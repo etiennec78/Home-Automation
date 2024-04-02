@@ -1,0 +1,460 @@
+#################### automations.yaml (Miscellaneous gate-related automations) ####################
+- id: '1685891275304'
+  alias: '[Gate] Open for too long'
+  description: Notifies every user when the gate has been open for 10 minutes
+
+  trigger:
+    - platform: state
+      entity_id:
+        - switch.gate
+      to: open
+      for:
+        hours: 0
+        minutes: 7
+        seconds: 0
+
+
+  condition: []
+    # No condition
+
+  action:
+    # Play a TTS on home speaker
+    - service: tts.speak
+      data:
+        media_player_entity_id: media_player.player0
+        message: The gate has been open for 10 minutes
+        cache: true
+      target:
+        entity_id: tts.piper
+    # Send a notification to all devices
+    - service: notify.all_devices
+      data:
+        message: The gate has been open for 10 minutes
+        title: Gate
+        data:
+          car_ui: true
+          notification_icon: mdi:gate-alert
+          channel: Gate alerts
+          importance: high
+          tag: gate-opened-reminder
+    # Wait for the gate to be closed
+    - wait_for_trigger:
+      - platform: state
+        entity_id:
+          - switch.portail
+        to: 'off'
+    # Remove the notification sent to the users
+    - service: notify.all_devices
+      data:
+        data:
+          tag: gate-opened-reminder
+        message: clear_notification
+  mode: single
+
+
+
+- id: '1688979506929'
+  alias: '[Gate] Offline notification'
+  description: Warns every user when the ESP32 of the gate is offline for 5 minutes
+
+  trigger:
+    # Triggers when the ESP32 is unavailable for 5 minutes
+    - platform: state
+      entity_id:
+        - switch.gate
+      to: unavailable
+      for:
+        hours: 0
+        minutes: 5
+        seconds: 0
+
+  condition: []
+    # No condition
+
+  action:
+    # Notify each user that the gate is offline
+    - service: notify.all_devices
+      data:
+        message: Gate offline for 5 minutes
+        title: Gate
+        data:
+          car_ui: true
+          notification_icon: mdi:gate-alert
+          channel: Gate alerts
+          importance: high
+          tag: gate-offline
+    # Wait for the gate to be back online, while running this automation at most one hour
+    - wait_for_trigger:
+      - platform: state
+        entity_id:
+          - switch.gate
+        to: 'off'
+      timeout:
+        hours: 1
+        minutes: 0
+        seconds: 0
+        milliseconds: 0
+      continue_on_timeout: false
+    # Remove the notification sent to the users
+    - service: notify.all_devices
+      data:
+        message: clear_notification
+        data:
+          tag: gate-offline
+  mode: single
+
+
+
+
+
+#################### automations.yaml (Automatic Gate) ####################
+- id: '1710799359483'
+  alias: '[Automatic Gate][V3] Start itinerary'
+  description: 'Opens the gate when a vehicle is started in the house
+    Starts an itinerary when a vehicle is started outside the house'
+
+  trigger:
+    # Triggers when one of the 3 users either connect to Android Auto on vehicle 1, or the Bluetooth signal of vehicle 2 (here via an ESP32 in the car)
+    # Please, do not use both Android Auto and Bluetooth for the same vehicle
+    # Sets a trigger ID corresponding to the user name
+    - platform: state
+      id: user0
+      entity_id:
+        - binary_sensor.user0_android_auto
+      from: 'off'
+      to: 'on'
+    - platform: template
+      id: user0
+      value_template: '{{ ''00:00:00:00:00:00 (BT-Device)'' in state_attr(''sensor.user0_bluetooth_connection'',
+        ''connected_paired_devices'') }}'
+    - platform: state
+      id: user1
+      entity_id:
+        - binary_sensor.user1_android_auto
+      from: 'off'
+      to: 'on'
+    - platform: template
+      id: user1
+      value_template: '{{ ''00:00:00:00:00:00 (BT-Device)'' in state_attr(''sensor.user1_bluetooth_connection'',
+        ''connected_paired_devices'') }}'
+    - platform: state
+      id: user2
+      entity_id:
+        - binary_sensor.user2_android_auto
+      from: 'off'
+      to: 'on'
+    - platform: template
+      id: user2
+      value_template: '{{ ''00:00:00:00:00:00 (BT-Device)'' in state_attr(''sensor.user2_bluetooth_connection'',
+        ''connected_paired_devices'') }}'
+
+  condition:
+    # Triggers only when the custom input boolean named "smart_gate" is active (to disable the whole automation with one switch)
+    - condition: state
+      entity_id: input_boolean.smart_gate
+      state: 'on'
+
+  action:
+    # If the user is currently at home
+    - if:
+        - condition: template
+          value_template: '{{states["person."+trigger.id].state == "home" }}'
+      then:
+        # Set the user itinerary text variable to "leaving", because the user is leaving home
+        - service: input_text.set_value
+          target:
+            entity_id: input_text.{{trigger.id}}_itinerary
+          data:
+            value: leaving
+        # Activate the BLE transmitter on the user's phone, to close the gate when he has left (optional)
+        - service: notify.mobile_app_{{trigger.id}}_phone
+          data:
+            message: command_ble_transmitter
+            data:
+              command: turn_on
+        # Activate the BLE scanner from the ESP32 connected to the gate (optional)
+        - service: switch.turn_on
+          target:
+            entity_id: switch.ibeacon_scanner
+        # If the gate is closing/closed
+        - if:
+            - condition: state
+              entity_id: switch.gate
+              state: 'off'
+          # Then open it because the user is leaving
+          then:
+            - service: switch.turn_on
+              target:
+                entity_id: switch.gate
+        # Wait for the gate to be closed by the user, or the iBeacon to be out of reach for 20s, or the itinerary to be canceled
+        - wait_for_trigger:
+            - platform: state
+              entity_id:
+                - switch.gate
+              from: 'on'
+              to: 'off'
+            # WORK IN PROGRESS
+            - platform: template
+              value_template: '{{ as_timestamp(now()) - as_timestamp(states["sensor.gate_ibeacon_"+trigger.id].last_changed) > 20 }}'
+              enabled: false
+            - platform: template
+              value_template: '{{states["input_text."+trigger.id+"_itinerary"].state == "none"}}'
+        # Removes the current itinerary since the user has left home
+        - service: input_text.set_value
+          target:
+            entity_id: input_text.{{trigger.id}}_itinerary
+          data:
+            value: none
+        # If no one else is currently leaving the house
+        - if:
+            - condition: not
+              conditions:
+              - condition: or
+                conditions:
+                - condition: state
+                  entity_id: input_text.user0_itinerary
+                  state: leaving
+              - condition: or
+                conditions:
+                - condition: state
+                  entity_id: input_text.user1_itinerary
+                  state: leaving
+              - condition: or
+                conditions:
+                - condition: state
+                  entity_id: input_text.user2_itinerary
+                  state: leaving
+          then:
+          # Deactivate the BLE scanner from the ESP32 connected to the gate (optional)
+          - service: switch.turn_off
+            target:
+              entity_id: switch.ibeacon_scanner
+          # If no one else is currently approaching the house
+          - if:
+              - condition: not
+                conditions:
+                - condition: or
+                  conditions:
+                  - condition: state
+                    entity_id: input_text.user0_itinerary
+                    state: on_approach
+                - condition: or
+                  conditions:
+                  - condition: state
+                    entity_id: input_text.user1_itinerary
+                    state: on_approach
+                - condition: or
+                  conditions:
+                  - condition: state
+                    entity_id: input_text.user2_itinerary
+                    state: on_approach
+              # If the gate is opening/open
+              - condition: state
+                entity_id: switch.gate
+                state: 'on'
+            # Then close the gate as no one is in a vehicle near the house
+            then:
+              - service: switch.turn_off
+                target:
+                  entity_id: switch.gate
+          # Deactivate the BLE transmitter on the user's phone (optional)
+          - service: notify.mobile_app_{{trigger.id}}_phone
+            data:
+              data:
+                command: turn_off
+              message: command_ble_transmitter
+      # If the user is currently away from home
+      else:
+        # Set the user itinerary text variable to "arriving", because the user has entered a vehicle away from home
+        - service: input_text.set_value
+          target:
+            entity_id: input_text.{{trigger.id}}_itinerary
+          data:
+            value: arriving
+        # Notify the user that its itinerary has been started
+        - service: notify.mobile_app_{{trigger.id}}_phone
+          data:
+            title: Itinéraire
+            message: Lancement de l'itinéraire
+            data:
+              car_ui: true
+              notification_icon: mdi:map-check
+              channel: Gate alerts
+              importance: high
+              tag: itinerary-started
+        # Update the user travel time once to display an approximation on the dashboard (while taking into account the time elapsed)
+        - service: homeassistant.update_entity
+          target:
+            entity_id: sensor.{{trigger.id}}_travel_time
+  # Run in parralel to let 2 users start their itinerary simultaneously (very unlikely)
+  mode: parallel
+  max: 10
+
+
+
+- id: '1711233913473'
+  alias: '[Automatic gate][V3] Stop itinerary'
+  description: Disable itinerary when someone leaves his vehicle
+
+  trigger:
+    # Triggers when one of the 3 users either disconnect to Android Auto on vehicle 1, or the Bluetooth signal of vehicle 2 (here via an ESP32 in the car)
+    # Please, do not use both Android Auto and Bluetooth for the same vehicle
+    # Sets a trigger ID corresponding to the user name
+    - platform: state
+      id:
+      entity_id:
+        - binary_sensor.user0_android_auto
+      from: 'on'
+      to: 'off'
+    - platform: template
+      id: user0
+      value_template: '{{ ''00:00:00:00:00:00 (BT-Device)'' not in state_attr(''sensor.user0_bluetooth_connection'',
+        ''connected_paired_devices'') }}'
+    - platform: state
+      id: user1
+      entity_id:
+        - binary_sensor.user1_android_auto
+      from: 'on'
+      to: 'off'
+    - platform: template
+      id: user1
+      value_template: '{{ ''00:00:00:00:00:00 (BT-Device)'' not in state_attr(''sensor.user1_bluetooth_connection'',
+        ''connected_paired_devices'') }}'
+    - platform: state
+      id: user2
+      entity_id:
+        - binary_sensor.user2_android_auto
+      from: 'on'
+      to: 'off'
+    - platform: template
+      id: user2
+      value_template: '{{ ''00:00:00:00:00:00 (BT-Device)'' not in state_attr(''sensor.user2_bluetooth_connection'',
+        ''connected_paired_devices'') }}'
+
+  condition:
+    # Triggers only when the user had an itinerary running
+    - condition: template
+      value_template: '{{states["input_text."+trigger.id+"_itinerary"].state != "none"}}'
+
+  action:
+    # Set the user itinerary text variable to "none", because the user has left his vehicle
+    - service: input_text.set_value
+      data:
+        value: none
+      target:
+        entity_id: input_text.{{trigger.id}}_itinerary
+    # Remove the notifcation received by the user when its itinerary was started
+    - service: notify.mobile_app_{{trigger.id}}_phone
+      data:
+        message: clear_notification
+        data:
+          tag: itinerary-started
+  # Run in parralel to let 2 users stop their itinerary simultaneously (very unlikely)
+  mode: parralel
+  max: 10
+
+
+
+- id: '1710958304120'
+  alias: "[Automatic Gate][V3] Update ETA"
+  description: Updates the time of arrival of the car when it is near home
+
+  trigger:
+    # Triggers when someone's position gets updated
+    # Sets a trigger ID corresponding to the user name.
+    - platform: state
+      entity_id:
+        - person.user0
+      id: user0
+    - platform: state
+      entity_id:
+        - person.user1
+      id: user1
+    - platform: state
+      entity_id:
+        - person.user2
+      id: user2
+
+  condition:
+    # Triggers only if the user is arriving
+    - condition: template
+      value_template: "{{states[\"input_text.\"+trigger.id+\"_itinerary\"].state == \"arriving\" }}"
+    # Triggers only if the user is nearer than 1km of radius
+    - condition: template
+      value_template: "{{states['sensor.distance_'+trigger.id].state | int < 1000}}"
+
+
+  action:
+    # Update the user travel time when there is a new position
+    - service: homeassistant.update_entity
+      target:
+        entity_id: sensor.{{trigger.id}}_travel_time
+    # Calculate its Estimated Time of Arrival
+    - service: input_datetime.set_datetime
+      target:
+        entity_id: input_datetime.planned_opening
+      data:
+        datetime: >
+          {{ (as_timestamp(now()) +
+          (state_attr('sensor.'+trigger.id+'_travel_time', 'duration') | float *
+          60) - 42 - 25) | timestamp_custom('%Y-%m-%d %H:%M:%S') }}
+    # If the ETA is not already past
+    - if:
+        - condition: template
+          value_template: >-
+            {{state_attr('input_datetime.planned_opening', 'timestamp') >
+            as_timestamp(now())}}
+      # Then wait for ETA, and cancel if it hasn't been updated for 7 mins without beeing reached, (ex: if device offline)
+      then:
+        - wait_for_trigger:
+            - platform: time
+              at: input_datetime.planned_opening
+          timeout:
+            hours: 0
+            minutes: 7
+            seconds: 0
+            milliseconds: 0
+          continue_on_timeout: false
+    # Continue only if the custom input boolean named "smart_gate" is active (to disable the whole automation with one switch)
+    - condition: state
+      entity_id: input_boolean.smart_gate
+      state: "on"
+    # Set the user itinerary text variable to "on_approach", because the user is near the house and will arrive soon
+    - service: input_text.set_value
+      data:
+        value: on_apporach
+      target:
+        entity_id: input_text.{{trigger.id}}_itinerary
+    # If the gate is closing/closed
+    - if:
+        - condition: state
+          entity_id: switch.gate
+          state: "off"
+      # Then open it
+      then:
+        - service: switch.turn_on
+          target:
+          entity_id: switch.gate
+    # Wait for the gate to be closed manually, or the itinerary to be canceled
+    - wait_for_trigger:
+        - platform: state
+          entity_id:
+            - switch.gate
+          from: "on"
+          to: "off"
+        - platform: template
+          value_template: >-
+            {{states["input_text."+trigger.id+"_itinerary"].state ==
+            "none" }}
+    # If the gate is opening/open
+    - if:
+        - condition: state
+          entity_id: switch.gate
+          state: "on"
+      # Then close it
+      then:
+        - service: switch.turn_off
+          target:
+          entity_id: switch.gate
+  # Run in restart mode to stop the previous run and refresh it with a new ETA each time the position gets updated
+  mode: restart
