@@ -1,0 +1,60 @@
+title: Home
+views:
+  # Itinerary tab to show the Estimated Time of Arrival of user0, disable the automatic gate, and see the position of user0
+  - title: Itinerary
+    path: carte
+    icon: mdi:map
+    visible:
+      - user: user_id # Change this to your own ID
+    subview: false
+    theme: ios-dark-mode-blue-red
+    badges: []
+    cards:
+      # Let each user disable your automatic gate
+      - type: entities
+        entities:
+          - input_boolean.smart_gate
+      # Show the ETA only if someone is driving towards home
+      - type: conditional
+        conditions:
+          - condition: or
+            conditions:
+              - condition: state
+                entity: input_text.user0_itinerary
+                state: arriving
+              - condition: state
+                entity: input_text.user0_itinerary
+                state: on_approach
+        card:
+          type: custom:mushroom-template-card
+          # Estimated time remaining
+          primary: >-
+            Time remaining : {{((state_attr('sensor.user0_travel_time',
+            'duration') | float * 60 - as_timestamp(now()) +
+            as_timestamp(states.sensor.user0_travel_time.last_changed))/60) |
+            round(0)}}min
+          # Estimated time of arrival
+          secondary: >-
+            Arrival :
+            {{(as_timestamp(states.sensor.user0_travel_time.last_changed) +
+            state_attr('sensor.user0_travel_time', 'duration') | float * 60) |
+            timestamp_custom('%H:%M')}}
+          icon: mdi:map-clock
+          entity: sensor.user0_travel_time
+          icon_color: blue
+          # Refresh travel time sensor on tap
+          tap_action:
+            action: call-service
+            service: homeassistant.update_entity
+            target:
+              entity_id: sensor.user0_travel_time
+          hold_action:
+            action: more-info
+          double_tap_action:
+            action: none
+          fill_container: false
+      # Show the positions history of user0 since 1 hour
+      - type: map
+        entities:
+          - entity: person.user0
+        hours_to_show: 1
