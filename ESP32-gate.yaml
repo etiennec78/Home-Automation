@@ -1,0 +1,393 @@
+esphome:
+  name: portail
+  platform: esp32
+  board: esp32dev #ESP32-WROOM-32E (version printed on the chip)
+
+  on_boot:
+    priority: 0
+    then:
+        - text_sensor.template.publish:
+            id: gate_status
+            state: "closed"
+        - binary_sensor.template.publish:
+            id: error
+            state: OFF
+        - text_sensor.template.publish:
+            id: error_message
+            state: ""
+
+# Enable logging
+logger:
+  level: WARN # Change to DEBUG if needed
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  manual_ip:
+    static_ip: 192.168.0.69
+    gateway: 192.168.0.254
+    subnet: 255.255.255.0
+
+esp32_ble_tracker:
+  scan_parameters:
+    continuous: false
+
+sensor:
+  # Sensors for android auto, nearest distance of any device from home, state of the gate, and variables
+  - platform: homeassistant
+    id: nearest_distance
+    entity_id: !secret nearest_device_sensor
+  - platform: duty_time
+    id: elapsed_time
+    disabled_by_default: true
+  - platform: ble_rssi
+    ibeacon_uuid: '1aa81d77-59dc-47d6-8358-e5c3b883ee3d'
+    name: "iBeacon Portail Etienne"
+  - platform: ble_rssi
+    ibeacon_uuid: 'd442c4e8-50a1-4ec1-b2e1-6e0dbf09d2d1'
+    name: "iBeacon Portail Magali"
+  - platform: ble_rssi
+    ibeacon_uuid: '6b2d17ed-9e89-4c33-a98a-956509050e4a'
+    name: "iBeacon Portail Olivier"
+
+text_sensor:
+  - platform: template
+    id: gate_status
+    name: "Statut du portail"
+    icon: "mdi:information"
+  - platform: template
+    id: error_message
+    name: "Message d'erreur"
+    icon: "mdi:chat-alert"
+
+binary_sensor:
+  - platform: template
+    id: error
+    name: "Erreur"
+    icon: "mdi:alert-circle"
+  - platform: template
+    id: standby
+    name: "Veille du récépteur"
+    icon: "mdi:sleep"
+    disabled_by_default: true
+  - platform: ble_presence
+    ibeacon_uuid: '6b2d17ed-9e89-4c33-a98a-956509050e4a'
+    name: "Presence Olivier"
+
+globals:
+  - id: sleep_time
+    type: float
+    restore_value: no
+    initial_value: "0"
+
+
+switch:
+    # Real relay connected to my gate
+  - platform: gpio
+    pin: 16
+    id: gate_pulse
+    restore_mode: ALWAYS_OFF
+    on_turn_on:
+    - delay: 1s
+    - switch.turn_off: gate_pulse
+
+    # Virtual switch monitoring the state of my gate
+  - platform: template
+    id: gate
+    name: "Portail"
+    icon: "mdi:gate"
+    restore_mode: ALWAYS_OFF
+    turn_on_action:
+        - script.execute: open_gate
+    turn_off_action:
+        - script.execute: close_gate
+
+  # Virtual switch to enable the internal iBeacon scanner
+  - platform: template
+    id: ibeacon_switch
+    name: "Switch d'activation de l'iBeacon"
+    icon: "mdi:access-point"
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    turn_on_action:
+      - esp32_ble_tracker.start_scan:
+    turn_off_action:
+      - esp32_ble_tracker.stop_scan:
+
+
+script:
+  - id: open_gate
+    mode: parallel
+    then:
+        - if:
+            condition:
+                - binary_sensor.is_off: standby
+            then:
+                - binary_sensor.template.publish:
+                    id: standby
+                    state: ON
+                - if:
+                    condition:
+                        - lambda: 'return id(nearest_distance).state < 1000;'
+                    then:
+                        - if:
+                            condition:
+                                - text_sensor.state:
+                                    id: gate_status
+                                    state: "closed"
+                            then:
+                                - switch.template.publish:
+                                    id: gate
+                                    state: ON
+
+                                #######################
+                                # NOTIFY GATE OPENING #
+                                #######################
+
+                                - homeassistant.service:
+                                    service: notify.all_devices
+                                    data:
+                                        message: Ouverture du portail en cours
+                                        title: Portail
+                                    data_template:
+                                        data: |
+                                            {{ '{"tag": "gate-opening", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Alertes portail", "importance": "high"}' | from_json }}
+                                - homeassistant.service:
+                                    service: tts.speak
+                                    data:
+                                        cache: "true"
+                                        media_player_entity_id: media_player.cuisine
+                                        message: Ouverture du portail en cours
+                                    data_template:
+                                        target: |
+                                            {{ '{"entity_id": "tts.piper"}' | from_json }}
+                                - homeassistant.service:
+                                    service: script.flasher_lampe_ouverture_portail
+
+                                ######################
+                                # UPDATE GATE STATUS #
+                                ######################
+
+                                - text_sensor.template.publish:
+                                    id: gate_status
+                                    state: "opening"
+                                - script.execute: set_timer
+                            else:
+                                - if:
+                                    condition:
+                                        - text_sensor.state:
+                                            id: gate_status
+                                            state: "closing"
+                                    then:
+                                        - switch.template.publish:
+                                            id: gate
+                                            state: ON
+
+                                        #######################
+                                        # NOTIFY GATE OPENING #
+                                        #######################
+
+                                        - homeassistant.service:
+                                            service: notify.all_devices
+                                            data:
+                                                message: Ouverture du portail en cours
+                                                title: Portail
+                                            data_template:
+                                                data: |
+                                                    {{ '{"tag": "gate-opening", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Alertes portail", "importance": "high"}' | from_json }}
+                                        - homeassistant.service:
+                                            service: tts.speak
+                                            data:
+                                                cache: "true"
+                                                media_player_entity_id: media_player.cuisine
+                                                message: Ouverture du portail en cours
+                                            data_template:
+                                                target: |
+                                                    {{ '{"entity_id": "tts.piper"}' | from_json }}
+
+                                        ######################
+                                        # UPDATE GATE STATUS #
+                                        ######################
+
+                                        - text_sensor.template.publish:
+                                            id: gate_status
+                                            state: "paused"
+                                        - switch.turn_on: gate_pulse
+
+                                        - delay: 2s
+
+                                        - text_sensor.template.publish:
+                                            id: gate_status
+                                            state: "opening"
+                                        - script.execute: set_timer
+                                    else:
+                                        - script.execute:
+                                            id: set_error
+                                            message: "wrong-state"
+                    else:
+                        - script.execute:
+                            id: set_error
+                            message: "nobody-near-home"
+            else:
+                - script.execute:
+                    id: set_error
+                    message: "not-ready"
+
+  - id: close_gate
+    mode: parallel
+    then:
+        - if:
+            condition:
+                - binary_sensor.is_off: standby
+            then:
+                - binary_sensor.template.publish:
+                    id: standby
+                    state: ON
+                - if:
+                    condition:
+                        - text_sensor.state:
+                            id: gate_status
+                            state: "open"
+                    then:
+                        - switch.template.publish:
+                            id: gate
+                            state: OFF
+                        - text_sensor.template.publish:
+                            id: gate_status
+                            state: "closing"
+                        - script.execute: set_timer
+                    else:
+                        - if:
+                            condition:
+                                text_sensor.state:
+                                    id: gate_status
+                                    state: "opening"
+                            then:
+                                - switch.template.publish:
+                                    id: gate
+                                    state: OFF
+                                - text_sensor.template.publish:
+                                    id: gate_status
+                                    state: "paused"
+                                - switch.turn_on: gate_pulse
+
+                                - delay: 2s
+
+                                - text_sensor.template.publish:
+                                    id: gate_status
+                                    state: "closing"
+                                - script.execute: set_timer
+                            else:
+                                - script.execute:
+                                    id: set_error
+                                    message: "wrong-state"
+            else:
+                - script.execute:
+                    id: set_error
+                    message: "not-ready"
+
+
+  - id: set_timer
+    mode: restart
+    then:
+      - component.update: elapsed_time
+      - lambda: |-
+          if (id(elapsed_time).state == 0) {
+            id(sleep_time) = 42;
+          } else {
+            id(sleep_time) = id(elapsed_time).state;
+          }
+      - switch.turn_on: gate_pulse
+      # - logger.log:
+      #     format: "/!\\ Elapsed time : %.1f. Sleeping for %.3f"
+      #     args: ["id(elapsed_time).state", "id(sleep_time)"]
+      - sensor.duty_time.start: elapsed_time
+      - delay: 1s
+      - binary_sensor.template.publish:
+          id: standby
+          state: OFF
+      - delay: !lambda "return (id(sleep_time)-1)*1000;"
+      # - logger.log:
+      #     format: "/!\\ Fin du timer"
+      - sensor.duty_time.stop: elapsed_time
+      - sensor.duty_time.reset: elapsed_time
+      - if:
+          condition:
+              - text_sensor.state:
+                  id: gate_status
+                  state: "closing"
+          then:
+              - text_sensor.template.publish:
+                  id: gate_status
+                  state: "closed"
+              - homeassistant.service:
+                  service: notify.all_devices
+                  data:
+                      message: clear_notification
+                  data_template:
+                      data: |
+                          {{ '{"tag": "gate-opening"}' | from_json }}
+          else:
+            - if:
+                condition:
+                    - text_sensor.state:
+                        id: gate_status
+                        state: "opening"
+                then:
+                    - text_sensor.template.publish:
+                        id: gate_status
+                        state: "open"
+                else:
+                    - script.execute:
+                        id: set_error
+                        message: "bad-moving-state"
+  - id: set_error
+    mode: restart
+    parameters:
+      message: string
+    then:
+        - binary_sensor.template.publish:
+            id: standby
+            state: OFF
+        - binary_sensor.template.publish:
+            id: error
+            state: ON
+        - text_sensor.template.publish:
+            id: error_message
+            state: !lambda return message;
+        - homeassistant.service:
+            service: notify.all_devices
+            data:
+                title: Erreur portail
+                message: !lambda return message;
+            data_template:
+                data: |
+                    {{ '{"tag": "gate-error", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Alertes portail", "importance": "high"}' | from_json }}
+        - delay: 5s
+        - binary_sensor.template.publish:
+            id: error
+            state: OFF
+        - text_sensor.template.publish:
+            id: error_message
+            state: ""
+        - homeassistant.service:
+            service: notify.all_devices
+            data:
+                message: clear_notification
+            data_template:
+                data: |
+                    {{ '{"tag": "gate-error"}' | from_json }}
+
+
+# sensor:
+#   - platform: wifi_signal
+#     name: "WiFi Signal Sensor"
+#     update_interval: 30s
