@@ -344,7 +344,7 @@
       target:
         entity_id: input_text.{{trigger.id}}_itinerary
     # Remove the notifcation received by the user when its itinerary was started
-    - service: notify.mobile_app_smartphone_{{trigger.id}}
+    - service: notify.mobile_app_{{trigger.id}}_phone
       data:
         message: clear_notification
         data:
