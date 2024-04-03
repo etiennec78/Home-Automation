@@ -186,7 +186,7 @@
             - service: switch.turn_on
               target:
                 entity_id: switch.gate
-        # Wait for the gate to be closed by the user, or the iBeacon to be out of reach for 20s, or the itinerary to be canceled
+        # Wait for the gate to be closed by the user, or the iBeacon to be out of reach for 20s, or the itinerary to be canceled, or the user to left home, all for at most 7 minutes
         - wait_for_trigger:
             - platform: state
               entity_id:
@@ -199,6 +199,13 @@
               enabled: false
             - platform: template
               value_template: '{{states["input_text."+trigger.id+"_itinerary"].state == "none"}}'
+            - platform: template
+              value_template: '{{states["person."+trigger.id].state != "home"}}'
+          timeout:
+            hours: 0
+            minutes: 7
+            seconds: 0
+            milliseconds: 0
         # Removes the current itinerary since the user has left home
         - service: input_text.set_value
           target:
@@ -378,7 +385,7 @@
   condition:
     # Triggers only if the user is arriving
     - condition: template
-      value_template: "{{states[\"input_text.\"+trigger.id+\"_itinerary\"].state == \"arriving\" }}"
+      value_template: "{{states['input_text.'+trigger.id+'_itinerary'].state == 'arriving' }}"
     # Triggers only if the user is nearer than 1km of radius
     - condition: template
       value_template: "{{states['sensor.distance_'+trigger.id].state | int < 1000}}"
@@ -401,9 +408,7 @@
     # If the ETA is not already past
     - if:
         - condition: template
-          value_template: >-
-            {{state_attr('input_datetime.planned_opening', 'timestamp') >
-            as_timestamp(now())}}
+          value_template: "{{state_attr('input_datetime.planned_opening', 'timestamp') > as_timestamp(now())}}"
       # Then wait for ETA, and cancel if it hasn't been updated for 7 mins without beeing reached, (ex: if device offline)
       then:
         - wait_for_trigger:
@@ -435,7 +440,7 @@
         - service: switch.turn_on
           target:
           entity_id: switch.gate
-    # Wait for the gate to be closed manually, or the itinerary to be canceled
+    # Wait for the gate to be closed manually, or the itinerary to be canceled, or the user to leave home, all for at most 7 minutes
     - wait_for_trigger:
         - platform: state
           entity_id:
@@ -443,9 +448,14 @@
           from: "on"
           to: "off"
         - platform: template
-          value_template: >-
-            {{states["input_text."+trigger.id+"_itinerary"].state ==
-            "none" }}
+          value_template: "{{states['input_text.'+trigger.id+'_itinerary'].state == 'none' }}"
+        - platform: template
+          value_template: "{{states['person.'+trigger.id].state != 'home'}}"
+      timeout:
+        hours: 0
+        minutes: 7
+        seconds: 0
+        milliseconds: 0
     # If the gate is opening/open
     - if:
         - condition: state

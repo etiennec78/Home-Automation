@@ -1,1 +1,38 @@
- 
+#################### configuration.yaml ####################
+# Please add every sensor through the frontend, as yaml files are being replaced by GUIs
+# Sensors used for automations.yaml, frontend.yaml, and ESP32-gate.yaml
+
+# See https://www.home-assistant.io/integrations/group/#notify-groups
+notify:
+  platform: group
+  name: "All devices"
+  services:
+    - service: mobile_app_user0_phone
+    - service: mobile_app_user1_phone
+    - service: mobile_app_user2_phone
+
+# See https://www.home-assistant.io/integrations/input_datetime/
+input_datetime:
+  planned_opening:
+    name: Automatic gate estimated time of arrival
+    has_date: true
+    has_time: true
+
+# See https://www.home-assistant.io/integrations/input_boolean/
+input_boolean:
+  smart_gate:
+    name: Smart gate
+    icon: mdi:car-connected
+
+# See https://www.home-assistant.io/integrations/waze_travel_time/
+sensor:
+  user0_travel_time
+  user1_travel_time
+  user2_travel_time
+
+# See https://www.home-assistant.io/integrations/proximity
+sensor:
+  nearest_device
+  distance_user0
+  distance_user1
+  distance_user2
