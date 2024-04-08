@@ -25,12 +25,14 @@ input_boolean:
     icon: mdi:car-connected
 
 # See https://www.home-assistant.io/integrations/waze_travel_time/
+# Frontend only
 sensor:
   user0_travel_time
   user1_travel_time
   user2_travel_time
 
 # See https://www.home-assistant.io/integrations/proximity
+# Frontend only
 sensor:
   nearest_device
   distance_user0
