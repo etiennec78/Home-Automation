@@ -27,18 +27,18 @@ input_boolean:
 
 # See https://www.home-assistant.io/integrations/waze_travel_time/
 # Frontend only
-sensor:
-  user0_travel_time
-  user1_travel_time
-  user2_travel_time
+waze:
+  user0_travel_time:
+  user1_travel_time:
+  user2_travel_time:
 
 # See https://www.home-assistant.io/integrations/proximity
 # Frontend only
-sensor:
-  nearest_device
-  distance_user0
-  distance_user1
-  distance_user2
+proximity:
+  nearest_device:
+  distance_user0:
+  distance_user1:
+  distance_user2:
 
 # See https://www.home-assistant.io/integrations/template/
 # Sensor to combine both my first car connected through Android Auto, and my second car connected via Bluetooth
