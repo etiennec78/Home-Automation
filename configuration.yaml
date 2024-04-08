@@ -1,6 +1,7 @@
 #################### configuration.yaml ####################
-# Please add every sensor through the frontend, as yaml files are being replaced by GUIs
 # Sensors used for automations.yaml, frontend.yaml, and ESP32-gate.yaml
+# Please add every sensor through the frontend, as yaml files are being replaced by GUIs
+# Replace user0, user1, user2 with your real names
 
 # See https://www.home-assistant.io/integrations/group/#notify-groups
 notify:
@@ -38,3 +39,27 @@ sensor:
   distance_user0
   distance_user1
   distance_user2
+
+# See https://www.home-assistant.io/integrations/template/
+# Sensor to combine both my first car connected through Android Auto, and my second car connected via Bluetooth
+template:
+  - binary_sensor:
+      - name: "user0 driving"
+        icon: mdi:steering
+          state: >
+            {{ states['binary_sensor.user0_android_auto'].state == 'on'
+                or '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user0_bluetooth_connection', 'connected_paired_devices') }}
+
+  - binary_sensor:
+      - name: "user1 driving"
+        icon: mdi:steering
+          state: >
+            {{ states['binary_sensor.user1_android_auto'].state == 'on'
+                or '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user1_bluetooth_connection', 'connected_paired_devices') }}
+
+  - binary_sensor:
+      - name: "user2 driving"
+        icon: mdi:steering
+          state: >
+            {{ states['binary_sensor.user2_android_auto'].state == 'on'
+                or '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user2_bluetooth_connection', 'connected_paired_devices') }}
