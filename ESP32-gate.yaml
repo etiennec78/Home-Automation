@@ -49,14 +49,14 @@ sensor:
     id: elapsed_time
     disabled_by_default: true
   - platform: ble_rssi
-    ibeacon_uuid: '1aa81d77-59dc-47d6-8358-e5c3b883ee3d'
-    name: "iBeacon Portail Etienne"
+    name: !secret ibeacon_user0_name
+    ibeacon_uuid: !secret ibeacon_user0_uuid
   - platform: ble_rssi
-    ibeacon_uuid: 'd442c4e8-50a1-4ec1-b2e1-6e0dbf09d2d1'
-    name: "iBeacon Portail Magali"
+    name: !secret ibeacon_user1_name
+    ibeacon_uuid: !secret ibeacon_user1_uuid
   - platform: ble_rssi
-    ibeacon_uuid: '6b2d17ed-9e89-4c33-a98a-956509050e4a'
-    name: "iBeacon Portail Olivier"
+    name: !secret ibeacon_user2_name
+    ibeacon_uuid: !secret ibeacon_user2_uuid
 
 text_sensor:
   - platform: template
@@ -78,9 +78,6 @@ binary_sensor:
     name: "Veille du récépteur"
     icon: "mdi:sleep"
     disabled_by_default: true
-  - platform: ble_presence
-    ibeacon_uuid: '6b2d17ed-9e89-4c33-a98a-956509050e4a'
-    name: "Presence Olivier"
 
 globals:
   - id: sleep_time
@@ -169,6 +166,7 @@ script:
                                     data_template:
                                         target: |
                                             {{ '{"entity_id": "tts.piper"}' | from_json }}
+                                # optional
                                 - homeassistant.service:
                                     service: script.flasher_lampe_ouverture_portail
 
@@ -385,9 +383,3 @@ script:
             data_template:
                 data: |
                     {{ '{"tag": "gate-error"}' | from_json }}
-
-
-# sensor:
-#   - platform: wifi_signal
-#     name: "WiFi Signal Sensor"
-#     update_interval: 30s
