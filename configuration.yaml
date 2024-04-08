@@ -45,21 +45,24 @@ sensor:
 template:
   - binary_sensor:
       - name: "user0 driving"
+        unique_id: "user0_driving"
         icon: mdi:steering
-          state: >
-            {{ states['binary_sensor.user0_android_auto'].state == 'on'
-                or '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user0_bluetooth_connection', 'connected_paired_devices') }}
+        state: >
+          {{ states['binary_sensor.user0_android_auto'].state == 'on'
+              or '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user0_bluetooth_connection', 'connected_paired_devices') }}
 
   - binary_sensor:
       - name: "user1 driving"
+        unique_id: "user1_driving"
         icon: mdi:steering
-          state: >
-            {{ states['binary_sensor.user1_android_auto'].state == 'on'
-                or '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user1_bluetooth_connection', 'connected_paired_devices') }}
+        state: >
+          {{ states['binary_sensor.user1_android_auto'].state == 'on'
+              or '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user1_bluetooth_connection', 'connected_paired_devices') }}
 
   - binary_sensor:
       - name: "user2 driving"
+        unique_id: "user2_driving"
         icon: mdi:steering
-          state: >
-            {{ states['binary_sensor.user2_android_auto'].state == 'on'
-                or '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user2_bluetooth_connection', 'connected_paired_devices') }}
+        state: >
+          {{ states['binary_sensor.user2_android_auto'].state == 'on'
+              or '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user2_bluetooth_connection', 'connected_paired_devices') }}
