@@ -19,18 +19,36 @@ input_datetime:
     has_date: true
     has_time: true
 
-# See https://www.home-assistant.io/integrations/input_boolean/
-input_boolean:
-  smart_gate:
-    name: Smart gate
-    icon: mdi:car-connected
+# See https://www.home-assistant.io/integrations/input_text/
+input_text:
+    user0_itinerary:
+        name: User0 itinerary
+        initial: none
+        icon: mdi:map
+    user1_itinerary:
+        name: User1 itinerary
+        initial: none
+        icon: mdi:map
+    user2_itinerary:
+        name: User2 itinerary
+        initial: none
+        icon: mdi:map
 
 # See https://www.home-assistant.io/integrations/waze_travel_time/
 # Frontend only
 waze:
   user0_travel_time:
+    origin: person.user0
+    destination: zone.home
+    region: YOUR_REGION
   user1_travel_time:
+    origin: person.user1
+    destination: zone.home
+    region: YOUR_REGION
   user2_travel_time:
+    origin: person.user2
+    destination: zone.home
+    region: YOUR_REGION
 
 # See https://www.home-assistant.io/integrations/proximity
 # Frontend only
@@ -51,7 +69,6 @@ template:
         state: >
           {{ states['binary_sensor.user0_android_auto'].state == 'on'
               or '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user0_bluetooth_connection', 'connected_paired_devices') }}
-
   - binary_sensor:
       - name: "user1 driving"
         unique_id: "user1_driving"
@@ -60,7 +77,6 @@ template:
         state: >
           {{ states['binary_sensor.user1_android_auto'].state == 'on'
               or '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user1_bluetooth_connection', 'connected_paired_devices') }}
-
   - binary_sensor:
       - name: "user2 driving"
         unique_id: "user2_driving"
