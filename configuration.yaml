@@ -41,14 +41,18 @@ waze:
     origin: person.user0
     destination: zone.home
     region: YOUR_REGION
+    # See https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval
+    polling_for_updates: false
   user1_travel_time:
     origin: person.user1
     destination: zone.home
     region: YOUR_REGION
+    polling_for_updates: false
   user2_travel_time:
     origin: person.user2
     destination: zone.home
     region: YOUR_REGION
+    polling_for_updates: false
 
 # See https://www.home-assistant.io/integrations/proximity
 # Frontend only
