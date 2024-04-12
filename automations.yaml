@@ -193,6 +193,29 @@
             minutes: 7
             seconds: 0
             milliseconds: 0
+        # If the timeout was reached
+        - if:
+            - condition: template
+              value_template: "{{ wait.completed }}"
+          then:
+            # Notify the user that the gate will close automatically
+            - service: notify.mobile_app_{{trigger.id}}_phone
+              data:
+                title: Gate closing
+                message: The vehicle did not leave home in less than 7 minutes
+                data:
+                  car_ui: true
+                  notification_icon: mdi:alert-circle
+                  channel: Gate alerts
+                  importance: high
+                  tag: itinerary
+            # Close the gate
+            - service: switch.turn_off
+              target:
+                entity_id: switch.gate
+            # Stop the automation
+            - stop: Did not leave
+              error: true
         # Remove the current itinerary since the user has left home
         - service: input_text.set_value
           target:
@@ -266,7 +289,7 @@
                     notification_icon: mdi:sleep
                     channel: Gate alerts
                     importance: high
-                    tag: itinerary-started
+                    tag: itinerary
               # Wait for the gate to be closed
               - wait_for_trigger:
                   - platform: state
@@ -278,7 +301,7 @@
                 data:
                   message: clear_notification
                   data:
-                    tag: itinerary-started
+                    tag: itinerary
           # If someone is currently leaving the house
           else:
             # Notify the user that the gate will wait for next person
@@ -291,7 +314,7 @@
                   notification_icon: mdi:sleep
                   channel: Gate alerts
                   importance: high
-                  tag: itinerary-started
+                  tag: itinerary
             # Wait for the gate to be closed
             - wait_for_trigger:
                 - platform: state
@@ -303,7 +326,7 @@
               data:
                 message: clear_notification
                 data:
-                  tag: itinerary-started
+                  tag: itinerary
       # If the user is currently away from home
       else:
         # Set the user itinerary text variable to "arriving", because the user has entered a vehicle away from home
@@ -322,7 +345,7 @@
               notification_icon: mdi:map-check
               channel: Gate alerts
               importance: high
-              tag: itinerary-started
+              tag: itinerary
         # Update the user travel time once to display an approximation on the dashboard (while taking into account the time elapsed)
         - service: homeassistant.update_entity
           target:
@@ -421,6 +444,29 @@
                         minutes: 7
                         seconds: 0
                         milliseconds: 0
+                    # If the timeout was reached
+                    - if:
+                        - condition: template
+                          value_template: "{{ wait.completed }}"
+                      then:
+                        # Notify the user that the gate will close automatically
+                        - service: notify.mobile_app_{{trigger.id}}_phone
+                          data:
+                            title: Gate closing
+                            message: The vehicle did not arrive home in less than 7 minutes
+                            data:
+                              car_ui: true
+                              notification_icon: mdi:alert-circle
+                              channel: Gate alerts
+                              importance: high
+                              tag: itinerary
+                        # Close the gate
+                        - service: switch.turn_off
+                          target:
+                            entity_id: switch.gate
+                        # Stop the automation
+                        - stop: Did not arrive
+                          error: true
                     # Remove the current itinerary since the user has arrived home
                     - service: input_text.set_value
                       data:
@@ -464,7 +510,7 @@
                               notification_icon: mdi:sleep
                               channel: Gate alerts
                               importance: high
-                              tag: itinerary-started
+                              tag: itinerary
                         # Wait for the gate to be closed
                         - wait_for_trigger:
                             - platform: state
@@ -483,11 +529,11 @@
                 data:
                   message: clear_notification
                   data:
-                    tag: itinerary-started
+                    tag: itinerary
               # Stop the whole script as it was successful
               - stop: Successful
         # If both loop were broken
-        # Remove the current itinerary since the user has left his vehicle
+        # Remove the current itinerary since the user has left his vehicle or timed out
         - service: input_text.set_value
           data:
             value: none
@@ -497,13 +543,13 @@
         - service: notify.mobile_app_{{trigger.id}}_phone
           data:
             title: Itinerary canceled
-            message: You have left your vehicle
+            message: You have left your vehicle or timed out
             data:
               car_ui: true
               notification_icon: mdi:alert-circle
               channel: Gate alerts
               importance: high
-              tag: itinerary-started
+              tag: itinerary
   # Run in parralel to let the automation start with multiple users driving simultaneously
   mode: parallel
   max: 15
