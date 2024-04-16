@@ -213,6 +213,12 @@
             - service: switch.turn_off
               target:
                 entity_id: switch.gate
+            # Remove the current itinerary
+            - service: input_text.set_value
+              target:
+                entity_id: input_text.{{trigger.id}}_itinerary
+              data:
+                value: none
             # Stop the automation
             - stop: Did not leave
               error: true
@@ -467,6 +473,12 @@
                         - service: switch.turn_off
                           target:
                             entity_id: switch.gate
+                        # Remove the current itinerary
+                        - service: input_text.set_value
+                          target:
+                            entity_id: input_text.{{trigger.id}}_itinerary
+                          data:
+                            value: none
                         # Stop the automation
                         - stop: Did not arrive
                           error: true
@@ -529,6 +541,12 @@
                             - service: switch.turn_off
                               target:
                                 entity_id: switch.gate
+                        # Remove the current itinerary as the user has arrived home
+                        - service: input_text.set_value
+                          target:
+                            entity_id: input_text.{{trigger.id}}_itinerary
+                          data:
+                            value: none
                         # Remove the notifcation received by the user when its itinerary was started or awaiting next user
                         - service: notify.mobile_app_{{trigger.id}}_phone
                           data:
