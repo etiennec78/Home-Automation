@@ -470,71 +470,73 @@
                         # Stop the automation
                         - stop: Did not arrive
                           error: true
-                    # Remove the current itinerary since the user has arrived home
-                    - service: input_text.set_value
-                      data:
-                        value: none
-                      target:
-                        entity_id: input_text.{{trigger.id}}_itinerary
-                    # Continue the script only if the gate wasn't closed manually
-                    - condition: state
-                      entity_id: switch.gate
-                      state: "on"
-                    # If someone is currently approaching or leaving the house
-                    - if:
-                        - condition: or
-                          conditions:
-                          - condition: state
-                            entity_id: input_text.user0_itinerary
-                            state: on_approach
-                          - condition: state
-                            entity_id: input_text.user1_itinerary
-                            state: on_approach
-                          - condition: state
-                            entity_id: input_text.user2_itinerary
-                            state: on_approach
-                          - condition: state
-                            entity_id: input_text.user0_itinerary
-                            state: leaving
-                          - condition: state
-                            entity_id: input_text.user1_itinerary
-                            state: leaving
-                          - condition: state
-                            entity_id: input_text.user2_itinerary
-                            state: leaving
-                      then:
-                        # Notify the user that the gate will wait for next person
+                      # If the user has arrived home in time
+                      else:
+                        # Remove the current itinerary
+                        - service: input_text.set_value
+                          data:
+                            value: none
+                          target:
+                            entity_id: input_text.{{trigger.id}}_itinerary
+                        # Continue the script only if the gate wasn't closed manually
+                        - condition: state
+                          entity_id: switch.gate
+                          state: "on"
+                        # If someone is currently approaching or leaving the house
+                        - if:
+                            - condition: or
+                              conditions:
+                              - condition: state
+                                entity_id: input_text.user0_itinerary
+                                state: on_approach
+                              - condition: state
+                                entity_id: input_text.user1_itinerary
+                                state: on_approach
+                              - condition: state
+                                entity_id: input_text.user2_itinerary
+                                state: on_approach
+                              - condition: state
+                                entity_id: input_text.user0_itinerary
+                                state: leaving
+                              - condition: state
+                                entity_id: input_text.user1_itinerary
+                                state: leaving
+                              - condition: state
+                                entity_id: input_text.user2_itinerary
+                                state: leaving
+                          then:
+                            # Notify the user that the gate will wait for next person
+                            - service: notify.mobile_app_{{trigger.id}}_phone
+                              data:
+                                title: Gate awaiting another user
+                                message: The gate will close once all users have entered/exited
+                                data:
+                                  car_ui: true
+                                  notification_icon: mdi:sleep
+                                  channel: Gate alerts
+                                  importance: high
+                                  tag: itinerary
+                            # Wait for the gate to be closed
+                            - wait_for_trigger:
+                                - platform: state
+                                  entity_id:
+                                    - switch.gate
+                                  from: "on"
+                                  to: "off"
+                          # If no one is currently approaching or leaving the house
+                          else:
+                            # Then close the gate
+                            - service: switch.turn_off
+                              target:
+                                entity_id: switch.gate
+                        # Remove the notifcation received by the user when its itinerary was started or awaiting next user
                         - service: notify.mobile_app_{{trigger.id}}_phone
                           data:
-                            title: Gate awaiting another user
-                            message: The gate will close once all users have entered/exited
+                            message: clear_notification
                             data:
-                              car_ui: true
-                              notification_icon: mdi:sleep
-                              channel: Gate alerts
-                              importance: high
                               tag: itinerary
-                        # Wait for the gate to be closed
-                        - wait_for_trigger:
-                            - platform: state
-                              entity_id:
-                                - switch.gate
-                              from: "on"
-                              to: "off"
-                      # If no one is currently approaching or leaving the house
-                      else:
-                        # Then close the gate
-                        - service: switch.turn_off
-                          target:
-                            entity_id: switch.gate
-              # Remove the notifcation received by the user when its itinerary was started or awaiting next user
-              - service: notify.mobile_app_{{trigger.id}}_phone
-                data:
-                  message: clear_notification
-                  data:
-                    tag: itinerary
-              # Stop the whole script as it was successful
-              - stop: Successful
+                        # Stop the whole script as it was successful
+                        - stop: Successful
         # If both loop were broken
         # Remove the current itinerary since the user has left his vehicle or timed out
         - service: input_text.set_value
