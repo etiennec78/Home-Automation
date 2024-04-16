@@ -410,10 +410,11 @@
                             seconds: 0
                             milliseconds: 0
                           continue_on_timeout: false
-                        # Continue the second repeat loop if the wait_for_trigger was triggered by a position or car sensor update
-                        # This allows the loop to refresh the ETA with a new position or stop the script if the car was left
-                        - condition: template
-                          value_template: "{{wait.trigger.id == 'eta'}}"
+                    # Restart the second repeat loop if the wait_for_trigger was triggered by a position or car sensor update
+                    # This allows the loop to refresh the ETA with a new position or stop the script if the car was left
+                    # This is quite a redundant condition as it has already been checked above, if you find a better way to restart the loop, feel free to make a PR
+                    - condition: template
+                      value_template: "{{ state_attr('input_datetime.planned_opening', 'timestamp') <= as_timestamp(now()) }}"
                     # Set the user itinerary text variable to "on_approach", because the user is near the house and will arrive soon
                     - service: input_text.set_value
                       data:
