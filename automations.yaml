@@ -109,35 +109,35 @@
 #################### automations.yaml (Automatic Gate) ####################
 - id: "1710799359483"
   alias: "Automatic Gate"
-    description: |-
-        Automatic Gate by etiennec78
-        Open then close the gate when a vehicle is started at home
-        Start an itinerary when a vehicle is started away from home
-        Update the time of arrival of the car when it is near home
-        Open then close the gate when estimated time of arrival is reached
-        Abort itinerary if someone leaves his vehicle
-        Flowchart : https://miro.com/app/board/uXjVMpH4Tno=/
+  description: |-
+      Automatic Gate by etiennec78
+      Open then close the gate when a vehicle is started at home
+      Start an itinerary when a vehicle is started away from home
+      Update the time of arrival of the car when it is near home
+      Open then close the gate when estimated time of arrival is reached
+      Abort itinerary if someone leaves his vehicle
+      Flowchart : https://miro.com/app/board/uXjVMpH4Tno=/
   trigger:
     # Triggers when one of the 3 users connect to a vehicle (if you have more than one, make a custom vehcle sensor : example in configuration.yaml)
     # Sets a trigger ID corresponding to the user name
     - platform: state
-        id: user0
-        entity_id:
-          - binary_sensor.user0_driving
-        from: "off"
-        to: "on"
+      id: user0
+      entity_id:
+        - binary_sensor.user0_driving
+      from: "off"
+      to: "on"
     - platform: state
-        id: user1
-        entity_id:
-          - binary_sensor.user1_driving
-        from: "off"
-        to: "on"
+      id: user1
+      entity_id:
+        - binary_sensor.user1_driving
+      from: "off"
+      to: "on"
     - platform: state
-        id: user2
-        entity_id:
-          - binary_sensor.user2_driving
-        from: "off"
-        to: "on"
+      id: user2
+      entity_id:
+        - binary_sensor.user2_driving
+      from: "off"
+      to: "on"
 
   condition: []
 
@@ -365,6 +365,8 @@
                   - platform: template
                     value_template: "{{ states['binary_sensor.'+trigger.id+'_driving']['state'] == 'off' }}"
               # Repeat while the user is nearer than 1km of radius from home and is still driving
+              # This allows to update to a precise ETA even if a traffic jam appears near home
+              # It will return to the previous loop if the user has entered the radius but passed by and didn't go directly to home
               - repeat:
                   while:
                     - condition: template
