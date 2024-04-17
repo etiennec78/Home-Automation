@@ -147,6 +147,11 @@
         - condition: template
           value_template: "{{ states['person.'+trigger.id]['state'] == 'home' }}"
       then:
+
+        #####################
+        # OPEN GATE ON EXIT #
+        #####################
+
         # Set the user itinerary text variable to "leaving", because the user is leaving home
         - service: input_text.set_value
           target:
@@ -193,6 +198,12 @@
             minutes: 7
             seconds: 0
             milliseconds: 0
+        # Remove the current itinerary since the user has either left home or took too long
+        - service: input_text.set_value
+          target:
+            entity_id: input_text.{{trigger.id}}_itinerary
+          data:
+            value: none
         # If the timeout was reached
         - if:
             - condition: template
@@ -213,103 +224,70 @@
             - service: switch.turn_off
               target:
                 entity_id: switch.gate
-            # Remove the current itinerary
-            - service: input_text.set_value
-              target:
-                entity_id: input_text.{{trigger.id}}_itinerary
-              data:
-                value: none
             # Stop the automation
             - stop: Did not leave
               error: true
-        # Remove the current itinerary since the user has left home
-        - service: input_text.set_value
-          target:
-            entity_id: input_text.{{trigger.id}}_itinerary
-          data:
-            value: none
         # Deactivate the BLE transmitter on user's phone (optional)
         - service: notify.mobile_app_{{trigger.id}}_phone
           data:
             message: command_ble_transmitter
             data:
               command: turn_off
-        # If the gate was closed manually or no one else is currently leaving the house
+        # If the gate is still open
         - if:
-            - condition: or
-              conditions:
-              - condition: state
-                entity_id: switch.gate
-                state: "off"
-              - condition: not
-                conditions:
-                  - condition: or
-                    conditions:
-                      - condition: state
-                        entity_id: input_text.user0_itinerary
-                        state: leaving
-                      - condition: state
-                        entity_id: input_text.user1_itinerary
-                        state: leaving
-                      - condition: state
-                        entity_id: input_text.user2_itinerary
-                        state: leaving
+            - condition: state
+              entity_id: switch.gate
+              state: "on"
           then:
-          # Deactivate the BLE scanner from the ESP32 connected to the gate (optional)
-          - service: switch.turn_off
-            target:
-              entity_id: switch.ibeacon_scanner
-          # Stop the automation if the gate was already closed by the user manually
-          - condition: state
-            entity_id: switch.gate
-            state: "on"
-          # If no one else is currently approaching the house
-          - if:
-              - condition: not
-                conditions:
-                - condition: or
+            # If no one else is currently leaving the house
+            - if:
+                - condition: not
                   conditions:
-                  - condition: state
-                    entity_id: input_text.user0_itinerary
-                    state: on_approach
-                  - condition: state
-                    entity_id: input_text.user1_itinerary
-                    state: on_approach
-                  - condition: state
-                    entity_id: input_text.user2_itinerary
-                    state: on_approach
-            # Then close the gate as no one is in a vehicle near the house
-            then:
-              - service: switch.turn_off
-                target:
-                  entity_id: switch.gate
-            # If someone is currently approaching the house
-            else:
-              # Notify the user that the gate will wait for next person
-              - service: notify.mobile_app_{{trigger.id}}_phone
-                data:
-                  title: Gate awaiting another user
-                  message: The gate will close once all users have entered/exited
-                  data:
-                    car_ui: true
-                    notification_icon: mdi:sleep
-                    channel: Gate alerts
-                    importance: high
-                    tag: itinerary
-              # Wait for the gate to be closed
-              - wait_for_trigger:
-                  - platform: state
-                    entity_id:
-                      - switch.gate
-                    to: "off"
-              # Remove the awaiting user notification
-              - service: notify.mobile_app_{{trigger.id}}_phone
-                data:
-                  message: clear_notification
-                  data:
-                    tag: itinerary
-          # If someone is currently leaving the house
-          else:
+                    - condition: or
+                      conditions:
+                        - condition: state
+                          entity_id: input_text.user0_itinerary
+                          state: leaving
+                        - condition: state
+                          entity_id: input_text.user1_itinerary
+                          state: leaving
+                        - condition: state
+                          entity_id: input_text.user2_itinerary
+                          state: leaving
+              then:
+                # Deactivate the BLE scanner from the ESP32 connected to the gate (optional)
+                - service: switch.turn_off
+                  target:
+                    entity_id: switch.ibeacon_scanner
+                # If no one else is currently approaching the house
+                - if:
+                    - condition: not
+
+                      conditions:
+                      - condition: or
+                        conditions:
+                        - condition: state
+                          entity_id: input_text.user0_itinerary
+                          state: on_approach
+                        - condition: state
+                          entity_id: input_text.user1_itinerary
+                          state: on_approach
+                        - condition: state
+                          entity_id: input_text.user2_itinerary
+                          state: on_approach
+                  then:
+                    # Then close the gate as no one is in a vehicle near the house
+                    - service: switch.turn_off
+                      target:
+                        entity_id: switch.gate
+                    # Remove the notifcation received by the user when its itinerary was started
+                    - service: notify.mobile_app_{{trigger.id}}_phone
+                      data:
+                        message: clear_notification
+                        data:
+                          tag: itinerary
+                    # Stop the whole script as it ran successfully
+                    - stop: Successful
             # Notify the user that the gate will wait for next person
             - service: notify.mobile_app_{{trigger.id}}_phone
               data:
@@ -327,12 +305,22 @@
                   entity_id:
                     - switch.gate
                   to: "off"
-            # Remove the awaiting user notification
-            - service: notify.mobile_app_{{trigger.id}}_phone
-              data:
-                message: clear_notification
-                data:
-                  tag: itinerary
+          else:
+            # Deactivate the BLE scanner from the ESP32 connected to the gate (optional)
+            - service: switch.turn_off
+              target:
+                entity_id: switch.ibeacon_scanner
+        # Remove the notification received by the user when its itinerary was started or while the gate was awaiting another user
+        - service: notify.mobile_app_{{trigger.id}}_phone
+          data:
+            message: clear_notification
+            data:
+              tag: itinerary
+
+      ###################
+      # START ITINERARY #
+      ###################
+
       # If the user is currently away from home
       else:
         # Set the user itinerary text variable to "arriving", because the user has entered a vehicle away from home
@@ -453,6 +441,12 @@
                         minutes: 7
                         seconds: 0
                         milliseconds: 0
+                    # Remove the current itinerary since the user has either arrived home or took too long
+                    - service: input_text.set_value
+                      target:
+                        entity_id: input_text.{{trigger.id}}_itinerary
+                      data:
+                        value: none
                     # If the timeout was reached
                     - if:
                         - condition: template
@@ -473,23 +467,11 @@
                         - service: switch.turn_off
                           target:
                             entity_id: switch.gate
-                        # Remove the current itinerary
-                        - service: input_text.set_value
-                          target:
-                            entity_id: input_text.{{trigger.id}}_itinerary
-                          data:
-                            value: none
                         # Stop the automation
                         - stop: Did not arrive
                           error: true
                       # If the user has arrived home in time
                       else:
-                        # Remove the current itinerary
-                        - service: input_text.set_value
-                          data:
-                            value: none
-                          target:
-                            entity_id: input_text.{{trigger.id}}_itinerary
                         # Continue the script only if the gate wasn't closed manually
                         - condition: state
                           entity_id: switch.gate
@@ -541,12 +523,6 @@
                             - service: switch.turn_off
                               target:
                                 entity_id: switch.gate
-                        # Remove the current itinerary as the user has arrived home
-                        - service: input_text.set_value
-                          target:
-                            entity_id: input_text.{{trigger.id}}_itinerary
-                          data:
-                            value: none
                         # Remove the notifcation received by the user when its itinerary was started or awaiting next user
                         - service: notify.mobile_app_{{trigger.id}}_phone
                           data:
@@ -562,7 +538,7 @@
             value: none
           target:
             entity_id: input_text.{{trigger.id}}_itinerary
-        # Notify the user that his itinerary has canceled
+        # Notify the user that his itinerary has been canceled
         - service: notify.mobile_app_{{trigger.id}}_phone
           data:
             title: Itinerary canceled
