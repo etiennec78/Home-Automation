@@ -185,10 +185,8 @@
                 - switch.gate
               from: 'on'
               to: 'off'
-            # WORK IN PROGRESS
             - platform: template
-              value_template: "{{ as_timestamp(now()) - as_timestamp(states['sensor.gate_ibeacon_'+trigger.id].last_changed) > 20 }}"
-              enabled: false
+              value_template: "{{ states['sensor.gate_ibeacon_'+trigger.id']['state'] == 'unknown' }}"
             - platform: template
               value_template: "{{ states['binary_sensor.'+trigger.id+'_driving']['state'] == 'off' }}"
             - platform: template
