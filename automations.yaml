@@ -310,8 +310,6 @@
                           tag: automatic-closing
                     # Stop the whole script as it ran successfully
                     - stop: Successful
-
-
             # Notify the user that the gate will wait for next person
             - service: notify.mobile_app_{{trigger.id}}_phone
               data:
@@ -515,7 +513,7 @@
                                   notification_icon: mdi:sleep
                                   channel: Gate alerts
                                   importance: high
-                                  tag: automatic-closing
+                                  tag: itinerary
                             # Wait for the gate to be closed
                             - wait_for_trigger:
                                 - platform: state
