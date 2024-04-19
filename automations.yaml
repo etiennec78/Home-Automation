@@ -1,9 +1,10 @@
 #################### automations.yaml (Miscellaneous gate-related automations) ####################
 - id: "1685891275304"
   alias: "[Gate] Open for too long"
-  description: Notifies every user when the gate has been open for 10 minutes
+  description: Notifies every user when the gate has been open for 7 minutes
 
   trigger:
+    # Triggers when the gate was open for 7 minutes
     - platform: state
       entity_id:
         - switch.gate
@@ -21,14 +22,14 @@
     - service: tts.speak
       data:
         media_player_entity_id: media_player.player0
-        message: The gate has been open for 10 minutes
+        message: The gate has been open for 7 minutes
         cache: true
       target:
         entity_id: tts.piper
     # Send a notification to all devices
     - service: notify.all_devices
       data:
-        message: The gate has been open for 10 minutes
+        message: The gate has been open for 7 minutes
         title: Gate
         data:
           car_ui: true
