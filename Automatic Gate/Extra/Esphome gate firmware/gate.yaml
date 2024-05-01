@@ -67,21 +67,21 @@ sensor:
 text_sensor:
   - platform: template
     id: gate_status
-    name: "Statut du portail"
+    name: "Gate status"
     icon: "mdi:information"
   - platform: template
     id: error_message
-    name: "Message d'erreur"
+    name: "Error message"
     icon: "mdi:chat-alert"
 
 binary_sensor:
   - platform: template
     id: error
-    name: "Erreur"
+    name: "Error"
     icon: "mdi:alert-circle"
   - platform: template
     id: standby
-    name: "Veille du récépteur"
+    name: "Gate on standby"
     icon: "mdi:sleep"
     disabled_by_default: true
 
@@ -105,7 +105,7 @@ switch:
     # Virtual switch monitoring the state of my gate
   - platform: template
     id: gate
-    name: "Portail"
+    name: "Gate"
     icon: "mdi:gate"
     restore_mode: ALWAYS_OFF
     turn_on_action:
@@ -116,7 +116,7 @@ switch:
   # Virtual switch to enable the internal iBeacon scanner
   - platform: template
     id: ibeacon_switch
-    name: "Switch d'activation de l'iBeacon"
+    name: "iBeacon scanner activation switch"
     icon: "mdi:access-point"
     optimistic: true
     restore_mode: ALWAYS_OFF
@@ -158,23 +158,23 @@ script:
                                 - homeassistant.service:
                                     service: notify.all_devices
                                     data:
-                                        message: Ouverture du portail en cours
-                                        title: Portail
+                                        message: !secret opening_tts_message
+                                        title: !secret opening_tts_title
                                     data_template:
                                         data: |
-                                            {{ '{"tag": "gate-opening", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Alertes portail", "importance": "high"}' | from_json }}
+                                            {{ '{"tag": "gate-opening", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Gate alerts", "importance": "high"}' | from_json }}
                                 - homeassistant.service:
                                     service: tts.speak
                                     data:
                                         cache: "true"
-                                        media_player_entity_id: media_player.cuisine
-                                        message: Ouverture du portail en cours
+                                        media_player_entity_id: !secret player_entity
+                                        message: !secret opening_tts_message
                                     data_template:
                                         target: |
                                             {{ '{"entity_id": "tts.piper"}' | from_json }}
                                 # optional
                                 - homeassistant.service:
-                                    service: script.flasher_lampe_ouverture_portail
+                                    service: script.flash_lamp
 
                                 ######################
                                 # UPDATE GATE STATUS #
@@ -202,17 +202,17 @@ script:
                                         - homeassistant.service:
                                             service: notify.all_devices
                                             data:
-                                                message: Ouverture du portail en cours
-                                                title: Portail
+                                                message: !secret opening_tts_message
+                                                title: !secret opening_tts_title
                                             data_template:
                                                 data: |
-                                                    {{ '{"tag": "gate-opening", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Alertes portail", "importance": "high"}' | from_json }}
+                                                    {{ '{"tag": "gate-opening", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Gate alerts", "importance": "high"}' | from_json }}
                                         - homeassistant.service:
                                             service: tts.speak
                                             data:
                                                 cache: "true"
-                                                media_player_entity_id: media_player.cuisine
-                                                message: Ouverture du portail en cours
+                                                media_player_entity_id: !secret player_entity
+                                                message: !secret opening_tts_message
                                             data_template:
                                                 target: |
                                                     {{ '{"entity_id": "tts.piper"}' | from_json }}
@@ -310,17 +310,12 @@ script:
             id(sleep_time) = id(elapsed_time).state;
           }
       - switch.turn_on: gate_pulse
-      # - logger.log:
-      #     format: "/!\\ Elapsed time : %.1f. Sleeping for %.3f"
-      #     args: ["id(elapsed_time).state", "id(sleep_time)"]
       - sensor.duty_time.start: elapsed_time
       - delay: 1s
       - binary_sensor.template.publish:
           id: standby
           state: OFF
       - delay: !lambda "return (id(sleep_time)-1)*1000;"
-      # - logger.log:
-      #     format: "/!\\ Fin du timer"
       - sensor.duty_time.stop: elapsed_time
       - sensor.duty_time.reset: elapsed_time
       - if:
@@ -370,11 +365,11 @@ script:
         - homeassistant.service:
             service: notify.all_devices
             data:
-                title: Erreur portail
+                title: !secret error_title
                 message: !lambda return message;
             data_template:
                 data: |
-                    {{ '{"tag": "gate-error", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Alertes portail", "importance": "high"}' | from_json }}
+                    {{ '{"tag": "gate-error", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Gate alerts", "importance": "high"}' | from_json }}
         - delay: 5s
         - binary_sensor.template.publish:
             id: error
