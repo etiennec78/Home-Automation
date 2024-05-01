@@ -1,0 +1,634 @@
+blueprint:
+  name: Automatic Gate
+  domain: automation
+  author: etiennec78
+  description: |-
+    Modular and secure gate automation that opens your gate upon leaving or arriving.
+    Supports up to 10 users driving simultaneously.
+    Various security features include an auto-close timer, alert notifications, timeout detection, vehicle left aborting, aborting if driven near home without entering, keeping gate open if someone else arrives or leaves soon.
+    Various options such as iBeacon automatic closing, continuously updating travel time always/near_home/only_once, and custom gate settings
+    Flowchart : https://miro.com/app/board/uXjVMpH4Tno=/
+  input:
+    persons:
+      name: 🧑 Tracked users
+      description: Each user which should be tracked for position updates (same order)
+      selector:
+        entity:
+          multiple: true
+          filter:
+            domain: person
+    driving_sensors:
+      name: 🚗 Driving sensors
+      description: Each driving sensor which should trigger the automation (same order)
+      selector:
+        entity:
+          multiple: true
+          filter:
+            domain: binary_sensor
+    itinerary_sensors:
+      name: 🗺️ Itinerary sensors
+      description: Each itinerary text input from the wiki (same order)
+      selector:
+        entity:
+          multiple: true
+          filter:
+            domain: input_text
+    proximity_sensors:
+      name: 📏 Proximity sensors
+      description: Each sensor from the proximity integration to calculate user distance from home (same order)
+      selector:
+        entity:
+          multiple: true
+          filter:
+            integration: proximity
+            domain: sensor
+            device_class: distance
+    eta_sensor:
+      name: 📅 Planned time of opening sensor
+      description: An empty input datetime sensor which will be used to set an ETA and plan the opening of your gate (see wiki)
+      selector:
+        entity:
+          filter:
+            domain: input_datetime
+    travel_time_sensors:
+      name: 🕓 Travel time sensors
+      description: Each travel time sensor monitoring each user time left before arrival (same order)
+      selector:
+        entity:
+          multiple: true
+          filter:
+            domain: sensor
+            device_class: duration
+    travel_time_rate:
+      name: 🔄 Travel time refresh rate
+      description: |-
+        Calculate the Travel time & ETA
+          - Continuously during the whole itinerary (1 min delay)
+          - Only while the vehicle is near home
+          - Only one time when the vehicle gets near home
+
+        "Continuously" can use a lot more Waze/Maps credits, but gives a precise ETA when far from home
+        "While near home" allows to monitor if you drive near home without entering to abort, or if there are traffic jams near home (recommended)
+        "Only once" uses the less amount of credits, but could trigger if you come near your house without entering (not recommended)
+      default: While near home
+      selector:
+        select:
+          options:
+            - Continuously
+            - While near home
+            - Once when near home
+    travel_time_treshold:
+      name: 🚀 Travel time treshold
+      description: At which distance from home should your vehicle start calculating its travel time and ETA upon arrival ? (has no impact on a "Continuously" reresh rate)
+      default: 1000
+      selector:
+        number:
+          min: 100
+          max: 5000
+          unit_of_measurement: meters
+    notify_devices:
+      name: 💬 Services of devices to notify
+      description: Each service of device to notify (Find the service id by going into dev tools > services > typing "notify." in services) (same order)
+      selector:
+        text:
+          multiple: true
+          prefix: notify.mobile_app_
+    gate:
+      name: 🚪 Gate
+      description: The switch which controls your gate
+      selector:
+        entity:
+          filter:
+            domain:
+              - switch
+    lead_time:
+      name: 🕓 Lead time
+      description: The lead time to open the gate before your arrival (take your gate movement time & a margin into account)
+      default: 75
+      selector:
+        number:
+          min: 10
+          max: 300
+          unit_of_measurement: seconds
+    safety_delay:
+      name: 🔒 Safety delay
+      description: The time the gate will wait before automatically closing if you haven't left your home / didn't arrive / timed out
+      default: 7
+      selector:
+        number:
+          min: 3
+          max: 30
+          unit_of_measurement: minutes
+    ble_scanner_switch:
+      name: 🛜 iBeacon scanner activator switch (optional)
+      description: |-
+        The switch you want to use to turn on and off your iBeacon scanner when a vehicle is leaving home
+        Let empty if no ble / want to always keep iBeacon running
+      default: ""
+      selector:
+        entity:
+          filter:
+            domain: switch
+    ble_entities:
+      name: 🔎 iBeacon tracker entities (optional)
+      description: |-
+        Each iBeacon rssi tracker entity to monitor
+        Let empty if no ble
+      default: ""
+      selector:
+        entity:
+          multiple: true
+          filter:
+            domain: sensor
+            device_class: signal_strength
+
+variables:
+  persons: !input persons
+  driving_sensors: !input driving_sensors
+  itinerary_sensors: !input itinerary_sensors
+  proximity_sensors: !input proximity_sensors
+  eta_sensor: !input eta_sensor
+  travel_time_sensors: !input travel_time_sensors
+  travel_time_rate: !input travel_time_rate
+  travel_time_treshold: !input travel_time_treshold
+  notify_devices: !input notify_devices
+  lead_time: !input lead_time
+  ble_entities: !input ble_entities
+
+trigger:
+  # Triggers when one of the users connect to a vehicle (if you have more than one, make a custom vehcle sensor : example in configuration.yaml)
+  - platform: state
+    entity_id: !input driving_sensors
+
+condition: []
+
+action:
+  # Store the list index of the user who triggered the automation, and extract the recurrent sensors at this index of the list
+  - variables:
+      idx: driving_sensors.index(trigger.entity_id)
+      person: persons[idx]
+      driving_sensor: trigger.entity_id
+      itinerary_sensor: itinerary_sensors[idx]
+      travel_time_sensor: travel_time_sensors[idx]
+      notify_device: "{{ 'notify.mobile_app_'+notify_devices[idx] }}"
+
+  # If the user is currently at home
+  - if:
+      - condition: template
+        value_template: "{{ states[person]['state'] == 'home' }}"
+    then:
+      #####################
+      # OPEN GATE ON EXIT #
+      #####################
+
+      # Set the user itinerary text variable to "leaving", because the user is leaving home
+      - service: input_text.set_value
+        target:
+          entity_id: "{{ itinerary_sensor }}"
+        data:
+          value: leaving
+      # If iBeacon automatic closing is enabled
+      - if:
+        - condition: template
+          value_template: "{{ ble_entities != '' }}"
+        then:
+          # Activate the BLE transmitter on the user's phone, to close the gate when he has left
+          - service: "{{ notify_device }}"
+            data:
+              message: command_ble_transmitter
+              data:
+                command: turn_on
+          - if:
+            - condition: template
+              value_template: "{{ ble_scanner_switch != '' }}"
+            then:
+              # Activate the BLE scanner from the ESP32 connected to the gate
+              - service: switch.turn_on
+                target:
+                  entity_id: !input ble_scanner_switch
+      # If the gate is closing/closed
+      - if:
+          - condition: state
+            entity_id: !input gate
+            state: "off"
+        # Then open it because the user is leaving
+        then:
+          - service: switch.turn_on
+            target:
+              entity_id: !input gate
+      # Wait for the gate to be closed by the user, or the iBeacon to be out of reach for 20s, or the vehicle to be left, or the user to leave home, all for at most 7 minutes
+      - wait_for_trigger:
+          - platform: state
+            id: manual
+            entity_id: !input gate
+            from: "on"
+            to: "off"
+          - platform: template
+            id: ble
+            value_template: "{{ ble_entities != '' and states[ble_entities[idx]]['state'] == 'unknown' }}"
+          - platform: template
+            id: vehicle_left
+            value_template: "{{ states[driving_sensor]['state'] == 'off' }}"
+          - platform: template
+            id: person_left
+            value_template: "{{ states[person]['state'] != 'home' }}"
+        timeout:
+          minutes: !input safety_delay
+      # Remove the current itinerary since the user has either left home or took too long
+      - service: input_text.set_value
+        target:
+          entity_id: "{{ itinerary_sensor }}"
+        data:
+          value: none
+      # If iBeacon automatic closing is enabled
+      - if:
+        - condition: template
+          value_template: "{{ ble_entities != '' }}"
+        then:
+          # Deactivate the BLE transmitter on user's phone
+          - service: "{{ notify_device }}"
+            data:
+              message: command_ble_transmitter
+              data:
+                command: turn_off
+      # If the gate has been closed manually
+      - if:
+          - condition: template
+            value_template: "{{ wait.trigger.id == 'manual' }}"
+        then:
+          # If the iBeacon scanner is only managed by this automation, and doesn't need to stay on
+          - if:
+            - condition: template
+              value_template: "{{ ble_scanner_switch != '' }}"
+            then:
+              # Deactivate the BLE scanner from the ESP32 connected to the gate (optional)
+              - service: switch.turn_off
+                target:
+                  entity_id: !input ble_scanner_switch
+        else:
+          # If no one else is currently leaving the house
+          - if:
+              - condition: not
+                conditions:
+                  - condition: or
+                    conditions:
+                      - condition: state
+                        entity_id: input_text.user0_itinerary
+                        state: leaving
+                      - condition: state
+                        entity_id: input_text.user1_itinerary
+                        state: leaving
+                      - condition: state
+                        entity_id: input_text.user2_itinerary
+                        state: leaving
+            then:
+              # If the iBeacon scanner is only managed by this automation, and doesn't need to stay on
+              - if:
+                - condition: template
+                  value_template: "{{ ble_scanner_switch != '' }}"
+                then:
+                  # Deactivate the BLE scanner from the ESP32 connected to the gate (optional)
+                  - service: switch.turn_off
+                    target:
+                      entity_id: !input ble_scanner_switch
+              # If no one else is currently approaching the house
+              - if:
+                  - condition: not
+                    conditions:
+                    - condition: or
+                      conditions:
+                      - condition: state
+                        entity_id: input_text.user0_itinerary
+                        state: on_approach
+                      - condition: state
+                        entity_id: input_text.user1_itinerary
+                        state: on_approach
+                      - condition: state
+                        entity_id: input_text.user2_itinerary
+                        state: on_approach
+                then:
+                  # If the timeout was reached
+                  - if:
+                      - condition: template
+                        value_template: "{{ wait.completed }}"
+                    then:
+                      # Notify the user that the gate will close automatically since he didn't leave in 7 minutes
+                      - service: "{{ notify_device }}"
+                        data:
+                          title: Gate closing
+                          message: The vehicle did not leave home in less than 7 minutes
+                          data:
+                            car_ui: true
+                            notification_icon: mdi:alert-circle
+                            channel: Gate alerts
+                            importance: high
+                            tag: automatic-closing
+                    else:
+                      # Notify the user that the gate will close automatically
+                      - service: "{{ notify_device }}"
+                        data:
+                          message: Automatic closing of the gate
+                          data:
+                            car_ui: true
+                            notification_icon: mdi:gate
+                            channel: Gate alerts
+                            importance: high
+                            tag: automatic-closing
+                  # Close the gate
+                  - service: switch.turn_off
+                    target:
+                      entity_id: !input gate
+                  # Remove the notification received by the user when his itinerary was started
+                  - service: "{{ notify_device }}"
+                    data:
+                      message: clear_notification
+                      data:
+                        tag: itinerary
+                  # Let the user read the message
+                  - delay:
+                      hours: 0
+                      minutes: 0
+                      seconds: 30
+                      milliseconds: 0
+                  # Remove the notification received by the user when the gate automatically closed
+                  - service: "{{ notify_device }}"
+                    data:
+                      message: clear_notification
+                      data:
+                        tag: automatic-closing
+                  # Stop the whole script as it ran successfully
+                  - stop: Successful
+          # Notify the user that the gate will wait for next person
+          - service: "{{ notify_device }}"
+            data:
+              title: Gate awaiting another user
+              message: The gate will close once all users have entered/exited
+              data:
+                car_ui: true
+                notification_icon: mdi:sleep
+                channel: Gate alerts
+                importance: high
+                tag: itinerary
+          # Wait for the gate to be closed
+          - wait_for_trigger:
+              - platform: state
+                entity_id: !input gate
+                from: "on"
+                to: "off"
+      # Remove the notification received by the user when his itinerary was started or while the gate was awaiting another user
+      - service: "{{ notify_device }}"
+        data:
+          message: clear_notification
+          data:
+            tag: itinerary
+
+    ###################
+    # START ITINERARY #
+    ###################
+
+    # If the user is currently away from home
+    else:
+      # Set the user itinerary text variable to "arriving", because the user has entered a vehicle away from home
+      - service: input_text.set_value
+        target:
+          entity_id: "{{ itinerary_sensor }}"
+        data:
+          value: arriving
+      # Notify the user that his itinerary has been started
+      - service: "{{ notify_device }}"
+        data:
+          title: Itinerary
+          message: Your itinerary has been started
+          data:
+            car_ui: true
+            notification_icon: mdi:map-check
+            channel: Gate alerts
+            importance: high
+            tag: itinerary
+      # Update the user travel time once to display an approximation on the dashboard (while taking into account the time elapsed)
+      - service: homeassistant.update_entity
+        target:
+          entity_id: "{{ travel_time_sensor }}"
+      # Repeat while the user is driving
+      - repeat:
+          while:
+            - condition: template
+              value_template: "{{ states[driving_sensor]['state'] == 'on' }}"
+          sequence:
+            # Wait for a user position update or a deactivation of his driving sensor
+            - wait_for_trigger:
+                - platform: event
+                  event_type: state_changed
+                  event_data:
+                    entity_id: person
+                - platform: template
+                  value_template: "{{ states[driving_sensor]['state'] == 'off' }}"
+            # Repeat while the user is nearer than 1km of radius from home and is still driving
+            # This allows to update to a precise ETA even if a traffic jam appears near home
+            # It will return to the previous loop if the user has entered the radius but passed by and didn't go directly to home
+            - repeat:
+                while:
+                  - condition: template
+                    value_template: "{{ states[proximity_sensors[idx]]['state'] | int < travel_time_treshold }}"
+                  - condition: template
+                    value_template: "{{ states[driving_sensor]['state'] == 'on' }}"
+                sequence:
+                  # Update the user travel time when there is a new position
+                  - service: homeassistant.update_entity
+                    target:
+                      entity_id: "{{ travel_time_sensor }}"
+                  # Calculate his Estimated Time of Arrival
+                  - service: input_datetime.set_datetime
+                    target:
+                      entity_id: !input eta_sensor
+                    data:
+                      datetime: >
+                        {{ (as_timestamp(now()) +
+                        (state_attr(travel_time_sensor, 'duration') | float *
+                        60) - lead_time) | timestamp_custom('%Y-%m-%d %H:%M:%S') }}
+                  # If the ETA is not already past
+                  - if:
+                      - condition: template
+                        value_template: "{{ state_attr(eta_sensor, 'timestamp') > as_timestamp(now()) }}"
+                    # Then wait for ETA or new position or car left, and cancel if it hasn't been updated for 5 mins (e.g: if device offline)
+                    then:
+                      - wait_for_trigger:
+                          - platform: event
+                            event_type: state_changed
+                            event_data:
+                              entity_id: person
+                          - platform: time
+                            at: !input eta_sensor
+                          - platform: template
+                            value_template: "{{ states[driving_sensor]['state'] == 'off' }}"
+                        timeout:
+                          minutes: !input safety_delay
+                        continue_on_timeout: false
+                  # Restart the second repeat loop if the wait_for_trigger was triggered by a position or car sensor update
+                  # This allows the loop to refresh the ETA with a new position or stop the script if the car was left
+                  # This is quite a redundant condition as it has already been checked above, if you find a better way to restart the loop, feel free to make a PR
+                  - condition: template
+                    value_template: "{{ state_attr(eta_sensor, 'timestamp') <= as_timestamp(now()) }}"
+                  # Set the user itinerary text variable to "on_approach", because the user is near the house and will arrive soon
+                  - service: input_text.set_value
+                    data:
+                      value: on_apporach
+                    target:
+                      entity_id: "{{ itinerary_sensor }}"
+                  # If the gate is closing/closed
+                  - if:
+                      - condition: state
+                        entity_id: !input gate
+                        state: "off"
+                    # Then open it
+                    then:
+                      - service: switch.turn_on
+                        target:
+                          entity_id: !input gate
+                  # Wait for the gate to be closed manually, or the vehicle to be left, or the user to leave home, all for at most 7 minutes
+                  - wait_for_trigger:
+                      - platform: state
+                        entity_id: !input gate
+                        from: "on"
+                        to: "off"
+                      - platform: template
+                        id: vehicle_left
+                        value_template: "{{ states[driving_sensor]['state'] == 'off' }}"
+                      - platform: template
+                        id: person_left
+                        value_template: "{{ states[person]['state'] != 'home' }}"
+                    timeout:
+                      minutes: !input safety_delay
+                  # Remove the current itinerary since the user has either arrived home or took too long
+                  - service: input_text.set_value
+                    target:
+                      entity_id: "{{ itinerary_sensor }}"
+                    data:
+                      value: none
+                  # If the gate has been closed manually
+                  - if:
+                      - condition: template
+                        value_template: "{{ wait.trigger.id == 'manual' }}"
+                    then:
+                      # Remove the notification received by the user when his itinerary was started
+                      - service: "{{ notify_device }}"
+                        data:
+                          message: clear_notification
+                          data:
+                            tag: itinerary
+                    else:
+                      # If someone is currently approaching or leaving the house
+                      - if:
+                          - condition: or
+                            conditions:
+                            - condition: state
+                              entity_id: input_text.user0_itinerary
+                              state: on_approach
+                            - condition: state
+                              entity_id: input_text.user1_itinerary
+                              state: on_approach
+                            - condition: state
+                              entity_id: input_text.user2_itinerary
+                              state: on_approach
+                            - condition: state
+                              entity_id: input_text.user0_itinerary
+                              state: leaving
+                            - condition: state
+                              entity_id: input_text.user1_itinerary
+                              state: leaving
+                            - condition: state
+                              entity_id: input_text.user2_itinerary
+                              state: leaving
+                        then:
+                          # Notify the user that the gate will wait for next person
+                          - service: "{{ notify_device }}"
+                            data:
+                              title: Gate awaiting another user
+                              message: The gate will close once all users have entered/exited
+                              data:
+                                car_ui: true
+                                notification_icon: mdi:sleep
+                                channel: Gate alerts
+                                importance: high
+                                tag: itinerary
+                          # Wait for the gate to be closed
+                          - wait_for_trigger:
+                              - platform: state
+                                entity_id: !input gate
+                                from: "on"
+                                to: "off"
+                        # If no one is currently approaching or leaving the house
+                        else:
+                          # If the timeout was reached
+                          - if:
+                              - condition: template
+                                value_template: "{{ wait.completed }}"
+                            then:
+                              # Notify the user that the gate will close automatically
+                              - service: "{{ notify_device }}"
+                                data:
+                                  title: Gate closing
+                                  message: The vehicle did not arrive home in less than 7 minutes
+                                  data:
+                                    car_ui: true
+                                    notification_icon: mdi:alert-circle
+                                    channel: Gate alerts
+                                    importance: high
+                                    tag: automatic-closing
+                            # If the timeout wasn't reached
+                            else:
+                              # Notify the user that the gate will close automatically
+                              - service: "{{ notify_device }}"
+                                data:
+                                  message: Automatic closing of the gate
+                                  data:
+                                    car_ui: true
+                                    notification_icon: mdi:gate
+                                    channel: Gate alerts
+                                    importance: high
+                                    tag: automatic-closing
+                          # Close the gate
+                          - service: switch.turn_off
+                            target:
+                              entity_id: !input gate
+                  # Remove the notification received by the user when his itinerary was started or awaiting next user
+                  - service: "{{ notify_device }}"
+                    data:
+                      message: clear_notification
+                      data:
+                        tag: itinerary
+                  # Let the user read the message
+                  - delay:
+                      hours: 0
+                      minutes: 0
+                      seconds: 30
+                      milliseconds: 0
+                  # Remove the notification received by the user when the gate automatically closed
+                  - service: "{{ notify_device }}"
+                    data:
+                      message: clear_notification
+                      data:
+                        tag: automatic-closing
+                  # Stop the whole script as it was successful
+                  - stop: Successful
+      # If both loop were broken
+      # Remove the current itinerary since the user has left his vehicle or timed out
+      - service: input_text.set_value
+        data:
+          value: none
+        target:
+          entity_id: "{{ itinerary_sensor }}"
+      # Notify the user that his itinerary has been canceled
+      - service: "{{ notify_device }}"
+        data:
+          title: Itinerary canceled
+          message: You have left your vehicle or timed out
+          data:
+            car_ui: true
+            notification_icon: mdi:alert-circle
+            channel: Gate alerts
+            importance: high
+            tag: itinerary
+# Run in parralel to let the automation start with multiple users driving simultaneously
+mode: parallel
+max: 10
