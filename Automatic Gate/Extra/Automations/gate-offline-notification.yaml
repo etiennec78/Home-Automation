@@ -1,0 +1,51 @@
+#################### automations.yaml (Gate offline notification) ####################
+- id: "1688979506929"
+  alias: "[Gate] Offline notification"
+  description: Notify every user when the ESP32 of the gate is offline for 5 minutes
+
+  trigger:
+    # Triggers when the ESP32 is unavailable for 5 minutes
+    - platform: state
+      entity_id:
+        - switch.gate
+      to: unavailable
+      for:
+        hours: 0
+        minutes: 5
+        seconds: 0
+
+  condition: []
+    # No condition
+
+  action:
+    # Notify each user that the gate is offline
+    - service: notify.all_devices
+      data:
+        message: Gate offline for 5 minutes
+        title: Gate
+        data:
+          car_ui: true
+          notification_icon: mdi:gate-alert
+          channel: Gate alerts
+          importance: high
+          tag: gate-offline
+    # Wait for the gate to be back online, while running this automation at most one hour
+    - wait_for_trigger:
+      - platform: state
+        entity_id:
+          - switch.gate
+        from: "on"
+        to: "off"
+      timeout:
+        hours: 1
+        minutes: 0
+        seconds: 0
+        milliseconds: 0
+      continue_on_timeout: false
+    # Remove the notification sent to the users
+    - service: notify.all_devices
+      data:
+        message: clear_notification
+        data:
+          tag: gate-offline
+  mode: single
