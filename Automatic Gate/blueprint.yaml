@@ -3,6 +3,7 @@ blueprint:
   domain: automation
   author: etiennec78
   description: |-
+    WORK IN PROGRESS, FUNCTIONS NOT FULLY IMPLEMENTED, EXPECT BUGS
     Modular and secure gate automation that opens your gate upon leaving or arriving.
     Supports up to 10 users driving simultaneously.
     Various security features include an auto-close timer, alert notifications, timeout detection, vehicle left aborting, aborting if driven near home without entering, keeping gate open if someone else arrives or leaves soon.
@@ -165,12 +166,12 @@ condition: []
 action:
   # Store the list index of the user who triggered the automation, and extract the recurrent sensors at this index of the list
   - variables:
-      idx: driving_sensors.index(trigger.entity_id)
-      person: persons[idx]
-      driving_sensor: trigger.entity_id
-      itinerary_sensor: itinerary_sensors[idx]
-      travel_time_sensor: travel_time_sensors[idx]
-      notify_device: "{{ 'notify.mobile_app_'+notify_devices[idx] }}"
+    idx: driving_sensors.index(trigger.entity_id)
+    person: persons[idx]
+    driving_sensor: trigger.entity_id
+    itinerary_sensor: itinerary_sensors[idx]
+    travel_time_sensor: travel_time_sensors[idx]
+    notify_device: "{{ 'notify.mobile_app_'+notify_devices[idx] }}"
 
   # If the user is currently at home
   - if:
@@ -268,7 +269,7 @@ action:
         else:
           # If no one else is currently leaving the house
           - if:
-              - condition: not
+              - condition: not # WARNING Dépend des utilisateurs
                 conditions:
                   - condition: or
                     conditions:
@@ -295,17 +296,8 @@ action:
               - if:
                   - condition: not
                     conditions:
-                    - condition: or
-                      conditions:
-                      - condition: state
-                        entity_id: input_text.user0_itinerary
-                        state: on_approach
-                      - condition: state
-                        entity_id: input_text.user1_itinerary
-                        state: on_approach
-                      - condition: state
-                        entity_id: input_text.user2_itinerary
-                        state: on_approach
+                      - condition: template
+                        value_template: "{{ driving_sensors | select('is_state', 'on_approach') | list != [] }}"
                 then:
                   # If the timeout was reached
                   - if:
@@ -521,24 +513,10 @@ action:
                       - if:
                           - condition: or
                             conditions:
-                            - condition: state
-                              entity_id: input_text.user0_itinerary
-                              state: on_approach
-                            - condition: state
-                              entity_id: input_text.user1_itinerary
-                              state: on_approach
-                            - condition: state
-                              entity_id: input_text.user2_itinerary
-                              state: on_approach
-                            - condition: state
-                              entity_id: input_text.user0_itinerary
-                              state: leaving
-                            - condition: state
-                              entity_id: input_text.user1_itinerary
-                              state: leaving
-                            - condition: state
-                              entity_id: input_text.user2_itinerary
-                              state: leaving
+                            - condition: template
+                              value_template: "{{ driving_sensors | select('is_state', 'on_approach') | list != [] }}"
+                            - condition: template
+                              value_template: "{{ driving_sensors | select('is_state', 'leaving') | list != [] }}"
                         then:
                           # Notify the user that the gate will wait for next person
                           - service: "{{ notify_device }}"
