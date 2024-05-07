@@ -6,8 +6,8 @@ blueprint:
     WORK IN PROGRESS, FUNCTIONS NOT FULLY IMPLEMENTED, EXPECT BUGS
     Modular and secure gate automation that opens your gate upon leaving or arriving.
     Supports up to 10 users driving simultaneously.
-    Various security features include an auto-close timer, alert notifications, timeout detection, vehicle left aborting, aborting if driven near home without entering, keeping gate open if someone else arrives or leaves soon.
-    Various options such as iBeacon automatic closing, continuously updating travel time always/near_home/only_once, and custom gate settings
+    Various security features including an auto-close timer, alert notifications, timeout detection, aborting on vehicle left, aborting if driven near home without entering, keeping gate open while someone else approaches or leaves home.
+    Various options such as iBeacon automatic closing, travel time updating interval, and custom gate settings
     Flowchart : https://miro.com/app/board/uXjVMpH4Tno=/
   input:
     persons:
@@ -63,8 +63,11 @@ blueprint:
     travel_time_rate:
       name: 🔄 Travel time refresh rate
       description: |-
+        /!\ Please follow this first : https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval
+
         Calculate the Travel time & ETA
-          - Continuously during the whole itinerary (1 min delay)
+
+          - Continuously during the whole itinerary (1 min delay while away)
           - Only while the vehicle is near home
           - Only one time when the vehicle gets near home
 
@@ -86,6 +89,15 @@ blueprint:
         number:
           min: 100
           max: 5000
+          unit_of_measurement: meters
+    exit_treshold:
+      name: ❌ Exit difference treshold
+      description: At which distance from your travel time treshold should your itinerary be canceled
+      default: 200
+      selector:
+        number:
+          min: 10
+          max: 1000
           unit_of_measurement: meters
     notify_devices:
       name: 💬 Services of devices to notify
@@ -155,6 +167,7 @@ variables:
   notify_devices: !input notify_devices
   lead_time: !input lead_time
   ble_entities: !input ble_entities
+  exit_treshold: !input exit_treshold
 
 trigger:
   # Triggers when one of the users connect to a vehicle (if you have more than one, make a custom vehcle sensor : example in configuration.yaml)
@@ -477,9 +490,10 @@ action:
                       - service: switch.turn_on
                         target:
                           entity_id: !input gate
-                  # Wait for the gate to be closed manually, or the vehicle to be left, or the user to leave home, all for at most 7 minutes
+                  # Wait for the gate to be closed manually, or the vehicle to be left, or the user to leave the activation zone, all for at most 7 minutes
                   - wait_for_trigger:
                       - platform: state
+                        id: manual
                         entity_id: !input gate
                         from: "on"
                         to: "off"
@@ -488,7 +502,7 @@ action:
                         value_template: "{{ states[driving_sensor]['state'] == 'off' }}"
                       - platform: template
                         id: person_left
-                        value_template: "{{ states[person]['state'] != 'home' }}"
+                        value_template: "{{ states[proximity_sensors[idx]]['state'] | int > travel_time_treshold + exit_treshold }}"
                     timeout:
                       minutes: !input safety_delay
                   # Remove the current itinerary since the user has either arrived home or took too long
