@@ -551,24 +551,40 @@ action:
                                 to: "off"
                         # If no one is currently approaching or leaving the house
                         else:
-                          # If the timeout was reached
-                          - if:
-                              - condition: template
-                                value_template: "{{ wait.completed }}"
-                            then:
-                              # Notify the user that the gate will close automatically
-                              - service: "{{ notify_device }}"
-                                data:
-                                  title: Gate closing
-                                  message: The vehicle did not arrive home in less than 7 minutes
-                                  data:
-                                    car_ui: true
-                                    notification_icon: mdi:alert-circle
-                                    channel: Gate alerts
-                                    importance: high
-                                    tag: automatic-closing
-                            # If the timeout wasn't reached
-                            else:
+                          - choose:
+                              # If the timeout was reached
+                              - conditions:
+                                  - condition: template
+                                    value_template: "{{ wait.completed }}"
+                                sequence:
+                                  # Notify the user that the gate will close automatically since he took too long
+                                  - service: "{{ notify_device }}"
+                                    data:
+                                      title: Gate closing
+                                      message: The vehicle did not arrive home in less than 7 minutes
+                                      data:
+                                        car_ui: true
+                                        notification_icon: mdi:alert-circle
+                                        channel: Gate alerts
+                                        importance: high
+                                        tag: automatic-closing
+                              # If the user has exited the gate activation zone
+                              - conditions:
+                                  - condition: template
+                                    value_template: "{{ wait.trigger.id == 'person_left' }}"
+                                sequence:
+                                  # Notify the user that the gate will close automatically since he has exited the zone
+                                  - service: "{{ notify_device }}"
+                                    data:
+                                      title: Gate closing
+                                      message: The vehicle has exited the activation zone
+                                      data:
+                                        car_ui: true
+                                        notification_icon: mdi:alert-circle
+                                        channel: Gate alerts
+                                        importance: high
+                                        tag: automatic-closing
+                            default:
                               # Notify the user that the gate will close automatically
                               - service: "{{ notify_device }}"
                                 data:
