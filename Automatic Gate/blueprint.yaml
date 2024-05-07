@@ -90,14 +90,14 @@ blueprint:
           min: 100
           max: 5000
           unit_of_measurement: meters
-    exit_treshold:
-      name: ❌ Exit difference treshold
-      description: At which distance from your travel time treshold should your itinerary be canceled
-      default: 200
+    activation_zone:
+      name: 🔒 Gate activation zone
+      description: At which maximal distance from home should your vehicle be able to automatically open your gate
+      default: 1000
       selector:
         number:
-          min: 10
-          max: 1000
+          min: 100
+          max: 5000
           unit_of_measurement: meters
     notify_devices:
       name: 💬 Services of devices to notify
@@ -167,7 +167,7 @@ variables:
   notify_devices: !input notify_devices
   lead_time: !input lead_time
   ble_entities: !input ble_entities
-  exit_treshold: !input exit_treshold
+  activation_zone: !input activation_zone
 
 trigger:
   # Triggers when one of the users connect to a vehicle (if you have more than one, make a custom vehcle sensor : example in configuration.yaml)
@@ -244,7 +244,7 @@ action:
             id: vehicle_left
             value_template: "{{ states[driving_sensor]['state'] == 'off' }}"
           - platform: template
-            id: person_left
+            id: home_left
             value_template: "{{ states[person]['state'] != 'home' }}"
         timeout:
           minutes: !input safety_delay
@@ -282,19 +282,10 @@ action:
         else:
           # If no one else is currently leaving the house
           - if:
-              - condition: not # WARNING Dépend des utilisateurs
+              - condition: not
                 conditions:
-                  - condition: or
-                    conditions:
-                      - condition: state
-                        entity_id: input_text.user0_itinerary
-                        state: leaving
-                      - condition: state
-                        entity_id: input_text.user1_itinerary
-                        state: leaving
-                      - condition: state
-                        entity_id: input_text.user2_itinerary
-                        state: leaving
+                  - condition: template
+                    value_template: "{{ driving_sensors | select('is_state', 'leaving') | list != [] }}"
             then:
               # If the iBeacon scanner is only managed by this automation, and doesn't need to stay on
               - if:
@@ -501,8 +492,8 @@ action:
                         id: vehicle_left
                         value_template: "{{ states[driving_sensor]['state'] == 'off' }}"
                       - platform: template
-                        id: person_left
-                        value_template: "{{ states[proximity_sensors[idx]]['state'] | int > travel_time_treshold + exit_treshold }}"
+                        id: zone_left
+                        value_template: "{{ states[proximity_sensors[idx]]['state'] | int > activation_zone }}"
                     timeout:
                       minutes: !input safety_delay
                   # Remove the current itinerary since the user has either arrived home or took too long
@@ -571,7 +562,7 @@ action:
                               # If the user has exited the gate activation zone
                               - conditions:
                                   - condition: template
-                                    value_template: "{{ wait.trigger.id == 'person_left' }}"
+                                    value_template: "{{ wait.trigger.id == 'zone_left' }}"
                                 sequence:
                                   # Notify the user that the gate will close automatically since he has exited the zone
                                   - service: "{{ notify_device }}"
