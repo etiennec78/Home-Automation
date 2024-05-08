@@ -2,17 +2,18 @@ title: Home
 views:
   # Itinerary tab to show the Estimated Time of Arrival of user0, disable the automatic gate, and see the position of user0
   - title: Itinerary
-    path: carte
+    path: map
     icon: mdi:map
-    visible:
-      - user: user_id # Change this to your own ID
     subview: false
     badges: []
     cards:
       # Let each user disable your automatic gate
       - type: entities
         entities:
-          - input_boolean.smart_gate
+          - entity: automation.automatic_gate
+            secondary_info: none
+            name: Automatic gate
+            icon: mdi:car-connected
       # Show the ETA only if someone is driving towards home
       - type: conditional
         conditions:
