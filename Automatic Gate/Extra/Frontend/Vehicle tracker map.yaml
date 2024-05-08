@@ -7,7 +7,6 @@ views:
     visible:
       - user: user_id # Change this to your own ID
     subview: false
-    theme: ios-dark-mode-blue-red
     badges: []
     cards:
       # Let each user disable your automatic gate
