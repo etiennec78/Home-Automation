@@ -193,7 +193,7 @@ action:
   # If the user is currently at home
   - if:
       - condition: template
-        value_template: "{{ states[person]['state'] == 'home' }}"
+        value_template: "{{ is_state(person, 'home') }}"
     then:
       #####################
       # OPEN GATE ON EXIT #
@@ -227,7 +227,7 @@ action:
       # If the gate is closing/closed
       - if:
           - condition: template
-            value_template: "{{ states[gate]['state'] in ['off', 'closed'] }}"
+            value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
         # Then open it because the user is leaving
         then:
           # Select the right service by checking the first letter of the gate id
@@ -250,16 +250,16 @@ action:
       - wait_for_trigger:
           - platform: template
             id: manual
-            value_template: "{{ states[gate]['state'] in ['off', 'closed'] }}"
+            value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
           - platform: template
             id: ble
-            value_template: "{{ ble_entities != '' and states[ble_entities[idx]]['state'] == 'unknown' }}"
+            value_template: "{{ ble_entities != '' and is_state(ble_entities[idx], 'unknown') }}"
           - platform: template
             id: vehicle_left
-            value_template: "{{ states[driving_sensor]['state'] == 'off' }}"
+            value_template: "{{ is_state(driving_sensor, 'off') }}"
           - platform: template
             id: home_left
-            value_template: "{{ states[person]['state'] != 'home' }}"
+            value_template: "{{ not is_state(person, 'home') }}"
         timeout:
           minutes: !input safety_delay
       # Remove the current itinerary since the user has either left home or took too long
@@ -394,7 +394,7 @@ action:
           # Wait for the gate to be closed
           - wait_for_trigger:
               - platform: template
-                value_template: "{{ states[gate]['state'] in ['off', 'closed'] }}"
+                value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
       # Remove the notification received by the user when his itinerary was started or while the gate was awaiting another user
       - service: "{{ notify_device }}"
         data:
@@ -433,7 +433,7 @@ action:
       - repeat:
           while:
             - condition: template
-              value_template: "{{ states[driving_sensor]['state'] == 'on' }}"
+              value_template: "{{ is_state(driving_sensor, 'on') }}"
           sequence:
             # Wait for a user position update or a deactivation of his driving sensor
             - wait_for_trigger:
@@ -442,16 +442,16 @@ action:
                   event_data:
                     entity_id: person
                 - platform: template
-                  value_template: "{{ states[driving_sensor]['state'] == 'off' }}"
+                  value_template: "{{ is_state(driving_sensor, 'off') }}"
             # Repeat while the user is nearer than 1km of radius from home and is still driving
             # This allows to update to a precise ETA even if a traffic jam appears near home
             # It will return to the previous loop if the user has entered the radius but passed by and didn't go directly to home
             - repeat:
                 while:
                   - condition: template
-                    value_template: "{{ states[proximity_sensors[idx]]['state'] | int < travel_time_treshold }}"
+                    value_template: "{{ states(proximity_sensors[idx]) | int < travel_time_treshold }}"
                   - condition: template
-                    value_template: "{{ states[driving_sensor]['state'] == 'on' }}"
+                    value_template: "{{ is_state(driving_sensor, 'on') }}"
                 sequence:
                   # Update the user travel time when there is a new position
                   - service: homeassistant.update_entity
@@ -480,7 +480,7 @@ action:
                           - platform: time
                             at: !input eta_sensor
                           - platform: template
-                            value_template: "{{ states[driving_sensor]['state'] == 'off' }}"
+                            value_template: "{{ is_state(driving_sensor, 'off') }}"
                         timeout:
                           minutes: !input safety_delay
                         continue_on_timeout: false
@@ -498,7 +498,7 @@ action:
                   # If the gate is closing/closed
                   - if:
                       - condition: template
-                        value_template: "{{ states[gate]['state'] in ['off', 'closed'] }}"
+                        value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
                     # Then open it
                     then:
                       # Select the right service by checking the first letter of the gate id
@@ -521,13 +521,13 @@ action:
                   - wait_for_trigger:
                       - platform: template
                         id: manual
-                        value_template: "{{ states[gate]['state'] in ['off', 'closed'] }}"
+                        value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
                       - platform: template
                         id: vehicle_left
-                        value_template: "{{ states[driving_sensor]['state'] == 'off' }}"
+                        value_template: "{{ is_state(driving_sensor, 'off') }}"
                       - platform: template
                         id: zone_left
-                        value_template: "{{ states[proximity_sensors[idx]]['state'] | int > activation_zone }}"
+                        value_template: "{{ states(proximity_sensors[idx]) | int > activation_zone }}"
                     timeout:
                       minutes: !input safety_delay
                   # Remove the current itinerary since the user has either arrived home or took too long
@@ -571,7 +571,7 @@ action:
                           # Wait for the gate to be closed
                           - wait_for_trigger:
                               - platform: template
-                                value_template: "{{ states[gate]['state'] in ['off', 'closed'] }}"
+                                value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
                         # If no one is currently approaching or leaving the house
                         else:
                           - choose:
