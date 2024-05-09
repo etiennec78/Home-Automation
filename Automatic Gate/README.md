@@ -10,6 +10,9 @@ Modular and secure gate automation that opens your gate upon leaving or arriving
 
 ## How to Install 🚀
 
+### Import the blueprint 🗺️
+[![Import Automatic Gate blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FAutomatic%20Gate%2Fblueprint.yaml)
+
 ### Required [sensors](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.yaml) 📡
 |        Sensor         |      Type      |      Provider      | Multiple |                                                      Description                                                      |
 | :-------------------: | :------------: | :----------------: | :------: | :-------------------------------------------------------------------------------------------------------------------- |
@@ -30,9 +33,6 @@ Modular and secure gate automation that opens your gate upon leaving or arriving
 |     BLE entities      |signal_strength |        Any         |   Yes    | Each BLE entity to monitor when the driver BLE state goes to unavailable. Could be my [esphome firmware](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/Extra/Esphome%20gate%20firmware/gate.yaml) or else.
 |  Notify all devices   |     group      |       [Group](https://companion.home-assistant.io/docs/notifications/notifications-basic/#sending-notifications-to-multiple-devices)        |    No    | Only necessary for esphome firmware and extra gate automations
 |   Nearest distance    |     sensor     |     [Proximity](https://www.home-assistant.io/integrations/proximity/#nearest-distance)      |    No    | Only necessary for esphome firmware. Gives the distance of the nearest person from home.
-
-### Install as a blueprint 🗺️
-[![Import Automatic Gate blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FAutomatic%20Gate%2Fblueprint.yaml)
 
 ### Install as an automation 🤖
 Not recommended 🙅
