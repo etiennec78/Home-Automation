@@ -14,9 +14,9 @@ To implement it in your home, you'll have to download Home Assistant and follow 
 * Finally, my automations could include optional extra elements (dashboards, esphome sensors, small automations, etc...), located in the "Extra" folder
 
 ## My automations / blueprints 🛠️
-|      Automation       | Github | Quick install |
-| --------------------- | ------ | ------------- |
-|   Automatic Gate ⛩️   | [More info](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate) | [![Quickly import Automatic Gate blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FAutomatic%20Gate%2Fblueprint.yaml) |
+|      Automation       | Description | Quick install |
+| --------------------- | ----------- | ------------- |
+|   Automatic Gate ⛩️   |  (https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate  | [![Quickly import Automatic Gate blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FAutomatic%20Gate%2Fblueprint.yaml) |
 
 ## Consider supporting ? 🩷
 
