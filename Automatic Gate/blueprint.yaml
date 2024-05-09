@@ -4,15 +4,15 @@ blueprint:
   author: etiennec78
   description: |-
     WORK IN PROGRESS, FUNCTIONS NOT FULLY IMPLEMENTED, EXPECT BUGS
-    Modular and secure gate automation that opens your gate upon leaving or arriving.
-    Supports up to 10 users driving simultaneously.
-    Various security features including an auto-close timer, alert notifications, timeout detection, aborting on vehicle left, aborting if driven near home without entering, keeping gate open while someone else approaches or leaves home.
-    Various options such as iBeacon automatic closing, travel time updating interval, and custom gate settings
+    **Modular** and **secure** gate automation that **opens your gate** upon leaving or arriving
+    Supports up to 10 users driving **simultaneously**
+    Security features including an auto-close timer, alert notifications, timeout detection, aborting on vehicle left, aborting if driven near home without entering, keeping gate open while someone else approaches or leaves home
+    Various options such as iBeacon automatic closing, travel time update interval, and custom gate settings
     Flowchart : https://miro.com/app/board/uXjVMpH4Tno=/
   input:
     persons:
       name: 🧑 Tracked users
-      description: Each user which should be tracked for position updates (same order)
+      description: Each **user** which should be tracked for **position updates** (same order)
       selector:
         entity:
           multiple: true
@@ -20,7 +20,7 @@ blueprint:
             domain: person
     driving_sensors:
       name: 🚗 Driving sensors
-      description: Each driving sensor which should trigger the automation (same order)
+      description: Each **driving sensor** which should trigger the automation (same order)
       selector:
         entity:
           multiple: true
@@ -28,7 +28,7 @@ blueprint:
             domain: binary_sensor
     itinerary_sensors:
       name: 🗺️ Itinerary sensors
-      description: Each itinerary text input from the wiki (same order)
+      description: Each **itinerary text input** from the wiki (same order)
       selector:
         entity:
           multiple: true
@@ -36,7 +36,7 @@ blueprint:
             domain: input_text
     proximity_sensors:
       name: 📏 Proximity sensors
-      description: Each sensor from the proximity integration to calculate user distance from home (same order)
+      description: Each sensor from the **proximity integration** to calculate user distance from home (same order)
       selector:
         entity:
           multiple: true
@@ -46,14 +46,14 @@ blueprint:
             device_class: distance
     eta_sensor:
       name: 📅 Planned time of opening sensor
-      description: An empty input datetime sensor which will be used to set an ETA and plan the opening of your gate (see wiki)
+      description: An empty **input datetime** sensor which will be used to set an **ETA** and plan the **opening of your gate** (see wiki)
       selector:
         entity:
           filter:
             domain: input_datetime
     travel_time_sensors:
       name: 🕓 Travel time sensors
-      description: Each travel time sensor monitoring each user time left before arrival (same order)
+      description: Each **travel time** sensor monitoring each user **time left before arrival** (same order)
       selector:
         entity:
           multiple: true
@@ -63,17 +63,17 @@ blueprint:
     travel_time_rate:
       name: 🔄 Travel time refresh rate
       description: |-
-        /!\ Please follow this first : https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval
+        **/!\ Please set a [custom polling interval](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)**
 
         Calculate the Travel time & ETA
 
-          - Continuously during the whole itinerary (1 min delay while away)
-          - Only while the vehicle is near home
-          - Only one time when the vehicle gets near home
+          - **Continuously** during the whole itinerary (custom refresh interval while away)
+          - Only while the vehicle is **near home**
+          - Only **once** when the vehicle gets near home
 
-        "Continuously" can use a lot more Waze/Maps credits, but gives a precise ETA when far from home
-        "While near home" allows to monitor if you drive near home without entering to abort, or if there are traffic jams near home (recommended)
-        "Only once" uses the less amount of credits, but could trigger if you come near your house without entering (not recommended)
+        **"Continuously"** can use more Waze/Maps credits, but can be useful to display a precise ETA on your dashboard when far from home
+        **"While near home"** allows to monitor if you drive near home without entering to abort the itinerary, or if there are traffic jams near home to open later (recommended)
+        **"Only once"** uses the less amount of credits, but could trigger if you come near your house without entering (not recommended)
       default: While near home
       selector:
         select:
@@ -81,22 +81,31 @@ blueprint:
             - Continuously
             - While near home
             - Once when near home
-    travel_time_treshold:
-      name: 🚀 Travel time treshold
-      description: At which distance from home should your vehicle start calculating its travel time and ETA upon arrival ? (has no impact on a "Continuously" reresh rate)
+    continuously_refresh_interval:
+      name: ⏳ Continuously refresh interval
+      description: Your travel time **refresh interval** while away. Only with a refresh rate set to **"Continously"**
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 60
+          unit_of_measurement: minutes
+    eta_zone:
+      name: 🚀 ETA planning zone
+      description: At which **distance** from home should your vehicle start planning its **Estimated Time of Arrival** to **open your gate** ?
       default: 1000
       selector:
         number:
-          min: 100
+          min: 200
           max: 5000
           unit_of_measurement: meters
     activation_zone:
       name: 🔒 Gate activation zone
-      description: At which maximal distance from home should your vehicle be able to automatically open your gate
-      default: 1000
+      description: At which maximal distance from home should your vehicle be able to automatically open your gate ? It will automatically close if you leave this zone
+      default: 1200
       selector:
         number:
-          min: 100
+          min: 300
           max: 5000
           unit_of_measurement: meters
     notify_devices:
@@ -164,7 +173,8 @@ variables:
   eta_sensor: !input eta_sensor
   travel_time_sensors: !input travel_time_sensors
   travel_time_rate: !input travel_time_rate
-  travel_time_treshold: !input travel_time_treshold
+  continuously_refresh_interval: !input continuously_refresh_interval
+  eta_zone: !input eta_zone
   notify_devices: !input notify_devices
   gate: !input gate
   lead_time: !input lead_time
@@ -435,6 +445,16 @@ action:
             - condition: template
               value_template: "{{ is_state(driving_sensor, 'on') }}"
           sequence:
+            # If the travel time has expired and its refresh rate is set to "Continuously"
+            - if:
+                - condition: template
+                  value_template:  "{{ travel_time_rate == 'Continuously' and
+                    states[travel_time_sensor].last_changed + timedelta(minutes=1) < now() }}"
+              # Then refresh the travel time
+              then:
+                - service: homeassistant.update_entity
+                  target:
+                    entity_id: "{{ travel_time_sensor }}"
             # Wait for a user position update or a deactivation of his driving sensor
             - wait_for_trigger:
                 - platform: event
@@ -449,7 +469,7 @@ action:
             - repeat:
                 while:
                   - condition: template
-                    value_template: "{{ states(proximity_sensors[idx]) | int < travel_time_treshold }}"
+                    value_template: "{{ states(proximity_sensors[idx]) | int < eta_zone }}"
                   - condition: template
                     value_template: "{{ is_state(driving_sensor, 'on') }}"
                 sequence:
@@ -466,24 +486,37 @@ action:
                         {{ (as_timestamp(now()) +
                         (state_attr(travel_time_sensor, 'duration') | float *
                         60) - lead_time) | timestamp_custom('%Y-%m-%d %H:%M:%S') }}
-                  # If the ETA is not already past
+                  # If the ETA is in the future
                   - if:
                       - condition: template
                         value_template: "{{ state_attr(eta_sensor, 'timestamp') > as_timestamp(now()) }}"
-                    # Then wait for ETA or new position or car left, and cancel if it hasn't been updated for 5 mins (e.g: if device offline)
                     then:
-                      - wait_for_trigger:
-                          - platform: event
-                            event_type: state_changed
-                            event_data:
-                              entity_id: person
-                          - platform: time
-                            at: !input eta_sensor
-                          - platform: template
-                            value_template: "{{ is_state(driving_sensor, 'off') }}"
-                        timeout:
-                          minutes: !input safety_delay
-                        continue_on_timeout: false
+                      # If the travel time refresh rate is set to "Once when near home"
+                      - if:
+                          - condition: template
+                            value_template: "{{ travel_time_rate == 'Once when near home' }}"
+                        # Then wait for ETA or car left
+                        then:
+                          - wait_for_trigger:
+                              - platform: time
+                                at: !input eta_sensor
+                              - platform: template
+                                value_template: "{{ is_state(driving_sensor, 'off') }}"
+                        # If the travel time refresh rate is set to "Continuously" or "While near home"
+                        else:
+                          # Wait for ETA or new position or car left, and cancel if it hasn't been updated for too long (e.g: if device offline)
+                          - wait_for_trigger:
+                              - platform: event
+                                event_type: state_changed
+                                event_data:
+                                  entity_id: person
+                              - platform: time
+                                at: !input eta_sensor
+                              - platform: template
+                                value_template: "{{ is_state(driving_sensor, 'off') }}"
+                            timeout:
+                              minutes: !input safety_delay
+                            continue_on_timeout: false
                   # Restart the second repeat loop if the wait_for_trigger was triggered by a position or car sensor update
                   # This allows the loop to refresh the ETA with a new position or stop the script if the car was left
                   # This is quite a redundant condition as it has already been checked above, if you find a better way to restart the loop, feel free to make a PR
@@ -492,7 +525,7 @@ action:
                   # Set the user itinerary text variable to "on_approach", because the user is near the house and will arrive soon
                   - service: input_text.set_value
                     data:
-                      value: on_apporach
+                      value: on_approach
                     target:
                       entity_id: "{{ itinerary_sensor }}"
                   # If the gate is closing/closed
