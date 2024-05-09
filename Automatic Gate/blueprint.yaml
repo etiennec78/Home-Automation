@@ -108,12 +108,13 @@ blueprint:
           prefix: notify.mobile_app_
     gate:
       name: 🚪 Gate
-      description: The switch which controls your gate
+      description: The switch or cover which controls your gate
       selector:
         entity:
           filter:
             domain:
               - switch
+              - cover
     lead_time:
       name: 🕓 Lead time
       description: The lead time to open the gate before your arrival (take your gate movement time & a margin into account)
@@ -165,6 +166,7 @@ variables:
   travel_time_rate: !input travel_time_rate
   travel_time_treshold: !input travel_time_treshold
   notify_devices: !input notify_devices
+  gate: !input gate
   lead_time: !input lead_time
   ble_entities: !input ble_entities
   activation_zone: !input activation_zone
@@ -173,6 +175,8 @@ trigger:
   # Triggers when one of the users connect to a vehicle (if you have more than one, make a custom vehcle sensor : example in configuration.yaml)
   - platform: state
     entity_id: !input driving_sensors
+    from: "off"
+    to: "on"
 
 condition: []
 
@@ -222,21 +226,31 @@ action:
                   entity_id: !input ble_scanner_switch
       # If the gate is closing/closed
       - if:
-          - condition: state
-            entity_id: !input gate
-            state: "off"
+          - condition: template
+            value_template: "{{ states[gate]['state'] in ['off', 'closed'] }}"
         # Then open it because the user is leaving
         then:
-          - service: switch.turn_on
-            target:
-              entity_id: !input gate
+          # Select the right service by checking the first letter of the gate id
+          - choose:
+            - conditions:
+                - condition: template
+                  value_template: "{{ gate[0] == 's' }}"
+              sequence:
+                - service: switch.turn_on
+                  target:
+                    entity_id: !input gate
+            - conditions:
+                - condition: template
+                  value_template: "{{ gate[0] == 'c' }}"
+              sequence:
+                - service: cover.open_cover
+                  target:
+                    entity_id: !input gate
       # Wait for the gate to be closed by the user, or the iBeacon to be out of reach for 20s, or the vehicle to be left, or the user to leave home, all for at most 7 minutes
       - wait_for_trigger:
-          - platform: state
+          - platform: template
             id: manual
-            entity_id: !input gate
-            from: "on"
-            to: "off"
+            value_template: "{{ states[gate]['state'] in ['off', 'closed'] }}"
           - platform: template
             id: ble
             value_template: "{{ ble_entities != '' and states[ble_entities[idx]]['state'] == 'unknown' }}"
@@ -331,9 +345,21 @@ action:
                             importance: high
                             tag: automatic-closing
                   # Close the gate
-                  - service: switch.turn_off
-                    target:
-                      entity_id: !input gate
+                  - choose:
+                    - conditions:
+                        - condition: template
+                          value_template: "{{ gate[0] == 's' }}"
+                      sequence:
+                        - service: switch.turn_off
+                          target:
+                            entity_id: !input gate
+                    - conditions:
+                        - condition: template
+                          value_template: "{{ gate[0] == 'c' }}"
+                      sequence:
+                        - service: cover.close_cover
+                          target:
+                            entity_id: !input gate
                   # Remove the notification received by the user when his itinerary was started
                   - service: "{{ notify_device }}"
                     data:
@@ -367,10 +393,8 @@ action:
                 tag: itinerary
           # Wait for the gate to be closed
           - wait_for_trigger:
-              - platform: state
-                entity_id: !input gate
-                from: "on"
-                to: "off"
+              - platform: template
+                value_template: "{{ states[gate]['state'] in ['off', 'closed'] }}"
       # Remove the notification received by the user when his itinerary was started or while the gate was awaiting another user
       - service: "{{ notify_device }}"
         data:
@@ -473,21 +497,31 @@ action:
                       entity_id: "{{ itinerary_sensor }}"
                   # If the gate is closing/closed
                   - if:
-                      - condition: state
-                        entity_id: !input gate
-                        state: "off"
+                      - condition: template
+                        value_template: "{{ states[gate]['state'] in ['off', 'closed'] }}"
                     # Then open it
                     then:
-                      - service: switch.turn_on
-                        target:
-                          entity_id: !input gate
+                      # Select the right service by checking the first letter of the gate id
+                      - choose:
+                        - conditions:
+                            - condition: template
+                              value_template: "{{ gate[0] == 's' }}"
+                          sequence:
+                            - service: switch.turn_on
+                              target:
+                                entity_id: !input gate
+                        - conditions:
+                            - condition: template
+                              value_template: "{{ gate[0] == 'c' }}"
+                          sequence:
+                            - service: cover.open_cover
+                              target:
+                                entity_id: !input gate
                   # Wait for the gate to be closed manually, or the vehicle to be left, or the user to leave the activation zone, all for at most 7 minutes
                   - wait_for_trigger:
-                      - platform: state
+                      - platform: template
                         id: manual
-                        entity_id: !input gate
-                        from: "on"
-                        to: "off"
+                        value_template: "{{ states[gate]['state'] in ['off', 'closed'] }}"
                       - platform: template
                         id: vehicle_left
                         value_template: "{{ states[driving_sensor]['state'] == 'off' }}"
@@ -536,10 +570,8 @@ action:
                                 tag: itinerary
                           # Wait for the gate to be closed
                           - wait_for_trigger:
-                              - platform: state
-                                entity_id: !input gate
-                                from: "on"
-                                to: "off"
+                              - platform: template
+                                value_template: "{{ states[gate]['state'] in ['off', 'closed'] }}"
                         # If no one is currently approaching or leaving the house
                         else:
                           - choose:
@@ -587,9 +619,21 @@ action:
                                     importance: high
                                     tag: automatic-closing
                           # Close the gate
-                          - service: switch.turn_off
-                            target:
-                              entity_id: !input gate
+                          - choose:
+                            - conditions:
+                                - condition: template
+                                  value_template: "{{ gate[0] == 's' }}"
+                              sequence:
+                                - service: switch.turn_off
+                                  target:
+                                    entity_id: !input gate
+                            - conditions:
+                                - condition: template
+                                  value_template: "{{ gate[0] == 'c' }}"
+                              sequence:
+                                - service: cover.close_cover
+                                  target:
+                                    entity_id: !input gate
                   # Remove the notification received by the user when his itinerary was started or awaiting next user
                   - service: "{{ notify_device }}"
                     data:
