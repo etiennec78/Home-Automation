@@ -5,7 +5,7 @@ Here you will find various automations I use everyday in my own house !
 
 ## How to use 🔌
 
-To implement it in your home, you'll have to download Home Assistant and follow [these instructions](https://www.home-assistant.io/docs/automation/using_blueprints/#importing-blueprints) for installing blueprints
+To implement it in your home, you'll have to [install Home Assistant](https://www.home-assistant.io/installation/) and follow [these instructions](https://www.home-assistant.io/docs/automation/using_blueprints/#importing-blueprints) for installing blueprints
 
 * Some of my automations require sensors. If so, you will find a sensors.yaml file in the same directory. It will guide you on how to add them either through the UI or in your own configuration.yaml file
 
@@ -24,10 +24,12 @@ If you enjoyed the work put into this repository, don't hesitate to star it ! �
 
 And if you would like to give me a tip, I'd be really grateful to get my first [Github Sponsor](https://github.com/sponsors/etiennec78) ! 💛
 
+My Amazon links are affiliated, so don't hesitate to buy from there if you want to support 🤗
+
 ## Final words 👋
 
 I can't guarantee reliability, but I assure you that I'm doing the best I can !
 
-If you find a bug 👉 open a [pull request](https://github.com/etiennec78/Home-Automation/issues/new) 😉
+If you find a bug 👉 open an [issue](https://github.com/etiennec78/Home-Automation/issues/new) or  [pull request](https://github.com/etiennec78/Home-Automation/pulls) 😉
 
 Happy tinkering ! 🔧
