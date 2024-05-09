@@ -234,14 +234,14 @@ action:
           - choose:
             - conditions:
                 - condition: template
-                  value_template: "{{ gate[0] == 's' }}"
+                  value_template: "{{ states[gate].domain == 'switch' }}"
               sequence:
                 - service: switch.turn_on
                   target:
                     entity_id: !input gate
             - conditions:
                 - condition: template
-                  value_template: "{{ gate[0] == 'c' }}"
+                  value_template: "{{ states[gate].domain == 'cover' }}"
               sequence:
                 - service: cover.open_cover
                   target:
@@ -348,14 +348,14 @@ action:
                   - choose:
                     - conditions:
                         - condition: template
-                          value_template: "{{ gate[0] == 's' }}"
+                          value_template: "{{ states[gate].domain == 'switch' }}"
                       sequence:
                         - service: switch.turn_off
                           target:
                             entity_id: !input gate
                     - conditions:
                         - condition: template
-                          value_template: "{{ gate[0] == 'c' }}"
+                          value_template: "{{ states[gate].domain == 'cover' }}"
                       sequence:
                         - service: cover.close_cover
                           target:
@@ -505,14 +505,14 @@ action:
                       - choose:
                         - conditions:
                             - condition: template
-                              value_template: "{{ gate[0] == 's' }}"
+                              value_template: "{{ states[gate].domain == 'switch' }}"
                           sequence:
                             - service: switch.turn_on
                               target:
                                 entity_id: !input gate
                         - conditions:
                             - condition: template
-                              value_template: "{{ gate[0] == 'c' }}"
+                              value_template: "{{ states[gate].domain == 'cover' }}"
                           sequence:
                             - service: cover.open_cover
                               target:
@@ -622,14 +622,14 @@ action:
                           - choose:
                             - conditions:
                                 - condition: template
-                                  value_template: "{{ gate[0] == 's' }}"
+                                  value_template: "{{ states[gate].domain == 'switch' }}"
                               sequence:
                                 - service: switch.turn_off
                                   target:
                                     entity_id: !input gate
                             - conditions:
                                 - condition: template
-                                  value_template: "{{ gate[0] == 'c' }}"
+                                  value_template: "{{ states[gate].domain == 'cover' }}"
                               sequence:
                                 - service: cover.close_cover
                                   target:
