@@ -12,7 +12,7 @@ Modular and secure gate automation that opens your gate upon leaving or arriving
 
 ### Required [sensors](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.yaml) 📡
 |        Sensor         |      Type      |      Provider      | Multiple |                                                      Description                                                      |
-| --------------------- | -------------- | ------------------ | -------- | --------------------------------------------------------------------------------------------------------------------- |
+| :-------------------: | :------------: | :----------------: | :------: | :-------------------------------------------------------------------------------------------------------------------- |
 |    Driving sensor     | binary_sensor  | [Companion](https://companion.home-assistant.io/docs/core/sensors#android-auto)/[Template](https://www.home-assistant.io/integrations/template/) |   Yes    | Either Android Auto, bluetooth connexion, or both grouped                                                             |
 | GPS location tracker  |     person     |     [Companion](https://companion.home-assistant.io/docs/core/location)      |   Yes    | Try to avoid using wifi/ble location trackers as latency could be an issue. Use high precision when driving near home |
 |    Planned opening    | input_datetime |       [Helper](https://www.home-assistant.io/integrations/input_datetime/)       |    No    | A helper you have to create which will store the planned automatic opening of the gate                                |
@@ -24,7 +24,7 @@ Modular and secure gate automation that opens your gate upon leaving or arriving
 
 ### Optional [sensors](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.yaml) ➕
 |        Sensor         |      Type      |      Provider      | Multiple |                                                      Description                                                      |
-| --------------------- | -------------- | ------------------ | -------- | --------------------------------------------------------------------------------------------------------------------- |
+| :-------------------: | :------------: | :----------------: | :------: | :-------------------------------------------------------------------------------------------------------------------- |
 |    BLE transmitter    |      none      |     [Companion](https://companion.home-assistant.io/docs/core/sensors/#bluetooth-sensors)      |   Yes    | Companion app ble transmitter to automatically close gate upon leaving                                                  |
 |  BLE scanner switch   |     switch     |        Any         |    No    | A switch which would automatically turn on/off your BLE scanner. Not useful if your BLE scanner is running 24/7       |
 |     BLE entities      |signal_strength |        Any         |   Yes    | Each BLE entity to monitor when the driver BLE state goes to unavailable. Could be my [esphome firmware](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/Extra/Esphome%20gate%20firmware/gate.yaml) or else.
@@ -43,7 +43,7 @@ Not recommended 🙅
 ## Extra ➕
 
 |          Element          |                                                                           Description                                                                            |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| :-----------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |      [Automations](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Automations) 🤖       | Automations that notify all users if the gate has been left open or is unavailable for more than 5 minutes                                                       |
 |     [Ble car device](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Ble%20car%20device) 🚗     | A really small Arduino code to let a ESP32 sit in your car so that your phone can connect to it over BLE and monitor if you are driving                          |
 |   [ESPHome gate firmware](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Esphome%20gate%20firmware) 🔧 | My ESP32 gate firmware which only needs to be connected to one open&close pin. Works by guessing the actual state and locking new requests while not being ready |
