@@ -3,16 +3,45 @@ blueprint:
   domain: automation
   author: etiennec78
   description: |-
-    WORK IN PROGRESS, FUNCTIONS NOT FULLY IMPLEMENTED, EXPECT BUGS
+    WORK IN PROGRESS, EXPECT BUGS
     **Modular** and **secure** gate automation that **opens your gate** upon leaving or arriving
     Supports up to 10 users driving **simultaneously**
     Security features including an auto-close timer, alert notifications, timeout detection, aborting on vehicle left, aborting if driven near home without entering, keeping gate open while someone else approaches or leaves home
     Various options such as iBeacon automatic closing, travel time update interval, and custom gate settings
     Flowchart : https://miro.com/app/board/uXjVMpH4Tno=/
   input:
+    gate:
+      name: ⛩️ Gate
+      description: The **switch** or **cover** which controls your **gate**
+      selector:
+        entity:
+          filter:
+            domain:
+              - switch
+              - cover
+    lead_time:
+      name: 🕓 Lead time
+      description: The **lead time** to open the gate **before your arrival** (take your gate movement time & a margin into account)
+      default: 75
+      selector:
+        number:
+          min: 10
+          max: 300
+          unit_of_measurement: seconds
+    safety_delay:
+      name: 🔒 Auto-close delay
+      description: The time the gate will wait before **automatically closing** if you haven't left home / didn't arrive / timed out
+      default: 7
+      selector:
+        number:
+          min: 2
+          max: 30
+          unit_of_measurement: minutes
     persons:
-      name: 🧑 Tracked users
-      description: Each **user** which should be tracked for **position updates** (same order)
+      name: 👤 Tracked users
+      description: |-
+        Each **user** which should be tracked for **position updates** (same order)
+        *Note : If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving home, your gate could open thinking you are still home*
       selector:
         entity:
           multiple: true
@@ -26,16 +55,17 @@ blueprint:
           multiple: true
           filter:
             domain: binary_sensor
-    itinerary_sensors:
-      name: 🗺️ Itinerary sensors
-      description: Each **itinerary text input** from the wiki (same order)
+    travel_time_sensors:
+      name: ✈️ Travel time sensors
+      description: Each **travel time** sensor monitoring each user **time left before arrival** (same order)
       selector:
         entity:
           multiple: true
           filter:
-            domain: input_text
+            domain: sensor
+            device_class: duration
     proximity_sensors:
-      name: 📏 Proximity sensors
+      name: ↔️ Proximity sensors
       description: Each sensor from the **proximity integration** to calculate user distance from home (same order)
       selector:
         entity:
@@ -44,22 +74,28 @@ blueprint:
             integration: proximity
             domain: sensor
             device_class: distance
-    eta_sensor:
-      name: 📅 Planned time of opening sensor
-      description: An empty **input datetime** sensor which will be used to set an **ETA** and plan the **opening of your gate** (see wiki)
+    notify_devices:
+      name: 💬 Services of devices to notify
+      description: Each **service** of **device to notify** (Find the service id by going into dev tools > services > typing "notify." in services) (same order)
       selector:
-        entity:
-          filter:
-            domain: input_datetime
-    travel_time_sensors:
-      name: 🕓 Travel time sensors
-      description: Each **travel time** sensor monitoring each user **time left before arrival** (same order)
+        text:
+          multiple: true
+          prefix: notify.mobile_app_
+    itinerary_sensors:
+      name: 🗺️ Itinerary sensors
+      description: Each **itinerary input text** helper from the wiki to monitor your **itinerary state** (same order)
       selector:
         entity:
           multiple: true
           filter:
-            domain: sensor
-            device_class: duration
+            domain: input_text
+    eta_sensor:
+      name: 📅 Planned time of opening sensor
+      description: An empty **input datetime** helper which will be used to set an **ETA** and plan the **opening of your gate** (see wiki)
+      selector:
+        entity:
+          filter:
+            domain: input_datetime
     travel_time_rate:
       name: 🔄 Travel time refresh rate
       description: |-
@@ -83,7 +119,7 @@ blueprint:
             - Once when near home
     continuously_refresh_interval:
       name: ⏳ Continuously refresh interval
-      description: Your travel time **refresh interval** while away. Only with a refresh rate set to **"Continously"**
+      description: Your travel time **refresh interval** while away. Only active with a refresh rate set to **"Continously"**
       default: 5
       selector:
         number:
@@ -101,62 +137,18 @@ blueprint:
           unit_of_measurement: meters
     activation_zone:
       name: 🔒 Gate activation zone
-      description: At which maximal distance from home should your vehicle be able to automatically open your gate ? It will automatically close if you leave this zone
+      description: At which **maximal distance** from home should your vehicle be able to automatically **open your gate** ? It will automatically **close** if you **leave** this zone
       default: 1200
       selector:
         number:
           min: 300
           max: 5000
           unit_of_measurement: meters
-    notify_devices:
-      name: 💬 Services of devices to notify
-      description: Each service of device to notify (Find the service id by going into dev tools > services > typing "notify." in services) (same order)
-      selector:
-        text:
-          multiple: true
-          prefix: notify.mobile_app_
-    gate:
-      name: 🚪 Gate
-      description: The switch or cover which controls your gate
-      selector:
-        entity:
-          filter:
-            domain:
-              - switch
-              - cover
-    lead_time:
-      name: 🕓 Lead time
-      description: The lead time to open the gate before your arrival (take your gate movement time & a margin into account)
-      default: 75
-      selector:
-        number:
-          min: 10
-          max: 300
-          unit_of_measurement: seconds
-    safety_delay:
-      name: 🔒 Safety delay
-      description: The time the gate will wait before automatically closing if you haven't left your home / didn't arrive / timed out
-      default: 7
-      selector:
-        number:
-          min: 3
-          max: 30
-          unit_of_measurement: minutes
-    ble_scanner_switch:
-      name: 🛜 iBeacon scanner activator switch (optional)
-      description: |-
-        The switch you want to use to turn on and off your iBeacon scanner when a vehicle is leaving home
-        Let empty if no ble / want to always keep iBeacon running
-      default: ""
-      selector:
-        entity:
-          filter:
-            domain: switch
     ble_entities:
-      name: 🔎 iBeacon tracker entities (optional)
+      name: 🛜 iBeacon tracker entities (**optional**)
       description: |-
-        Each iBeacon rssi tracker entity to monitor
-        Let empty if no ble
+        Each iBeacon **rssi tracker** entity to monitor
+        *Note : Let empty if no ble*
       default: ""
       selector:
         entity:
@@ -164,22 +156,32 @@ blueprint:
           filter:
             domain: sensor
             device_class: signal_strength
+    ble_scanner_switch:
+      name: ⏻ iBeacon scanner activator switch (**optional**)
+      description: |-
+        The **switch** you want to use to turn on and off your **iBeacon scanner** when a vehicle is leaving home
+        *Note : Let empty if no ble / want to always keep iBeacon running*
+      default: ""
+      selector:
+        entity:
+          filter:
+            domain: switch
 
 variables:
+  gate: !input gate
+  lead_time: !input lead_time
   persons: !input persons
   driving_sensors: !input driving_sensors
-  itinerary_sensors: !input itinerary_sensors
-  proximity_sensors: !input proximity_sensors
-  eta_sensor: !input eta_sensor
   travel_time_sensors: !input travel_time_sensors
+  proximity_sensors: !input proximity_sensors
+  notify_devices: !input notify_devices
+  itinerary_sensors: !input itinerary_sensors
+  eta_sensor: !input eta_sensor
   travel_time_rate: !input travel_time_rate
   continuously_refresh_interval: !input continuously_refresh_interval
   eta_zone: !input eta_zone
-  notify_devices: !input notify_devices
-  gate: !input gate
-  lead_time: !input lead_time
-  ble_entities: !input ble_entities
   activation_zone: !input activation_zone
+  ble_entities: !input ble_entities
 
 trigger:
   # Triggers when one of the users connect to a vehicle (if you have more than one, make a custom vehcle sensor : example in configuration.yaml)
@@ -196,9 +198,9 @@ action:
     idx: driving_sensors.index(trigger.entity_id)
     person: persons[idx]
     driving_sensor: trigger.entity_id
-    itinerary_sensor: itinerary_sensors[idx]
     travel_time_sensor: travel_time_sensors[idx]
     notify_device: "{{ 'notify.mobile_app_'+notify_devices[idx] }}"
+    itinerary_sensor: itinerary_sensors[idx]
 
   # If the user is currently at home
   - if:
