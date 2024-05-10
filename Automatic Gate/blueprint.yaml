@@ -439,10 +439,15 @@ action:
             channel: Gate alerts
             importance: high
             tag: itinerary
-      # Update the user travel time once to display an approximation on the dashboard (while taking into account the time elapsed)
-      - service: homeassistant.update_entity
-        target:
-          entity_id: "{{ travel_time_sensor }}"
+      # If the travel time refresh rate is set to "While near home"
+      - if:
+          - condition: template
+            value_template:  "{{ travel_time_rate == 'While near home' }}"
+        # Then update the user travel time once to display an approximation on the dashboard (while taking into account the time elapsed
+        then:
+          - service: homeassistant.update_entity
+            target:
+              entity_id: "{{ travel_time_sensor }}"
       # Repeat while the user is driving
       - repeat:
           while:
@@ -454,7 +459,7 @@ action:
                 - condition: template
                   value_template:  "{{ travel_time_rate == 'Continuously' and
                     states[travel_time_sensor].last_updated + timedelta(minutes=1) < now() }}"
-              # Then refresh the travel time
+              # Then refresh the travel time to display a precise value on the dashboard
               then:
                 - service: homeassistant.update_entity
                   target:
