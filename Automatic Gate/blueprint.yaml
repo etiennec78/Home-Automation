@@ -168,10 +168,78 @@ blueprint:
         entity:
           filter:
             domain: switch
+    itinerary_update_title:
+      name: 📃 Itinerary status update title
+      default: "Itinerary"
+      selector:
+        text:
+    itinerary_canceled_title:
+      name: 📃!input itinerary_canceled_title title
+      default: "Itinerary canceled"
+      selector:
+        text:
+    gate_closing_title:
+      name: 📃 Gate closing notification title
+      default: "Gate closing"
+      selector:
+        text:
+    awaiting_title:
+      name: 📃 Gate awaiting user notification title
+      default: "Gate awaiting another user"
+      selector:
+        text:
+    itinerary_started_message:
+      name: 💬 Itinerary started_message
+      default: "Your itinerary has been started"
+      selector:
+        text:
+    automatic_closing_message:
+      name: 💬 Automatic closing notification
+      default: "Automatic closing of the gate"
+      selector:
+        text:
+          multiline: true
+    vehicle_left_message:
+      name: 💬 Vehicle left notification
+      default: "You have left your vehicle"
+      selector:
+        text:
+          multiline: true
+    did_not_leave_message:
+      name: 💬 User did not leave notification
+      default: "The vehicle did not leave home in less than {{ safety_delay }} minutes"
+      selector:
+        text:
+          multiline: true
+    did_not_arrive_message:
+      name: 💬 User did not leave notification
+      default: "The vehicle did not arrive home in less than {{ safety_delay }} minutes"
+      selector:
+        text:
+          multiline: true
+    timed_out_message:
+      name: 💬 Timed out notification
+      default: "Your position has not been updated in {{ safety_delay }} minutes"
+      selector:
+        text:
+          multiline: true
+    vehicle_away_message:
+      name: 💬 Vehicle has left the zone notification
+      default: "The vehicle has exited the activation zone"
+      selector:
+        text:
+          multiline: true
+    awaiting_message:
+      name: 💬 Gate awaiting user notification
+      default: "The gate will close once all users have entered/exited"
+      selector:
+        text:
+          multiline: true
 
 variables:
   gate: !input gate
   lead_time: !input lead_time
+  safety_delay: !input safety_delay
   persons: !input persons
   driving_sensors: !input driving_sensors
   travel_time_sensors: !input travel_time_sensors
@@ -339,8 +407,8 @@ action:
                       # Notify the user that the gate will close automatically since he didn't leave in 7 minutes
                       - service: "{{ notify_device }}"
                         data:
-                          title: Gate closing
-                          message: The vehicle did not leave home in less than 7 minutes
+                          title: !input gate_closing_title
+                          message: !input did_not_leave_message
                           data:
                             car_ui: true
                             notification_icon: mdi:alert-circle
@@ -351,7 +419,7 @@ action:
                       # Notify the user that the gate will close automatically
                       - service: "{{ notify_device }}"
                         data:
-                          message: Automatic closing of the gate
+                          message: !input automatic_closing_message
                           data:
                             car_ui: true
                             notification_icon: mdi:gate
@@ -397,8 +465,8 @@ action:
           # Notify the user that the gate will wait for next person
           - service: "{{ notify_device }}"
             data:
-              title: Gate awaiting another user
-              message: The gate will close once all users have entered/exited
+              title: !input awaiting_title
+              message: !input awaiting_message
               data:
                 car_ui: true
                 notification_icon: mdi:sleep
@@ -431,8 +499,8 @@ action:
       # Notify the user that his itinerary has been started
       - service: "{{ notify_device }}"
         data:
-          title: Itinerary
-          message: Your itinerary has been started
+          title: !input itinerary_update_title
+          message: !input itinerary_started_message
           data:
             car_ui: true
             notification_icon: mdi:map-check
@@ -525,7 +593,24 @@ action:
                                 value_template: "{{ is_state(driving_sensor, 'off') }}"
                             timeout:
                               minutes: !input safety_delay
-                            continue_on_timeout: false
+                          # If the timeout ran out of time
+                          - if:
+                              - condition: template
+                                value_template: "{{ wait.completed }}"
+                            # Then notify the user that the itinerary will get canceled since he timed out
+                            then:
+                              - service: "{{ notify_device }}"
+                                data:
+                                  title: !input itinerary_canceled_title
+                                  message: !input timed_out_message
+                                  data:
+                                    car_ui: true
+                                    notification_icon: mdi:alert-circle
+                                    channel: Gate alerts
+                                    importance: high
+                                    tag: itinerary
+                              - stop: Timed out
+
                   # Restart the second repeat loop if the wait_for_trigger was triggered by a position or car sensor update
                   # This allows the loop to refresh the ETA with a new position or stop the script if the car was left
                   # This is quite a redundant condition as it has already been checked above, if you find a better way to restart the loop, feel free to make a PR
@@ -602,8 +687,8 @@ action:
                           # Notify the user that the gate will wait for next person
                           - service: "{{ notify_device }}"
                             data:
-                              title: Gate awaiting another user
-                              message: The gate will close once all users have entered/exited
+                              title: !input awaiting_title
+                              message: !input awaiting_message
                               data:
                                 car_ui: true
                                 notification_icon: mdi:sleep
@@ -625,8 +710,8 @@ action:
                                   # Notify the user that the gate will close automatically since he took too long
                                   - service: "{{ notify_device }}"
                                     data:
-                                      title: Gate closing
-                                      message: The vehicle did not arrive home in less than 7 minutes
+                                      title: !input gate_closing_title
+                                      message: !input did_not_arrive_message
                                       data:
                                         car_ui: true
                                         notification_icon: mdi:alert-circle
@@ -641,8 +726,8 @@ action:
                                   # Notify the user that the gate will close automatically since he has exited the zone
                                   - service: "{{ notify_device }}"
                                     data:
-                                      title: Gate closing
-                                      message: The vehicle has exited the activation zone
+                                      title: !input gate_closing_title
+                                      message: !input vehicle_away_message
                                       data:
                                         car_ui: true
                                         notification_icon: mdi:alert-circle
@@ -653,7 +738,7 @@ action:
                               # Notify the user that the gate will close automatically
                               - service: "{{ notify_device }}"
                                 data:
-                                  message: Automatic closing of the gate
+                                  message: !input automatic_closing_message
                                   data:
                                     car_ui: true
                                     notification_icon: mdi:gate
@@ -706,8 +791,8 @@ action:
       # Notify the user that his itinerary has been canceled
       - service: "{{ notify_device }}"
         data:
-          title: Itinerary canceled
-          message: You have left your vehicle or timed out
+          title: !input itinerary_canceled_title
+          message: !input vehicle_left_message
           data:
             car_ui: true
             notification_icon: mdi:alert-circle
