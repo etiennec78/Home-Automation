@@ -597,8 +597,14 @@ action:
                           - if:
                               - condition: template
                                 value_template: "{{ wait.completed }}"
-                            # Then notify the user that the itinerary will get canceled since he timed out
                             then:
+                              # Remove the current itinerary since the user has timed out
+                              - service: input_text.set_value
+                                target:
+                                  entity_id: "{{ itinerary_sensor }}"
+                                data:
+                                  value: none
+                              # Notify the user that his itinerary has been canceled
                               - service: "{{ notify_device }}"
                                 data:
                                   title: !input itinerary_canceled_title
