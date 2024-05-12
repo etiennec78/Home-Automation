@@ -265,12 +265,12 @@ condition: []
 action:
   # Store the list index of the user who triggered the automation, and extract the recurrent sensors at this index of the list
   - variables:
-      idx: driving_sensors.index(trigger.entity_id)
-      person: persons[idx]
-      driving_sensor: trigger.entity_id
-      travel_time_sensor: travel_time_sensors[idx]
+      idx: "{{ driving_sensors.index(trigger.entity_id) }}"
+      person: "{{ persons[idx] }}"
+      driving_sensor: "{{ trigger.entity_id }}"
+      travel_time_sensor: "{{ travel_time_sensors[idx] }}"
       notify_device: "{{ 'notify.mobile_app_'+notify_devices[idx] }}"
-      itinerary_sensor: itinerary_sensors[idx]
+      itinerary_sensor: "{{ itinerary_sensors[idx] }}"
 
   # If the user is currently at home
   - if:
