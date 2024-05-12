@@ -638,6 +638,29 @@ action:
                   # Restart the second repeat loop if the wait_for_trigger was triggered by a position or car sensor update
                   # This allows the loop to refresh the ETA with a new position or stop the script if the car was left
                   # This is quite a redundant condition as it has already been checked above, if you find a better way to restart the loop, feel free to make a PR
+                  - if:
+                      # The user is not in the activation zone
+                      - condition: template
+                        value_template: "{{ states(proximity_sensors[idx]) | int > activation_zone }}"
+                    then:
+                      # Remove the current itinerary since the user was not in the activation zone when the gate tried to open
+                      - service: input_text.set_value
+                        target:
+                          entity_id: "{{ itinerary_sensor }}"
+                        data:
+                          value: none
+                      # Notify the user that his itinerary has been canceled
+                      - service: "{{ notify_device }}"
+                        data:
+                          title: !input itinerary_canceled_title
+                          message: !input vehicle_away_message
+                          data:
+                            car_ui: true
+                            notification_icon: mdi:alert-circle
+                            channel: Gate alerts
+                            importance: high
+                            tag: itinerary
+                      - stop: Not in activation zone
                   - condition: template
                     value_template: "{{ state_attr(eta_sensor, 'timestamp') <= as_timestamp(now()) }}"
                   # Set the user itinerary text variable to "on_approach", because the user is near the house and will arrive soon
