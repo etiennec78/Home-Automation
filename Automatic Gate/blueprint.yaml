@@ -169,86 +169,86 @@ blueprint:
           filter:
             domain: switch
     itinerary_update_title:
-      name: 📃🛈 Itinerary status update **title**
-      description: The title displayed on the notification you will receive when the status of your itinerary changes
+      name: 📃🛈 Itinerary status update title
+      description: The **title** displayed on the notification you will receive when the **status of your itinerary** changes
       default: "Itinerary"
       selector:
         text:
     itinerary_canceled_title:
-      name: 📃❌ Itinerary canceled **title**
-      description: The title displayed on the notification you will receive when your itinerary gets canceled
+      name: 📃❌ Itinerary canceled title
+      description: The **title** displayed on the notification you will receive when your **itinerary gets canceled**
       default: "Itinerary canceled"
       selector:
         text:
     gate_closing_title:
-      name: 📃🔒 Gate closing notification **title**
-      description: The title displayed on the notification you will receive when your gate is closing
+      name: 📃🔒 Gate closing notification title
+      description: The **title** displayed on the notification you will receive when your **gate is closing**
       default: "Gate closing"
       selector:
         text:
     awaiting_title:
-      name: 📃💤 Gate awaiting user notification **title**
-      description: The title displayed on the notification you will receive when your gate is awaiting another user
+      name: 📃💤 Gate awaiting user notification title
+      description: The **title** displayed on the notification you will receive when your gate is **awaiting another user**
       default: "Gate awaiting another user"
       selector:
         text:
     itinerary_started_message:
-      name: 💬🏁 Itinerary started **notification**
-      description: The title displayed on the notification you will receive when your itinerary starts
+      name: 💬🏁 Itinerary started notification
+      description: The **title** displayed on the notification you will receive when your **itinerary starts**
       default: "Your itinerary has been started"
       selector:
         text:
     automatic_closing_message:
-      name: 💬🤖 Automatic closing **notification**
-      description: The title displayed on the notification you will receive when your gate is automatically closing
+      name: 💬🤖 Automatic closing notification
+      description: The **title** displayed on the notification you will receive when your gate is **automatically closing**
       default: "Automatic closing of the gate"
       selector:
         text:
           multiline: true
     awaiting_message:
-      name: 💬💤 Gate awaiting user **notification**
-      description: The content of the notification you will receive when your gate is awaiting another user
+      name: 💬💤 Gate awaiting user notification
+      description: The **content** of the notification you will receive when your gate is **awaiting another user**
       default: "The gate will close once all users have entered/exited"
       selector:
         text:
           multiline: true
     vehicle_left_message:
-      name: 💬⚠️ Vehicle left **notification**
-      description: The content of the notification you will receive if you leave your vehicle
+      name: 💬⚠️ Vehicle left notification
+      description: The **content** of the notification you will receive if you **leave your vehicle**
       default: "You have left your vehicle"
       selector:
         text:
           multiline: true
     did_not_leave_message:
-      name: 💬⚠️ User did not leave **notification**
+      name: 💬⚠️ User did not leave notification
       description: |-
-        The content of the notification you will receive if you don't leave your home in time
+        The **content** of the notification you will receive if you **don't leave your home in time**
         *Note : {{safety_delay}} will be replaced by your auto-close delay you have set above*
       default: "The vehicle did not leave home in less than {{ safety_delay }} minutes"
       selector:
         text:
           multiline: true
     did_not_arrive_message:
-      name: 💬⚠️ User did not arrive **notification**
+      name: 💬⚠️ User did not arrive notification
       description: |-
-        The content of the notification you will receive if you don't arrive home in time
+        The **content** of the notification you will receive if you **don't arrive home in time**
         *Note : {{safety_delay}} will be replaced by your auto-close delay you have set above*
       default: "The vehicle did not arrive home in less than {{ safety_delay }} minutes"
       selector:
         text:
           multiline: true
     timed_out_message:
-      name: 💬⚠️ Timed out **notification**
+      name: 💬⚠️ Timed out notification
       description: |-
-        The content of the notification you will receive if you time out
+        The **content** of the notification you will receive if you **time out**
         *Note : {{safety_delay}} will be replaced by your auto-close delay you have set above*
       default: "Your position has not been updated in {{ safety_delay }} minutes"
       selector:
         text:
           multiline: true
     vehicle_away_message:
-      name: 💬⚠️ Vehicle not in activation zone **notification**
-      description: The content of the notification you will receive if you are not in your activation zone
+      name: 💬⚠️ Vehicle not in activation zone notification
+      description: The **content** of the notification you will receive if **you are not in your activation zone**
       default: "The vehicle is not in the activation zone"
       selector:
         text:
