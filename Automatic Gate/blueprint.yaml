@@ -171,25 +171,25 @@ blueprint:
     itinerary_update_title:
       name: 📃🛈 Itinerary status update title
       description: The **title** displayed on the notification you will receive when the **status of your itinerary** changes
-      default: "Itinerary"
+      default: "Itinerary 🛈"
       selector:
         text:
     itinerary_canceled_title:
       name: 📃❌ Itinerary canceled title
       description: The **title** displayed on the notification you will receive when your **itinerary gets canceled**
-      default: "Itinerary canceled"
+      default: "Itinerary canceled ❌"
       selector:
         text:
     gate_closing_title:
       name: 📃🔒 Gate closing notification title
       description: The **title** displayed on the notification you will receive when your **gate is closing**
-      default: "Gate closing"
+      default: "Gate closing 🔒"
       selector:
         text:
     awaiting_title:
       name: 📃💤 Gate awaiting user notification title
       description: The **title** displayed on the notification you will receive when your gate is **awaiting another user**
-      default: "Gate awaiting another user"
+      default: "Gate awaiting another user 💤"
       selector:
         text:
     itinerary_started_message:
