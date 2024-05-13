@@ -555,7 +555,7 @@ action:
                 - platform: event
                   event_type: state_changed
                   event_data:
-                    entity_id: person
+                    entity_id: "{{ person }}"
                 - platform: template
                   value_template: "{{ is_state(driving_sensor, 'off') }}"
             # Repeat while the user is nearer than 1km of radius from home and is still driving
@@ -604,7 +604,7 @@ action:
                               - platform: event
                                 event_type: state_changed
                                 event_data:
-                                  entity_id: person
+                                  entity_id: "{{ person }}"
                               - platform: time
                                 at: !input eta_sensor
                               - platform: template
