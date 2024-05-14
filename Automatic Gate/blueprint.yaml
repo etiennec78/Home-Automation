@@ -151,7 +151,7 @@ blueprint:
       description: |-
         Each iBeacon **rssi tracker** entity to monitor
         *Note : Let empty if no ble*
-      default: ""
+      default: []
       selector:
         entity:
           multiple: true
@@ -308,7 +308,7 @@ action:
       # If iBeacon automatic closing is enabled
       - if:
         - condition: template
-          value_template: "{{ ble_entities != '' }}"
+          value_template: "{{ ble_entities != [] }}"
         then:
           # Activate the BLE transmitter on the user's phone, to close the gate when he has left
           - service: "{{ notify_device }}"
@@ -353,7 +353,7 @@ action:
             value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
           - platform: template
             id: ble
-            value_template: "{{ ble_entities != '' and is_state(ble_entities[idx], 'unknown') }}"
+            value_template: "{{ ble_entities != [] and is_state(ble_entities[idx], 'unknown') }}"
           - platform: template
             id: vehicle_left
             value_template: "{{ is_state(driving_sensor, 'off') }}"
@@ -371,7 +371,7 @@ action:
       # If iBeacon automatic closing is enabled
       - if:
         - condition: template
-          value_template: "{{ ble_entities != '' }}"
+          value_template: "{{ ble_entities != [] }}"
         then:
           # Deactivate the BLE transmitter on user's phone
           - service: "{{ notify_device }}"
