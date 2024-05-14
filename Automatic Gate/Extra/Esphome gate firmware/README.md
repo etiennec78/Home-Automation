@@ -1,15 +1,15 @@
 # Esphome Gate Firmware 🔧
 ## Description
-An [ESP32](https://amzn.to/3y2UtCr) firmware I use to smartify my FAAC E024S gate
+An [ESP32](https://amzn.to/3y2UtCr) firmware I use to **smartify** my FAAC E024S **gate**
 
 Supports the following features :
-* Only accepting open requests when someone is nearer than 1km from home
-* Only accepting requests when ready, to avoid double presses which would make it report the wrong state
-* Only using one pin, to only use one relay and work by guessing the actual state of the gate
-* Opening and closing even while moving, by sending a double pulse, and inverting the moving time
-* Error reporting in HA, to see why the gate decided not to move
-* BLE scanner, with automatically turns entity status to unavailable after no signal for 25s
-* BLE switch, which allows you to turn off the continuous BLE scanning
+* Only accepting open requests when someone is nearer than **1km from home**
+* Only accepting requests when **ready**, to avoid double presses which would make it report the wrong state
+* Only using **one pin**, to only use one relay and work by **guessing** the actual state of the gate
+* Opening and closing **even while moving**, by sending a double pulse, and inverting time taken to move to the current position
+* **Error reporting** in HA, to see why the gate decided not to move
+* **BLE scanner**, with automatically turns entity status to unavailable after no signal for 25s
+* **BLE switch**, which allows you to **turn off** the continuous BLE scanning
 
 ## Flowchart 🔀
 
