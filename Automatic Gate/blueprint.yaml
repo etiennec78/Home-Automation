@@ -638,6 +638,8 @@ action:
                   # Restart the second repeat loop if the wait_for_trigger was triggered by a position or car sensor update
                   # This allows the loop to refresh the ETA with a new position or stop the script if the car was left
                   # This is quite a redundant condition as it has already been checked above, if you find a better way to restart the loop, feel free to make a PR
+                  - condition: template
+                    value_template: "{{ state_attr(eta_sensor, 'timestamp') <= as_timestamp(now()) }}"
                   - if:
                       # The user is not in the activation zone
                       - condition: template
@@ -661,8 +663,6 @@ action:
                             importance: high
                             tag: itinerary
                       - stop: Not in activation zone
-                  - condition: template
-                    value_template: "{{ state_attr(eta_sensor, 'timestamp') <= as_timestamp(now()) }}"
                   # Set the user itinerary text variable to "on_approach", because the user is near the house and will arrive soon
                   - service: input_text.set_value
                     data:
