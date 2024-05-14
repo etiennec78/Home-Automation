@@ -1,7 +1,7 @@
 # Automatic Gate ⛩️
 ## Description 📝
-Modular and secure gate automation that opens your gate upon leaving or arriving
-* Supports up to 10 users driving simultaneously
+**Modular** and **secure** gate automation that **opens your gate** upon leaving or arriving
+* Supports up to 10 users driving **simultaneously**
 * Security features including an auto-close timer, alert notifications, timeout detection, aborting on vehicle left, aborting if driven near home without entering, keeping gate open while someone else approaches or leaves home
 * Various options such as iBeacon automatic closing, travel time update interval, and custom gate settings
 
@@ -34,11 +34,8 @@ Modular and secure gate automation that opens your gate upon leaving or arriving
 |  Notify all devices   |     group      |       [Group](https://companion.home-assistant.io/docs/notifications/notifications-basic/#sending-notifications-to-multiple-devices)        |    No    | Only necessary for esphome firmware and extra gate automations
 |   Nearest distance    |     sensor     |     [Proximity](https://www.home-assistant.io/integrations/proximity/#nearest-distance)      |    No    | Only necessary for esphome firmware. Gives the distance of the nearest person from home.
 
-### Install as an automation 🤖
-Not recommended 🙅
-1. Rename each 'user0', 'user1' and 'user2' to the person ids of each of your users.
-2. Rename all your sensors id so they contain these names like in the automation (e.g : notify.mobile_app_user0_phone ) (Settings > Devices > Entities > select an entity > Settings > change their id)
-3. Either copy the automation to your automations folder or simply copy and paste the code in a new automation with the UI
+## How to update 🔁
+Simply import the blueprint again, and Home Assistant should ask you to replace your old version
 
 ## Extra ➕
 
