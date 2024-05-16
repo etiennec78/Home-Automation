@@ -6,8 +6,9 @@ blueprint:
     WORK IN PROGRESS, EXPECT BUGS
     **Modular** and **secure** gate automation that **opens your gate** upon leaving or arriving
     Supports up to 10 users driving **simultaneously**
-    Security features including an auto-close timer, alert notifications, timeout detection, aborting on vehicle left, aborting if driven near home without entering, keeping gate open while someone else approaches or leaves home
-    Various options such as iBeacon automatic closing, travel time update interval, and custom gate settings
+    Manual override : Prioritizes manual actions over the automation, letting you control your gate even while the automation is running
+    Security features : Auto-close timer, alert notifications, timeout detection, aborting on vehicle left, aborting if driven near home without entering, keeping gate open while someone else approaches or leaves home
+    Various options : Custom gate settings, iBeacon automatic closing, travel time update interval
     Flowchart : [click here](https://miro.com/app/board/uXjVMpH4Tno=/)
     Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate)
     Discord : etiennec78
@@ -67,7 +68,7 @@ blueprint:
             domain: sensor
             device_class: duration
     proximity_sensors:
-      name: ↔️ Proximity sensors
+      name: 📏 Proximity sensors
       description: Each sensor from the **proximity integration** to calculate user distance from home (same order)
       selector:
         entity:
@@ -77,7 +78,7 @@ blueprint:
             domain: sensor
             device_class: distance
     notify_devices:
-      name: 💬 Services of devices to notify
+      name: 💬 Notify services
       description: Each **service** of **device to notify** (Find the service id by going into dev tools > services > typing "notify." in services) (same order)
       selector:
         text:
@@ -101,7 +102,7 @@ blueprint:
     travel_time_rate:
       name: 🔄 Travel time refresh rate
       description: |-
-        **/!\ Please set a [custom polling interval](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)**
+        **⚠️ Please set a [custom polling interval](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)**
 
         Calculate the Travel time & ETA
 
