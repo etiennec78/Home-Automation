@@ -16,7 +16,7 @@ To implement it in your home, you'll have to [install Home Assistant](https://ww
 ## My automations / blueprints 🛠️
 |      Automation       | Description | Quick install |
 | :-------------------: | :---------: | :-----------: |
-|   Automatic Gate ⛩️   |  [Read More](Automatic%20Gate)  | [![Quickly import Automatic Gate blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FAutomatic%20Gate%2Fblueprint.yaml) |
+|   Automatic Gate ⛩️   |  [Read More](Automatic%20Gate)  | [![Quickly import Automatic Gate blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FAutomatic+Gate%2Fautomatic-gate.yaml) |
 
 ## My smarthome related stuff 💡
 |        Automation        | Description |
