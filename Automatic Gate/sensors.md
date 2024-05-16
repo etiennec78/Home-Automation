@@ -1,18 +1,18 @@
-# Description 📝
+# Description 📝 {#description}
 * Sensors used in Automatic Gate [blueprint](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate), [automations](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Automations), [frontend](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Frontend), and [gate firmware](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Esphome%20gate%20firmware)
 * Prefer installing sensors through the UI when possible
 * Replace user0 with your real name
 * Some sensors require to be set for each user
 
 
-# Required sensors 📌
-## Gate ⛩️
+# Required sensors 📌 {#required-sensors}
+## Gate ⛩️ {#gate}
 **Any gate or garage door which is either a switch or a cover**
 
-Could be from my [esphome firmware](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/Extra/Esphome%20gate%20firmware/gate.yaml) or any other integration
+Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware/gate.yaml) or any other integration
 
 
-## GPS location trackers 🌎
+## GPS location trackers 🌎 {#gps-location-trackers}
 **Each GPS location tracker necessary to detect if you're home or away, estimate your travel time, and track your distance**
 
 *Note : Try to avoid using wifi/ble location trackers as latency could be an issue. Use high precision when driving near home*
@@ -32,7 +32,7 @@ Install through [companion app](https://companion.home-assistant.io/docs/core/lo
 Then, assign these device trackers to each person by going into : `Settings > People > Select a user > Track devices > Your new device tracker`
 
 
-## Driving sensors 🚗
+## Driving sensors 🚗 {#driving-sensors}
 **Each driving sensor which will detect when you start and stop driving**
 
 Either Android Auto, bluetooth connexion, or both grouped
@@ -71,7 +71,7 @@ Install sensors from options 1 & 2
 Then use the following template : `{{ is_state('binary_sensor.user0_android_auto', 'on') or '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user0_bluetooth_connection', 'connected_paired_devices') }}`
 
 
-## Travel time sensors ✈️
+## Travel time sensors ✈️ {#travel-time-sensors}
 **Each travel time sensor which calculates the travel time between each user and your home**
 
 ### Option 1 : Waze
@@ -101,7 +101,7 @@ Install through the UI : `Settings > Devices & services > Add integration > Goog
 * Destination : `zone.home`
 
 
-## Proximity sensors ↔️
+## Proximity sensors ↔️ {#proximity-sensors}
 **Each proximity sensor which calculates the distance of each user from home**
 
 Delivered by the [Proximity](https://www.home-assistant.io/integrations/proximity/) integration
@@ -115,13 +115,13 @@ Settings :
 * Tolerance distance : Not required by Automatic Gate
 
 
-## Notify services 💬
+## Notify services 💬 {#notify-devices}
 **Each phone notification service to notify of the itinerary status**
 
 Delivered by the [companion app](https://companion.home-assistant.io/docs/notifications/notifications-basic) by default
 
 
-## Itinerary sensors 🗺️
+## Itinerary sensors 🗺️ {#itinerary-sensors}
 **Each itinerary helper whicA helper you have to create which will store the state of each user ih will store the state of each user itinerary**
 
 Use an [input text helper](https://www.home-assistant.io/integrations/input_text/)
@@ -145,7 +145,7 @@ input_text:
     icon: mdi:map
 ```
 
-## Planned opening 📅
+## Planned opening 📅 {#planned-opening}
 **A helper which will store the planned automatic opening of the gate**
 
 Use an [input datetime helper](https://www.home-assistant.io/integrations/input_datetime/)
@@ -168,9 +168,9 @@ input_datetime:
 
 
 
-# Optional sensors ➕
+# Optional sensors ➕ {#optional-sensors}
 
-## Bluetooth transmitter 📡
+## Bluetooth transmitter 📡 {{#ble-transmitter}}
 **Companion app ble transmitter to let a scanner automatically close your gate upon leaving**
 
 The automation will automatically turn the transmitter off if not needed
@@ -187,16 +187,16 @@ Settings :
 * Transmit power : `High`
 * UUID : A [random UUID](https://www.uuidgenerator.net/)
 
-## Bluetooth entities 🔎
+## Bluetooth entities 🔎 {#ble-entities}
 **Each BLE entity to monitor when someone is leaving home, to close when it goes to unavailable**
 
-Could be from my [esphome firmware](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/Extra/Esphome%20gate%20firmware/gate.yaml) or any other bluetooth iBeacon scanner near your gate
+Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware) or any other bluetooth iBeacon scanner near your gate
 
-## Bluetooth scanner switch ⏻
+## Bluetooth scanner switch ⏻ {#ble-scanner-switch}
 **A switch which can turn on/off your BLE scanner. Not useful if you want your BLE scanner running 24/7**
 
-## Notify all devices group 🔔
-**A group which allows my [esphome firmware](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/Extra/Esphome%20gate%20firmware/gate.yaml) and [automations](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Automations) to notify all users in case of an event like your gate opening**
+## Notify all devices group 🔔 {#notify-all-devices-group}
+**A group which allows my [esphome firmware](Extra/Esphome%20gate%20firmware/gate.yaml) and [automations](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Automations) to notify all users in case of an event like your gate opening**
 
 Use a [notification group](https://www.home-assistant.io/integrations/group/#notify-groups)
 
@@ -210,9 +210,9 @@ notify:
     - ...
 ```
 
-## Nearest distance sensor 🤏
-Only necessary for [esphome firmware](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/Extra/Esphome%20gate%20firmware/gate.yaml)
+## Nearest distance sensor 🤏 {#nearest-distance-sensor}
+Only necessary for [esphome firmware](Extra/Esphome%20gate%20firmware)
 
 **Gives the distance of the nearest person from home, to only open if someone is close enough**
 
-To install, please follow the instructions for the [required proximity sensors](https://github.com/etiennec78/Home-Automation/edit/master/Automatic%20Gate/sensors.md#proximity-sensors)
+To install, please follow the instructions for the [required proximity sensors](sensors.md#proximity-sensors)
