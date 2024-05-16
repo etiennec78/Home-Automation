@@ -116,7 +116,7 @@ Install through the UI : `Settings > Devices & services > Add integration > Goog
 * Destination : `zone.home`
 
 
-## Proximity sensors ↔️
+## Proximity sensors 📏
 
 **Each proximity sensor which calculates the distance of each user from home**
 
@@ -133,12 +133,14 @@ Settings :
 
 
 ## Notify services 💬
+
 **Each phone notification service to notify of the itinerary status**
 
 Delivered by the [companion app](https://companion.home-assistant.io/docs/notifications/notifications-basic) by default
 
 
 ## Itinerary sensors 🗺️
+
 **Each itinerary helper whicA helper you have to create which will store the state of each user ih will store the state of each user itinerary**
 
 Use an [input text helper](https://www.home-assistant.io/integrations/input_text/)
@@ -146,6 +148,7 @@ Use an [input text helper](https://www.home-assistant.io/integrations/input_text
 Install through the UI : `Settings > Devices & services > Helpers tab > Create helper > Text`
 
 Settings :
+
 * Name : `User0 itinerary`
 * Icon : `mdi:map`
 * Minimum lenght : `0`
@@ -225,6 +228,7 @@ Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware) or any othe
 Use a [notification group](https://www.home-assistant.io/integrations/group/#notify-groups)
 
 Install in your configuration.yaml file :
+
 ```yaml
 notify:
   platform: group
@@ -240,4 +244,4 @@ Only necessary for [esphome firmware](Extra/Esphome%20gate%20firmware)
 
 **Gives the distance of the nearest person from home, to only open if someone is close enough**
 
-To install, please follow the instructions for the [required proximity sensors](sensors.md#proximity-sensors)
+To install, please follow the instructions for the [required proximity sensors](sensors.md#proximity-sensors-%EF%B8%8F)
