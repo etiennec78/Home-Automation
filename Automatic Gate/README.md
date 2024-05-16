@@ -1,20 +1,26 @@
 # Automatic Gate ⛩️
+
 ## Description 📝
+
 **Modular** and **secure** gate automation that **opens your gate** upon leaving or arriving
+
 * Supports up to 10 users driving **simultaneously**
 * Manual override : Prioritizes manual actions over the automation, letting you control your gate even while the automation is running
 * Security features : Auto-close timer, alert notifications, timeout detection, aborting on vehicle left, aborting if driven near home without entering, keeping gate open while someone else approaches or leaves home
 * Various options : Custom gate settings, iBeacon automatic closing, travel time update interval
 
 ## Flowchart 🔀
+
 [<img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Automatic%20Gate/Automatic%20Gate%20Flowchart.png?raw=true" width="100%">](https://miro.com/app/board/uXjVMpH4Tno=/)
 
 ## How to Install 🚀
 
 ### Import the blueprint 🗺️
+
 [![Import Automatic Gate blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FAutomatic+Gate%2Fautomatic-gate.yaml)
 
 ### Required [sensors](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#required-sensors-) 📡
+
 |        Sensor         |      Type      |      Provider      | Multiple |                                                       Description                                                       |
 | :-------------------: | :------------: | :----------------: | :------: | :---------------------------------------------------------------------------------------------------------------------- |
 |         [Gate](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gate-%EF%B8%8F)          |  switch/cover  |        Any         |    No    | Any gate or garage door which is either a switch or a cover. Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware) or any other integration |
@@ -28,6 +34,7 @@
 
 
 ### Optional [sensors](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#optional-sensors-) ➕
+
 |        Sensor         |      Type      |      Provider      | Multiple |                                                      Description                                                      |
 | :-------------------: | :------------: | :----------------: | :------: | :-------------------------------------------------------------------------------------------------------------------- |
 |    [BLE transmitter](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-transmitter-)    |      none      |     Companion      |   Yes    | Companion app ble transmitter to automatically close gate upon leaving                                                |
@@ -38,9 +45,13 @@
 
 
 ## How to update 🔁
-Simply restart Home Assistant, and this blueprint will be updated to the latest version
+
+Go to [Settings > Automations & Scenes > Blueprints](https://my.home-assistant.io/redirect/blueprints)
+
+Click on the three-dot menu to the right of Automatic Gate, and select "Re-import blueprint"
 
 ## Extra ➕
+
 |          Element          |                                                                           Description                                                                            |
 | :-----------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |      [Automations](Extra/Automations) 🤖       | Automations that notify all users if the gate has been left open or is unavailable for more than 5 minutes                                                       |
