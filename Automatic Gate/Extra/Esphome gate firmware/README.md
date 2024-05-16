@@ -1,5 +1,7 @@
 # Esphome Gate Firmware ⚙️
+
 ## Description
+
 An [ESP32](https://amzn.to/3y2UtCr) firmware I use to **smartify** my FAAC E024S **gate**
 
 Supports the following features :
@@ -16,6 +18,7 @@ Supports the following features :
 [<img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Automatic%20Gate/Automatic%20Gate%20Flowchart.png?raw=true" width="100%">](https://miro.com/app/board/uXjVMpH4Tno=/)
 
 ## How to install 🚀
+
 1. Get yourself an [ESP32 with relay](https://amzn.to/3y2UtCr), and  [Install ESPHome](https://esphome.io/guides/installing_esphome.html)
 2. Read your gate documentation and identify the pin responsible for gate opening
 3. Read your ESP32 documentation and identify the pin used for the relay ([this model](https://amzn.to/3y2UtCr) has it on GPIO16 or GPIO17)
