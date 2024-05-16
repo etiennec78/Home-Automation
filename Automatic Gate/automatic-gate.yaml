@@ -782,6 +782,22 @@ action:
                                         channel: Gate alerts
                                         importance: high
                                         tag: automatic-closing
+                              # If the user has left his car
+                              - conditions:
+                                  - condition: template
+                                    value_template: "{{ wait.trigger.id == 'vehicle_left' }}"
+                                sequence:
+                                  # Notify the user that the gate will close automatically since he has left his car
+                                  - service: "{{ notify_device }}"
+                                    data:
+                                      title: !input gate_closing_title
+                                      message: !input vehicle_left_message
+                                      data:
+                                        car_ui: true
+                                        notification_icon: mdi:alert-circle
+                                        channel: Gate alerts
+                                        importance: high
+                                        tag: automatic-closing
                             default:
                               # Notify the user that the gate will close automatically
                               - service: "{{ notify_device }}"
