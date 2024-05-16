@@ -444,6 +444,7 @@ action:
                             channel: Gate alerts
                             importance: high
                             tag: automatic-closing
+                            timeout: 300
                     else:
                       # Notify the user that the gate will close automatically
                       - service: "{{ notify_device }}"
@@ -455,6 +456,7 @@ action:
                             channel: Gate alerts
                             importance: high
                             tag: automatic-closing
+                            timeout: 300
                   # Close the gate
                   - choose:
                     - conditions:
@@ -477,18 +479,6 @@ action:
                       message: clear_notification
                       data:
                         tag: itinerary
-                  # Let the user read the message
-                  - delay:
-                      hours: 0
-                      minutes: 0
-                      seconds: 30
-                      milliseconds: 0
-                  # Remove the notification received by the user when the gate automatically closed
-                  - service: "{{ notify_device }}"
-                    data:
-                      message: clear_notification
-                      data:
-                        tag: automatic-closing
                   # Stop the whole script as it ran successfully
                   - stop: Successful
           # Notify the user that the gate will wait for next person
@@ -647,6 +637,7 @@ action:
                                     channel: Gate alerts
                                     importance: high
                                     tag: itinerary
+                                    timeout: 300
                               - stop: Timed out
 
                   # Restart the second repeat loop if the wait_for_trigger was triggered by a position or car sensor update
@@ -676,6 +667,7 @@ action:
                             channel: Gate alerts
                             importance: high
                             tag: itinerary
+                            timeout: 300
                       - stop: Not in activation zone
                   # Set the user itinerary text variable to "on_approach", because the user is near the house and will arrive soon
                   - service: input_text.set_value
@@ -779,6 +771,7 @@ action:
                                         channel: Gate alerts
                                         importance: high
                                         tag: automatic-closing
+                                        timeout: 300
                               # If the user has exited the gate activation zone
                               - conditions:
                                   - condition: template
@@ -795,6 +788,7 @@ action:
                                         channel: Gate alerts
                                         importance: high
                                         tag: automatic-closing
+                                        timeout: 300
                               # If the user has left his car
                               - conditions:
                                   - condition: template
@@ -811,6 +805,7 @@ action:
                                         channel: Gate alerts
                                         importance: high
                                         tag: automatic-closing
+                                        timeout: 300
                             default:
                               # Notify the user that the gate will close automatically
                               - service: "{{ notify_device }}"
@@ -822,6 +817,7 @@ action:
                                     channel: Gate alerts
                                     importance: high
                                     tag: automatic-closing
+                                    timeout: 300
                           # Close the gate
                           - choose:
                             - conditions:
@@ -844,18 +840,6 @@ action:
                       message: clear_notification
                       data:
                         tag: itinerary
-                  # Let the user read the message
-                  - delay:
-                      hours: 0
-                      minutes: 0
-                      seconds: 30
-                      milliseconds: 0
-                  # Remove the notification received by the user when the gate automatically closed
-                  - service: "{{ notify_device }}"
-                    data:
-                      message: clear_notification
-                      data:
-                        tag: automatic-closing
                   # Stop the whole script as it was successful
                   - stop: Successful
       # If both loop were broken
@@ -876,6 +860,7 @@ action:
             channel: Gate alerts
             importance: high
             tag: itinerary
+            timeout: 300
 # Run in parralel to let the automation start with multiple users driving simultaneously
 mode: parallel
 max: 10
