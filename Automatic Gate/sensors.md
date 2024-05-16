@@ -21,7 +21,7 @@ Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware/gate.yaml) o
 
 *Note : Try to avoid using wifi/ble location trackers as latency could be an issue. Use high precision when driving near home*
 
-Install through [companion app](https://companion.home-assistant.io/docs/core/location/) settings : `Settings > Companion app > Manage sensors > Background location ✔️`
+Install through [companion app](https://companion.home-assistant.io/docs/core/location/) settings : Settings > Companion app > Manage sensors > Background location ✔️
 
 Settings :
 
@@ -34,7 +34,7 @@ Settings :
 * Minimal precision : Keep default
 * Location sent : `Exact`
 
-Then, assign these device trackers to each person by going into : `Settings > People > Select a user > Track devices > Your new device tracker`
+Then, assign these device trackers to each person by going into : *[Settings > People](https://my.home-assistant.io/redirect/people/) > Select a user > Track devices > Your new device tracker*
 
 
 ## Driving sensors 🚗
@@ -45,15 +45,15 @@ Either Android Auto, bluetooth connexion, or both grouped
 
 ### Option 1 : Android Auto connection
 
-Install through [companion app](https://companion.home-assistant.io/docs/core/sensors#android-auto) settings : `Settings > Companion app > Manage sensors > Android Auto ✔️`
+Install through [companion app](https://companion.home-assistant.io/docs/core/sensors#android-auto) settings : *Settings > Companion app > Manage sensors > Android Auto ✔️*
 
 ### Option 2 : Bluetooth connection with template sensor
 
-Install through [companion app](https://companion.home-assistant.io/docs/core/sensors/#bluetooth-sensors) settings : `Settings > Companion app > Manage sensors > Bluetooth connection ✔️`
+Install through [companion app](https://companion.home-assistant.io/docs/core/sensors/#bluetooth-sensors) settings : *Settings > Companion app > Manage sensors > Bluetooth connection ✔️*
 
 Use a [template helper](https://www.home-assistant.io/integrations/template/)
 
-Install through the UI : `Settings > Devices & services > Helpers tab > Create helper > Template > Binary sensor`
+Install through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Template > Binary sensor*
 
 Settings :
 
@@ -91,7 +91,9 @@ Then use the following template : `{{ is_state('binary_sensor.user0_android_auto
 
 Delivered by the [Waze Travel Time](https://www.home-assistant.io/integrations/waze_travel_time/) integration
 
-Install through the UI : `Settings > Devices & services > Add integration > Waze Travel Time`
+Install through the UI : *[Settings > Devices & services > Add integration > Waze Travel Time](https://my.home-assistant.io/redirect/config_flow_start/?domain=waze_travel_time)*
+
+Install the integration multiple times if you have multiple users
 
 Settings :
 
@@ -108,7 +110,9 @@ Settings :
 
 Delivered by the [Google Maps Travel Time](https://www.home-assistant.io/integrations/google_travel_time/) integration
 
-Install through the UI : `Settings > Devices & services > Add integration > Google Maps Travel Time`
+Install through the UI : *[Settings > Devices & services > Add integration > Google Maps Travel Time](https://my.home-assistant.io/redirect/config_flow_start/?domain=google_travel_time)*
+
+Install the integration multiple times if you have multiple users
 
 * Name : `User0 Travel Time`
 * API key : Your api key
@@ -122,7 +126,7 @@ Install through the UI : `Settings > Devices & services > Add integration > Goog
 
 Delivered by the [Proximity](https://www.home-assistant.io/integrations/proximity/) integration
 
-Install through the UI : `Settings > Devices & services > Add integration > Proximity`
+Install through the UI : *[Settings > Devices & services > Add integration > Proximity](https://my.home-assistant.io/redirect/config_flow_start/?domain=proximity)*
 
 Settings :
 
@@ -138,14 +142,16 @@ Settings :
 
 Delivered by the [companion app](https://companion.home-assistant.io/docs/notifications/notifications-basic) by default
 
+Find the service ids by going into : *[Developer tools > Services tab](https://my.home-assistant.io/redirect/developer_states/) > searching for "notify."*
+
 
 ## Itinerary sensors 🗺️
 
-**Each itinerary helper whicA helper you have to create which will store the state of each user ih will store the state of each user itinerary**
+**Each input text helper which will store the state of each user itinerary**
 
 Use an [input text helper](https://www.home-assistant.io/integrations/input_text/)
 
-Install through the UI : `Settings > Devices & services > Helpers tab > Create helper > Text`
+Install through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Text*
 
 Settings :
 
@@ -171,7 +177,7 @@ input_text:
 
 Use an [input datetime helper](https://www.home-assistant.io/integrations/input_datetime/)
 
-Install through the UI : `Settings > Devices & services > Helpers tab > Create helper > Date and/or time`
+Install through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Date and/or time*
 
 Settings :
 
@@ -198,7 +204,7 @@ input_datetime:
 
 The automation will automatically turn the transmitter off if not needed
 
-Install through [companion app](https://www.home-assistant.io/integrations/mobile_app/) settings : `Settings > Companion app > Manage sensors > BLE Transmitter ✔️`
+Install through [companion app](https://www.home-assistant.io/integrations/mobile_app/) settings : *Settings > Companion app > Manage sensors > BLE Transmitter ✔️*
 
 Settings :
 

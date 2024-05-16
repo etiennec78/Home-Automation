@@ -88,7 +88,7 @@ blueprint:
             device_class: distance
     notify_devices:
       name: 💬 Notify services
-      description: Each **service** of **device to notify** (Find the service id by going into dev tools > services > typing "notify." in services) (same order)
+      description: Each **service** of **device to notify** (Find the service ids by going into [Developer tools > Services tab](https://my.home-assistant.io/redirect/developer_states/) > searching for "notify.") (same order)
       selector:
         text:
           multiple: true
