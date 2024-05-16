@@ -223,7 +223,7 @@ Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware) or any othe
 
 ## Notify all devices group 🔔
 
-**A group which allows my [esphome firmware](Extra/Esphome%20gate%20firmware/gate.yaml) and [automations](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Automations) to notify all users in case of an event like your gate opening**
+**A group which allows my [esphome firmware](Extra/Esphome%20gate%20firmware) and [automations](Extra/Automations) to notify all users in case of an event like your gate opening**
 
 Use a [notification group](https://www.home-assistant.io/integrations/group/#notify-groups)
 
@@ -244,4 +244,4 @@ Only necessary for [esphome firmware](Extra/Esphome%20gate%20firmware)
 
 **Gives the distance of the nearest person from home, to only open if someone is close enough**
 
-To install, please follow the instructions for the [required proximity sensors](sensors.md#proximity-sensors-%EF%B8%8F)
+To install, please follow the instructions for the [required proximity sensors](sensors.md#proximity-sensors-)
