@@ -33,11 +33,20 @@ blueprint:
           unit_of_measurement: seconds
     safety_delay:
       name: 🔒 Auto-close delay
-      description: The time the gate will wait before **automatically closing** if you haven't left home / didn't arrive / timed out
+      description: The time the gate will wait before **automatically closing** if you haven't left home or didn't arrive
       default: 7
       selector:
         number:
           min: 2
+          max: 30
+          unit_of_measurement: minutes
+    timeout_delay:
+      name: ⌛ Timeout delay
+      description: The time the automation will wait before **stopping** if your phone **times out** and doesn't send new position updates, while being in the activation zone
+      default: 2
+      selector:
+        number:
+          min: 0.5
           max: 30
           unit_of_measurement: minutes
     persons:
@@ -242,8 +251,8 @@ blueprint:
       name: 💬⚠️ Timed out notification
       description: |-
         The **content** of the notification you will receive if you **time out**
-        *Note : {{safety_delay}} will be replaced by your auto-close delay you have set above*
-      default: "Your position has not been updated in {{ safety_delay }} minutes"
+        *Note : {{timeout_delay}} will be replaced by your auto-close delay you have set above*
+      default: "Your position has not been updated in {{ timeout_delay }} minutes"
       selector:
         text:
           multiline: true
@@ -259,6 +268,7 @@ variables:
   gate: !input gate
   lead_time: !input lead_time
   safety_delay: !input safety_delay
+  timeout_delay: !input timeout_delay
   persons: !input persons
   driving_sensors: !input driving_sensors
   travel_time_sensors: !input travel_time_sensors
@@ -347,7 +357,7 @@ action:
                 - service: cover.open_cover
                   target:
                     entity_id: !input gate
-      # Wait for the gate to be closed by the user, or the iBeacon to be out of reach for 20s, or the vehicle to be left, or the user to leave home, all for at most 7 minutes
+      # Wait for the gate to be closed by the user, or the iBeacon to be out of reach for 20s, or the vehicle to be left, or the user to leave home, all while not waiting more than the auto-close delay
       - wait_for_trigger:
           - platform: template
             id: manual
@@ -423,7 +433,7 @@ action:
                       - condition: template
                         value_template: "{{ wait.completed }}"
                     then:
-                      # Notify the user that the gate will close automatically since he didn't leave in 7 minutes
+                      # Notify the user that the gate will close automatically since he didn't leave in time
                       - service: "{{ notify_device }}"
                         data:
                           title: !input gate_closing_title
@@ -614,7 +624,7 @@ action:
                               - platform: template
                                 value_template: "{{ is_state(driving_sensor, 'off') }}"
                             timeout:
-                              minutes: !input safety_delay
+                              minutes: !input timeout_delay
                           # If the timeout ran out of time
                           - if:
                               - condition: template
@@ -695,7 +705,7 @@ action:
                             - service: cover.open_cover
                               target:
                                 entity_id: !input gate
-                  # Wait for the gate to be closed manually, or the vehicle to be left, or the user to leave the activation zone, all for at most 7 minutes
+                  # Wait for the gate to be closed manually, or the vehicle to be left, or the user to leave the activation zone, all while not waiting more than the auto-close delay
                   - wait_for_trigger:
                       - platform: template
                         id: manual
