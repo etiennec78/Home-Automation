@@ -13,36 +13,36 @@
 ### Import the blueprint 🗺️
 [![Import Automatic Gate blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FAutomatic%20Gate%2Fblueprint.yaml)
 
-### Required [sensors](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.yaml) 📡
-|        Sensor         |      Type      |      Provider      | Multiple |                                                      Description                                                      |
-| :-------------------: | :------------: | :----------------: | :------: | :-------------------------------------------------------------------------------------------------------------------- |
-|         Gate          |  switch/cover  |        Any         |    No    | Any gate or garage door which is either a switch or a cover. Could be my [esphome firmware](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/Extra/Esphome%20gate%20firmware/gate.yaml) or any other integration    |
-| GPS location tracker  |     person     |     [Companion](https://companion.home-assistant.io/docs/core/location)      |   Yes    | Try to avoid using wifi/ble location trackers as latency could be an issue. Use high precision when driving near home |
-|    Driving sensor     | binary_sensor  | [Companion](https://companion.home-assistant.io/docs/core/sensors#android-auto)/[Template](https://www.home-assistant.io/integrations/template/) |   Yes    | Either Android Auto, bluetooth connexion, or both grouped
-|      Travel time      |     sensor     |        [Waze](https://www.home-assistant.io/integrations/waze_travel_time/)        |   Yes    | For now only Waze integration accepted, calculates the travel time between you and your home. Disable auto polling    |
-|   Proximity sensors   |     sensor     |     [Proximity](https://www.home-assistant.io/integrations/proximity/#distance)      |   Yes    | Distance of the user from home                                                                                        |
-|    Notify services    |     service    |     [Companion](https://companion.home-assistant.io/docs/notifications/notifications-basic)      |   Yes    | Each phone per user to notify of the itinerary state. Comes by default when installing the companion app              |
-|    Itinerary state    |   input_text   |       [Helper](https://www.home-assistant.io/integrations/input_text/)       |   Yes    | A helper you have to create which will store the state of each user itinerary                                         |                                                 |
-|    Planned opening    | input_datetime |       [Helper](https://www.home-assistant.io/integrations/input_datetime/)       |    No    | A helper you have to create which will store the planned automatic opening of the gate                                |
+### Required [sensors](sensors.md#required-sensors) 📡
+|        Sensor         |      Type      |      Provider      | Multiple |                                                       Description                                                       |
+| :-------------------: | :------------: | :----------------: | :------: | :---------------------------------------------------------------------------------------------------------------------- |
+|         [Gate](sensors.md#gate)          |  switch/cover  |        Any         |    No    | Any gate or garage door which is either a switch or a cover. Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware) or any other integration |
+| [GPS location trackers](sensors.md#gps-location-trackers) |     person     |     Companion      |   Yes    | Try to avoid using wifi/ble location trackers as latency could be an issue. Use high precision when driving near home   |
+|    [Driving sensor](sensors.md#driving-sensors)     | binary_sensor  | Companion/Template |   Yes    | Either Android Auto, bluetooth connexion, or both grouped                                                               |
+|      [Travel time](sensors.md#travel-time-sensors)      |     sensor     |        Waze        |   Yes    | For now only Waze integration accepted, calculates the travel time between you and your home. Disable auto polling      |
+|   [Proximity sensors](sensors.md#proximity-sensors)   |     sensor     |     Proximity      |   Yes    | Calculates the distance of each user from home                                                                          |
+|    [Notify services](sensors.md#notify-services)    |     service    |     Companion      |   Yes    | Each phone notification service to notify of the itinerary status. Comes by default when installing the companion app   |
+|    [Itinerary state](sensors.md#itinerary-sensors)    |   input_text   |       Helper       |   Yes    | A helper you have to create which will store the state of each user itinerary                                           |
+|    [Planned opening](sensors.md#planned-opening)    | input_datetime |       Helper       |    No    | A helper you have to create which will store the planned automatic opening of the gate                                  |
 
 
-### Optional [sensors](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.yaml) ➕
+### Optional [sensors](sensors.md#optional-sensors) ➕
 |        Sensor         |      Type      |      Provider      | Multiple |                                                      Description                                                      |
 | :-------------------: | :------------: | :----------------: | :------: | :-------------------------------------------------------------------------------------------------------------------- |
-|     BLE entities      |signal_strength |        Any         |   Yes    | Each BLE entity to monitor when the driver BLE state goes to unavailable. Could be my [esphome firmware](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/Extra/Esphome%20gate%20firmware/gate.yaml) or else.
-|  BLE scanner switch   |     switch     |        Any         |    No    | A switch which would automatically turn on/off your BLE scanner. Not useful if your BLE scanner is running 24/7       |
-|  Notify all devices   |     group      |       [Group](https://companion.home-assistant.io/docs/notifications/notifications-basic/#sending-notifications-to-multiple-devices)        |    No    | Only necessary for esphome firmware and extra gate automations
-|    BLE transmitter    |      none      |     [Companion](https://companion.home-assistant.io/docs/core/sensors/#bluetooth-sensors)      |   Yes    | Companion app ble transmitter to automatically close gate upon leaving                                                  |
-|   Nearest distance    |     sensor     |     [Proximity](https://www.home-assistant.io/integrations/proximity/#nearest-distance)      |    No    | Only necessary for esphome firmware. Gives the distance of the nearest person from home.
+|    [BLE transmitter](sensors.md#bluetooth-transmitter)    |      none      |     Companion      |   Yes    | Companion app ble transmitter to automatically close gate upon leaving                                                |
+|     [BLE entities](sensors.md#bluetooth-entities)      |signal_strength |        Any         |   Yes    | Each BLE entity to monitor, to close the gate when it goes to unavailable. Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware) or else  |
+|  [BLE scanner switch](sensors.md#bluetooth-scanner-switch)   |     switch     |        Any         |    No    | A switch which can turn on/off your BLE scanner. Not useful if you want your BLE scanner running 24/7                 |
+|  [Notify all devices](sensors.md#notify-all-devices-group)   |     group      |       Group        |    No    | Only necessary for [esphome firmware](Extra/Esphome%20gate%20firmware) and extra gate automations                                                        |
+|   [Nearest distance](sensors.md#nearest-distance-sensor-)    |     sensor     |     Proximity      |    No    | Only necessary for [esphome firmware](Extra/Esphome%20gate%20firmware). Gives the distance of the nearest person from home                               |
+
 
 ## How to update 🔁
-Simply import the blueprint again, and Home Assistant should ask you to replace your old version
+Simply restart Home Assistant, and this blueprint will be updated to the latest version
 
 ## Extra ➕
-
 |          Element          |                                                                           Description                                                                            |
 | :-----------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|      [Automations](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Automations) 🤖       | Automations that notify all users if the gate has been left open or is unavailable for more than 5 minutes                                                       |
-|     [Ble car device](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Ble%20car%20device) 🚗     | A really small Arduino code to let a ESP32 sit in your car so that your phone can connect to it over BLE and monitor if you are driving                          |
-|   [ESPHome gate firmware](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Esphome%20gate%20firmware) 🔧 | My ESP32 gate firmware which only needs to be connected to one open&close pin. Works by guessing the actual state and locking new requests while not being ready |
-|        [Frontend](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Frontend) 🎨        | A small dashboard which can track the position history of a user and display both the ETA and time remaining when an itinerary is in progress                    |
+|      [Automations](Extra/Automations) 🤖       | Automations that notify all users if the gate has been left open or is unavailable for more than 5 minutes                                                       |
+|     [Ble car device](Extra/Ble%20car%20device) 🚗     | A really small Arduino code to let a ESP32 sit in your car so that your phone can connect to it over BLE and monitor if you are driving                          |
+| [ESPHome gate firmware](Extra/Esphome%20gate%20firmware) 🔧  | My ESP32 gate firmware which only needs to be connected to one open&close pin. Works by guessing the actual state and locking new requests while not being ready |
+|        [Frontend](Extra/Frontend) 🎨        | A small dashboard which can track the position history of a user and display both the ETA and time remaining when an itinerary is in progress                    |

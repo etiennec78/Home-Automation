@@ -1,4 +1,4 @@
-# Esphome Gate Firmware 🔧
+# Esphome Gate Firmware ⚙️
 ## Description
 An [ESP32](https://amzn.to/3y2UtCr) firmware I use to **smartify** my FAAC E024S **gate**
 
