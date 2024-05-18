@@ -1,53 +1,181 @@
-#################### automations.yaml (Gate left open for too long) ####################
-- id: "1685891275304"
-  alias: "[Gate] Open for too long"
-  description: Notifies every user when the gate has been open for 7 minutes
+blueprint:
+  name: Gate left open notification
+  domain: automation
+  author: etiennec78
+  description: |-
+    A simple automation that **notifies** all selected users when the gate has been **left open** for too long
+    Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Automations)
+    Discord : etiennec78
+  input:
+    gate:
+      name: ⛩️ Gate
+      description: The **switch** or **cover** which controls your **gate**
+      selector:
+        entity:
+          filter:
+            domain:
+              - switch
+              - cover
+    left_open_delay:
+      name: ⌛ Left open delay
+      description: |-
+        The time the automation will wait before notifying your devices if your gate is still open
+        Useful to let the gate be open for a normal amount of time
+      default: 7
+      selector:
+        number:
+          min: 0
+          max: 30
+          unit_of_measurement: minutes
+    notify_devices:
+      name: 💬 Notify services
+      description: |-
+        Each **service** of **device to notify** (Find the service ids by going into [Developer tools > Services tab](https://my.home-assistant.io/redirect/developer_states) > searching for "notify.")
+        *Note : Optional*
+      default: []
+      selector:
+        text:
+          multiple: true
+          prefix: notify.mobile_app_
+    persistent_notification:
+      name: 🔔 Persistent notification
+      description: Be notified by a **[persistent notification](https://www.home-assistant.io/integrations/persistent_notification)** directly on the **frontend**
+      default: false
+      selector:
+        boolean:
+    phone_tts:
+      name: 📢 Phone TTS
+      description: Let your **phones** read the **notification on speaker** when received
+      default: false
+      selector:
+        boolean:
+    speaker_tts_devices:
+      name: 🔊 TTS speakers
+      description: |-
+        The **home speakers** your want to play a TTS on
+        *Note : Optional*
+      default: []
+      selector:
+        entity:
+          multiple: true
+          domain: media_player
+    speaker_tts_service:
+      name: 🎙️ TTS service
+      description: |-
+        The **TTS service** you want to use for your speakers
+        *Note : Optional*
+      default: []
+      selector:
+        target:
+          entity:
+            domain: tts
+    left_open_title:
+      name: 📃 Gate left open notification title
+      description: The **title** displayed on the notification you will receive when your gate has been **left open**
+      default: "Gate left open 🔓"
+      selector:
+        text:
+    left_open_message:
+      name: 💬 Gate left open notification
+      description: |-
+        The **content** of the notification you will receive when your gate has been **left open**
+        *Note : {{left_open_delay}} will be replaced by the left open delay set above*
+      default: "Gate has been left open for {{ left_open_delay }} minutes"
+      selector:
+        text:
 
-  trigger:
-    # Triggers when the gate was open for 7 minutes
-    - platform: state
-      entity_id:
-        - switch.gate
-      to: open
-      for:
-        hours: 0
-        minutes: 7
-        seconds: 0
+variables:
+  gate: !input gate
+  persistent_notification: !input persistent_notification
+  phone_tts: !input phone_tts
+  speaker_tts_devices: !input speaker_tts_devices
+  speaker_tts_service: !input speaker_tts_service
 
-  condition: []
-    # No condition
+trigger:
+  # Triggers when the gate was open for 7 minutes
+  - platform: state
+    value_template: "{{ is_state(switch.gate, ['on', 'open']) }}"
+    for:
+      hours: 0
+      minutes: 7
+      seconds: 0
 
-  action:
-    # Play a TTS on home speaker
-    - service: tts.speak
-      data:
-        media_player_entity_id: media_player.player0
-        message: The gate has been open for 7 minutes
-        cache: true
-      target:
-        entity_id: tts.piper
-    # Send a notification to all devices
-    - service: notify.all_devices
-      data:
-        message: The gate has been open for 7 minutes
-        title: Gate
+condition: []
+  # No condition
+
+action:
+  # Notify each user that the gate has been left open
+  - repeat:
+      for_each: !input notify_devices
+      sequence:
+        - service: "{{ 'notify.mobile_app_'+repeat.item }}"
+          data:
+            message: !input left_open_message
+            title: !input left_open_title
+            data:
+              car_ui: true
+              notification_icon: mdi:gate-alert
+              channel: Gate alerts
+              importance: high
+              tag: gate-left-open
+              timeout: 3600
+        # Play a TTS on each phone, only if this has been enabled
+        - if:
+            condition: template
+            value_template: "{{ phone_tts }}"
+          then:
+            - service: "{{ 'notify.mobile_app_'+repeat.item }}"
+              data:
+                message: TTS
+                data:
+                  tts_text: !input left_open_message
+  # Play a TTS on each speaker selected, only if at least one is selected and a tts service is set
+  - if:
+      condition: template
+      value_template: "{{ speaker_tts_devices != [] and speaker_tts_service != [] }}"
+    then:
+      - service: tts.speak
         data:
-          car_ui: true
-          notification_icon: mdi:gate-alert
-          channel: Gate alerts
-          importance: high
-          tag: gate-opened-reminder
-    # Wait for the gate to be closed
-    - wait_for_trigger:
-      - platform: state
-        entity_id:
-          - switch.gate
-        from: "on"
-        to: "off"
-    # Remove the notification sent to the users
-    - service: notify.all_devices
-      data:
+          cache: true
+          media_player_entity_id: !input speaker_tts_devices
+          message: !input left_open_message
+        target:
+          entity_id: !input speaker_tts_service
+  # Send a persistent notification on the dashboard, only if this has been enabled
+  - if:
+      condition: template
+      value_template: !input persistent_notification
+    then:
+      - service: persistent_notification.create
         data:
-          tag: gate-opened-reminder
-        message: clear_notification
-  mode: single
+          message: !input left_open_message
+          title: !input left_open_title
+          notification_id: gate-left-open
+  # Wait for the gate to be closed, while running this automation for at most one hour
+  - wait_for_trigger:
+    - platform: template
+      value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
+    timeout:
+      hours: 1
+      minutes: 0
+      seconds: 0
+      milliseconds: 0
+    continue_on_timeout: false
+  # Remove the notification sent to the users
+  - repeat:
+      for_each: !input notify_devices
+      sequence:
+        - service: "{{ 'notify.mobile_app_'+repeat.item }}"
+          data:
+            message: clear_notification
+            data:
+              tag: gate-left-open
+  # Remove the persistent notification from the dashboard
+  - if:
+      condition: template
+      value_template: !input persistent_notification
+    then:
+      - service: persistent_notification.dismiss
+        data:
+          notification_id: gate-left-open
+mode: single
