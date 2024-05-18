@@ -5,9 +5,9 @@
 **Modular** and **secure** gate automation that **opens your gate** upon leaving or arriving
 
 * Supports up to 10 users driving **simultaneously**
-* Manual override : Prioritizes manual actions over the automation, letting you control your gate even while the automation is running
-* Security features : Auto-close timer, alert notifications, timeout detection, aborting on vehicle left, aborting if driven near home without entering, keeping gate open while someone else approaches or leaves home
-* Various options : Custom gate settings, iBeacon automatic closing, travel time update interval
+* **Prioritizes manual actions** over the automation, letting you control your gate even while the automation is running
+* **Security features** : Auto-close timer, alert notifications, timeout detection, aborting on vehicle left, aborting if driven near home without entering, keeping gate open while someone else approaches or leaves home
+* **Custom options** : Gate settings, security settings, iBeacon automatic closing, travel time update interval, notifications text
 
 ## Flowchart 🔀
 
@@ -54,7 +54,7 @@ Click on the three-dot menu to the right of Automatic Gate, and select "Re-impor
 
 |          Element          |                                                                           Description                                                                            |
 | :-----------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|      [Automations](Extra/Automations) 🤖       | Automations that notify all users if the gate has been left open or is unavailable for more than 5 minutes                                                       |
-|     [Ble car device](Extra/Ble%20car%20device) 🚗     | A really small Arduino code to let a ESP32 sit in your car so that your phone can connect to it over BLE and monitor if you are driving                          |
+|      [Automations](Extra/Automations) 🤖       | Automations that notifies all users if the gate has been left open or is unavailable, while playing a tts on speakers                                            |
+|     [Ble car device](Extra/Ble%20car%20device) 🚗     | A really small Arduino code to let an ESP32 sit in your car so that your phone can connect to it over BLE and monitor if you are driving                         |
 | [ESPHome gate firmware](Extra/Esphome%20gate%20firmware) 🔧  | My ESP32 gate firmware which only needs to be connected to one open&close pin. Works by guessing the actual state and locking new requests while not being ready |
-|        [Frontend](Extra/Frontend) 🎨        | A small dashboard which can track the position history of a user and display both the ETA and time remaining when an itinerary is in progress                    |
+|   [Vehicle tracker map](Extra/Vehicle%20tracker%20map) 🎨  | A small dashboard which can track the position history of a user and display both the ETA and time remaining when an itinerary is in progress                    |

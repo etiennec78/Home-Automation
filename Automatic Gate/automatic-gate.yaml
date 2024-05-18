@@ -3,12 +3,11 @@ blueprint:
   domain: automation
   author: etiennec78
   description: |-
-    WORK IN PROGRESS, EXPECT BUGS
     **Modular** and **secure** gate automation that **opens your gate** upon leaving or arriving
     Supports up to 10 users driving **simultaneously**
-    Manual override : Prioritizes manual actions over the automation, letting you control your gate even while the automation is running
+    Prioritizes manual actions over the automation, letting you control your gate even while the automation is running
     Security features : Auto-close timer, alert notifications, timeout detection, aborting on vehicle left, aborting if driven near home without entering, keeping gate open while someone else approaches or leaves home
-    Various options : Custom gate settings, iBeacon automatic closing, travel time update interval
+    Various options : Gate settings, security settings, iBeacon automatic closing, travel time update interval, notifications text
     Flowchart : [click here](https://miro.com/app/board/uXjVMpH4Tno=/)
     Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate)
     Discord : etiennec78
@@ -34,7 +33,7 @@ blueprint:
     safety_delay:
       name: 🔒 Auto-close delay
       description: The time the gate will wait before **automatically closing** if you haven't left home or didn't arrive
-      default: 7
+      default: 5
       selector:
         number:
           min: 2
@@ -95,7 +94,7 @@ blueprint:
           prefix: notify.mobile_app_
     itinerary_sensors:
       name: 🗺️ Itinerary sensors
-      description: Each **itinerary input text** helper from the wiki to monitor your **itinerary state** (same order)
+      description: Each empty **itinerary input text** helper to store each user **itinerary state** (same order)
       selector:
         entity:
           multiple: true
@@ -206,13 +205,13 @@ blueprint:
         text:
     itinerary_started_message:
       name: 💬🏁 Itinerary started notification
-      description: The **title** displayed on the notification you will receive when your **itinerary starts**
+      description: The **content** of the notification you will receive when your **itinerary starts**
       default: "Your itinerary has been started"
       selector:
         text:
     automatic_closing_message:
       name: 💬🤖 Automatic closing notification
-      description: The **title** displayed on the notification you will receive when your gate is **automatically closing**
+      description: The **content** of the notification you will receive when your gate is **automatically closing**
       default: "Automatic closing of the gate"
       selector:
         text:
@@ -285,7 +284,7 @@ variables:
   ble_entities: !input ble_entities
 
 trigger:
-  # Triggers when one of the users connect to a vehicle (if you have more than one, make a custom vehcle sensor : example in configuration.yaml)
+  # Triggers when one of the users connect to a vehicle (if you have more than one, make a custom vehcle sensor : example in sensors.md)
   - platform: state
     entity_id: !input driving_sensors
     from: "off"
