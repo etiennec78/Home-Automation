@@ -5,9 +5,9 @@ blueprint:
   description: |-
     **Modular** and **secure** gate automation that **opens your gate** upon leaving or arriving
     Supports up to 10 users driving **simultaneously**
-    Prioritizes manual actions over the automation, letting you control your gate even while the automation is running
-    Security features : Auto-close timer, alert notifications, timeout detection, aborting on vehicle left, aborting if driven near home without entering, keeping gate open while someone else approaches or leaves home
-    Various options : Gate settings, security settings, iBeacon automatic closing, travel time update interval, notifications text
+    **Prioritizes manual actions** over the automation, letting you control your gate even while the automation is running
+    **Security features** : Auto-close timer, alert notifications, timeout detection, aborting on vehicle left, aborting if driven near home without entering, keeping gate open while someone else approaches or leaves home
+    **Custom options** : Gate settings, security settings, iBeacon automatic closing, travel time update interval, notifications text
     Set up sensors : [click here](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md)
     Flowchart : [click here](https://miro.com/app/board/uXjVMpH4Tno=/)
     Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate)
@@ -336,7 +336,7 @@ action:
               # Activate the BLE scanner from the ESP32 connected to the gate
               - service: switch.turn_on
                 target:
-                  entity_id: !input ble_scanner_switch
+                  entity_id: "{{ ble_scanner_switch }}"
       # If the gate is closing/closed
       - if:
           - condition: template
@@ -405,7 +405,7 @@ action:
               # Deactivate the BLE scanner from the ESP32 connected to the gate (optional)
               - service: switch.turn_off
                 target:
-                  entity_id: !input ble_scanner_switch
+                  entity_id: "{{ ble_scanner_switch }}"
         else:
           # If no one else is currently leaving the house
           - if:
@@ -422,7 +422,7 @@ action:
                   # Deactivate the BLE scanner from the ESP32 connected to the gate (optional)
                   - service: switch.turn_off
                     target:
-                      entity_id: !input ble_scanner_switch
+                      entity_id: "{{ ble_scanner_switch }}"
               # If no one else is currently approaching the house
               - if:
                   - condition: not
