@@ -16,4 +16,4 @@ A small dashboard containing a map of the position history of a user and display
 
 ## Example 📌
 
-<img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Automatic%20Gate/Extra/Vehicle%20tracker%20map/example.png?raw=true" width="100%">
+<img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Automatic%20Gate/Extra/Vehicle%20tracker%20map/example.png?raw=true" width="40%">
