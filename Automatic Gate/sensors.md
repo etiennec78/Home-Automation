@@ -10,7 +10,7 @@
 
 ## Gate ⛩️
 
-**Any gate or garage door which is either a switch or a cover**
+**The switch or cover which controls your gate**
 
 Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware/gate.yaml) or any other integration
 
@@ -21,7 +21,7 @@ Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware/gate.yaml) o
 
 *Note : Try to avoid using wifi/ble location trackers as latency could be an issue. Use high precision when driving near home*
 
-Install through [companion app](https://companion.home-assistant.io/docs/core/location/) settings : Settings > Companion app > Manage sensors > Background location ✔️
+Install through [companion app](https://companion.home-assistant.io/docs/core/location/) settings : *Settings > Companion app > Manage sensors > Background location ✔️*
 
 Settings :
 
@@ -61,7 +61,7 @@ Settings :
 * State template : `{{ '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user0_bluetooth_connection', 'connected_paired_devices') }}`
 * Device class : `Moving`
 
-Or in your configuration.yaml file :
+Or in your [configuration.yaml](https://www.home-assistant.io/docs/configuration/) file :
 
 ```yaml
 template:
@@ -83,7 +83,7 @@ Then use the following template : `{{ is_state('binary_sensor.user0_android_auto
 
 ## Travel time sensors ✈️
 
-**Each travel time sensor which calculates the travel time between each user and your home**
+**Each travel time sensor monitoring each user time left before arrival**
 
 ### Option 1 : Waze
 
@@ -132,7 +132,7 @@ Settings :
 
 * Track distance to : `zone.home`
 * Devices or persons to track : `[person.user0, ...]`
-* Zones to ignore : []
+* Zones to ignore : `[]`
 * Tolerance distance : Not required by Automatic Gate
 
 
@@ -147,7 +147,7 @@ Find the service ids by going into : *[Developer tools > Services tab](https://m
 
 ## Itinerary sensors 🗺️
 
-**Each input text helper which will store the state of each user itinerary**
+**Each empty itinerary input text helper to store each user itinerary state**
 
 Use an [input text helper](https://www.home-assistant.io/integrations/input_text/)
 
@@ -161,7 +161,7 @@ Settings :
 * Maximum length : `100`
 * Display mode : `Text`
 
-Or in your configuration.yaml file :
+Or in your [configuration.yaml](https://www.home-assistant.io/docs/configuration/) file :
 
 ```yaml
 input_text:
@@ -173,7 +173,7 @@ input_text:
 
 ## Planned opening 📅
 
-**A helper which will store the planned automatic opening of the gate**
+**An empty input datetime helper which will be used to set an ETA and plan the opening of your gate**
 
 Use an [input datetime helper](https://www.home-assistant.io/integrations/input_datetime/)
 
@@ -184,7 +184,7 @@ Settings :
 * Name : `Automatic gate planned opening`
 * What do you want to input : `Date and time`
 
-Or in your configuration.yaml file :
+Or in your [configuration.yaml](https://www.home-assistant.io/docs/configuration/) file :
 
 ```yaml
 input_datetime:
@@ -233,7 +233,7 @@ Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware) or any othe
 
 Use a [notification group](https://www.home-assistant.io/integrations/group/#notify-groups)
 
-Install in your configuration.yaml file :
+Install in your [configuration.yaml](https://www.home-assistant.io/docs/configuration/) file :
 
 ```yaml
 notify:
