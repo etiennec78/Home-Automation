@@ -1,19 +1,31 @@
 # Automations 🤖
 
-## Gate offline notification 🌐
-
-### Description 📝
-
-A simple automation that **notifies** all users if the gate is **unavailable** for more than 5 minutes
-
 ## Gate left open notification 🔓
 
 ### Description 📝
 
-A simple automation that **notifies** all users if the gate has been **left open** for more than 7 minutes
+A blueprint that **notifies** selected users when the gate has been **left open** for a time set
 
-## How to install 🚀
+Can send a notification to phones and HA frontend
 
-1. Change the "switch.gate" entity to your own
-2. Create the "[Notify all devices](../../sensors.md#notify-all-devices-group-)" optional sensor
-3. Either copy the automation to your automations folder or simply copy and paste the code in a new automation with the UI
+Can send a TTS to phones and home speakers
+
+### Import the blueprint 🗺️
+
+[![Import gate offline notification](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FAutomatic%2520Gate%2FExtra%2FAutomations%2Fgate-offline-notification.yaml)
+
+
+
+## Gate offline notification 🌐
+
+### Description 📝
+
+A blueprint that **notifies** selected users when the gate has been **unavailable** for a time set
+
+Can send a notification to phones and HA frontend
+
+Can send a TTS to phones and home speakers
+
+### Import the blueprint 🗺️
+
+[![Import gate offline notification](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FAutomatic%2520Gate%2FExtra%2FAutomations%2Fgate-left-open-notification.yaml)
