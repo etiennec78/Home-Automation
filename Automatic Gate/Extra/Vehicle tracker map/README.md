@@ -1,4 +1,4 @@
-# Vehicle tracker map 🎨
+# Vehicle tracker map 🗺️
 
 ## Description
 
