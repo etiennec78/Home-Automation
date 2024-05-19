@@ -53,7 +53,9 @@ blueprint:
       name: 👤 Tracked users
       description: |-
         Each **user** which should be tracked for **position updates** (same order)
-        *Note : If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving home, your gate could open thinking you are still home*
+        *Notes :*
+        * *⚠️ Use high precision while driving near home or you could time out*
+        * *If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving home, your gate could open thinking you are still home*
       selector:
         entity:
           multiple: true
@@ -156,10 +158,18 @@ blueprint:
           min: 300
           max: 5000
           unit_of_measurement: meters
+    automatic_closing_arrival:
+      name: 🔒 Automatic closing on arrival
+      description: |-
+        Should the gate automatically close on arrival ?
+        *Warning : All auto-closing securities will not be operational if turned off*
+      default: true
+      selector:
+        boolean:
     ble_entities:
       name: 🔎 iBeacon tracker entities (optional)
       description: |-
-        Each iBeacon **rssi tracker** entity to monitor
+        Each **BLE rssi tracker entity** to monitor your distance from the gate while leaving, to close it when you're out of reach
         *Note : Let empty if no ble*
       default: []
       selector:
@@ -283,6 +293,7 @@ variables:
   eta_zone: !input eta_zone
   activation_zone: !input activation_zone
   ble_entities: !input ble_entities
+  automatic_closing_arrival: !input automatic_closing_arrival
 
 trigger:
   # Triggers when one of the users connect to a vehicle (if you have more than one, make a custom vehcle sensor : example in sensors.md)
@@ -710,162 +721,187 @@ action:
                             - service: cover.open_cover
                               target:
                                 entity_id: !input gate
-                  # Wait for the gate to be closed manually, or the vehicle to be left, or the user to leave the activation zone, all while not waiting more than the auto-close delay
-                  - wait_for_trigger:
-                      - platform: template
-                        id: manual
-                        value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
-                      - platform: template
-                        id: vehicle_left
-                        value_template: "{{ is_state(driving_sensor, 'off') }}"
-                      - platform: template
-                        id: zone_left
-                        value_template: "{{ states(proximity_sensors[idx]) | int > activation_zone }}"
-                    timeout:
-                      minutes: !input safety_delay
-                  # Remove the current itinerary since the user has either arrived home or took too long
-                  - service: input_text.set_value
-                    target:
-                      entity_id: "{{ itinerary_sensor }}"
-                    data:
-                      value: none
-                  # If the gate has been closed manually
+                  # If the automatic closing on arrival input is set to true
                   - if:
                       - condition: template
-                        value_template: "{{ wait.trigger.id == 'manual' }}"
+                        value_template: "{{ automatic_closing_arrival }}"
                     then:
-                      # Remove the notification received by the user when his itinerary was started
+                      # Wait for the gate to be closed manually, or the vehicle to be left, or the user to leave the activation zone, all while not waiting more than the auto-close delay
+                      - wait_for_trigger:
+                          - platform: template
+                            id: manual
+                            value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
+                          - platform: template
+                            id: vehicle_left
+                            value_template: "{{ is_state(driving_sensor, 'off') }}"
+                          - platform: template
+                            id: zone_left
+                            value_template: "{{ states(proximity_sensors[idx]) | int > activation_zone }}"
+                        timeout:
+                          minutes: !input safety_delay
+                      # Remove the current itinerary since the user has either arrived home or took too long
+                      - service: input_text.set_value
+                        target:
+                          entity_id: "{{ itinerary_sensor }}"
+                        data:
+                          value: none
+                      # If the gate has been closed manually
+                      - if:
+                          - condition: template
+                            value_template: "{{ wait.trigger.id == 'manual' }}"
+                        then:
+                          # Remove the notification received by the user when his itinerary was started
+                          - service: "{{ notify_device }}"
+                            data:
+                              message: clear_notification
+                              data:
+                                tag: itinerary
+                        else:
+                          # If someone is currently approaching or leaving the house
+                          - if:
+                              - condition: or
+                                conditions:
+                                - condition: template
+                                  value_template: "{{ driving_sensors | select('is_state', 'on_approach') | list != [] }}"
+                                - condition: template
+                                  value_template: "{{ driving_sensors | select('is_state', 'leaving') | list != [] }}"
+                            then:
+                              # Get the names of the persons being awaited
+                              - variables:
+                                  awaiting_sensors: >-
+                                    {{ (itinerary_sensors | select('is_state', 'on_approach') | list +
+                                        itinerary_sensors | select('is_state', 'leaving') | list) }}
+                                  awaiting_persons: >-
+                                    {% set data = namespace(awaiting_persons=[]) %}
+                                    {% for i in range(awaiting_sensors|length) %}
+                                    {% set data.awaiting_persons = data.awaiting_persons + [state_attr(persons[i], 'friendly_name')] %}
+                                    {% endfor %}
+                                    {{ data.awaiting_persons | join(', ') }}
+                              # Notify the user that the gate will wait for next person
+                              - service: "{{ notify_device }}"
+                                data:
+                                  title: !input awaiting_title
+                                  message: !input awaiting_message
+                                  data:
+                                    car_ui: true
+                                    notification_icon: mdi:sleep
+                                    channel: Gate alerts
+                                    importance: high
+                                    tag: itinerary
+                              # Wait for the gate to be closed
+                              - wait_for_trigger:
+                                  - platform: template
+                                    value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
+                            # If no one is currently approaching or leaving the house
+                            else:
+                              - choose:
+                                  # If the timeout was reached
+                                  - conditions:
+                                      - condition: template
+                                        value_template: "{{ wait.completed }}"
+                                    sequence:
+                                      # Notify the user that the gate will close automatically since he took too long
+                                      - service: "{{ notify_device }}"
+                                        data:
+                                          title: !input gate_closing_title
+                                          message: !input did_not_arrive_message
+                                          data:
+                                            car_ui: true
+                                            notification_icon: mdi:alert-circle
+                                            channel: Gate alerts
+                                            importance: high
+                                            tag: automatic-closing
+                                            timeout: 300
+                                  # If the user has exited the gate activation zone
+                                  - conditions:
+                                      - condition: template
+                                        value_template: "{{ wait.trigger.id == 'zone_left' }}"
+                                    sequence:
+                                      # Notify the user that the gate will close automatically since he has exited the zone
+                                      - service: "{{ notify_device }}"
+                                        data:
+                                          title: !input gate_closing_title
+                                          message: !input vehicle_away_message
+                                          data:
+                                            car_ui: true
+                                            notification_icon: mdi:alert-circle
+                                            channel: Gate alerts
+                                            importance: high
+                                            tag: automatic-closing
+                                            timeout: 300
+                                  # If the user has left his car
+                                  - conditions:
+                                      - condition: template
+                                        value_template: "{{ wait.trigger.id == 'vehicle_left' }}"
+                                    sequence:
+                                      # Notify the user that the gate will close automatically since he has left his car
+                                      - service: "{{ notify_device }}"
+                                        data:
+                                          title: !input gate_closing_title
+                                          message: !input vehicle_left_message
+                                          data:
+                                            car_ui: true
+                                            notification_icon: mdi:alert-circle
+                                            channel: Gate alerts
+                                            importance: high
+                                            tag: automatic-closing
+                                            timeout: 300
+                                default:
+                                  # Notify the user that the gate will close automatically
+                                  - service: "{{ notify_device }}"
+                                    data:
+                                      message: !input automatic_closing_message
+                                      data:
+                                        car_ui: true
+                                        notification_icon: mdi:gate
+                                        channel: Gate alerts
+                                        importance: high
+                                        tag: automatic-closing
+                                        timeout: 300
+                              # Close the gate
+                              - choose:
+                                - conditions:
+                                    - condition: template
+                                      value_template: "{{ states[gate].domain == 'switch' }}"
+                                  sequence:
+                                    - service: switch.turn_off
+                                      target:
+                                        entity_id: !input gate
+                                - conditions:
+                                    - condition: template
+                                      value_template: "{{ states[gate].domain == 'cover' }}"
+                                  sequence:
+                                    - service: cover.close_cover
+                                      target:
+                                        entity_id: !input gate
+                      # Remove the notification received by the user when his itinerary was started or awaiting next user
                       - service: "{{ notify_device }}"
                         data:
                           message: clear_notification
                           data:
                             tag: itinerary
+                      # Stop the whole script as it was successful
+                      - stop: Successful
+                    # If the automatic closing on arrival input is set to false
                     else:
-                      # If someone is currently approaching or leaving the house
-                      - if:
-                          - condition: or
-                            conditions:
-                            - condition: template
-                              value_template: "{{ driving_sensors | select('is_state', 'on_approach') | list != [] }}"
-                            - condition: template
-                              value_template: "{{ driving_sensors | select('is_state', 'leaving') | list != [] }}"
-                        then:
-                          # Get the names of the persons being awaited
-                          - variables:
-                              awaiting_sensors: >-
-                                {{ (itinerary_sensors | select('is_state', 'on_approach') | list +
-                                    itinerary_sensors | select('is_state', 'leaving') | list) }}
-                              awaiting_persons: >-
-                                {% set data = namespace(awaiting_persons=[]) %}
-                                {% for i in range(awaiting_sensors|length) %}
-                                {% set data.awaiting_persons = data.awaiting_persons + [state_attr(persons[i], 'friendly_name')] %}
-                                {% endfor %}
-                                {{ data.awaiting_persons | join(', ') }}
-                          # Notify the user that the gate will wait for next person
-                          - service: "{{ notify_device }}"
-                            data:
-                              title: !input awaiting_title
-                              message: !input awaiting_message
-                              data:
-                                car_ui: true
-                                notification_icon: mdi:sleep
-                                channel: Gate alerts
-                                importance: high
-                                tag: itinerary
-                          # Wait for the gate to be closed
-                          - wait_for_trigger:
-                              - platform: template
-                                value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
-                        # If no one is currently approaching or leaving the house
-                        else:
-                          - choose:
-                              # If the timeout was reached
-                              - conditions:
-                                  - condition: template
-                                    value_template: "{{ wait.completed }}"
-                                sequence:
-                                  # Notify the user that the gate will close automatically since he took too long
-                                  - service: "{{ notify_device }}"
-                                    data:
-                                      title: !input gate_closing_title
-                                      message: !input did_not_arrive_message
-                                      data:
-                                        car_ui: true
-                                        notification_icon: mdi:alert-circle
-                                        channel: Gate alerts
-                                        importance: high
-                                        tag: automatic-closing
-                                        timeout: 300
-                              # If the user has exited the gate activation zone
-                              - conditions:
-                                  - condition: template
-                                    value_template: "{{ wait.trigger.id == 'zone_left' }}"
-                                sequence:
-                                  # Notify the user that the gate will close automatically since he has exited the zone
-                                  - service: "{{ notify_device }}"
-                                    data:
-                                      title: !input gate_closing_title
-                                      message: !input vehicle_away_message
-                                      data:
-                                        car_ui: true
-                                        notification_icon: mdi:alert-circle
-                                        channel: Gate alerts
-                                        importance: high
-                                        tag: automatic-closing
-                                        timeout: 300
-                              # If the user has left his car
-                              - conditions:
-                                  - condition: template
-                                    value_template: "{{ wait.trigger.id == 'vehicle_left' }}"
-                                sequence:
-                                  # Notify the user that the gate will close automatically since he has left his car
-                                  - service: "{{ notify_device }}"
-                                    data:
-                                      title: !input gate_closing_title
-                                      message: !input vehicle_left_message
-                                      data:
-                                        car_ui: true
-                                        notification_icon: mdi:alert-circle
-                                        channel: Gate alerts
-                                        importance: high
-                                        tag: automatic-closing
-                                        timeout: 300
-                            default:
-                              # Notify the user that the gate will close automatically
-                              - service: "{{ notify_device }}"
-                                data:
-                                  message: !input automatic_closing_message
-                                  data:
-                                    car_ui: true
-                                    notification_icon: mdi:gate
-                                    channel: Gate alerts
-                                    importance: high
-                                    tag: automatic-closing
-                                    timeout: 300
-                          # Close the gate
-                          - choose:
-                            - conditions:
-                                - condition: template
-                                  value_template: "{{ states[gate].domain == 'switch' }}"
-                              sequence:
-                                - service: switch.turn_off
-                                  target:
-                                    entity_id: !input gate
-                            - conditions:
-                                - condition: template
-                                  value_template: "{{ states[gate].domain == 'cover' }}"
-                              sequence:
-                                - service: cover.close_cover
-                                  target:
-                                    entity_id: !input gate
-                  # Remove the notification received by the user when his itinerary was started or awaiting next user
-                  - service: "{{ notify_device }}"
-                    data:
-                      message: clear_notification
-                      data:
-                        tag: itinerary
-                  # Stop the whole script as it was successful
-                  - stop: Successful
+                      # Wait for the user to manually close his gate
+                      - wait_for_trigger:
+                        platform: state
+                        entity_id: !input gate
+                      # Remove the current itinerary since the user has closed his gate
+                      - service: input_text.set_value
+                        target:
+                          entity_id: "{{ itinerary_sensor }}"
+                        data:
+                          value: none
+                      # Remove the current itinerary
+                      - service: input_text.set_value
+                        data:
+                          value: none
+                        target:
+                          entity_id: "{{ itinerary_sensor }}"
+                      # Stop the whole script as it ran successfully
+                      - stop: Successful
       # If both loop were broken
       # Remove the current itinerary since the user has left his vehicle or timed out
       - service: input_text.set_value
