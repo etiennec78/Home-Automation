@@ -278,7 +278,7 @@ blueprint:
     travel_time_did_not_respond:
       name: 💬⚠️ Travel time integration did not respond
       description: The **content** of the notification you will receive if your **travel time integraton did not respond** during the itinerary
-      default: "Your travel time integration did not respond during your itinerary 😴"
+      default: "Your travel time integration did not respond during your itinerary"
 
 variables:
   gate: !input gate
@@ -889,8 +889,9 @@ action:
                     # If the automatic closing on arrival input is set to false
                     else:
                       # Wait for the user to stop his car
-                      - platform: template
-                        value_template: "{{ is_state(driving_sensor, 'off') }}"
+                      - wait_for_trigger:
+                        - platform: template
+                          value_template: "{{ is_state(driving_sensor, 'off') }}"
                       # Remove the current itinerary
                       - service: input_text.set_value
                         target:
