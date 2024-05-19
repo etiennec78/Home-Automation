@@ -884,22 +884,21 @@ action:
                       - stop: Successful
                     # If the automatic closing on arrival input is set to false
                     else:
-                      # Wait for the user to manually close his gate
-                      - wait_for_trigger:
-                        - platform: state
-                          entity_id: !input gate
-                      # Remove the current itinerary since the user has closed his gate
-                      - service: input_text.set_value
-                        target:
-                          entity_id: "{{ itinerary_sensor }}"
-                        data:
-                          value: none
+                      # Wait for the user to stop his car
+                      - platform: template
+                        value_template: "{{ is_state(driving_sensor, 'off') }}"
                       # Remove the current itinerary
                       - service: input_text.set_value
-                        data:
-                          value: none
                         target:
                           entity_id: "{{ itinerary_sensor }}"
+                        data:
+                          value: none
+                      # Remove the notification received by the user when his itinerary was started
+                      - service: "{{ notify_device }}"
+                        data:
+                          message: clear_notification
+                          data:
+                            tag: itinerary
                       # Stop the whole script as it ran successfully
                       - stop: Successful
       # If both loop were broken
