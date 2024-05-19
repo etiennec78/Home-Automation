@@ -31,18 +31,18 @@ Supports the following features :
 ### Steps 📜
 
 1. Clone this repo
-  * Run : `git clone https://github.com/etiennec78/Home-Automation.git`
+    * Run : `git clone https://github.com/etiennec78/Home-Automation.git`
 2. Edit [the file](gate.yaml) to fill your needs
-  * Change the GPIO pin
-  * Replace any "!secret" line with your own information
-  * Adapt the gate moving time (default 42s)
+    * Change the GPIO pin
+    * Replace any "!secret" line with your own information
+    * Adapt the gate moving time (default 42s)
 3. Flash your ESP32
-  * Plug it into your computer
-  * Run : `python -m esphome run gate.yaml`
+    * Plug it into your computer
+    * Run : `python -m esphome run gate.yaml`
 4. Harware connections
-  * Run a cable between your gate opening/closing pin and your ESP32 relay pin
-  * Either power your ESP32 with a gate pin, or an external supply
+    * Run a cable between your gate opening/closing pin and your ESP32 relay pin
+    * Either power your ESP32 with a gate pin, or an external supply
 5. Connect your ESP32 to Home Assistant
-  * Home Assistant should detect your ESPHome device automatically on your LAN
-  * Connect it and enter your api_key
-  * Finally, go to *[Settings > Devices & services > ESPHome](https://my.home-assistant.io/redirect/integration/?domain=esphome) > three-dot menu to the right of your gate > Configure > Allow the device to make Home Assistant service calls ✔️*
+    * Home Assistant should detect your ESPHome device automatically on your LAN
+    * Connect it and enter your api_key
+    * Finally, go to *[Settings > Devices & services > ESPHome](https://my.home-assistant.io/redirect/integration/?domain=esphome) > three-dot menu to the right of your gate > Configure > Allow the device to make Home Assistant service calls ✔️*
