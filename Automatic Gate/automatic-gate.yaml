@@ -886,8 +886,8 @@ action:
                     else:
                       # Wait for the user to manually close his gate
                       - wait_for_trigger:
-                        platform: state
-                        entity_id: !input gate
+                        - platform: state
+                          entity_id: !input gate
                       # Remove the current itinerary since the user has closed his gate
                       - service: input_text.set_value
                         target:
