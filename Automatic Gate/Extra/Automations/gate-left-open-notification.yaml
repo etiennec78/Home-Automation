@@ -92,13 +92,11 @@ variables:
   speaker_tts_service: !input speaker_tts_service
 
 trigger:
-  # Triggers when the gate was open for 7 minutes
-  - platform: state
+  # Triggers when the gate was open for too long
+  - platform: template
     value_template: "{{ is_state(switch.gate, ['on', 'open']) }}"
     for:
-      hours: 0
-      minutes: 7
-      seconds: 0
+      minutes: !input left_open_delay
 
 condition: []
   # No condition

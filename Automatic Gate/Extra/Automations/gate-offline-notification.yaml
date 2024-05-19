@@ -92,14 +92,12 @@ variables:
   speaker_tts_service: !input speaker_tts_service
 
 trigger:
-  # Triggers when the gate becomes unavailable for 5 minutes
+  # Triggers when the gate becomes unavailable for too long
   - platform: state
     entity_id: !input gate
     to: unavailable
     for:
-      hours: 0
-      minutes: 5
-      seconds: 0
+      minutes: !input offline_delay
 
 condition: []
   # No condition
