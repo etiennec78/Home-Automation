@@ -159,9 +159,9 @@ blueprint:
           max: 5000
           unit_of_measurement: meters
     automatic_closing_arrival:
-      name: 🔒 Automatic closing on arrival
+      name: 🔒 Automatic closing
       description: |-
-        Should the gate automatically close on arrival ?
+        Should the gate automatically close ?
         *Warning : All auto-closing securities will not be operational if turned off*
       default: true
       selector:
@@ -374,60 +374,48 @@ action:
                 - service: cover.open_cover
                   target:
                     entity_id: !input gate
-      # Wait for the gate to be closed by the user, or the iBeacon to be out of reach for 20s, or the vehicle to be left, or the user to leave home, all while not waiting more than the auto-close delay
-      - wait_for_trigger:
-          - platform: template
-            id: manual
-            value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
-          - platform: template
-            id: ble
-            value_template: "{{ ble_entities != [] and is_state(ble_entities[idx], 'unknown') }}"
-          - platform: template
-            id: vehicle_left
-            value_template: "{{ is_state(driving_sensor, 'off') }}"
-          - platform: template
-            id: home_left
-            value_template: "{{ not is_state(person, 'home') }}"
-        timeout:
-          minutes: !input safety_delay
-      # Remove the current itinerary since the user has either left home or took too long
-      - service: input_text.set_value
-        target:
-          entity_id: "{{ itinerary_sensor }}"
-        data:
-          value: none
-      # If iBeacon automatic closing is enabled
-      - if:
-        - condition: template
-          value_template: "{{ ble_entities != [] }}"
-        then:
-          # Deactivate the BLE transmitter on user's phone
-          - service: "{{ notify_device }}"
-            data:
-              message: command_ble_transmitter
-              data:
-                command: turn_off
-      # If the gate has been closed manually
+      # If the automatic closing input is set to true
       - if:
           - condition: template
-            value_template: "{{ wait.trigger.id == 'manual' }}"
+            value_template: "{{ automatic_closing_arrival }}"
         then:
-          # If the iBeacon scanner is only managed by this automation, and doesn't need to stay on
+          # Wait for the gate to be closed by the user, or the iBeacon to be out of reach for 20s, or the vehicle to be left, or the user to leave home, all while not waiting more than the auto-close delay
+          - wait_for_trigger:
+              - platform: template
+                id: manual
+                value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
+              - platform: template
+                id: ble
+                value_template: "{{ ble_entities != [] and is_state(ble_entities[idx], 'unknown') }}"
+              - platform: template
+                id: vehicle_left
+                value_template: "{{ is_state(driving_sensor, 'off') }}"
+              - platform: template
+                id: home_left
+                value_template: "{{ not is_state(person, 'home') }}"
+            timeout:
+              minutes: !input safety_delay
+          # Remove the current itinerary since the user has either left home or took too long
+          - service: input_text.set_value
+            target:
+              entity_id: "{{ itinerary_sensor }}"
+            data:
+              value: none
+          # If iBeacon automatic closing is enabled
           - if:
             - condition: template
-              value_template: "{{ ble_scanner_switch != '' }}"
+              value_template: "{{ ble_entities != [] }}"
             then:
-              # Deactivate the BLE scanner from the ESP32 connected to the gate (optional)
-              - service: switch.turn_off
-                target:
-                  entity_id: "{{ ble_scanner_switch }}"
-        else:
-          # If no one else is currently leaving the house
+              # Deactivate the BLE transmitter on user's phone
+              - service: "{{ notify_device }}"
+                data:
+                  message: command_ble_transmitter
+                  data:
+                    command: turn_off
+          # If the gate has been closed manually
           - if:
-              - condition: not
-                conditions:
-                  - condition: template
-                    value_template: "{{ driving_sensors | select('is_state', 'leaving') | list != [] }}"
+              - condition: template
+                value_template: "{{ wait.trigger.id == 'manual' }}"
             then:
               # If the iBeacon scanner is only managed by this automation, and doesn't need to stay on
               - if:
@@ -438,98 +426,128 @@ action:
                   - service: switch.turn_off
                     target:
                       entity_id: "{{ ble_scanner_switch }}"
-              # If no one else is currently approaching the house
+            else:
+              # If no one else is currently leaving the house
               - if:
                   - condition: not
                     conditions:
                       - condition: template
-                        value_template: "{{ driving_sensors | select('is_state', 'on_approach') | list != [] }}"
+                        value_template: "{{ driving_sensors | select('is_state', 'leaving') | list != [] }}"
                 then:
-                  # If the timeout was reached
+                  # If the iBeacon scanner is only managed by this automation, and doesn't need to stay on
                   - if:
-                      - condition: template
-                        value_template: "{{ wait.completed }}"
+                    - condition: template
+                      value_template: "{{ ble_scanner_switch != '' }}"
                     then:
-                      # Notify the user that the gate will close automatically since he didn't leave in time
+                      # Deactivate the BLE scanner from the ESP32 connected to the gate (optional)
+                      - service: switch.turn_off
+                        target:
+                          entity_id: "{{ ble_scanner_switch }}"
+                  # If no one else is currently approaching the house
+                  - if:
+                      - condition: not
+                        conditions:
+                          - condition: template
+                            value_template: "{{ driving_sensors | select('is_state', 'on_approach') | list != [] }}"
+                    then:
+                      # If the timeout was reached
+                      - if:
+                          - condition: template
+                            value_template: "{{ wait.completed }}"
+                        then:
+                          # Notify the user that the gate will close automatically since he didn't leave in time
+                          - service: "{{ notify_device }}"
+                            data:
+                              title: !input gate_closing_title
+                              message: !input did_not_leave_message
+                              data:
+                                car_ui: true
+                                notification_icon: mdi:alert-circle
+                                channel: Gate alerts
+                                importance: high
+                                tag: automatic-closing
+                                timeout: 300
+                        else:
+                          # Notify the user that the gate will close automatically
+                          - service: "{{ notify_device }}"
+                            data:
+                              message: !input automatic_closing_message
+                              data:
+                                car_ui: true
+                                notification_icon: mdi:gate
+                                channel: Gate alerts
+                                importance: high
+                                tag: automatic-closing
+                                timeout: 300
+                      # Close the gate
+                      - choose:
+                        - conditions:
+                            - condition: template
+                              value_template: "{{ states[gate].domain == 'switch' }}"
+                          sequence:
+                            - service: switch.turn_off
+                              target:
+                                entity_id: !input gate
+                        - conditions:
+                            - condition: template
+                              value_template: "{{ states[gate].domain == 'cover' }}"
+                          sequence:
+                            - service: cover.close_cover
+                              target:
+                                entity_id: !input gate
+                      # Remove the notification received by the user when his itinerary was started
                       - service: "{{ notify_device }}"
                         data:
-                          title: !input gate_closing_title
-                          message: !input did_not_leave_message
+                          message: clear_notification
                           data:
-                            car_ui: true
-                            notification_icon: mdi:alert-circle
-                            channel: Gate alerts
-                            importance: high
-                            tag: automatic-closing
-                            timeout: 300
-                    else:
-                      # Notify the user that the gate will close automatically
-                      - service: "{{ notify_device }}"
-                        data:
-                          message: !input automatic_closing_message
-                          data:
-                            car_ui: true
-                            notification_icon: mdi:gate
-                            channel: Gate alerts
-                            importance: high
-                            tag: automatic-closing
-                            timeout: 300
-                  # Close the gate
-                  - choose:
-                    - conditions:
-                        - condition: template
-                          value_template: "{{ states[gate].domain == 'switch' }}"
-                      sequence:
-                        - service: switch.turn_off
-                          target:
-                            entity_id: !input gate
-                    - conditions:
-                        - condition: template
-                          value_template: "{{ states[gate].domain == 'cover' }}"
-                      sequence:
-                        - service: cover.close_cover
-                          target:
-                            entity_id: !input gate
-                  # Remove the notification received by the user when his itinerary was started
-                  - service: "{{ notify_device }}"
-                    data:
-                      message: clear_notification
-                      data:
-                        tag: itinerary
-                  # Stop the whole script as it ran successfully
-                  - stop: Successful
-          # Get the names of the persons being awaited
-          - variables:
-              awaiting_sensors: >-
-                {{ (itinerary_sensors | select('is_state', 'on_approach') | list +
-                    itinerary_sensors | select('is_state', 'leaving') | list) }}
-              awaiting_persons: >-
-                {% set data = namespace(awaiting_persons=[]) %}
-                {% for i in range(awaiting_sensors|length) %}
-                {% set data.awaiting_persons = data.awaiting_persons + [state_attr(persons[i], 'friendly_name')] %}
-                {% endfor %}
-                {{ data.awaiting_persons | join(', ') }}
-          # Notify the user that the gate will wait for next person
+                            tag: itinerary
+                      # Stop the whole script as it ran successfully
+                      - stop: Successful
+              # Get the names of the persons being awaited
+              - variables:
+                  awaiting_sensors: >-
+                    {{ (itinerary_sensors | select('is_state', 'on_approach') | list +
+                        itinerary_sensors | select('is_state', 'leaving') | list) }}
+                  awaiting_persons: >-
+                    {% set data = namespace(awaiting_persons=[]) %}
+                    {% for i in range(awaiting_sensors|length) %}
+                    {% set data.awaiting_persons = data.awaiting_persons + [state_attr(persons[i], 'friendly_name')] %}
+                    {% endfor %}
+                    {{ data.awaiting_persons | join(', ') }}
+              # Notify the user that the gate will wait for next person
+              - service: "{{ notify_device }}"
+                data:
+                  title: !input awaiting_title
+                  message: !input awaiting_message
+                  data:
+                    car_ui: true
+                    notification_icon: mdi:sleep
+                    channel: Gate alerts
+                    importance: high
+                    tag: itinerary
+              # Wait for the gate to be closed
+              - wait_for_trigger:
+                  - platform: template
+                    value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
+          # Remove the notification received by the user when his itinerary was started or while the gate was awaiting another user
           - service: "{{ notify_device }}"
             data:
-              title: !input awaiting_title
-              message: !input awaiting_message
+              message: clear_notification
               data:
-                car_ui: true
-                notification_icon: mdi:sleep
-                channel: Gate alerts
-                importance: high
                 tag: itinerary
-          # Wait for the gate to be closed
+        # If the automatic closing input is set to false
+        else:
+          # Wait for the user to leave home
           - wait_for_trigger:
               - platform: template
-                value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
-      # Remove the notification received by the user when his itinerary was started or while the gate was awaiting another user
-      - service: "{{ notify_device }}"
-        data:
-          message: clear_notification
-          data:
-            tag: itinerary
+                id: home_left
+                value_template: "{{ not is_state(person, 'home') }}"
+          # Remove the current itinerary
+          - service: input_text.set_value
+            target:
+              entity_id: "{{ itinerary_sensor }}"
+            data:
+              value: none
 
     ###################
     # START ITINERARY #
@@ -725,7 +743,7 @@ action:
                             - service: cover.open_cover
                               target:
                                 entity_id: !input gate
-                  # If the automatic closing on arrival input is set to true
+                  # If the automatic closing input is set to true
                   - if:
                       - condition: template
                         value_template: "{{ automatic_closing_arrival }}"
@@ -886,7 +904,7 @@ action:
                             tag: itinerary
                       # Stop the whole script as it was successful
                       - stop: Successful
-                    # If the automatic closing on arrival input is set to false
+                    # If the automatic closing input is set to false
                     else:
                       # Wait for the user to stop his car
                       - wait_for_trigger:
