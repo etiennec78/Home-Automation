@@ -64,7 +64,7 @@ blueprint:
       description: |-
         The **TTS service** you want to use for your speakers
         *Note : Optional*
-      default: []
+      default: ""
       selector:
         target:
           entity:
@@ -133,15 +133,14 @@ action:
   # Play a TTS on each speaker selected, only if at least one is selected and a tts service is set
   - if:
       condition: template
-      value_template: "{{ speaker_tts_devices != [] and speaker_tts_service != [] }}"
+      value_template: "{{ speaker_tts_devices != [] and speaker_tts_service != '' }}"
     then:
       - service: tts.speak
         data:
           cache: true
           media_player_entity_id: !input speaker_tts_devices
           message: !input offline_message
-        target:
-          entity_id: !input speaker_tts_service
+        target: "{{speaker_tts_service}}"
   # Send a persistent notification on the dashboard, only if this has been enabled
   - if:
       condition: template
