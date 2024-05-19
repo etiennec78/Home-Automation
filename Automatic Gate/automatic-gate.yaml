@@ -275,6 +275,10 @@ blueprint:
       selector:
         text:
           multiline: true
+    travel_time_did_not_respond:
+      name: 💬⚠️ Travel time integration did not respond
+      description: The **content** of the notification you will receive if your **travel time integraton did not respond** during the itinerary
+      default: "Your travel time integration did not respond during your itinerary 😴"
 
 variables:
   gate: !input gate
@@ -908,18 +912,36 @@ action:
           value: none
         target:
           entity_id: "{{ itinerary_sensor }}"
-      # Notify the user that his itinerary has been canceled
-      - service: "{{ notify_device }}"
-        data:
-          title: !input itinerary_canceled_title
-          message: !input vehicle_left_message
-          data:
-            car_ui: true
-            notification_icon: mdi:alert-circle
-            channel: Gate alerts
-            importance: high
-            tag: itinerary
-            timeout: 300
+      # If the car has been left at home and the travel time was not updated during the itinerary
+      - if:
+          condition: template
+          value_template: "{{ is_state(person, 'home') and states[travel_time_sensor].last_updated < now() - timedelta(minutes=5) }}"
+        then:
+          # Notify the user that his travel time integration did not respond during the itinerary
+          - service: "{{ notify_device }}"
+            data:
+              title: !input itinerary_canceled_title
+              message: !input travel_time_did_not_respond
+              data:
+                car_ui: true
+                notification_icon: mdi:alert-circle
+                channel: Gate alerts
+                importance: high
+                tag: itinerary
+                timeout: 300
+        else:
+          # Notify the user that his itinerary has been canceled because he has left his car
+          - service: "{{ notify_device }}"
+            data:
+              title: !input itinerary_canceled_title
+              message: !input vehicle_left_message
+              data:
+                car_ui: true
+                notification_icon: mdi:alert-circle
+                channel: Gate alerts
+                importance: high
+                tag: itinerary
+                timeout: 300
 # Run in parralel to let the automation start with multiple users driving simultaneously
 mode: parallel
 max: 10
