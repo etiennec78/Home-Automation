@@ -401,7 +401,7 @@ action:
                     entity_id: !input gate
           - if:
               - condition: template
-                value_template: "{{ opening_notification }}"
+                value_template: !input opening_notification
             then:
                 # Notify the user that the gate is opening automatically
                 - service: "{{ notify_device }}"
@@ -418,7 +418,7 @@ action:
       # If the automatic closing input is set to true
       - if:
           - condition: template
-            value_template: "{{ automatic_closing_arrival }}"
+            value_template: !input automatic_closing_arrival
         then:
           # Wait for the gate to be closed by the user, or the iBeacon to be out of reach for 20s, or the vehicle to be left, or the user to leave home, all while not waiting more than the auto-close delay
           - wait_for_trigger:
@@ -572,7 +572,7 @@ action:
               # Remove the notification received by the user when his gate was opening
               - if:
                   condition: template
-                  value_template: "{{ opening_notification }}"
+                  value_template: !input opening_notification
                 then:
                   - service: "{{ notify_device }}"
                     data:
@@ -789,7 +789,7 @@ action:
                                 entity_id: !input gate
                       - if:
                           - condition: template
-                            value_template: "{{ opening_notification }}"
+                            value_template: !input opening_notification
                         then:
                             # Notify the user that the gate is opening automatically
                             - service: "{{ notify_device }}"
@@ -806,7 +806,7 @@ action:
                   # If the automatic closing input is set to true
                   - if:
                       - condition: template
-                        value_template: "{{ automatic_closing_arrival }}"
+                        value_template: !input automatic_closing_arrival
                     then:
                       # Wait for the gate to be closed manually, or the vehicle to be left, or the user to leave the activation zone, all while not waiting more than the auto-close delay
                       - wait_for_trigger:
@@ -985,7 +985,7 @@ action:
                       # Remove the notification received by the user when his gate was opening
                       - if:
                           condition: template
-                          value_template: "{{ opening_notification }}"
+                          value_template: !input opening_notification
                         then:
                           - service: "{{ notify_device }}"
                             data:
