@@ -150,7 +150,9 @@ blueprint:
           unit_of_measurement: minutes
     eta_zone:
       name: 🚀 ETA planning zone
-      description: At which **distance** from home should your vehicle start planning its **Estimated Time of Arrival** to **open your gate** ?
+      description: |-
+        At which **distance** from home should your vehicle start planning its **Estimated Time of Arrival** to **open your gate** ?
+        This should be the same value as your ["High accuracy mode trigger range for zone"](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gps-location-trackers-)
       default: 1000
       selector:
         number:
