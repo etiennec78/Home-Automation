@@ -533,6 +533,7 @@ action:
                             - service: cover.close_cover
                               target:
                                 entity_id: !input gate
+                      - stop: Successful
               # Get the names of the persons being awaited
               - variables:
                   awaiting_sensors: >-
