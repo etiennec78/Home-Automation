@@ -62,8 +62,8 @@ blueprint:
       description: |-
         Each **user** which should be **[tracked](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gps-location-trackers-)** for **position updates** (same order)
         *Notes :*
-        * *⚠️ Use high precision while driving near home or you could time out*
-        * *If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving home, your gate could open thinking you are still home*
+        *⚠️ Use high precision while driving near home or you could time out*
+        *If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving home, your gate could open thinking you are still home*
       selector:
         entity:
           multiple: true
