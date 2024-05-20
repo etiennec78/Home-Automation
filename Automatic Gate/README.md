@@ -5,15 +5,16 @@
 **Modular** and **secure** gate automation that **opens your gate** upon leaving or arriving
 Makes managing your gate while driving easier : don't ever touch your screen or remote again
 Have your gate greet you when you arrive home and be ready for you
-Customize the options to tailor the system to your exact needs.
+Customize the options to tailor the system to your exact needs
 
 ## Key Features 🌟
 
 * **Automatic Opening**: Your gate will open automatically when you drive home. No need to press any buttons ! 🏠
 * **Smart Navigation**: Directly open the gate when leaving home, or launch an itinerary when starting from outside 🚀
 * **Multi-User Support**: Manages up to 10 drivers simultaneously 🚗
-* **Collision Prevention**: Ensures the gate doesn't close on anyone arriving or leaving at the same time. 🚧
+* **Collision Prevention**: Ensures the gate doesn't close on anyone arriving or leaving at the same time 🚧
 * **Security & Reliability**:
+  * Precise Waze and ETA calculations to have your gate fully open exactly when you arrive home 🎯
   * Real-time position tracking to adjust timing for traffic or if you pass by without entering 📍
   * Car status monitoring to cancel everything if you leave your car ✋
   * Built-in timeouts in case of an internet loss ⏳
