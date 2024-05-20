@@ -15,7 +15,7 @@ blueprint:
   input:
     gate:
       name: ⛩️ Gate
-      description: The **switch** or **cover** which controls your **gate**
+      description: The **switch** or **cover** which controls your **[gate](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gate-%EF%B8%8F)**
       selector:
         entity:
           filter:
@@ -60,7 +60,7 @@ blueprint:
     persons:
       name: 👤 Tracked users
       description: |-
-        Each **user** which should be tracked for **position updates** (same order)
+        Each **user** which should be [tracked](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gps-location-trackers-) for **position updates** (same order)
         *Notes :*
         * *⚠️ Use high precision while driving near home or you could time out*
         * *If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving home, your gate could open thinking you are still home*
@@ -71,7 +71,7 @@ blueprint:
             domain: person
     driving_sensors:
       name: 🚗 Driving sensors
-      description: Each **driving sensor** which should trigger the automation (same order)
+      description: Each **[driving sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#driving-sensors-)** which should trigger the automation (same order)
       selector:
         entity:
           multiple: true
@@ -79,7 +79,7 @@ blueprint:
             domain: binary_sensor
     travel_time_sensors:
       name: ✈️ Travel time sensors
-      description: Each **travel time** sensor monitoring each user **time left before arrival** (same order)
+      description: Each **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#travel-time-sensors-%EF%B8%8F)** monitoring each user **time left before arrival** (same order)
       selector:
         entity:
           multiple: true
@@ -88,7 +88,7 @@ blueprint:
             device_class: duration
     proximity_sensors:
       name: 📏 Proximity sensors
-      description: Each sensor from the **proximity integration** to calculate user distance from home (same order)
+      description: Each **[proximity sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#proximity-sensors-)** from the proximity integration to calculate user distance from home (same order)
       selector:
         entity:
           multiple: true
@@ -98,14 +98,14 @@ blueprint:
             device_class: distance
     notify_devices:
       name: 💬 Notify services
-      description: Each **service** of **device to notify** (Find the service ids by going into [Developer tools > Services tab](https://my.home-assistant.io/redirect/developer_states/) > searching for "notify.") (same order)
+      description: Each **[service](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-services-)** of **device to notify** (Find the service ids by going into [Developer tools > Services tab](https://my.home-assistant.io/redirect/developer_states/) > searching for "notify.") (same order)
       selector:
         text:
           multiple: true
           prefix: notify.mobile_app_
     itinerary_sensors:
       name: 🗺️ Itinerary sensors
-      description: Each empty **itinerary input text** helper to store each user **itinerary state** (same order)
+      description: Each empty **[itinerary input text](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#itinerary-sensors-%EF%B8%8F)** helper to store each user **itinerary state** (same order)
       selector:
         entity:
           multiple: true
@@ -113,7 +113,7 @@ blueprint:
             domain: input_text
     eta_sensor:
       name: 📅 Planned time of opening sensor
-      description: An empty **input datetime** helper which will be used to set an **ETA** and plan the **opening of your gate** (see wiki)
+      description: An empty **[input datetime](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#planned-opening-) helper** which will be used to set an **ETA** and plan the **opening of your gate** (see wiki)
       selector:
         entity:
           filter:
@@ -177,7 +177,8 @@ blueprint:
     ble_entities:
       name: 🔎 iBeacon tracker entities (optional)
       description: |-
-        Each **BLE rssi tracker entity** to monitor your distance from the gate while leaving, to close it when you're out of reach
+        Each **[BLE rssi tracker entity](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-entities-)** to monitor your distance from the gate while leaving, to close it when you're out of reach
+        Needs [bluetooth transmitters](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-transmitter-) set on companion apps
         *Note : Let empty if no ble*
       default: []
       selector:
@@ -189,7 +190,7 @@ blueprint:
     ble_scanner_switch:
       name: ⏻ iBeacon scanner activator switch (optional)
       description: |-
-        The **switch** you want to use to turn on and off your **iBeacon scanner** when a vehicle is leaving home
+        The **[switch](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-scanner-switch-)** you want to use to turn on and off your **iBeacon scanner** when a vehicle is leaving home
         *Note : Let empty if no ble / want to always keep iBeacon running*
       default: ""
       selector:
