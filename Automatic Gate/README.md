@@ -3,11 +3,29 @@
 ## Description 📝
 
 **Modular** and **secure** gate automation that **opens your gate** upon leaving or arriving
+Makes managing your gate while driving easier : don't ever touch your screen or remote again
+Have your gate greet you when you arrive home and be ready for you
+Customize the options to tailor the system to your exact needs.
 
-* Supports up to 10 users driving **simultaneously**
-* **Prioritizes manual actions** over the automation, letting you control your gate even while the automation is running
-* **Security features** : Auto-close timer, alert notifications, timeout detection, aborting on vehicle left, aborting if driven near home without entering, keeping gate open while someone else approaches or leaves home
-* **Custom options** : Gate settings, security settings, iBeacon automatic closing, travel time update interval, notifications text
+## Key Features 🌟
+
+* **Automatic Opening**: Your gate will open automatically when you drive home. No need to press any buttons ! 🏠
+* **Smart Navigation**: Directly open the gate when leaving home, or launch an itinerary when starting from outside 🚀
+* **Multi-User Support**: Manages up to 10 drivers simultaneously 🚗
+* **Collision Prevention**: Ensures the gate doesn't close on anyone arriving or leaving at the same time. 🚧
+* **Security & Reliability**:
+  * Real-time position tracking to adjust timing for traffic or if you pass by without entering 📍
+  * Car status monitoring to cancel everything if you leave your car ✋
+  * Built-in timeouts in case of an internet loss ⏳
+  * Maximum entry and leaving time before auto-closing ⌛
+  * Notification alerts at each decision of the automation 🚨
+  * Manual actions prioritized over the automation, letting you control your gate even while the automation is running ✍️
+* **Customizable Settings**:
+  * Auto-close with iBeacon 📡
+  * Adjustable notifications 💬
+  * Customizable security options 🔒
+  * Customizable gate operation timings 🛠️
+  * Customizable travel time refresh rate 🔁
 
 ## Flowchart 🔀
 
