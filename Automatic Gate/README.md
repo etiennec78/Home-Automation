@@ -3,11 +3,30 @@
 ## Description 📝
 
 **Modular** and **secure** gate automation that **opens your gate** upon leaving or arriving
+Makes managing your gate while driving easier : don't ever touch your screen or remote again
+Have your gate greet you when you arrive home and be ready for you
+Customize the options to tailor the system to your exact needs
 
-* Supports up to 10 users driving **simultaneously**
-* **Prioritizes manual actions** over the automation, letting you control your gate even while the automation is running
-* **Security features** : Auto-close timer, alert notifications, timeout detection, aborting on vehicle left, aborting if driven near home without entering, keeping gate open while someone else approaches or leaves home
-* **Custom options** : Gate settings, security settings, iBeacon automatic closing, travel time update interval, notifications text
+## Key Features 🌟
+
+* **Automatic Opening**: Your gate will open automatically when you drive home. No need to press any buttons ! 🏠
+* **Smart Navigation**: Directly open the gate when leaving home, or launch an itinerary when starting from outside 🚀
+* **Multi-User Support**: Manages up to 10 drivers simultaneously 🚗
+* **Collision Prevention**: Ensures the gate doesn't close on anyone arriving or leaving at the same time 🚧
+* **Security & Reliability**:
+  * Precise Waze and ETA calculations to have your gate fully open exactly when you arrive home 🎯
+  * Real-time position tracking to adjust timing for traffic or if you pass by without entering 📍
+  * Car status monitoring to cancel everything if you leave your car ✋
+  * Built-in timeouts in case of an internet loss ⏳
+  * Maximum entry and leaving time before auto-closing ⌛
+  * Notification alerts at each decision of the automation 🚨
+  * Manual actions prioritized over the automation, letting you control your gate even while the automation is running ✍️
+* **Customizable Settings**:
+  * Auto-close with iBeacon 📡
+  * Adjustable notifications 💬
+  * Customizable security options 🔒
+  * Customizable gate operation timings 🛠️
+  * Customizable travel time refresh rate 🔁
 
 ## Flowchart 🔀
 
@@ -24,7 +43,7 @@
 |        Sensor         |      Type      |      Provider      | Multiple |                                                       Description                                                       |
 | :-------------------: | :------------: | :----------------: | :------: | :---------------------------------------------------------------------------------------------------------------------- |
 |         [Gate](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gate-%EF%B8%8F)          |  switch/cover  |        Any         |    No    | Any gate or garage door which is either a switch or a cover. Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware) or any other integration |
-| [GPS location trackers](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gps-location-trackers-) |     person     |     Companion      |   Yes    | Try to avoid using wifi/ble location trackers as latency could be an issue. Use high precision when driving near home   |
+| [GPS location trackers](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gps-location-trackers-) |     person     |     Companion      |   Yes    | ⚠️ Use [high precision while driving near home](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gps-location-trackers-) or you could time out. Try to avoid using BLE/Wifi location trackers      |
 |    [Driving sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#driving-sensors-)     | binary_sensor  | Companion/Template |   Yes    | Either Android Auto, bluetooth connexion, or both grouped                                                               |
 |      [Travel time](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#travel-time-sensors-%EF%B8%8F)      |     sensor     |        Waze        |   Yes    | For now only Waze integration accepted, calculates the travel time between you and your home. Disable auto polling      |
 |   [Proximity sensors](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#proximity-sensors-)   |     sensor     |     Proximity      |   Yes    | Calculates the distance of each user from home                                                                          |
@@ -40,7 +59,7 @@
 |    [BLE transmitter](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-transmitter-)    |      none      |     Companion      |   Yes    | Companion app ble transmitter to automatically close gate upon leaving                                                |
 |     [BLE entities](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-entities-)      |signal_strength |        Any         |   Yes    | Each BLE entity to monitor, to close the gate when it goes to unavailable. Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware) or else  |
 |  [BLE scanner switch](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-scanner-switch-)   |     switch     |        Any         |    No    | A switch which can turn on/off your BLE scanner. Not useful if you want your BLE scanner running 24/7                 |
-|  [Notify all devices](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-all-devices-group-)   |     group      |       Group        |    No    | Only necessary for [esphome firmware](Extra/Esphome%20gate%20firmware) and extra gate automations                                                        |
+|  [Notify all devices](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-all-devices-group-)   |     group      |       Group        |    No    | Only necessary for [esphome firmware](Extra/Esphome%20gate%20firmware). Allows it to notify all devices when opening on in case of an error       |
 |   [Nearest distance](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#nearest-distance-sensor-)    |     sensor     |     Proximity      |    No    | Only necessary for [esphome firmware](Extra/Esphome%20gate%20firmware). Gives the distance of the nearest person from home                               |
 
 
