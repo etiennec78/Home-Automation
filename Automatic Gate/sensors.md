@@ -7,7 +7,7 @@
 
 
 # Required sensors 📌
-
+* *If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving home, your gate could open thinking you are still home*
 ## Gate ⛩️
 
 **The switch or cover which controls your gate**
@@ -19,7 +19,11 @@ Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware/gate.yaml) o
 
 **Each GPS location tracker necessary to detect if you're home or away, estimate your travel time, and track your distance**
 
-*Note : Try to avoid using wifi/ble location trackers as latency could be an issue. Use high precision when driving near home*
+*Notes :*
+
+* *⚠️ Use high precision while driving near home or you could time out*
+* *If your location tracker has report latency (wifi/ble), and you plug Android Auto just after leaving home, your gate could open thinking you are still home*
+* *Your High accuracy mode trigger range should be the same as your ETA planning zone in your blueprint config*
 
 Install through [companion app](https://companion.home-assistant.io/docs/core/location/) settings : *Settings > Companion app > Manage sensors > Background location ✔️*
 
@@ -204,6 +208,11 @@ input_datetime:
 
 The automation will automatically turn the transmitter off if not needed
 
+*Notes :*
+
+* *Your bluetooth transmitter should report your devices unavailable after a small time period or this won't have any effect*
+* *Be aware that having your BLE transmitter too far away from your gate could make your gate close onto your car when the signal is lost before leaving*
+
 Install through [companion app](https://www.home-assistant.io/integrations/mobile_app/) settings : *Settings > Companion app > Manage sensors > BLE Transmitter ✔️*
 
 Settings :
@@ -219,7 +228,7 @@ Settings :
 
 ## Bluetooth entities 🔎
 
-**Each BLE entity to monitor when someone is leaving home, to close when it goes to unavailable**
+**Each BLE rssi tracker entity to monitor your distance from the gate while leaving, to close it when you're out of reach**
 
 Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware) or any other bluetooth iBeacon scanner near your gate
 
@@ -229,7 +238,7 @@ Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware) or any othe
 
 ## Notify all devices group 🔔
 
-**A group which allows my [esphome firmware](Extra/Esphome%20gate%20firmware) and [automations](Extra/Automations) to notify all users in case of an event like your gate opening**
+**A group which allows my [esphome firmware](Extra/Esphome%20gate%20firmware) to notify all users in case of an event like your gate opening**
 
 Use a [notification group](https://www.home-assistant.io/integrations/group/#notify-groups)
 
