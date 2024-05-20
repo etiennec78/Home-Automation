@@ -60,7 +60,7 @@ blueprint:
     persons:
       name: 👤 Tracked users
       description: |-
-        Each **user** which should be [tracked](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gps-location-trackers-) for **position updates** (same order)
+        Each **user** which should be **[tracked](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gps-location-trackers-)** for **position updates** (same order)
         *Notes :*
         * *⚠️ Use high precision while driving near home or you could time out*
         * *If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving home, your gate could open thinking you are still home*
@@ -79,7 +79,9 @@ blueprint:
             domain: binary_sensor
     travel_time_sensors:
       name: ✈️ Travel time sensors
-      description: Each **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#travel-time-sensors-%EF%B8%8F)** monitoring each user **time left before arrival** (same order)
+      description: |-
+        Each **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#travel-time-sensors-%EF%B8%8F)** monitoring each user **time left before arrival** (same order)
+        **⚠️ Please set a [custom polling interval](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)**
       selector:
         entity:
           multiple: true
@@ -121,8 +123,6 @@ blueprint:
     travel_time_rate:
       name: 🔄 Travel time refresh rate
       description: |-
-        **⚠️ Please set a [custom polling interval](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)**
-
         Calculate the Travel time & ETA
 
           - **Continuously** during the whole itinerary (custom refresh interval while away)
