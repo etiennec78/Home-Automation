@@ -49,6 +49,14 @@ blueprint:
           min: 0.5
           max: 30
           unit_of_measurement: minutes
+    opening_notification:
+      name: 👐 Opening notification
+      description: |-
+        Should the automation notify you when your gate opens?
+        *Note : If your gate already notifies you like my esphome firmware, you can turn this off*
+      default: true
+      selector:
+        boolean:
     persons:
       name: 👤 Tracked users
       description: |-
@@ -200,6 +208,12 @@ blueprint:
       default: "Itinerary canceled ❌"
       selector:
         text:
+    gate_opening_title:
+      name: 📃🔓 Gate opening notification title
+      description: The **title** displayed on the notification you will receive when your **gate is opening**
+      default: "Gate opening 🔓"
+      selector:
+        text:
     gate_closing_title:
       name: 📃🔒 Gate closing notification title
       description: The **title** displayed on the notification you will receive when your **gate is closing**
@@ -220,8 +234,15 @@ blueprint:
       default: "Your itinerary has been started"
       selector:
         text:
+    automatic_opening_message:
+      name: 💬🔓 Automatic opening notification
+      description: The **content** of the notification you will receive when your gate is **automatically opening**
+      default: "Automatic opening of the gate"
+      selector:
+        text:
+          multiline: true
     automatic_closing_message:
-      name: 💬🤖 Automatic closing notification
+      name: 💬🔒 Automatic closing notification
       description: The **content** of the notification you will receive when your gate is **automatically closing**
       default: "Automatic closing of the gate"
       selector:
@@ -285,6 +306,7 @@ variables:
   lead_time: !input lead_time
   safety_delay: !input safety_delay
   timeout_delay: !input timeout_delay
+  opening_notification: !input opening_notification
   persons: !input persons
   driving_sensors: !input driving_sensors
   travel_time_sensors: !input travel_time_sensors
@@ -374,6 +396,22 @@ action:
                 - service: cover.open_cover
                   target:
                     entity_id: !input gate
+          - if:
+              - condition: template
+                value_template: "{{ opening_notification }}"
+            then:
+                # Notify the user that the gate is opening automatically
+                - service: "{{ notify_device }}"
+                  data:
+                    title: !input gate_closing_title
+                    message: !input automatic_opening_message
+                    data:
+                      car_ui: true
+                      notification_icon: mdi:gate-open
+                      channel: Gate alerts
+                      importance: high
+                      tag: gate-movement
+                      timeout: 300
       # If the automatic closing input is set to true
       - if:
           - condition: template
@@ -527,6 +565,16 @@ action:
                   message: clear_notification
                   data:
                     tag: itinerary
+              # Remove the notification received by the user when his gate was opening
+              - if:
+                  condition: template
+                  value_template: "{{ opening_notification }}"
+                then:
+                  - service: "{{ notify_device }}"
+                    data:
+                      message: clear_notification
+                      data:
+                        tag: gate-movement
         # If the automatic closing input is set to false
         else:
           # Wait for the user to leave home
@@ -735,6 +783,22 @@ action:
                             - service: cover.open_cover
                               target:
                                 entity_id: !input gate
+                      - if:
+                          - condition: template
+                            value_template: "{{ opening_notification }}"
+                        then:
+                            # Notify the user that the gate is opening automatically
+                            - service: "{{ notify_device }}"
+                              data:
+                                title: !input gate_closing_title
+                                message: !input automatic_opening_message
+                                data:
+                                  car_ui: true
+                                  notification_icon: mdi:gate-open
+                                  channel: Gate alerts
+                                  importance: high
+                                  tag: gate-movement
+                                  timeout: 300
                   # If the automatic closing input is set to true
                   - if:
                       - condition: template
@@ -914,6 +978,16 @@ action:
                           message: clear_notification
                           data:
                             tag: itinerary
+                      # Remove the notification received by the user when his gate was opening
+                      - if:
+                          condition: template
+                          value_template: "{{ opening_notification }}"
+                        then:
+                          - service: "{{ notify_device }}"
+                            data:
+                              message: clear_notification
+                              data:
+                                tag: gate-movement
                       # Stop the whole script as it ran successfully
                       - stop: Successful
       # If both loop were broken
