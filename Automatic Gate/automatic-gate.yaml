@@ -3,19 +3,44 @@ blueprint:
   domain: automation
   author: etiennec78
   description: |-
+    # Automatic Gate ⛩️
+
+    ## Description 📝
     **Modular** and **secure** gate automation that **opens your gate** upon leaving or arriving
-    Supports up to 10 users driving **simultaneously**
-    **Prioritizes manual actions** over the automation, letting you control your gate even while the automation is running
-    **Security features** : Auto-close timer, alert notifications, timeout detection, aborting on vehicle left, aborting if driven near home without entering, keeping gate open while someone else approaches or leaves home
-    **Custom options** : Gate settings, security settings, iBeacon automatic closing, travel time update interval, notifications text
+    Makes managing your gate while driving easier : don't ever touch your screen or remote again
+    Have your gate greet you when you arrive home and be ready for you
+    Customize the options to tailor the system to your exact needs
+
+    ## Key Features 🌟
+    * **Automatic Opening**: Your gate will open automatically when you drive home. No need to press any buttons ! 🏠
+    * **Smart Navigation**: Directly open the gate when leaving home, or launch an itinerary when starting from outside 🚀
+    * **Multi-User Support**: Manages up to 10 drivers simultaneously 🚗
+    * **Collision Prevention**: Ensures the gate doesn't close on anyone arriving or leaving at the same time 🚧
+    * **Security & Reliability**:
+      * Precise Waze and ETA calculations to have your gate fully open exactly when you arrive home 🎯
+      * Real-time position tracking to adjust timing for traffic or if you pass by without entering 📍
+      * Car status monitoring to cancel everything if you leave your car ✋
+      * Built-in timeouts in case of an internet loss ⏳
+      * Maximum entry and leaving time before auto-closing ⌛
+      * Notification alerts at each decision of the automation 🚨
+      * Manual actions prioritized over the automation, letting you control your gate even while the automation is running ✍️
+    * **Customizable Settings**:
+      * Auto-close with iBeacon 📡
+      * Adjustable notifications 💬
+      * Customizable security options 🔒
+      * Customizable gate operation timings 🛠️
+      * Customizable travel time refresh rate 🔁
+
+    ## More info ℹ️
     Set up sensors : [click here](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md)
     Flowchart : [click here](https://miro.com/app/board/uXjVMpH4Tno=/)
     Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate)
     Discord : etiennec78
+    Buy Me a Coffee :  [![Buy Me a Coffee](https://cdn.buymeacoffee.com/buttons/default-orange.png)](https://buymeacoffee.com/etiennec78)
   input:
     gate:
       name: ⛩️ Gate
-      description: The **switch** or **cover** which controls your **gate**
+      description: The **switch** or **cover** which controls your **[gate](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gate-%EF%B8%8F)**
       selector:
         entity:
           filter:
@@ -49,13 +74,21 @@ blueprint:
           min: 0.5
           max: 30
           unit_of_measurement: minutes
+    opening_notification:
+      name: 👐 Opening notification
+      description: |-
+        Should the automation notify you when your gate opens?
+        *Note : If your gate already notifies you like my esphome firmware, you can turn this off*
+      default: true
+      selector:
+        boolean:
     persons:
       name: 👤 Tracked users
       description: |-
-        Each **user** which should be tracked for **position updates** (same order)
+        Each **user** which should be **[tracked](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gps-location-trackers-)** for **position updates** (same order)
         *Notes :*
-        * *⚠️ Use high precision while driving near home or you could time out*
-        * *If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving home, your gate could open thinking you are still home*
+        *⚠️ Use high precision while driving near home or you could time out*
+        *If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving home, your gate could open thinking you are still home*
       selector:
         entity:
           multiple: true
@@ -63,7 +96,7 @@ blueprint:
             domain: person
     driving_sensors:
       name: 🚗 Driving sensors
-      description: Each **driving sensor** which should trigger the automation (same order)
+      description: Each **[driving sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#driving-sensors-)** which should trigger the automation (same order)
       selector:
         entity:
           multiple: true
@@ -71,7 +104,9 @@ blueprint:
             domain: binary_sensor
     travel_time_sensors:
       name: ✈️ Travel time sensors
-      description: Each **travel time** sensor monitoring each user **time left before arrival** (same order)
+      description: |-
+        Each **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#travel-time-sensors-%EF%B8%8F)** monitoring each user **time left before arrival** (same order)
+        **⚠️ Please set a [custom polling interval](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)**
       selector:
         entity:
           multiple: true
@@ -80,7 +115,7 @@ blueprint:
             device_class: duration
     proximity_sensors:
       name: 📏 Proximity sensors
-      description: Each sensor from the **proximity integration** to calculate user distance from home (same order)
+      description: Each **[proximity sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#proximity-sensors-)** from the proximity integration to calculate user distance from home (same order)
       selector:
         entity:
           multiple: true
@@ -90,14 +125,14 @@ blueprint:
             device_class: distance
     notify_devices:
       name: 💬 Notify services
-      description: Each **service** of **device to notify** (Find the service ids by going into [Developer tools > Services tab](https://my.home-assistant.io/redirect/developer_states/) > searching for "notify.") (same order)
+      description: Each **[service](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-services-)** of **device to notify** (Find the service ids by going into [Developer tools > Services tab](https://my.home-assistant.io/redirect/developer_states/) > searching for "notify.") (same order)
       selector:
         text:
           multiple: true
           prefix: notify.mobile_app_
     itinerary_sensors:
       name: 🗺️ Itinerary sensors
-      description: Each empty **itinerary input text** helper to store each user **itinerary state** (same order)
+      description: Each empty **[itinerary input text](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#itinerary-sensors-%EF%B8%8F)** helper to store each user **itinerary state** (same order)
       selector:
         entity:
           multiple: true
@@ -105,7 +140,7 @@ blueprint:
             domain: input_text
     eta_sensor:
       name: 📅 Planned time of opening sensor
-      description: An empty **input datetime** helper which will be used to set an **ETA** and plan the **opening of your gate** (see wiki)
+      description: An empty **[input datetime](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#planned-opening-) helper** which will be used to set an **ETA** and plan the **opening of your gate** (see wiki)
       selector:
         entity:
           filter:
@@ -113,8 +148,6 @@ blueprint:
     travel_time_rate:
       name: 🔄 Travel time refresh rate
       description: |-
-        **⚠️ Please set a [custom polling interval](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)**
-
         Calculate the Travel time & ETA
 
           - **Continuously** during the whole itinerary (custom refresh interval while away)
@@ -142,7 +175,9 @@ blueprint:
           unit_of_measurement: minutes
     eta_zone:
       name: 🚀 ETA planning zone
-      description: At which **distance** from home should your vehicle start planning its **Estimated Time of Arrival** to **open your gate** ?
+      description: |-
+        At which **distance** from home should your vehicle start planning its **Estimated Time of Arrival** to **open your gate** ?
+        This should be the same value as your ["High accuracy mode trigger range for zone"](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gps-location-trackers-)
       default: 1000
       selector:
         number:
@@ -169,7 +204,8 @@ blueprint:
     ble_entities:
       name: 🔎 iBeacon tracker entities (optional)
       description: |-
-        Each **BLE rssi tracker entity** to monitor your distance from the gate while leaving, to close it when you're out of reach
+        Each **[BLE rssi tracker entity](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-entities-)** to monitor your distance from the gate while leaving, to close it when you're out of reach
+        Needs [bluetooth transmitters](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-transmitter-) set on companion apps
         *Note : Let empty if no ble*
       default: []
       selector:
@@ -181,7 +217,7 @@ blueprint:
     ble_scanner_switch:
       name: ⏻ iBeacon scanner activator switch (optional)
       description: |-
-        The **switch** you want to use to turn on and off your **iBeacon scanner** when a vehicle is leaving home
+        The **[switch](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-scanner-switch-)** you want to use to turn on and off your **iBeacon scanner** when a vehicle is leaving home
         *Note : Let empty if no ble / want to always keep iBeacon running*
       default: ""
       selector:
@@ -198,6 +234,12 @@ blueprint:
       name: 📃❌ Itinerary canceled title
       description: The **title** displayed on the notification you will receive when your **itinerary gets canceled**
       default: "Itinerary canceled ❌"
+      selector:
+        text:
+    gate_opening_title:
+      name: 📃🔓 Gate opening notification title
+      description: The **title** displayed on the notification you will receive when your **gate is opening**
+      default: "Gate opening 🔓"
       selector:
         text:
     gate_closing_title:
@@ -220,8 +262,15 @@ blueprint:
       default: "Your itinerary has been started"
       selector:
         text:
+    automatic_opening_message:
+      name: 💬🔓 Automatic opening notification
+      description: The **content** of the notification you will receive when your gate is **automatically opening**
+      default: "Automatic opening of the gate"
+      selector:
+        text:
+          multiline: true
     automatic_closing_message:
-      name: 💬🤖 Automatic closing notification
+      name: 💬🔒 Automatic closing notification
       description: The **content** of the notification you will receive when your gate is **automatically closing**
       default: "Automatic closing of the gate"
       selector:
@@ -285,6 +334,7 @@ variables:
   lead_time: !input lead_time
   safety_delay: !input safety_delay
   timeout_delay: !input timeout_delay
+  opening_notification: !input opening_notification
   persons: !input persons
   driving_sensors: !input driving_sensors
   travel_time_sensors: !input travel_time_sensors
@@ -374,10 +424,26 @@ action:
                 - service: cover.open_cover
                   target:
                     entity_id: !input gate
+          - if:
+              - condition: template
+                value_template: !input opening_notification
+            then:
+                # Notify the user that the gate is opening automatically
+                - service: "{{ notify_device }}"
+                  data:
+                    title: !input gate_closing_title
+                    message: !input automatic_opening_message
+                    data:
+                      car_ui: true
+                      notification_icon: mdi:gate-open
+                      channel: Gate alerts
+                      importance: high
+                      tag: gate-movement
+                      timeout: 300
       # If the automatic closing input is set to true
       - if:
           - condition: template
-            value_template: "{{ automatic_closing_arrival }}"
+            value_template: !input automatic_closing_arrival
         then:
           # Wait for the gate to be closed by the user, or the iBeacon to be out of reach for 20s, or the vehicle to be left, or the user to leave home, all while not waiting more than the auto-close delay
           - wait_for_trigger:
@@ -465,7 +531,7 @@ action:
                                 notification_icon: mdi:alert-circle
                                 channel: Gate alerts
                                 importance: high
-                                tag: automatic-closing
+                                tag: gate-movement
                                 timeout: 300
                         else:
                           # Notify the user that the gate will close automatically
@@ -477,7 +543,7 @@ action:
                                 notification_icon: mdi:gate
                                 channel: Gate alerts
                                 importance: high
-                                tag: automatic-closing
+                                tag: gate-movement
                                 timeout: 300
                       # Close the gate
                       - choose:
@@ -495,6 +561,7 @@ action:
                             - service: cover.close_cover
                               target:
                                 entity_id: !input gate
+                      - stop: Successful
               # Get the names of the persons being awaited
               - variables:
                   awaiting_sensors: >-
@@ -527,6 +594,16 @@ action:
                   message: clear_notification
                   data:
                     tag: itinerary
+              # Remove the notification received by the user when his gate was opening
+              - if:
+                  condition: template
+                  value_template: !input opening_notification
+                then:
+                  - service: "{{ notify_device }}"
+                    data:
+                      message: clear_notification
+                      data:
+                        tag: gate-movement
         # If the automatic closing input is set to false
         else:
           # Wait for the user to leave home
@@ -735,10 +812,26 @@ action:
                             - service: cover.open_cover
                               target:
                                 entity_id: !input gate
+                      - if:
+                          - condition: template
+                            value_template: !input opening_notification
+                        then:
+                            # Notify the user that the gate is opening automatically
+                            - service: "{{ notify_device }}"
+                              data:
+                                title: !input gate_closing_title
+                                message: !input automatic_opening_message
+                                data:
+                                  car_ui: true
+                                  notification_icon: mdi:gate-open
+                                  channel: Gate alerts
+                                  importance: high
+                                  tag: gate-movement
+                                  timeout: 300
                   # If the automatic closing input is set to true
                   - if:
                       - condition: template
-                        value_template: "{{ automatic_closing_arrival }}"
+                        value_template: !input automatic_closing_arrival
                     then:
                       # Wait for the gate to be closed manually, or the vehicle to be left, or the user to leave the activation zone, all while not waiting more than the auto-close delay
                       - wait_for_trigger:
@@ -824,7 +917,7 @@ action:
                                             notification_icon: mdi:alert-circle
                                             channel: Gate alerts
                                             importance: high
-                                            tag: automatic-closing
+                                            tag: gate-movement
                                             timeout: 300
                                   # If the user has exited the gate activation zone
                                   - conditions:
@@ -841,7 +934,7 @@ action:
                                             notification_icon: mdi:alert-circle
                                             channel: Gate alerts
                                             importance: high
-                                            tag: automatic-closing
+                                            tag: gate-movement
                                             timeout: 300
                                   # If the user has left his car
                                   - conditions:
@@ -858,7 +951,7 @@ action:
                                             notification_icon: mdi:alert-circle
                                             channel: Gate alerts
                                             importance: high
-                                            tag: automatic-closing
+                                            tag: gate-movement
                                             timeout: 300
                                 default:
                                   # Notify the user that the gate will close automatically
@@ -870,7 +963,7 @@ action:
                                         notification_icon: mdi:gate
                                         channel: Gate alerts
                                         importance: high
-                                        tag: automatic-closing
+                                        tag: gate-movement
                                         timeout: 300
                               # Close the gate
                               - choose:
@@ -914,6 +1007,16 @@ action:
                           message: clear_notification
                           data:
                             tag: itinerary
+                      # Remove the notification received by the user when his gate was opening
+                      - if:
+                          condition: template
+                          value_template: !input opening_notification
+                        then:
+                          - service: "{{ notify_device }}"
+                            data:
+                              message: clear_notification
+                              data:
+                                tag: gate-movement
                       # Stop the whole script as it ran successfully
                       - stop: Successful
       # If both loop were broken

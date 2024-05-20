@@ -162,7 +162,7 @@ script:
                                         title: !secret opening_tts_title
                                     data_template:
                                         data: |
-                                            {{ '{"tag": "gate-opening", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Gate alerts", "importance": "high"}' | from_json }}
+                                            {{ '{"tag": "gate-movement", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Gate alerts", "importance": "high"}' | from_json }}
                                 - homeassistant.service:
                                     service: tts.speak
                                     data:
@@ -206,7 +206,7 @@ script:
                                                 title: !secret opening_tts_title
                                             data_template:
                                                 data: |
-                                                    {{ '{"tag": "gate-opening", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Gate alerts", "importance": "high"}' | from_json }}
+                                                    {{ '{"tag": "gate-movement", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Gate alerts", "importance": "high"}' | from_json }}
                                         - homeassistant.service:
                                             service: tts.speak
                                             data:
@@ -333,7 +333,7 @@ script:
                       message: clear_notification
                   data_template:
                       data: |
-                          {{ '{"tag": "gate-opening"}' | from_json }}
+                          {{ '{"tag": "gate-movement"}' | from_json }}
           else:
             - if:
                 condition:
