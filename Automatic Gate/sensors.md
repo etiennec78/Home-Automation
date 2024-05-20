@@ -32,7 +32,7 @@ Settings :
 * High accuracy mode : ✔️
 * High accuracy mode only when connected to BT devices : Select vehicles bluetooth devices
 * High accuracy mode only when entering zone : `zone.home`
-* High accuracy mode trigger range for zone : The range in which you want your phone to spam location updates when arriving (suggested : 500m)
+* High accuracy mode trigger range for zone : The range in which you want your phone to spam location updates when arriving (suggested : 1000m)
 * High accuracy interval : `5s`
 * High accuracy mode only when connected to BT devices : ✔️
 * Minimal precision : Keep default
