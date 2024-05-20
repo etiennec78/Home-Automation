@@ -465,7 +465,7 @@ action:
                                 notification_icon: mdi:alert-circle
                                 channel: Gate alerts
                                 importance: high
-                                tag: automatic-closing
+                                tag: gate-movement
                                 timeout: 300
                         else:
                           # Notify the user that the gate will close automatically
@@ -477,7 +477,7 @@ action:
                                 notification_icon: mdi:gate
                                 channel: Gate alerts
                                 importance: high
-                                tag: automatic-closing
+                                tag: gate-movement
                                 timeout: 300
                       # Close the gate
                       - choose:
@@ -824,7 +824,7 @@ action:
                                             notification_icon: mdi:alert-circle
                                             channel: Gate alerts
                                             importance: high
-                                            tag: automatic-closing
+                                            tag: gate-movement
                                             timeout: 300
                                   # If the user has exited the gate activation zone
                                   - conditions:
@@ -841,7 +841,7 @@ action:
                                             notification_icon: mdi:alert-circle
                                             channel: Gate alerts
                                             importance: high
-                                            tag: automatic-closing
+                                            tag: gate-movement
                                             timeout: 300
                                   # If the user has left his car
                                   - conditions:
@@ -858,7 +858,7 @@ action:
                                             notification_icon: mdi:alert-circle
                                             channel: Gate alerts
                                             importance: high
-                                            tag: automatic-closing
+                                            tag: gate-movement
                                             timeout: 300
                                 default:
                                   # Notify the user that the gate will close automatically
@@ -870,7 +870,7 @@ action:
                                         notification_icon: mdi:gate
                                         channel: Gate alerts
                                         importance: high
-                                        tag: automatic-closing
+                                        tag: gate-movement
                                         timeout: 300
                               # Close the gate
                               - choose:
