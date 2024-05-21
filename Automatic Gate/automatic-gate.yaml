@@ -347,6 +347,7 @@ variables:
   eta_zone: !input eta_zone
   activation_zone: !input activation_zone
   ble_entities: !input ble_entities
+  ble_scanner_switch: !input ble_scanner_switch
   automatic_closing_arrival: !input automatic_closing_arrival
 
 trigger:
