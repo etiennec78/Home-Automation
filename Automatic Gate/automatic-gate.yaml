@@ -574,10 +574,9 @@ action:
                       - stop: Successful
               # Get the names of the persons being awaited
               - variables:
-                  awaiting_sensors: >-
-                    {{ (itinerary_sensors | select('is_state', 'on_approach') | list +
-                        itinerary_sensors | select('is_state', 'leaving') | list) }}
                   awaiting_persons: >-
+                    {% set awaiting_sensors = itinerary_sensors | select('is_state', 'on_approach') | list +
+                                              itinerary_sensors | select('is_state', 'leaving') | list) %}
                     {% set data = namespace(awaiting_persons=[]) %}
                     {% for i in range(awaiting_sensors|length) %}
                     {% set data.awaiting_persons = data.awaiting_persons + [state_attr(persons[i], 'friendly_name')] %}
@@ -885,10 +884,9 @@ action:
                             then:
                               # Get the names of the persons being awaited
                               - variables:
-                                  awaiting_sensors: >-
-                                    {{ (itinerary_sensors | select('is_state', 'on_approach') | list +
-                                        itinerary_sensors | select('is_state', 'leaving') | list) }}
                                   awaiting_persons: >-
+                                    {% set awaiting_sensors = itinerary_sensors | select('is_state', 'on_approach') | list +
+                                                              itinerary_sensors | select('is_state', 'leaving') | list) %}
                                     {% set data = namespace(awaiting_persons=[]) %}
                                     {% for i in range(awaiting_sensors|length) %}
                                     {% set data.awaiting_persons = data.awaiting_persons + [state_attr(persons[i], 'friendly_name')] %}
