@@ -76,7 +76,9 @@ blueprint:
           unit_of_measurement: minutes
     timeout_delay:
       name: ⌛ Timeout delay
-      description: The time the automation will wait before **stopping** if your phone **times out** and doesn't send new position updates, while being in the activation zone
+      description: |-
+        The time the automation will wait before **stopping** if your phone **times out** and doesn't send new position updates, while being in the activation zone
+        *Note : If your position provider doesn't let you use a high accuracy mode (like iOS), please increase this value*
       default: 2
       selector:
         number:
