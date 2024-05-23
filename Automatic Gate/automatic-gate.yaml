@@ -30,6 +30,7 @@ blueprint:
       * Customizable security options 🔒
       * Customizable gate operation timings 🛠️
       * Customizable travel time refresh rate 🔁
+      * Multiple gates supported by reusing the blueprint ♻️
 
     ## More info ℹ️
     Set up sensors : [click here](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md)
