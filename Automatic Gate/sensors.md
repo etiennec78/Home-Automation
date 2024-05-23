@@ -7,7 +7,7 @@
 
 
 # Required sensors 📌
-* *If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving home, your gate could open thinking you are still home*
+
 ## Gate ⛩️
 
 **The switch or cover which controls your gate**
@@ -17,12 +17,12 @@ Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware/gate.yaml) o
 
 ## GPS location trackers 🌎
 
-**Each GPS location tracker necessary to detect if you're home or away, estimate your travel time, and track your distance**
+**Each GPS location tracker necessary to detect if you're in your leaving/arriving, estimate your travel time, and track your distance**
 
 *Notes :*
 
-* *⚠️ Use high precision while driving near home or you could time out*
-* *If your location tracker has report latency (wifi/ble), and you plug Android Auto just after leaving home, your gate could open thinking you are still home*
+* *⚠️ Use high precision while driving in your ETA calculation zone or you could time out*
+* *If your location tracker has report latency (wifi/ble), and you plug Android Auto just after leaving, your gate could open thinking you are still there*
 * *Your High accuracy mode trigger range should be the same as your ETA planning zone in your blueprint config*
 
 Install through [companion app](https://companion.home-assistant.io/docs/core/location/) settings : *Settings > Companion app > Manage sensors > Background location ✔️*
@@ -31,7 +31,7 @@ Settings :
 
 * High accuracy mode : ✔️
 * High accuracy mode only when connected to BT devices : Select vehicles bluetooth devices
-* High accuracy mode only when entering zone : `zone.home`
+* High accuracy mode only when entering zone : `zone.home` *(or another zone if your gate is not at home)*
 * High accuracy mode trigger range for zone : The range in which you want your phone to spam location updates when arriving (suggested : 1000m)
 * High accuracy interval : `5s`
 * High accuracy mode only when connected to BT devices : ✔️
@@ -103,7 +103,7 @@ Settings :
 
 * Name : `User0 Travel Time`
 * Origin : `person.user0`
-* Destination : `zone.home`
+* Destination : `zone.home` *(or another zone if your gate is not at home)*
 * Region : Select your region
 
 ### Option 2 : Google Maps
@@ -121,12 +121,12 @@ Install the integration multiple times if you have multiple users
 * Name : `User0 Travel Time`
 * API key : Your api key
 * Origin : `person.user0`
-* Destination : `zone.home`
+* Destination : `zone.home` *(or another zone if your gate is not at home)*
 
 
 ## Proximity sensors 📏
 
-**Each proximity sensor which calculates the distance of each user from home**
+**Each proximity sensor which calculates the distance of each user from your gate**
 
 Delivered by the [Proximity](https://www.home-assistant.io/integrations/proximity/) integration
 
@@ -134,7 +134,7 @@ Install through the UI : *[Settings > Devices & services > Add integration > Pro
 
 Settings :
 
-* Track distance to : `zone.home`
+* Track distance to : `zone.home` *(or another zone if your gate is not at home)*
 * Devices or persons to track : `[person.user0, ...]`
 * Zones to ignore : `[]`
 * Tolerance distance : Not required by Automatic Gate
@@ -257,6 +257,6 @@ notify:
 
 Only necessary for [esphome firmware](Extra/Esphome%20gate%20firmware)
 
-**Gives the distance of the nearest person from home, to only open if someone is close enough**
+**Gives the distance of the nearest person from your gate, to only open if someone is close enough**
 
 To install, please follow the instructions for the [required proximity sensors](sensors.md#proximity-sensors-)
