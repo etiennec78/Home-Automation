@@ -47,6 +47,14 @@ blueprint:
             domain:
               - switch
               - cover
+    input:
+      gate_location:
+        name: 📍 Gate location
+        description: The zone where your gate is located, to detect whether you are leaving or arriving
+        default: "zone.home"
+        selector:
+          filter:
+            domain: zone
     lead_time:
       name: 🕓 Lead time
       description: The **lead time** to open the gate **before your arrival** (take your gate movement time & a margin into account)
@@ -58,7 +66,7 @@ blueprint:
           unit_of_measurement: seconds
     safety_delay:
       name: 🔒 Auto-close delay
-      description: The time the gate will wait before **automatically closing** if you haven't left home or didn't arrive
+      description: The time the gate will wait before **automatically closing** if you haven't left or didn't arrive
       default: 5
       selector:
         number:
@@ -87,8 +95,8 @@ blueprint:
       description: |-
         Each **user** which should be **[tracked](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gps-location-trackers-)** for **position updates** (same order)
         *Notes :*
-        *⚠️ Use high precision while driving near home or you could time out*
-        *If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving home, your gate could open thinking you are still home*
+        *⚠️ Use high precision while driving in your ETA zone or you could time out*
+        *If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving, your gate could open thinking you are still there*
       selector:
         entity:
           multiple: true
@@ -115,7 +123,7 @@ blueprint:
             device_class: duration
     proximity_sensors:
       name: 📏 Proximity sensors
-      description: Each **[proximity sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#proximity-sensors-)** from the proximity integration to calculate user distance from home (same order)
+      description: Each **[proximity sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#proximity-sensors-)** from the proximity integration to calculate user distance from your gate (same order)
       selector:
         entity:
           multiple: true
@@ -154,9 +162,9 @@ blueprint:
           - Only while the vehicle is **near home**
           - Only **once** when the vehicle gets near home
 
-        **"Continuously"** can use more Waze/Maps credits, but can be useful to display a precise ETA on your dashboard when far from home
-        **"While near home"** allows to monitor if you drive near home without entering to abort the itinerary, or if there are traffic jams near home to open later (recommended)
-        **"Only once"** uses the less amount of credits, but could trigger if you come near your house without entering (not recommended)
+        **"Continuously"** can use more Waze/Maps credits, but can be useful to display a precise ETA on your dashboard when far from your destination
+        **"While near home"** allows to monitor if you drive near your gate without entering to abort the itinerary, or if there are traffic jams near home to open later (recommended)
+        **"Only once"** uses the less amount of credits, but could trigger if you come near your gate without entering (not recommended)
       default: While near home
       selector:
         select:
@@ -176,7 +184,7 @@ blueprint:
     eta_zone:
       name: 🚀 ETA planning zone
       description: |-
-        At which **distance** from home should your vehicle start planning its **Estimated Time of Arrival** to **open your gate** ?
+        At which **distance** from gate should your vehicle start planning its **Estimated Time of Arrival** to **open your gate** ?
         This should be the same value as your ["High accuracy mode trigger range for zone"](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gps-location-trackers-)
       default: 1000
       selector:
@@ -186,7 +194,7 @@ blueprint:
           unit_of_measurement: meters
     activation_zone:
       name: 🔒 Gate activation zone
-      description: At which **maximal distance** from home should your vehicle be able to automatically **open your gate** ? It will automatically **close** if you **leave** this zone
+      description: At which **maximal distance** should your vehicle be able to automatically **open your gate** ? It will automatically **close** if you **leave** this zone
       default: 1200
       selector:
         number:
@@ -217,7 +225,7 @@ blueprint:
     ble_scanner_switch:
       name: ⏻ iBeacon scanner activator switch (optional)
       description: |-
-        The **[switch](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-scanner-switch-)** you want to use to turn on and off your **iBeacon scanner** when a vehicle is leaving home
+        The **[switch](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-scanner-switch-)** you want to use to turn on and off your **iBeacon scanner** when a vehicle is leaving
         *Note : Let empty if no ble / want to always keep iBeacon running*
       default: ""
       selector:
@@ -293,18 +301,18 @@ blueprint:
     did_not_leave_message:
       name: 💬⚠️ User did not leave notification
       description: |-
-        The **content** of the notification you will receive if you **don't leave your home in time**
+        The **content** of the notification you will receive if you **don't leave in time**
         *Note : {{safety_delay}} will be replaced by your auto-close delay you have set above*
-      default: "The vehicle did not leave home in less than {{ safety_delay }} minutes"
+      default: "The vehicle did not leave in less than {{ safety_delay }} minutes"
       selector:
         text:
           multiline: true
     did_not_arrive_message:
       name: 💬⚠️ User did not arrive notification
       description: |-
-        The **content** of the notification you will receive if you **don't arrive home in time**
+        The **content** of the notification you will receive if you **don't arrive in time**
         *Note : {{safety_delay}} will be replaced by your auto-close delay you have set above*
-      default: "The vehicle did not arrive home in less than {{ safety_delay }} minutes"
+      default: "The vehicle did not arrive in less than {{ safety_delay }} minutes"
       selector:
         text:
           multiline: true
@@ -369,16 +377,16 @@ action:
       notify_device: "{{ 'notify.mobile_app_'+notify_devices[idx] }}"
       itinerary_sensor: "{{ itinerary_sensors[idx] }}"
 
-  # If the user is currently at home
+  # If the user is currently at the gate location
   - if:
       - condition: template
-        value_template: "{{ is_state(person, 'home') }}"
+        value_template: "{{ is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id]) }}"
     then:
       #####################
       # OPEN GATE ON EXIT #
       #####################
 
-      # Set the user itinerary text variable to "leaving", because the user is leaving home
+      # Set the user itinerary text variable to "leaving"
       - service: input_text.set_value
         target:
           entity_id: "{{ itinerary_sensor }}"
@@ -446,7 +454,7 @@ action:
           - condition: template
             value_template: !input automatic_closing_arrival
         then:
-          # Wait for the gate to be closed by the user, or the iBeacon to be out of reach for 20s, or the vehicle to be left, or the user to leave home, all while not waiting more than the auto-close delay
+          # Wait for the gate to be closed by the user, or the iBeacon to be out of reach for 20s, or the vehicle to be left, or the user to leave, all while not waiting more than the auto-close delay
           - wait_for_trigger:
               - platform: template
                 id: manual
@@ -458,11 +466,11 @@ action:
                 id: vehicle_left
                 value_template: "{{ is_state(driving_sensor, 'off') }}"
               - platform: template
-                id: home_left
-                value_template: "{{ not is_state(person, 'home') }}"
+                id: gate_zone_left
+                value_template: "{{ not is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id]) }}"
             timeout:
               minutes: !input safety_delay
-          # Remove the current itinerary since the user has either left home or took too long
+          # Remove the current itinerary since the user has either left or took too long
           - service: input_text.set_value
             target:
               entity_id: "{{ itinerary_sensor }}"
@@ -494,7 +502,7 @@ action:
                     target:
                       entity_id: "{{ ble_scanner_switch }}"
             else:
-              # If no one else is currently leaving the house
+              # If no one else is currently leaving
               - if:
                   - condition: not
                     conditions:
@@ -510,7 +518,7 @@ action:
                       - service: switch.turn_off
                         target:
                           entity_id: "{{ ble_scanner_switch }}"
-                  # If no one else is currently approaching the house
+                  # If no one else is currently approaching
                   - if:
                       - condition: not
                         conditions:
@@ -607,11 +615,11 @@ action:
                         tag: gate-movement
         # If the automatic closing input is set to false
         else:
-          # Wait for the user to leave home
+          # Wait for the user to leave
           - wait_for_trigger:
               - platform: template
-                id: home_left
-                value_template: "{{ not is_state(person, 'home') }}"
+                id: gate_zone_left
+                value_template: "{{ not is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id]) }}"
           # Remove the current itinerary
           - service: input_text.set_value
             target:
@@ -623,9 +631,9 @@ action:
     # START ITINERARY #
     ###################
 
-    # If the user is currently away from home
+    # If the user is currently away from the gate location
     else:
-      # Set the user itinerary text variable to "arriving", because the user has entered a vehicle away from home
+      # Set the user itinerary text variable to "arriving"
       - service: input_text.set_value
         target:
           entity_id: "{{ itinerary_sensor }}"
@@ -675,9 +683,9 @@ action:
                     entity_id: "{{ person }}"
                 - platform: template
                   value_template: "{{ is_state(driving_sensor, 'off') }}"
-            # Repeat while the user is nearer than 1km of radius from home and is still driving
-            # This allows to update to a precise ETA even if a traffic jam appears near home
-            # It will return to the previous loop if the user has entered the radius but passed by and didn't go directly to home
+            # Repeat while the user is nearer than 1km of radius from the gate and is still driving
+            # This allows to update to a precise ETA even if a traffic jam appears near your gate
+            # It will return to the previous loop if the user has entered the radius but passed by and didn't go directly to your gate zone
             - repeat:
                 while:
                   - condition: template
@@ -785,7 +793,7 @@ action:
                             tag: itinerary
                             timeout: 300
                       - stop: Not in activation zone
-                  # Set the user itinerary text variable to "on_approach", because the user is near the house and will arrive soon
+                  # Set the user itinerary text variable to "on_approach", because the user is near the gate and will arrive soon
                   - service: input_text.set_value
                     data:
                       value: on_approach
@@ -843,11 +851,11 @@ action:
                             id: vehicle_left
                             value_template: "{{ is_state(driving_sensor, 'off') }}"
                           - platform: template
-                            id: zone_left
+                            id: activation_zone_left
                             value_template: "{{ states(proximity_sensors[idx]) | int > activation_zone }}"
                         timeout:
                           minutes: !input safety_delay
-                      # Remove the current itinerary since the user has either arrived home or took too long
+                      # Remove the current itinerary since the user has either arrived or took too long
                       - service: input_text.set_value
                         target:
                           entity_id: "{{ itinerary_sensor }}"
@@ -865,7 +873,7 @@ action:
                               data:
                                 tag: itinerary
                         else:
-                          # If someone is currently approaching or leaving the house
+                          # If someone is currently approaching or leaving
                           - if:
                               - condition: or
                                 conditions:
@@ -900,7 +908,7 @@ action:
                               - wait_for_trigger:
                                   - platform: template
                                     value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
-                            # If no one is currently approaching or leaving the house
+                            # If no one is currently approaching or leaving
                             else:
                               - choose:
                                   # If the timeout was reached
@@ -923,7 +931,7 @@ action:
                                   # If the user has exited the gate activation zone
                                   - conditions:
                                       - condition: template
-                                        value_template: "{{ wait.trigger.id == 'zone_left' }}"
+                                        value_template: "{{ wait.trigger.id == 'activation_zone_left' }}"
                                     sequence:
                                       # Notify the user that the gate will close automatically since he has exited the zone
                                       - service: "{{ notify_device }}"
@@ -1027,10 +1035,11 @@ action:
           value: none
         target:
           entity_id: "{{ itinerary_sensor }}"
-      # If the car has been left at home and the travel time was not updated during the itinerary
+      # If the car has been left in the gate zone and the travel time was not updated during the itinerary
       - if:
           condition: template
-          value_template: "{{ is_state(person, 'home') and states[travel_time_sensor].last_updated < now() - timedelta(minutes=5) }}"
+          value_template: "{{ is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id])
+            and states[travel_time_sensor].last_updated < now() - timedelta(minutes=5) }}"
         then:
           # Notify the user that his travel time integration did not respond during the itinerary
           - service: "{{ notify_device }}"
