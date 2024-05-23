@@ -27,6 +27,7 @@ Customize the options to tailor the system to your exact needs
   * Customizable security options 🔒
   * Customizable gate operation timings 🛠️
   * Customizable travel time refresh rate 🔁
+  * Multiple gates supported by reusing the blueprint ♻️
 
 ## Flowchart 🔀
 
