@@ -47,14 +47,13 @@ blueprint:
             domain:
               - switch
               - cover
-    input:
-      gate_location:
-        name: 📍 Gate location
-        description: The zone where your gate is located, to detect whether you are leaving or arriving
-        default: "zone.home"
-        selector:
-          filter:
-            domain: zone
+    gate_location:
+      name: 📍 Gate location
+      description: The zone where your gate is located, to detect whether you are leaving or arriving
+      default: "zone.home"
+      selector:
+        filter:
+          domain: zone
     lead_time:
       name: 🕓 Lead time
       description: The **lead time** to open the gate **before your arrival** (take your gate movement time & a margin into account)
@@ -339,6 +338,7 @@ blueprint:
 
 variables:
   gate: !input gate
+  gate_location: ! input gate_location
   lead_time: !input lead_time
   safety_delay: !input safety_delay
   timeout_delay: !input timeout_delay
