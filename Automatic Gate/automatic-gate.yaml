@@ -52,8 +52,9 @@ blueprint:
       description: The zone where your gate is located, to detect whether you are leaving or arriving
       default: "zone.home"
       selector:
-        filter:
-          domain: zone
+        entity:
+          filter:
+            domain: zone
     lead_time:
       name: 🕓 Lead time
       description: The **lead time** to open the gate **before your arrival** (take your gate movement time & a margin into account)
