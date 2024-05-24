@@ -4,7 +4,7 @@
 BleKeyboard bleKeyboard;
 
 void setup() {
-  bleKeyboard.setName('Vehicle');
+  bleKeyboard.setName("Vehicle");
   bleKeyboard.begin();
 }
 
