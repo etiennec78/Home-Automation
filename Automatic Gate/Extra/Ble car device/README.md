@@ -3,6 +3,7 @@
 ## Description 📝
 
 A really small Arduino code to let an [ESP32](https://amzn.to/44BPk0g) sit in your car and show up as a **BLE device** so that your phone can connect to it and monitor if you are in your car
+Useful if your car does not support Bluetooth or Android Auto
 
 ## How to install 🚀
 
