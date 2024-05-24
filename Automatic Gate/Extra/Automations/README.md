@@ -8,7 +8,7 @@ A blueprint that **notifies** selected users when the gate has been **left open*
 
 Can send a notification to phones and HA frontend
 
-Can send a TTS to phones and home speakers
+Can play a TTS on phones and home speakers
 
 ### Import the blueprint 🗺️
 
@@ -24,7 +24,7 @@ A blueprint that **notifies** selected users when the gate has been **unavailabl
 
 Can send a notification to phones and HA frontend
 
-Can send a TTS to phones and home speakers
+Can play a TTS on phones and home speakers
 
 ### Import the blueprint 🗺️
 
