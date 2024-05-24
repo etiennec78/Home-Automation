@@ -14,6 +14,8 @@ Supports the following features :
 * **BLE scanner**, with automatically turns entity status to unavailable after no signal for 25s 📡
 * **BLE switch**, which allows you to **turn off** the continuous BLE scanning ⏻
 
+*Note : Since this gate firmware relies on a single opening pin without any extra sensors, please keep in mind that it won't be able to register any state change from another source than itself. If you open your gate with your remote, please also close it with your remote, as closing with your esp32 would invert the virtual state of the gate*
+
 ## Flowchart 🔀
 
 [<img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Automatic%20Gate/Automatic%20Gate%20Flowchart.png?raw=true" width="100%">](https://miro.com/app/board/uXjVMpH4Tno=/)

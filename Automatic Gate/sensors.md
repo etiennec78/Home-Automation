@@ -202,6 +202,7 @@ The automation will automatically turn the transmitter off if not needed
 
 * *Your bluetooth transmitter should report your devices unavailable after a small time period or this won't have any effect*
 * *Be aware that having your BLE transmitter too far away from your gate could make your gate close onto your car when the signal is lost before leaving*
+* *The transmitter should be set to off by default since this blueprint will automatically turn it on when needed*
 
 Install through [companion app](https://www.home-assistant.io/integrations/mobile_app/) settings : *Settings > Companion app > Manage sensors > BLE Transmitter ✔*
 
