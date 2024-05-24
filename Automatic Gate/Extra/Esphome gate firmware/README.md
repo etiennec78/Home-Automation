@@ -45,4 +45,4 @@ Supports the following features :
 5. Connect your ESP32 to Home Assistant
     * Home Assistant should detect your ESPHome device automatically on your LAN
     * Connect it and enter your api_key
-    * Finally, go to *[Settings > Devices & services > ESPHome](https://my.home-assistant.io/redirect/integration/?domain=esphome) > three-dot menu to the right of your gate > Configure > Allow the device to make Home Assistant service calls ✔️*
+    * Finally, go to *[Settings > Devices & services > ESPHome](https://my.home-assistant.io/redirect/integration/?domain=esphome) > three-dot menu to the right of your gate > Configure > Allow the device to make Home Assistant service calls ✔*

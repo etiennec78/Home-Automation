@@ -25,16 +25,16 @@ Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware/gate.yaml) o
 * *If your location tracker has report latency (wifi/ble), and you plug Android Auto just after leaving, your gate could open thinking you are still there*
 * *Your High accuracy mode trigger range should be the same as your ETA planning zone in your blueprint config*
 
-Install through [companion app](https://companion.home-assistant.io/docs/core/location/) settings : *Settings > Companion app > Manage sensors > Background location ✔️*
+Install through [companion app](https://companion.home-assistant.io/docs/core/location/) settings : *Settings > Companion app > Manage sensors > Background location ✔*
 
 Settings :
 
-* High accuracy mode : ✔️
+* High accuracy mode : ✔
 * High accuracy mode only when connected to BT devices : Select vehicles bluetooth devices
 * High accuracy mode only when entering zone : `zone.home` *(or another zone if your gate is not at home)*
 * High accuracy mode trigger range for zone : The range in which you want your phone to spam location updates when arriving (suggested : 1000m)
 * High accuracy interval : `5s`
-* High accuracy mode only when connected to BT devices : ✔️
+* High accuracy mode only when connected to BT devices : ✔
 * Minimal precision : Keep default
 * Location sent : `Exact`
 
@@ -49,11 +49,11 @@ Either Android Auto, bluetooth connexion, or both grouped
 
 ### Option 1 : Android Auto connection
 
-Install through [companion app](https://companion.home-assistant.io/docs/core/sensors#android-auto) settings : *Settings > Companion app > Manage sensors > Android Auto ✔️*
+Install through [companion app](https://companion.home-assistant.io/docs/core/sensors#android-auto) settings : *Settings > Companion app > Manage sensors > Android Auto ✔*
 
 ### Option 2 : Bluetooth connection with template sensor
 
-Install through [companion app](https://companion.home-assistant.io/docs/core/sensors/#bluetooth-sensors) settings : *Settings > Companion app > Manage sensors > Bluetooth connection ✔️*
+Install through [companion app](https://companion.home-assistant.io/docs/core/sensors/#bluetooth-sensors) settings : *Settings > Companion app > Manage sensors > Bluetooth connection ✔*
 
 Install a [template helper](https://www.home-assistant.io/integrations/template/) through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Template > Binary sensor*
 
@@ -203,16 +203,16 @@ The automation will automatically turn the transmitter off if not needed
 * *Your bluetooth transmitter should report your devices unavailable after a small time period or this won't have any effect*
 * *Be aware that having your BLE transmitter too far away from your gate could make your gate close onto your car when the signal is lost before leaving*
 
-Install through [companion app](https://www.home-assistant.io/integrations/mobile_app/) settings : *Settings > Companion app > Manage sensors > BLE Transmitter ✔️*
+Install through [companion app](https://www.home-assistant.io/integrations/mobile_app/) settings : *Settings > Companion app > Manage sensors > BLE Transmitter ✔*
 
 Settings :
 
 * Advertise mode : `Low latency (10Hz)`
-* Transmit only enabled on Home Wifi Network SSIDs : ❌
+* Transmit only enabled on Home Wifi Network SSIDs : ✖
 * major : `100`
 * Measured power at 1 meter : Not necessary for Automatic Gate
 * minor : `1`
-* Enable transmitter : ❌
+* Enable transmitter : ✖
 * Transmit power : `High`
 * UUID : A [random UUID](https://www.uuidgenerator.net/)
 
