@@ -55,9 +55,7 @@ Install through [companion app](https://companion.home-assistant.io/docs/core/se
 
 Install through [companion app](https://companion.home-assistant.io/docs/core/sensors/#bluetooth-sensors) settings : *Settings > Companion app > Manage sensors > Bluetooth connection ✔️*
 
-Use a [template helper](https://www.home-assistant.io/integrations/template/)
-
-Install through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Template > Binary sensor*
+Install a [template helper](https://www.home-assistant.io/integrations/template/) through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Template > Binary sensor*
 
 Settings :
 
@@ -93,9 +91,7 @@ Then use the following template : `{{ is_state('binary_sensor.user0_android_auto
 
 **⚠️ Please disable [auto-polling](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)**
 
-Delivered by the [Waze Travel Time](https://www.home-assistant.io/integrations/waze_travel_time/) integration
-
-Install through the UI : *[Settings > Devices & services > Add integration > Waze Travel Time](https://my.home-assistant.io/redirect/config_flow_start/?domain=waze_travel_time)*
+Install [Waze Travel Time](https://www.home-assistant.io/integrations/waze_travel_time/) integration through the UI : *[Settings > Devices & services > Add integration > Waze Travel Time](https://my.home-assistant.io/redirect/config_flow_start/?domain=waze_travel_time)*
 
 Install the integration multiple times if you have multiple users
 
@@ -112,9 +108,7 @@ Settings :
 
 ⚠️ Work in progress ! The current integration is not reporting usable attributes
 
-Delivered by the [Google Maps Travel Time](https://www.home-assistant.io/integrations/google_travel_time/) integration
-
-Install through the UI : *[Settings > Devices & services > Add integration > Google Maps Travel Time](https://my.home-assistant.io/redirect/config_flow_start/?domain=google_travel_time)*
+Install [Google Maps Travel Time](https://www.home-assistant.io/integrations/google_travel_time/) integration through the UI : *[Settings > Devices & services > Add integration > Google Maps Travel Time](https://my.home-assistant.io/redirect/config_flow_start/?domain=google_travel_time)*
 
 Install the integration multiple times if you have multiple users
 
@@ -128,9 +122,9 @@ Install the integration multiple times if you have multiple users
 
 **Each proximity sensor which calculates the distance of each user from your gate**
 
-Delivered by the [Proximity](https://www.home-assistant.io/integrations/proximity/) integration
+Delivered by the
 
-Install through the UI : *[Settings > Devices & services > Add integration > Proximity](https://my.home-assistant.io/redirect/config_flow_start/?domain=proximity)*
+Install the [Proximity](https://www.home-assistant.io/integrations/proximity/) integration through the UI : *[Settings > Devices & services > Add integration > Proximity](https://my.home-assistant.io/redirect/config_flow_start/?domain=proximity)*
 
 Settings :
 
@@ -153,9 +147,7 @@ Find the service ids by going into : *[Developer tools > Services tab](https://m
 
 **Each empty itinerary input text helper to store each user itinerary state**
 
-Use an [input text helper](https://www.home-assistant.io/integrations/input_text/)
-
-Install through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Text*
+Install an [input text helper](https://www.home-assistant.io/integrations/input_text/) through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Text*
 
 Settings :
 
@@ -179,9 +171,7 @@ input_text:
 
 **An empty input datetime helper which will be used to set an ETA and plan the opening of your gate**
 
-Use an [input datetime helper](https://www.home-assistant.io/integrations/input_datetime/)
-
-Install through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Date and/or time*
+Install an [input datetime helper](https://www.home-assistant.io/integrations/input_datetime/) through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Date and/or time*
 
 Settings :
 
@@ -240,9 +230,7 @@ Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware) or any othe
 
 **A group which allows my [esphome firmware](Extra/Esphome%20gate%20firmware) to notify all users in case of an event like your gate opening**
 
-Use a [notification group](https://www.home-assistant.io/integrations/group/#notify-groups)
-
-Install in your [configuration.yaml](https://www.home-assistant.io/docs/configuration/) file :
+Install a [notification group](https://www.home-assistant.io/integrations/group/#notify-groups) in your [configuration.yaml](https://www.home-assistant.io/docs/configuration/) file :
 
 ```yaml
 notify:
