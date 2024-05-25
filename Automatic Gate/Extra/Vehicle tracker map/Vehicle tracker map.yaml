@@ -1,6 +1,6 @@
 # Itinerary tab to show the Estimated Time of Arrival of user0, disable the automatic gate, and see the position of user0
 title: Itinerary
-path: map
+path: vehicle-tracker-map
 icon: mdi:map
 subview: false
 badges: []
