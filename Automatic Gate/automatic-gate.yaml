@@ -595,7 +595,7 @@ action:
                     notification_icon: mdi:sleep
                     channel: Gate alerts
                     importance: high
-                    tag: itinerary
+                    tag: itinerary-status
               # Wait for the gate to be closed
               - wait_for_trigger:
                   - platform: template
@@ -605,7 +605,7 @@ action:
                 data:
                   message: clear_notification
                   data:
-                    tag: itinerary
+                    tag: itinerary-status
               # Remove the notification received by the user when his gate was opening
               - if:
                   condition: template
@@ -650,9 +650,9 @@ action:
           data:
             car_ui: true
             notification_icon: mdi:map-check
-            channel: Gate alerts
+            channel: Itinerary status
             importance: high
-            tag: itinerary
+            tag: itinerary-status
       # If the travel time refresh rate is set to "While near home"
       - if:
           - condition: template
@@ -761,9 +761,9 @@ action:
                                   data:
                                     car_ui: true
                                     notification_icon: mdi:alert-circle
-                                    channel: Gate alerts
+                                    channel: Itinerary status
                                     importance: high
-                                    tag: itinerary
+                                    tag: itinerary-status
                                     timeout: 300
                               - stop: Timed out
 
@@ -791,9 +791,9 @@ action:
                           data:
                             car_ui: true
                             notification_icon: mdi:alert-circle
-                            channel: Gate alerts
+                            channel: Itinerary status
                             importance: high
-                            tag: itinerary
+                            tag: itinerary-status
                             timeout: 300
                       - stop: Not in activation zone
                   # Set the user itinerary text variable to "on_approach", because the user is near the gate and will arrive soon
@@ -874,7 +874,7 @@ action:
                             data:
                               message: clear_notification
                               data:
-                                tag: itinerary
+                                tag: itinerary-status
                         else:
                           # If someone is currently approaching or leaving
                           - if:
@@ -903,9 +903,9 @@ action:
                                   data:
                                     car_ui: true
                                     notification_icon: mdi:sleep
-                                    channel: Gate alerts
+                                    channel: Itinerary status
                                     importance: high
-                                    tag: itinerary
+                                    tag: itinerary-status
                               # Wait for the gate to be closed
                               - wait_for_trigger:
                                   - platform: template
@@ -997,7 +997,7 @@ action:
                         data:
                           message: clear_notification
                           data:
-                            tag: itinerary
+                            tag: itinerary-status
                       # Stop the whole script as it was successful
                       - stop: Successful
                     # If the automatic closing input is set to false
@@ -1017,7 +1017,7 @@ action:
                         data:
                           message: clear_notification
                           data:
-                            tag: itinerary
+                            tag: itinerary-status
                       # Remove the notification received by the user when his gate was opening
                       - if:
                           condition: template
@@ -1051,9 +1051,9 @@ action:
               data:
                 car_ui: true
                 notification_icon: mdi:alert-circle
-                channel: Gate alerts
+                channel: Itinerary status
                 importance: high
-                tag: itinerary
+                tag: itinerary-status
                 timeout: 300
         else:
           # Notify the user that his itinerary has been canceled because he has left his car
@@ -1064,9 +1064,9 @@ action:
               data:
                 car_ui: true
                 notification_icon: mdi:alert-circle
-                channel: Gate alerts
+                channel: Itinerary status
                 importance: high
-                tag: itinerary
+                tag: itinerary-status
                 timeout: 300
 # Run in parralel to let the automation start with multiple users driving simultaneously
 mode: parallel
