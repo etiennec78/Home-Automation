@@ -28,14 +28,14 @@ cards:
       # Estimated time remaining
       primary: >-
         Time remaining : {{((state_attr('sensor.user0_travel_time',
-        'duration') | float * 60 - as_timestamp(now()) +
+        'duration') * 60 - as_timestamp(now()) +
         as_timestamp(states.sensor.user0_travel_time.last_updated))/60) |
         round(0)}}min
       # Estimated time of arrival
       secondary: >-
         Arrival :
         {{(as_timestamp(states.sensor.user0_travel_time.last_updated) +
-        state_attr('sensor.user0_travel_time', 'duration') | float * 60) |
+        state_attr('sensor.user0_travel_time', 'duration') * 60) |
         timestamp_custom('%H:%M')}}
       icon: mdi:map-clock
       entity: sensor.user0_travel_time

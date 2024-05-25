@@ -710,7 +710,7 @@ action:
                     data:
                       datetime: >
                         {{ (as_timestamp(now()) +
-                        (state_attr(travel_time_sensor, 'duration') | float *
+                        (state_attr(travel_time_sensor, 'duration') *
                         60) - lead_time) | timestamp_custom('%Y-%m-%d %H:%M:%S') }}
                   # If the ETA is in the future
                   - if:
