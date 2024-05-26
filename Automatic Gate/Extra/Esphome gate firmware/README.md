@@ -48,3 +48,9 @@ Supports the following features :
     * Home Assistant should detect your ESPHome device automatically on your LAN
     * Connect it and enter your api_key
     * Finally, go to *[Settings > Devices & services > ESPHome](https://my.home-assistant.io/redirect/integration/?domain=esphome) > three-dot menu to the right of your gate > Configure > Allow the device to make Home Assistant service calls ✔*
+
+# Pictures 📷
+
+|       |       |       |
+| :---: | :---: | :---: |
+| <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Automatic%20Gate/Extra/Esphome%20gate%20firmware/whole.jpg?raw=true" width="100%" alt="Whole view" > | <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Automatic%20Gate/Extra/Esphome%20gate%20firmware/case.jpg?raw=true" width="100%" alt="Case view"> | <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Automatic%20Gate/Extra/Esphome%20gate%20firmware/esp.jpg?raw=true" width="100%" alt="Close view"> |
