@@ -127,17 +127,16 @@ action:
                 message: TTS
                 data:
                   tts_text: !input offline_message
-  # Play a TTS on each speaker selected, only if at least one is selected and a tts service is set
-  - if:
-      condition: template
-      value_template: "{{ speaker_tts_devices != [] and speaker_tts_service != '' }}"
-    then:
-      - service: tts.speak
-        data:
-          cache: true
-          media_player_entity_id: !input speaker_tts_devices
-          message: !input offline_message
-        target: "{{ speaker_tts_service }}"
+  # Play a TTS on each speaker selected, only if at least one has been selected
+  - repeat:
+      for_each: "{{ speaker_tts_devices }}"
+      sequence:
+        - service: tts.speak
+          data:
+            cache: true
+            media_player_entity_id: "{{ repeat.item }}"
+            message: !input offline_message
+          target: "{{ speaker_tts_service }}"
   # Send a persistent notification on the dashboard, only if this has been enabled
   - if:
       condition: template
