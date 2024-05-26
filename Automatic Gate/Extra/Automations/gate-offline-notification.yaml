@@ -3,9 +3,24 @@ blueprint:
   domain: automation
   author: etiennec78
   description: |-
-    A simple automation that **notifies** all selected users when the gate has been **unavailable** for too long
+    # Gate offline notification 🌐
+
+    ## Description 📝
+    A blueprint that **notifies** selected users when the gate has been **unavailable** for a time set
+
+    ## Key Features 🌟
+    * Companion app notification 🔔
+    * Dashboard persistent notification 📢
+    * Companion app TTS support
+    * Speakers TTS support 🔊
+    * Adjustable notifications 💬
+
+    ## More info ℹ️
+    Version : 1.0.6
+    Set up sensors : [click here](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md)
     Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Automations)
     Discord : etiennec78
+    [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/etiennec78)
   input:
     gate:
       name: ⛩️ Gate
