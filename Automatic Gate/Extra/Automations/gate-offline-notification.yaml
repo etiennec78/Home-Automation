@@ -11,7 +11,7 @@ blueprint:
     ## Key Features 🌟
     * Companion app notification 🔔
     * Dashboard persistent notification 📢
-    * Companion app TTS support
+    * Companion app TTS support 📳
     * Speakers TTS support 🔊
     * Adjustable notifications 💬
 
@@ -59,7 +59,7 @@ blueprint:
       selector:
         boolean:
     phone_tts:
-      name: 📢 Phone TTS
+      name: 📳 Phone TTS
       description: Let your **phones** read the **notification on speaker** when received
       default: false
       selector:
