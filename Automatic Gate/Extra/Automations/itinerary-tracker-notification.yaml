@@ -225,7 +225,7 @@ action:
                         url: !input on_tap_link
                         clickAction: !input on_tap_link
                         alert_once: true
-                        timeout: "{{ remaining }}"
+                        timeout: "{{ remaining | int }}"
                         chronometer: true
                         when: "{{ arrival_timestamp }}"
     # If "Track travel time" boolean input is set to false
