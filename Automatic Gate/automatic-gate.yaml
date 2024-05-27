@@ -208,7 +208,7 @@ blueprint:
     automatic_closing_arrival:
       name: 🔒 Automatic closing
       description: |-
-        Should the gate automatically close ?
+        Should the gate automatically **close** ?
         *Warning : All auto-closing securities will not be operational if turned off*
       default: true
       selector:
@@ -236,6 +236,15 @@ blueprint:
         entity:
           filter:
             domain: switch
+    ble_transmitter_phone_control:
+      name: 📵 Phone iBeacon control
+      description: |-
+        Should your **phone iBeacon transmitter** automatically be turned **off** while not being used by the gate ?
+        *Note : Only necessary if ble tracker entities are set*
+        *Please manually set your [iBeacon transmitter](https://github.com/etiennec78/Home-Automation/blob/dev/Automatic%20Gate/sensors.md#bluetooth-transmitter-) to on in companion settings if disabled*
+      default: true
+      selector:
+        boolean:
     itinerary_update_title:
       name: 📃🛈 Itinerary status update title
       description: The **title** displayed on the notification you will receive when the **status of your itinerary** changes
@@ -361,6 +370,7 @@ variables:
   activation_zone: !input activation_zone
   ble_entities: !input ble_entities
   ble_scanner_switch: !input ble_scanner_switch
+  ble_transmitter_phone_control: !input ble_transmitter_phone_control
   automatic_closing_arrival: !input automatic_closing_arrival
 
 trigger:
@@ -402,17 +412,21 @@ action:
         - condition: template
           value_template: "{{ ble_entities != [] }}"
         then:
-          # Activate the BLE transmitter on the user's phone, to close the gate when he has left
-          - service: "{{ notify_device }}"
-            data:
-              message: command_ble_transmitter
-              data:
-                command: turn_on
+          # Activate the BLE transmitter on the user's phone to close the gate when he has left, only if ble_transmitter_phone_control is turned on
+          - if:
+              - condition: template
+                value_template: !input ble_transmitter_phone_control
+            then:
+              - service: "{{ notify_device }}"
+                data:
+                  message: command_ble_transmitter
+                  data:
+                    command: turn_on
+          # Activate the BLE scanner from the ESP32 connected to the gate, only if a switch has been set
           - if:
             - condition: template
               value_template: "{{ ble_scanner_switch != '' }}"
             then:
-              # Activate the BLE scanner from the ESP32 connected to the gate
               - service: switch.turn_on
                 target:
                   entity_id: "{{ ble_scanner_switch }}"
@@ -481,10 +495,10 @@ action:
               entity_id: "{{ itinerary_sensor }}"
             data:
               value: none
-          # If iBeacon automatic closing is enabled
+          # If iBeacon automatic closing is enabled and ble_transmitter_phone_control is turned on
           - if:
-            - condition: template
-              value_template: "{{ ble_entities != [] }}"
+              - condition: template
+                value_template: "{{ ble_entities != [] and ble_transmitter_phone_control }}"
             then:
               # Deactivate the BLE transmitter on user's phone
               - service: "{{ notify_device }}"
