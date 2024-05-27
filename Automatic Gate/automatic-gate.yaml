@@ -352,7 +352,7 @@ blueprint:
 
 variables:
   gate: !input gate
-  gate_location: ! input gate_location
+  gate_location: !input gate_location
   lead_time: !input lead_time
   safety_delay: !input safety_delay
   timeout_delay: !input timeout_delay
