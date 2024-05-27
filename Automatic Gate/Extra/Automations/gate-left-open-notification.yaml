@@ -3,9 +3,24 @@ blueprint:
   domain: automation
   author: etiennec78
   description: |-
-    A simple automation that **notifies** all selected users when the gate has been **left open** for too long
-    Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Automations)
-    Discord : etiennec78
+    # Gate left open notification 🔓
+
+    ## Description 📝
+    A blueprint that **notifies** selected users when the gate has been **left open** for a time set
+
+    ## Key Features 🌟
+    * Companion app notification 🔔
+    * Dashboard persistent notification 📢
+    * Companion app TTS support 📳
+    * Speakers TTS support 🔊
+    * Adjustable notifications 💬
+
+    ## More info ℹ️
+    * Version : 1.0.6
+    * Set up sensors : [click here](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md)
+    * Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Automations)
+    * Discord : etiennec78
+    [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/etiennec78)
   input:
     gate:
       name: ⛩️ Gate
@@ -44,7 +59,7 @@ blueprint:
       selector:
         boolean:
     phone_tts:
-      name: 📢 Phone TTS
+      name: 📳 Phone TTS
       description: Let your **phones** read the **notification on speaker** when received
       default: false
       selector:
@@ -87,7 +102,6 @@ blueprint:
 variables:
   gate: !input gate
   persistent_notification: !input persistent_notification
-  phone_tts: !input phone_tts
   speaker_tts_devices: !input speaker_tts_devices
   speaker_tts_service: !input speaker_tts_service
 
@@ -120,25 +134,23 @@ action:
         # Play a TTS on each phone, only if this has been enabled
         - if:
             condition: template
-            value_template: "{{ phone_tts }}"
+            value_template: !input phone_tts
           then:
             - service: "{{ 'notify.mobile_app_'+repeat.item }}"
               data:
                 message: TTS
                 data:
                   tts_text: !input left_open_message
-  # Play a TTS on each speaker selected, only if at least one is selected and a tts service is set
-  - if:
-      condition: template
-      value_template: "{{ speaker_tts_devices != [] and speaker_tts_service != '' }}"
-    then:
-      - service: tts.speak
-        data:
-          cache: true
-          media_player_entity_id: !input speaker_tts_devices
-          message: !input left_open_message
-        target:
-          "{{ speaker_tts_service }}"
+  # Play a TTS on each speaker selected, only if at least one has been selected
+  - repeat:
+      for_each: "{{ speaker_tts_devices }}"
+      sequence:
+        - service: tts.speak
+          data:
+            cache: true
+            media_player_entity_id: "{{ repeat.item }}"
+            message: !input left_open_message
+          target: "{{ speaker_tts_service }}"
   # Send a persistent notification on the dashboard, only if this has been enabled
   - if:
       condition: template

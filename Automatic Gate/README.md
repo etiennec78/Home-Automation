@@ -27,6 +27,7 @@ Customize the options to tailor the system to your exact needs
   * Customizable security options 🔒
   * Customizable gate operation timings 🛠️
   * Customizable travel time refresh rate 🔁
+  * Multiple gates supported by reusing the blueprint ♻️
 
 ## Flowchart 🔀
 
@@ -45,8 +46,8 @@ Customize the options to tailor the system to your exact needs
 |         [Gate](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gate-%EF%B8%8F)          |  switch/cover  |        Any         |    No    | Any gate or garage door which is either a switch or a cover. Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware) or any other integration |
 | [GPS location trackers](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gps-location-trackers-) |     person     |     Companion      |   Yes    | ⚠️ Use [high precision while driving near home](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gps-location-trackers-) or you could time out. Try to avoid using BLE/Wifi location trackers      |
 |    [Driving sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#driving-sensors-)     | binary_sensor  | Companion/Template |   Yes    | Either Android Auto, bluetooth connexion, or both grouped                                                               |
-|      [Travel time](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#travel-time-sensors-%EF%B8%8F)      |     sensor     |        Waze        |   Yes    | For now only Waze integration accepted, calculates the travel time between you and your home. Disable auto polling      |
-|   [Proximity sensors](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#proximity-sensors-)   |     sensor     |     Proximity      |   Yes    | Calculates the distance of each user from home                                                                          |
+|      [Travel time](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#travel-time-sensors-%EF%B8%8F)      |     sensor     |        Waze        |   Yes    | For now only Waze integration accepted, calculates the travel time between you and your destination                 |
+|   [Proximity sensors](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#proximity-sensors-)   |     sensor     |     Proximity      |   Yes    | Calculates the distance of each user from the targetted zone                                                             |
 |    [Notify services](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-services-)    |     service    |     Companion      |   Yes    | Each phone notification service to notify of the itinerary status. Comes by default when installing the companion app   |
 |    [Itinerary state](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#itinerary-sensors-%EF%B8%8F)    |   input_text   |       Helper       |   Yes    | A helper you have to create which will store the state of each user itinerary                                           |
 |    [Planned opening](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#planned-opening-)    | input_datetime |       Helper       |    No    | A helper you have to create which will store the planned automatic opening of the gate                                  |
@@ -60,7 +61,7 @@ Customize the options to tailor the system to your exact needs
 |     [BLE entities](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-entities-)      |signal_strength |        Any         |   Yes    | Each BLE entity to monitor, to close the gate when it goes to unavailable. Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware) or else  |
 |  [BLE scanner switch](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-scanner-switch-)   |     switch     |        Any         |    No    | A switch which can turn on/off your BLE scanner. Not useful if you want your BLE scanner running 24/7                 |
 |  [Notify all devices](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-all-devices-group-)   |     group      |       Group        |    No    | Only necessary for [esphome firmware](Extra/Esphome%20gate%20firmware). Allows it to notify all devices when opening on in case of an error       |
-|   [Nearest distance](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#nearest-distance-sensor-)    |     sensor     |     Proximity      |    No    | Only necessary for [esphome firmware](Extra/Esphome%20gate%20firmware). Gives the distance of the nearest person from home                               |
+|   [Nearest distance](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#nearest-distance-sensor-)    |     sensor     |     Proximity      |    No    | Only necessary for [esphome firmware](Extra/Esphome%20gate%20firmware). Gives the distance of the nearest person from your gate                          |
 
 
 ## How to update 🔁
@@ -76,4 +77,4 @@ Click on the three-dot menu to the right of Automatic Gate, and select "Re-impor
 |      [Automations](Extra/Automations) 🤖       | Automations that notifies all users if the gate has been left open or is unavailable, while playing a tts on speakers                                            |
 |     [Ble car device](Extra/Ble%20car%20device) 🚗     | A really small Arduino code to let an ESP32 sit in your car so that your phone can connect to it over BLE and monitor if you are driving                         |
 | [ESPHome gate firmware](Extra/Esphome%20gate%20firmware) 🔧  | My ESP32 gate firmware which only needs to be connected to one open&close pin. Works by guessing the actual state and locking new requests while not being ready |
-|   [Vehicle tracker map](Extra/Vehicle%20tracker%20map) 🎨  | A small dashboard which can track the position history of a user and display both the ETA and time remaining when an itinerary is in progress                    |
+|   [Vehicle tracker map](Extra/Vehicle%20tracker%20map) 🗺️  | A small dashboard which can track the position history of a user and display both the ETA and time remaining when an itinerary is in progress                    |

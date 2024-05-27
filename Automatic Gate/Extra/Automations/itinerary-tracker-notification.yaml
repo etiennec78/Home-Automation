@@ -1,0 +1,268 @@
+blueprint:
+  name: Itinerary tracker notification
+  domain: automation
+  author: etiennec78
+  description: |-
+    # Itinerary tracker notification 📍
+
+    ## Description 📝
+    A blueprint that **notifies** all selected users when another one is **driving home**
+
+    ## Key Features 🌟
+    * Companion app notifications 🔔
+    * Travel time and ETA notification updates 🔁
+    * On notification tap custom link 👆
+    * Speakers TTS support 🔊
+    * Adjustable notifications 💬
+
+    ## More info ℹ️
+    * Version : 1.0.6
+    * Set up sensors : [click here](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md)
+    * Flowchart : [click here](https://miro.com/app/board/uXjVMpH4Tno=/)
+    * Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Automations)
+    * Discord : etiennec78
+    [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/etiennec78)
+  input:
+    driving_sensors:
+      name: 🚗 Driving sensors
+      description: |-
+        Each **[driving sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#driving-sensors-)** which should trigger the automation (same order)
+        *Note : You can have just one driver, and have other users receive notifications only*
+      selector:
+        entity:
+          multiple: true
+          filter:
+            domain: binary_sensor
+    track_travel_time:
+      name: 📍 Track travel time
+      description: Should the automation display and update the delay remaining before arrival on the notification received ?
+      default: true
+      selector:
+        boolean:
+    travel_time_sensors:
+      name: ✈️ Travel time sensors
+      description: |-
+        Each **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#travel-time-sensors-%EF%B8%8F)** monitoring each user **time left before arrival** (same order)
+        *Note: Optional if "Track travel time" is set to false*
+      default: []
+      selector:
+        entity:
+          multiple: true
+          filter:
+            domain: sensor
+            device_class: duration
+    persons:
+      name: 👤 Tracked users
+      description: |-
+        Each **user** which should be **tracked** or **notified** when an itinerary is in progress
+      selector:
+        entity:
+          multiple: true
+          filter:
+            domain: person
+    notify_devices:
+      name: 💬 Notify services
+      description: |-
+        Each **service** of **device to notify** (Find the service ids by going into [Developer tools > Services tab](https://my.home-assistant.io/redirect/developer_states) > searching for "notify.") (same order)
+        *Note : Please put people who don't have a driving sensor at the end of the list*
+      selector:
+        text:
+          multiple: true
+          prefix: notify.mobile_app_
+    on_tap_link:
+      name: 👆 On tap link
+      description: |-
+        The **link** you will go to if you **tap** on the notification
+        *Note : Can be Home Assistant relative links*
+      default: "/lovelace/vehicle-tracker-map"
+      selector:
+        text:
+    speaker_tts_devices:
+      name: 🔊 TTS speakers
+      description: |-
+        The **home speakers** your want to play a TTS on when someone starts driving
+        *Note : Optional*
+      default: []
+      selector:
+        entity:
+          multiple: true
+          domain: media_player
+    speaker_tts_service:
+      name: 🎙️ TTS service
+      description: |-
+        The **TTS service** you want to use for your speakers
+        *Note : Optional*
+      default: ""
+      selector:
+        target:
+          entity:
+            domain: tts
+    itinerary_started_message:
+      name: 💬 Itinerary started notification
+      description: |-
+        The **content** of the notification or TTS you will receive when someone **begins to drive**
+        *Note : {{driver_name}} will be replaced by the drivers' name*
+      default: "{{ driver_name }} just got into his car"
+      selector:
+        text:
+    itinerary_ongoing_message:
+      name: 💬 Itinerary ongoing notification
+      description: |-
+        The **content** of the notification you will receive while receiving new **travel time updates**
+        *Note : {{driver_name}} will be replaced by the drivers' name and {{arrival}} by its ETA*
+      default: "{{ driver_name }} will arrive approximately at {{ arrival }}"
+      selector:
+        text:
+    driver_arrived_message:
+      name: 💬 Driver has arrived notification
+      description: |-
+        The **content** of the notification you will receive when the driver has **arrived**
+        *Note : {{driver_name}} will be replaced by the drivers' name*
+      default: "{{ driver_name }} just arrived home"
+      selector:
+        text:
+
+variables:
+  persons: !input persons
+  driving_sensors: !input driving_sensors
+  travel_time_sensors: !input travel_time_sensors
+  devices_to_notify: !input notify_devices
+  speaker_tts_devices: !input speaker_tts_devices
+  speaker_tts_service: !input speaker_tts_service
+
+trigger:
+  - platform: state
+    entity_id: !input driving_sensors
+    from: "off"
+    to: "on"
+
+condition: []
+  # No condition
+
+action:
+  # Store the list index of the driver, and extract the recurrent sensors at this index of the list
+  - variables:
+      idx: "{{ driving_sensors.index(trigger.entity_id) }}"
+      driving_sensor: "{{ driving_sensors[idx] }}"
+      travel_time_sensor: "{{ travel_time_sensors[idx] }}"
+      driver: "{{ persons[idx] }}"
+      driver_name: "{{ state_attr(driver, 'friendly_name') }}"
+  # Only continue if the driver is not home
+  - condition: template
+    value_template: "{{ not is_state(driver, 'home') }}"
+  # Notify each user except the driver that an itinerary has been started
+  - repeat:
+      for_each: |-
+        {% set temp = devices_to_notify.pop(idx) %}
+        {{ devices_to_notify }}
+      sequence:
+        - service: "notify.mobile_app_{{ repeat.item }}"
+          data:
+            message: !input itinerary_started_message
+            data:
+              notification_icon: mdi:car
+              tag: itinerary-status
+              channel: Itinerary status
+              url: !input on_tap_link
+              clickAction: !input on_tap_link
+              alert_once: true
+  # If someone is currently home, and tts devices and service are set
+  - if:
+      - condition: template
+        value_template: |-
+          {{ speaker_tts_devices != [] and speaker_tts_service != '' and persons | select('is_state', 'home') | list != [] }}
+    then:
+      # Play a TTS on each device
+      - repeat:
+          for_each: "{{ speaker_tts_devices }}"
+          sequence:
+            - service: tts.speak
+              data:
+                cache: true
+                media_player_entity_id: "{{ repeat.item }}"
+                message: !input itinerary_started_message
+              target: "{{ speaker_tts_service }}"
+  # If "Track travel time" boolean input is set to true
+  - if:
+      condition: template
+      value_template: !input track_travel_time
+    then:
+      # Repeat while the driver is still driving
+      - repeat:
+          while:
+            - condition: template
+              value_template: "{{ is_state(driving_sensor, 'on') }}"
+          sequence:
+            # Wait for a travel time update or the user to leave his vehicle
+            - wait_for_trigger:
+                - platform: event
+                  id: travel_time
+                  event_type: state_changed
+                  event_data:
+                    entity_id: "{{ travel_time_sensor }}"
+                - platform: template
+                  id: vehicle_left
+                  value_template: "{{ is_state(driving_sensor, 'off') }}"
+            # Only continue the loop if the wait_for_trigger was triggered by a travel time update
+            - condition: template
+              value_template: "{{ wait.trigger.id == 'travel_time' }}"
+            # Calculate ETA
+            - variables:
+                remaining: "{{ state_attr(travel_time_sensor, 'duration') * 60 }}"
+                arrival_timestamp: "{{ as_timestamp(now()) + remaining }}"
+                arrival: "{{ arrival_timestamp | timestamp_custom('%H:%M') }}"
+            # Send an ETA notification update to each user
+            - repeat:
+                for_each: "{{ devices_to_notify }}"
+                sequence:
+                  - service: "notify.mobile_app_{{ repeat.item }}"
+                    data:
+                      message: !input itinerary_ongoing_message
+                      data:
+                        notification_icon: mdi:map-marker-account
+                        tag: itinerary-status
+                        channel: Itinerary status
+                        url: !input on_tap_link
+                        clickAction: !input on_tap_link
+                        alert_once: true
+                        timeout: "{{ remaining | int }}"
+                        chronometer: true
+                        when: "{{ arrival_timestamp }}"
+    # If "Track travel time" boolean input is set to false
+    else:
+      # Wait for the user to leave his vehicle
+      - wait_for_trigger:
+          - platform: template
+            id: vehicle_left
+            value_template: "{{ is_state(driving_sensor, 'off') }}"
+  # If the driver has arrived home
+  - if:
+      condition: template
+      value_template: "{{ is_state(driver, 'home') }}"
+    then:
+      # Send an arrival notification to each user
+      - repeat:
+          for_each: "{{ devices_to_notify }}"
+          sequence:
+            - service: "notify.mobile_app_{{ repeat.item }}"
+              data:
+                message: !input driver_arrived_message
+                data:
+                  notification_icon: mdi:home-map-marker
+                  tag: itinerary-status
+                  channel: Itinerary status
+                  url: !input on_tap_link
+                  clickAction: !input on_tap_link
+                  timeout: 300
+    # If the driver has not arrived home
+    else:
+      # Remove itinerary notification for each user
+      - repeat:
+          for_each: "{{ devices_to_notify }}"
+          sequence:
+            - service: "notify.mobile_app_{{ repeat.item }}"
+              data:
+                message: clear_notification
+                data:
+                  tag: itinerary-status
+mode: single

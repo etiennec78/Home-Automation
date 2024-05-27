@@ -7,7 +7,7 @@
 
 
 # Required sensors 📌
-* *If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving home, your gate could open thinking you are still home*
+
 ## Gate ⛩️
 
 **The switch or cover which controls your gate**
@@ -17,24 +17,24 @@ Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware/gate.yaml) o
 
 ## GPS location trackers 🌎
 
-**Each GPS location tracker necessary to detect if you're home or away, estimate your travel time, and track your distance**
+**Each GPS location tracker necessary to detect if you're in your leaving/arriving, estimate your travel time, and track your distance**
 
 *Notes :*
 
-* *⚠️ Use high precision while driving near home or you could time out*
-* *If your location tracker has report latency (wifi/ble), and you plug Android Auto just after leaving home, your gate could open thinking you are still home*
+* *⚠️ Use high precision while driving in your ETA calculation zone or you could time out*
+* *If your location tracker has report latency (wifi/ble), and you plug Android Auto just after leaving, your gate could open thinking you are still there*
 * *Your High accuracy mode trigger range should be the same as your ETA planning zone in your blueprint config*
 
-Install through [companion app](https://companion.home-assistant.io/docs/core/location/) settings : *Settings > Companion app > Manage sensors > Background location ✔️*
+Install through [companion app](https://companion.home-assistant.io/docs/core/location/) settings : *Settings > Companion app > Manage sensors > Background location ✔*
 
 Settings :
 
-* High accuracy mode : ✔️
+* High accuracy mode : ✔
 * High accuracy mode only when connected to BT devices : Select vehicles bluetooth devices
-* High accuracy mode only when entering zone : `zone.home`
+* High accuracy mode only when entering zone : `zone.home` *(or another zone if your gate is not at home)*
 * High accuracy mode trigger range for zone : The range in which you want your phone to spam location updates when arriving (suggested : 1000m)
 * High accuracy interval : `5s`
-* High accuracy mode only when connected to BT devices : ✔️
+* High accuracy mode only when connected to BT devices : ✔
 * Minimal precision : Keep default
 * Location sent : `Exact`
 
@@ -49,15 +49,13 @@ Either Android Auto, bluetooth connexion, or both grouped
 
 ### Option 1 : Android Auto connection
 
-Install through [companion app](https://companion.home-assistant.io/docs/core/sensors#android-auto) settings : *Settings > Companion app > Manage sensors > Android Auto ✔️*
+Install through [companion app](https://companion.home-assistant.io/docs/core/sensors#android-auto) settings : *Settings > Companion app > Manage sensors > Android Auto ✔*
 
 ### Option 2 : Bluetooth connection with template sensor
 
-Install through [companion app](https://companion.home-assistant.io/docs/core/sensors/#bluetooth-sensors) settings : *Settings > Companion app > Manage sensors > Bluetooth connection ✔️*
+Install through [companion app](https://companion.home-assistant.io/docs/core/sensors/#bluetooth-sensors) settings : *Settings > Companion app > Manage sensors > Bluetooth connection ✔*
 
-Use a [template helper](https://www.home-assistant.io/integrations/template/)
-
-Install through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Template > Binary sensor*
+Install a [template helper](https://www.home-assistant.io/integrations/template/) through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Template > Binary sensor*
 
 Settings :
 
@@ -93,9 +91,7 @@ Then use the following template : `{{ is_state('binary_sensor.user0_android_auto
 
 **⚠️ Please disable [auto-polling](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)**
 
-Delivered by the [Waze Travel Time](https://www.home-assistant.io/integrations/waze_travel_time/) integration
-
-Install through the UI : *[Settings > Devices & services > Add integration > Waze Travel Time](https://my.home-assistant.io/redirect/config_flow_start/?domain=waze_travel_time)*
+Install [Waze Travel Time](https://www.home-assistant.io/integrations/waze_travel_time/) integration through the UI : *[Settings > Devices & services > Add integration > Waze Travel Time](https://my.home-assistant.io/redirect/config_flow_start/?domain=waze_travel_time)*
 
 Install the integration multiple times if you have multiple users
 
@@ -103,7 +99,7 @@ Settings :
 
 * Name : `User0 Travel Time`
 * Origin : `person.user0`
-* Destination : `zone.home`
+* Destination : `zone.home` *(or another zone if your gate is not at home)*
 * Region : Select your region
 
 ### Option 2 : Google Maps
@@ -112,29 +108,27 @@ Settings :
 
 ⚠️ Work in progress ! The current integration is not reporting usable attributes
 
-Delivered by the [Google Maps Travel Time](https://www.home-assistant.io/integrations/google_travel_time/) integration
-
-Install through the UI : *[Settings > Devices & services > Add integration > Google Maps Travel Time](https://my.home-assistant.io/redirect/config_flow_start/?domain=google_travel_time)*
+Install [Google Maps Travel Time](https://www.home-assistant.io/integrations/google_travel_time/) integration through the UI : *[Settings > Devices & services > Add integration > Google Maps Travel Time](https://my.home-assistant.io/redirect/config_flow_start/?domain=google_travel_time)*
 
 Install the integration multiple times if you have multiple users
 
 * Name : `User0 Travel Time`
 * API key : Your api key
 * Origin : `person.user0`
-* Destination : `zone.home`
+* Destination : `zone.home` *(or another zone if your gate is not at home)*
 
 
 ## Proximity sensors 📏
 
-**Each proximity sensor which calculates the distance of each user from home**
+**Each proximity sensor which calculates the distance of each user from your gate**
 
-Delivered by the [Proximity](https://www.home-assistant.io/integrations/proximity/) integration
+Delivered by the
 
-Install through the UI : *[Settings > Devices & services > Add integration > Proximity](https://my.home-assistant.io/redirect/config_flow_start/?domain=proximity)*
+Install the [Proximity](https://www.home-assistant.io/integrations/proximity/) integration through the UI : *[Settings > Devices & services > Add integration > Proximity](https://my.home-assistant.io/redirect/config_flow_start/?domain=proximity)*
 
 Settings :
 
-* Track distance to : `zone.home`
+* Track distance to : `zone.home` *(or another zone if your gate is not at home)*
 * Devices or persons to track : `[person.user0, ...]`
 * Zones to ignore : `[]`
 * Tolerance distance : Not required by Automatic Gate
@@ -153,9 +147,7 @@ Find the service ids by going into : *[Developer tools > Services tab](https://m
 
 **Each empty itinerary input text helper to store each user itinerary state**
 
-Use an [input text helper](https://www.home-assistant.io/integrations/input_text/)
-
-Install through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Text*
+Install an [input text helper](https://www.home-assistant.io/integrations/input_text/) through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Text*
 
 Settings :
 
@@ -179,9 +171,7 @@ input_text:
 
 **An empty input datetime helper which will be used to set an ETA and plan the opening of your gate**
 
-Use an [input datetime helper](https://www.home-assistant.io/integrations/input_datetime/)
-
-Install through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Date and/or time*
+Install an [input datetime helper](https://www.home-assistant.io/integrations/input_datetime/) through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Date and/or time*
 
 Settings :
 
@@ -212,17 +202,18 @@ The automation will automatically turn the transmitter off if not needed
 
 * *Your bluetooth transmitter should report your devices unavailable after a small time period or this won't have any effect*
 * *Be aware that having your BLE transmitter too far away from your gate could make your gate close onto your car when the signal is lost before leaving*
+* *The transmitter should be set to off by default since this blueprint will automatically turn it on when needed*
 
-Install through [companion app](https://www.home-assistant.io/integrations/mobile_app/) settings : *Settings > Companion app > Manage sensors > BLE Transmitter ✔️*
+Install through [companion app](https://www.home-assistant.io/integrations/mobile_app/) settings : *Settings > Companion app > Manage sensors > BLE Transmitter ✔*
 
 Settings :
 
 * Advertise mode : `Low latency (10Hz)`
-* Transmit only enabled on Home Wifi Network SSIDs : ❌
+* Transmit only enabled on Home Wifi Network SSIDs : ✖
 * major : `100`
 * Measured power at 1 meter : Not necessary for Automatic Gate
 * minor : `1`
-* Enable transmitter : ❌
+* Enable transmitter : ✖
 * Transmit power : `High`
 * UUID : A [random UUID](https://www.uuidgenerator.net/)
 
@@ -240,9 +231,7 @@ Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware) or any othe
 
 **A group which allows my [esphome firmware](Extra/Esphome%20gate%20firmware) to notify all users in case of an event like your gate opening**
 
-Use a [notification group](https://www.home-assistant.io/integrations/group/#notify-groups)
-
-Install in your [configuration.yaml](https://www.home-assistant.io/docs/configuration/) file :
+Install a [notification group](https://www.home-assistant.io/integrations/group/#notify-groups) in your [configuration.yaml](https://www.home-assistant.io/docs/configuration/) file :
 
 ```yaml
 notify:
@@ -257,6 +246,6 @@ notify:
 
 Only necessary for [esphome firmware](Extra/Esphome%20gate%20firmware)
 
-**Gives the distance of the nearest person from home, to only open if someone is close enough**
+**Gives the distance of the nearest person from your gate, to only open if someone is close enough**
 
 To install, please follow the instructions for the [required proximity sensors](sensors.md#proximity-sensors-)
