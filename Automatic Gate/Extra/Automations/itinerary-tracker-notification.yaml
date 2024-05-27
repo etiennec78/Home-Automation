@@ -16,11 +16,11 @@ blueprint:
     * Adjustable notifications 💬
 
     ## More info ℹ️
-    Version : 1.0.6
-    Set up sensors : [click here](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md)
-    Flowchart : [click here](https://miro.com/app/board/uXjVMpH4Tno=/)
-    Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Automations)
-    Discord : etiennec78
+    * Version : 1.0.6
+    * Set up sensors : [click here](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md)
+    * Flowchart : [click here](https://miro.com/app/board/uXjVMpH4Tno=/)
+    * Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Automations)
+    * Discord : etiennec78
     [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/etiennec78)
   input:
     driving_sensors:
