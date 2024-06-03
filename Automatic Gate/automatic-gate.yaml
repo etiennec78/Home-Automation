@@ -67,7 +67,7 @@ blueprint:
           max: 300
           unit_of_measurement: seconds
     safety_delay:
-      name: 🔒 Auto-close delay
+      name: 🔒 Auto-close safety delay
       description: The time the gate will wait before **automatically closing** if you haven't left or didn't arrive
       default: 5
       selector:
@@ -278,11 +278,18 @@ blueprint:
       selector:
         text:
     itinerary_started_message:
-      name: 💬🏁 Itinerary started notification
+      name: 💬🚀 Itinerary started notification
       description: The **content** of the notification you will receive when your **itinerary starts**
       default: "Your itinerary has been started"
       selector:
         text:
+    user_arrival_message:
+      name: 💬🏁 User arrival notification
+      description: The **content** of the notification you will receive when you **arrive at your destination**
+      default: "You have arrived at your destination"
+      selector:
+        text:
+          multiline: true
     automatic_opening_message:
       name: 💬🔓 Automatic opening notification
       description: The **content** of the notification you will receive when your gate is **automatically opening**
@@ -962,6 +969,23 @@ action:
                                             importance: high
                                             tag: gate-movement
                                             timeout: 300
+                                  # If the user has arrived
+                                  - conditions:
+                                      - condition: template
+                                        value_template: "{{ wait.trigger.id == 'vehicle_left' and is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id])}}"
+                                    sequence:
+                                      # Notify the user that the gate will close automatically since he has arrived
+                                      - service: "{{ notify_device }}"
+                                        data:
+                                          title: !input gate_closing_title
+                                          message: !input user_arrival_message
+                                          data:
+                                            car_ui: true
+                                            notification_icon: mdi:flag-checkered
+                                            channel: Gate alerts
+                                            importance: high
+                                            tag: gate-movement
+                                            timeout: 300
                                   # If the user has left his car
                                   - conditions:
                                       - condition: template
@@ -979,18 +1003,6 @@ action:
                                             importance: high
                                             tag: gate-movement
                                             timeout: 300
-                                default:
-                                  # Notify the user that the gate will close automatically
-                                  - service: "{{ notify_device }}"
-                                    data:
-                                      message: !input automatic_closing_message
-                                      data:
-                                        car_ui: true
-                                        notification_icon: mdi:gate
-                                        channel: Gate alerts
-                                        importance: high
-                                        tag: gate-movement
-                                        timeout: 300
                               # Close the gate
                               - choose:
                                 - conditions:
