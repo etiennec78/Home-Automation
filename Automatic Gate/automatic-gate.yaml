@@ -213,6 +213,17 @@ blueprint:
       default: true
       selector:
         boolean:
+    auto_close_arrival_delay:
+      name: 📬 Auto-close delay after arrival
+      description: |-
+        The time the gate will wait before **automatically closing** after you arrive home and you have left your car
+        *Note : Can be useful if you plan to collect mail or put away groceries after arriving*
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 30
+          unit_of_measurement: minutes
     ble_entities:
       name: 🔎 iBeacon tracker entities (optional)
       description: |-
@@ -986,6 +997,8 @@ action:
                                             importance: high
                                             tag: gate-movement
                                             timeout: 300
+                                      - delay:
+                                          minutes: !input auto_close_arrival_delay
                                   # If the user has left his car
                                   - conditions:
                                       - condition: template
