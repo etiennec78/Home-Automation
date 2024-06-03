@@ -459,7 +459,7 @@ action:
                 # Notify the user that the gate is opening automatically
                 - service: "{{ notify_device }}"
                   data:
-                    title: !input gate_closing_title
+                    title: !input gate_opening_title
                     message: !input automatic_opening_message
                     data:
                       car_ui: true
@@ -846,7 +846,7 @@ action:
                             # Notify the user that the gate is opening automatically
                             - service: "{{ notify_device }}"
                               data:
-                                title: !input gate_closing_title
+                                title: !input gate_opening_title
                                 message: !input automatic_opening_message
                                 data:
                                   car_ui: true
