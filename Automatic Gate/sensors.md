@@ -76,6 +76,11 @@ template:
         {{ '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user0_bluetooth_connection', 'connected_paired_devices') }}
 ```
 
+* `00:00:00:00:00:00:00` is your vehicle mac address
+* `Bt-Device` is the device name of your vehicle
+* `sensor.user0_bluetooth_connection` is your bluetooth companion sensor
+* `connected_paired_devices` needs to be left untouched
+
 ### Option 3 : Both (for multiple vehicles)
 
 Install sensors from options 1 & 2
