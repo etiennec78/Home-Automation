@@ -23,7 +23,7 @@ Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware/gate.yaml) o
 
 * *⚠️ Use high precision while driving in your ETA calculation zone or you could time out*
 * *If your location tracker has report latency (wifi/ble), and you plug Android Auto just after leaving, your gate could open thinking you are still there*
-* *Your High accuracy mode trigger range should be the same as your ETA planning zone in your blueprint config*
+* *If high precision mode does not trigger, please increase its range*
 
 Install through [companion app](https://companion.home-assistant.io/docs/core/location/) settings : *Settings > Companion app > Manage sensors > Background location ✔*
 
@@ -75,6 +75,8 @@ template:
       state: >
         {{ '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user0_bluetooth_connection', 'connected_paired_devices') }}
 ```
+
+*Note : If your vehicle repeatedly cuts the USB power supply during engine start-up, you should add `delay_off: 00:00:03` in binary_sensor attributes (e.g, after state:)*
 
 * `00:00:00:00:00:00:00` is your vehicle mac address
 * `Bt-Device` is the device name of your vehicle
