@@ -197,14 +197,24 @@ blueprint:
               min: 300
               max: 5000
               unit_of_measurement: meters
-        automatic_closing_arrival:
-          name: 🔒 Automatic closing
+        automatic_closing:
+          name: 🔒 Automatic closing behavior
           description: |-
-            Should the gate automatically **close** ?
-            *Warning : All auto-closing securities will not be operational if turned off*
-          default: true
+            Gate automatic **closing** behavior
+
+              - **Automatically close** your gate after you reach your destination (or leave if ble sensors are set)
+              - **Only close for safety mechanism**, in case you don't want your gate to close automatically but want to keep safety features
+              - **Never close** at all, in case your gate doesn't support closing. This will disable almost all safety features
+          default: "on"
           selector:
-            boolean:
+            select:
+              options:
+                - label: Automatically close
+                  value: "on"
+                - label: Only close for safety mechanism
+                  value: "only-safety"
+                - label: Never close
+                  value: "off"
         safety_delay:
           name: 🔒 Auto-close safety delay
           description: The time the gate will wait before **automatically closing** after you have arrived home and left your car
@@ -423,7 +433,7 @@ variables:
   ble_entities: !input ble_entities
   ble_scanner_switch: !input ble_scanner_switch
   ble_transmitter_phone_control: !input ble_transmitter_phone_control
-  automatic_closing_arrival: !input automatic_closing_arrival
+  automatic_closing: !input automatic_closing
 
 trigger:
   # Triggers when one of the users connect to a vehicle (if you have more than one, make a custom vehcle sensor : example in sensors.md)
@@ -520,10 +530,10 @@ action:
                       importance: high
                       tag: gate-movement
                       timeout: 300
-      # If the automatic closing input is set to true
+      # If automatic closing is enabled
       - if:
           - condition: template
-            value_template: !input automatic_closing_arrival
+            value_template: "{{ automatic_closing == 'on' }}"
         then:
           # Wait for the gate to be closed by the user, or the iBeacon to be out of reach for 20s, or the vehicle to be left, or the user to leave, all while not waiting more than the auto-close delay
           - wait_for_trigger:
@@ -683,7 +693,7 @@ action:
                       message: clear_notification
                       data:
                         tag: gate-movement
-        # If the automatic closing input is set to false
+        # If automatic closing is disabled
         else:
           # Wait for the user to leave
           - wait_for_trigger:
@@ -907,10 +917,10 @@ action:
                                   importance: high
                                   tag: gate-movement
                                   timeout: 300
-                  # If the automatic closing input is set to true
+                  # If automatic closing is not fully disabled
                   - if:
                       - condition: template
-                        value_template: !input automatic_closing_arrival
+                        value_template: "{{ automatic_closing != 'off' }}"
                     then:
                       # Wait for the gate to be closed manually, or the vehicle to be left, or the user to leave the activation zone, all while not waiting more than the auto-close delay
                       - wait_for_trigger:
@@ -1014,10 +1024,12 @@ action:
                                             importance: high
                                             tag: gate-movement
                                             timeout: 300
-                                  # If the user has arrived
+                                  # If the user has stopped his car, arrived, and auto-closing is enabled
                                   - conditions:
                                       - condition: template
-                                        value_template: "{{ wait.trigger.id == 'vehicle_left' and is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id])}}"
+                                        value_template: "{{ wait.trigger.id == 'vehicle_left' and
+                                                            is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id]) and
+                                                            automatic_closing == 'on' }}"
                                     sequence:
                                       # Notify the user that the gate will close automatically since he has arrived
                                       - service: "{{ notify_device }}"
@@ -1050,6 +1062,16 @@ action:
                                             importance: high
                                             tag: gate-movement
                                             timeout: 300
+                                # If the user has arrived but don't have automatic gate enabled
+                                default:
+                                  # Remove the notification received by the user when his itinerary was started
+                                  - service: "{{ notify_device }}"
+                                    data:
+                                      message: clear_notification
+                                      data:
+                                        tag: itinerary-status
+                                  # Stop the whole script as it was successful
+                                  - stop: Successful
                               # Close the gate
                               - choose:
                                 - conditions:
@@ -1074,7 +1096,7 @@ action:
                             tag: itinerary-status
                       # Stop the whole script as it was successful
                       - stop: Successful
-                    # If the automatic closing input is set to false
+                    # If automatic closing is disabled
                     else:
                       # Wait for the user to stop his car
                       - wait_for_trigger:
