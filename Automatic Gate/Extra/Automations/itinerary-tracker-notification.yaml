@@ -227,7 +227,7 @@ action:
                         alert_once: true
                         timeout: "{{ remaining | int }}"
                         chronometer: true
-                        when: "{{ arrival_timestamp }}"
+                        when: "{{ arrival_timestamp | int }}"
     # If "Track travel time" boolean input is set to false
     else:
       # Wait for the user to leave his vehicle
