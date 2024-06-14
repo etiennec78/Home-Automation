@@ -101,6 +101,7 @@ blueprint:
 
 variables:
   gate: !input gate
+  offline_delay: !input offline_delay
   persistent_notification: !input persistent_notification
   speaker_tts_devices: !input speaker_tts_devices
   speaker_tts_service: !input speaker_tts_service
