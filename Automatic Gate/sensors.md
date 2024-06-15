@@ -23,7 +23,7 @@ Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware/gate.yaml) o
 
 * *⚠️ Use high precision while driving in your ETA calculation zone or you could time out*
 * *If your location tracker has report latency (wifi/ble), and you plug Android Auto just after leaving, your gate could open thinking you are still there*
-* *If high precision mode does not trigger, please increase its range*
+* *If high precision mode does not trigger, please increase its range (try 2500m if you don't use Android Auto)*
 
 Install through [companion app](https://companion.home-assistant.io/docs/core/location/) settings : *Settings > Companion app > Manage sensors > Background location ✔*
 
