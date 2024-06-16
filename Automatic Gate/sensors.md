@@ -234,6 +234,40 @@ Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware) or any othe
 
 **A switch which can turn on/off your BLE scanner. Not useful if you want your BLE scanner running 24/7**
 
+## Last notification 🔔
+
+Only necessary for itinerary tracker notification [automation](Extra/Automations)
+
+**An empty input datetime helper which will store the last time a tracking notification was sent to your devices**
+
+Install an [input datetime helper](https://www.home-assistant.io/integrations/input_datetime/) through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Date and/or time*
+
+Settings :
+
+* Name : `Last notification`
+* Icon : `mdi:bell`
+* What do you want to input : `Date and time`
+
+Or in your [configuration.yaml](https://www.home-assistant.io/docs/configuration/) file :
+
+```yaml
+input_datetime:
+  planned_opening:
+    name: Last notification
+    icon : mdi:bell
+    has_date: true
+    has_time: true
+```
+
+Then you may mute this sensor by adding this line to your [configuration.yaml](https://www.home-assistant.io/docs/configuration/) file
+
+```yaml
+logbook:
+  exclude:
+    entities:
+      - input_datetime.last_notification
+```
+
 ## Notify all devices group 🔔
 
 **A group which allows my [esphome firmware](Extra/Esphome%20gate%20firmware) to notify all users in case of an event like your gate opening**
