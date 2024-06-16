@@ -1,5 +1,5 @@
 name: Bug report
-about: Report an issue with a project of this repository to help me find a fix
+description: Report an issue with a project of this repository to help me find a fix
 labels: bug
 assignees: etiennec78
 body:
