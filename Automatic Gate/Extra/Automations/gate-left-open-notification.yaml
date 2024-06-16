@@ -16,7 +16,7 @@ blueprint:
     * Adjustable notifications 💬
 
     ## More info ℹ️
-    * Version : 1.0.6
+    * Version : 1.0.7
     * Set up sensors : [click here](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md)
     * Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Automations)
     * Discord : etiennec78
@@ -101,6 +101,7 @@ blueprint:
 
 variables:
   gate: !input gate
+  left_open_delay: !input left_open_delay
   persistent_notification: !input persistent_notification
   speaker_tts_devices: !input speaker_tts_devices
   speaker_tts_service: !input speaker_tts_service

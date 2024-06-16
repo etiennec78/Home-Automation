@@ -1,0 +1,70 @@
+esphome:
+  name: phillips-livingcolors
+  friendly_name: Phillips LivingColors
+  platform: esp32
+  board: esp32dev #ESP32-WROOM-32 (version printed on the chip)
+
+# Enable logging
+logger:
+  level: WARN # Change to DEBUG if needed
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  manual_ip:
+    # Adapt this to your own network
+    static_ip: 192.168.0.71
+    gateway: 192.168.0.254
+    subnet: 255.255.255.0
+
+# Enable E1.31 lighting protocol
+e131:
+  method: unicast
+
+# Enable wled lighting protocol
+wled:
+
+# Each led GPIO address
+output:
+  - platform: ledc
+    id: led_R
+    pin: GPIO15
+  - platform: ledc
+    id: led_G
+    pin: GPIO21
+  - platform: ledc
+    pin: GPIO17
+    id: led_B
+
+light:
+  # Real light component
+  - platform: rgb
+    id: base_light
+    internal: true
+    red: led_R
+    green: led_G
+    blue: led_B
+
+  # Fake light component to simulate a led strip
+  - platform: partition
+    id: livingcolors
+    name: Phillips LivingColors
+    segments:
+      - single_light_id: base_light
+    effects:
+      - random:
+          name: "Random"
+          transition_length: 3s
+          update_interval: 3s
+      - e131:
+          universe: 1
+          channels: RGB
+      - wled:

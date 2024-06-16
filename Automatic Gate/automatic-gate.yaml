@@ -33,322 +33,384 @@ blueprint:
       * Multiple gates supported by reusing the blueprint ♻️
 
     ## More info ℹ️
-    * Version : 1.0.6
+    * Version : 1.0.7
     * Set up sensors : [click here](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md)
     * Flowchart : [click here](https://miro.com/app/board/uXjVMpH4Tno=/)
     * Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate)
     * Discord : etiennec78
     [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/etiennec78)
+  homeassistant:
+    min_version: 2024.6.0
   input:
-    gate:
-      name: ⛩️ Gate
-      description: The **switch** or **cover** which controls your **[gate](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gate-%EF%B8%8F)**
-      selector:
-        entity:
-          filter:
-            domain:
-              - switch
-              - cover
-    gate_location:
-      name: 📍 Gate location
-      description: The zone where your gate is located, to detect whether you are leaving or arriving
-      default: "zone.home"
-      selector:
-        entity:
-          filter:
-            domain: zone
-    lead_time:
-      name: 🕓 Lead time
-      description: The **lead time** to open the gate **before your arrival** (take your gate movement time & a margin into account)
-      default: 75
-      selector:
-        number:
-          min: 10
-          max: 300
-          unit_of_measurement: seconds
-    safety_delay:
-      name: 🔒 Auto-close delay
-      description: The time the gate will wait before **automatically closing** if you haven't left or didn't arrive
-      default: 5
-      selector:
-        number:
-          min: 2
-          max: 30
-          unit_of_measurement: minutes
-    timeout_delay:
-      name: ⌛ Timeout delay
-      description: |-
-        The time the automation will wait before **stopping** if your phone **times out** and doesn't send new position updates, while being in the activation zone
-        *Note : If your position provider doesn't let you use a high accuracy mode (like iOS), please increase this value*
-      default: 2
-      selector:
-        number:
-          min: 0.5
-          max: 30
-          unit_of_measurement: minutes
-    opening_notification:
-      name: 👐 Opening notification
-      description: |-
-        Should the automation notify you when your gate opens?
-        *Note : If your gate already notifies you like my esphome firmware, you can turn this off*
-      default: true
-      selector:
-        boolean:
-    persons:
-      name: 👤 Tracked users
-      description: |-
-        Each **user** which should be **[tracked](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gps-location-trackers-)** for **position updates** (same order)
-        *Notes :*
-        *⚠️ Use high precision while driving in your ETA zone or you could time out*
-        *If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving, your gate could open thinking you are still there*
-      selector:
-        entity:
-          multiple: true
-          filter:
-            domain: person
-    driving_sensors:
-      name: 🚗 Driving sensors
-      description: Each **[driving sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#driving-sensors-)** which should trigger the automation (same order)
-      selector:
-        entity:
-          multiple: true
-          filter:
-            domain: binary_sensor
-    travel_time_sensors:
-      name: ✈️ Travel time sensors
-      description: |-
-        Each **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#travel-time-sensors-%EF%B8%8F)** monitoring each user **time left before arrival** (same order)
-        **⚠️ Please set a [custom polling interval](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)**
-      selector:
-        entity:
-          multiple: true
-          filter:
-            domain: sensor
-            device_class: duration
-    proximity_sensors:
-      name: 📏 Proximity sensors
-      description: Each **[proximity sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#proximity-sensors-)** from the proximity integration to calculate user distance from your gate (same order)
-      selector:
-        entity:
-          multiple: true
-          filter:
-            integration: proximity
-            domain: sensor
-            device_class: distance
-    notify_devices:
-      name: 💬 Notify services
-      description: Each **[service](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-services-)** of **device to notify** (Find the service ids by going into [Developer tools > Services tab](https://my.home-assistant.io/redirect/developer_states/) > searching for "notify.") (same order)
-      selector:
-        text:
-          multiple: true
-          prefix: notify.mobile_app_
-    itinerary_sensors:
-      name: 🗺️ Itinerary sensors
-      description: Each empty **[itinerary input text](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#itinerary-sensors-%EF%B8%8F)** helper to store each user **itinerary state** (same order)
-      selector:
-        entity:
-          multiple: true
-          filter:
-            domain: input_text
-    eta_sensor:
-      name: 📅 Planned time of opening sensor
-      description: An empty **[input datetime](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#planned-opening-) helper** which will be used to set an **ETA** and plan the **opening of your gate** (see wiki)
-      selector:
-        entity:
-          filter:
-            domain: input_datetime
-    travel_time_rate:
-      name: 🔄 Travel time refresh rate
-      description: |-
-        Calculate the Travel time & ETA
+    essential_sensors:
+      name: Essential sensors
+      icon: "mdi:gate"
+      collapsed: true
+      input:
+        gate:
+          name: ⛩️ Gate
+          description: The **switch** or **cover** which controls your **[gate](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gate-%EF%B8%8F)**
+          selector:
+            entity:
+              filter:
+                domain:
+                  - switch
+                  - cover
+        gate_location:
+          name: 📍 Gate location
+          description: The zone where your gate is located, to detect whether you are leaving or arriving
+          default: "zone.home"
+          selector:
+            entity:
+              filter:
+                domain: zone
+        lead_time:
+          name: 🕓 Lead time
+          description: The **lead time** to open the gate **before your arrival** (take your gate movement time & a margin into account)
+          default: 75
+          selector:
+            number:
+              min: 10
+              max: 300
+              unit_of_measurement: seconds
+        eta_sensor:
+          name: 📅 Planned time of opening
+          description: An empty **[input datetime](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#planned-opening-) helper** which will be used to set an **ETA** and plan the **opening of your gate** (see wiki)
+          selector:
+            entity:
+              filter:
+                domain: input_datetime
 
-          - **Continuously** during the whole itinerary (custom refresh interval while away)
-          - Only while the vehicle is **near home**
-          - Only **once** when the vehicle gets near home
+    per_person_sensors:
+      name: Per person sensors
+      icon: mdi:account-multiple
+      collapsed: true
+      description: |-
+        ⚠️ Please enter the same amount of entires in each input, and place users in the same order
+      input:
+        persons:
+          name: 👤 Tracked users
+          description: |-
+            Each **user** which should be **[tracked](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gps-location-trackers-)** for **position updates**
+            *Notes :*
+            *⚠️ Use high precision while driving in your ETA zone or you could time out*
+            *If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving, your gate could open thinking you are still there*
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain: person
+        driving_sensors:
+          name: 🚗 Driving sensors
+          description: Each **[driving sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#driving-sensors-)** which should trigger the automation
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain: binary_sensor
+        travel_time_sensors:
+          name: ✈️ Travel time sensors
+          description: |-
+            Each **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#travel-time-sensors-%EF%B8%8F)** monitoring each user **time left before arrival**
+            *⚠️ Please set a [custom polling interval](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)*
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain: sensor
+                device_class: duration
+        proximity_sensors:
+          name: 📏 Proximity sensors
+          description: Each **[proximity sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#proximity-sensors-)** from the proximity integration to calculate user distance from your gate
+          selector:
+            entity:
+              multiple: true
+              filter:
+                integration: proximity
+                domain: sensor
+                device_class: distance
+        notify_devices:
+          name: 💬 Notify services
+          description: Each **[service](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-services-)** of **device to notify** (Find the service ids by going into [Developer tools > Services tab](https://my.home-assistant.io/redirect/developer_states/) > searching for "notify.")
+          selector:
+            text:
+              multiple: true
+              prefix: notify.mobile_app_
+        itinerary_sensors:
+          name: 🗺️ Itinerary sensors
+          description: Each empty **[itinerary input text](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#itinerary-sensors-%EF%B8%8F)** helper to store each user **itinerary state**
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain: input_text
 
-        **"Continuously"** can use more Waze/Maps credits, but can be useful to display a precise ETA on your dashboard when far from your destination
-        **"While near home"** allows to monitor if you drive near your gate without entering to abort the itinerary, or if there are traffic jams near home to open later (recommended)
-        **"Only once"** uses the less amount of credits, but could trigger if you come near your gate without entering (not recommended)
-      default: While near home
-      selector:
-        select:
-          options:
-            - Continuously
-            - While near home
-            - Once when near home
-    continuously_refresh_interval:
-      name: ⏳ Continuously refresh interval
-      description: Your travel time **refresh interval** while away. Only active with a refresh rate set to **"Continously"**
-      default: 5
-      selector:
-        number:
-          min: 1
-          max: 60
-          unit_of_measurement: minutes
-    eta_zone:
-      name: 🚀 ETA planning zone
+    automation_settings:
+      name: Automation settings
+      icon: mdi:cog
+      collapsed: true
+      input:
+        travel_time_rate:
+          name: 🔄 Travel time refresh rate
+          description: |-
+            Calculate the Travel time & ETA
+
+              - **Continuously** during the whole itinerary (custom refresh interval while away)
+              - Only while the vehicle is **near home**
+              - Only **once** when the vehicle gets near home
+
+            **"Continuously"** can use more Waze/Maps credits, but can be useful to display a precise ETA on your dashboard when far from your destination
+            **"While near home"** allows to monitor if you drive near your gate without entering to abort the itinerary, or if there are traffic jams near home to open later (recommended)
+            **"Only once"** uses the less amount of credits, but could trigger if you come near your gate without entering (not recommended)
+          default: While near home
+          selector:
+            select:
+              options:
+                - Continuously
+                - While near home
+                - Once when near home
+        continuously_refresh_interval:
+          name: ⏳ Continuously refresh interval
+          description: Your travel time **refresh interval** while away. Only active with a refresh rate set to **"Continuously"**
+          default: 5
+          selector:
+            number:
+              min: 1
+              max: 60
+              unit_of_measurement: minutes
+        eta_zone:
+          name: 🚀 ETA planning zone
+          description: |-
+            At which **distance** from gate should your vehicle start planning its **Estimated Time of Arrival** to **open your gate** ?
+          default: 1000
+          selector:
+            number:
+              min: 200
+              max: 5000
+              unit_of_measurement: meters
+        activation_zone:
+          name: 🔒 Gate activation zone
+          description: At which **maximal distance** should your vehicle be able to automatically **open your gate** ? It will automatically **close** if you **leave** this zone
+          default: 1200
+          selector:
+            number:
+              min: 300
+              max: 5000
+              unit_of_measurement: meters
+        automatic_closing:
+          name: 🔒 Automatic closing behavior
+          description: |-
+            Gate automatic **closing** behavior
+
+              - **Automatically close** your gate after you reach your destination (or leave if ble sensors are set)
+              - **Only close for safety mechanism**, in case you don't want your gate to close automatically but want to keep safety features
+              - **Never close** at all, in case your gate doesn't support closing. This will disable almost all safety features
+          default: "on"
+          selector:
+            select:
+              options:
+                - label: Automatically close
+                  value: "on"
+                - label: Only close for safety mechanism
+                  value: "only-safety"
+                - label: Never close
+                  value: "off"
+        safety_delay:
+          name: 🔒 Auto-close safety delay
+          description: The time the gate will wait before **automatically closing** after you have arrived home and left your car
+          default: 5
+          selector:
+            number:
+              min: 2
+              max: 30
+              unit_of_measurement: minutes
+        timeout_delay:
+          name: ⌛ Timeout delay
+          description: |-
+            The time the automation will wait before **stopping** if your phone **times out** and doesn't send new position updates, while being in the activation zone
+            *Note : If your position provider doesn't let you use a high accuracy mode (like iOS), please increase this value*
+          default: 2
+          selector:
+            number:
+              min: 0.5
+              max: 30
+              unit_of_measurement: minutes
+        auto_close_arrival_delay:
+          name: 📬 Auto-close delay after arrival
+          description: |-
+            The time the gate will wait before **automatically closing** after you arrive home and you have left your car
+            *Note : Can be useful if you plan to collect mail or put away groceries after arriving*
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 30
+              unit_of_measurement: minutes
+
+    notification_settings:
+      name: Notification settings
+      icon: mdi:bell
+      collapsed: true
       description: |-
-        At which **distance** from gate should your vehicle start planning its **Estimated Time of Arrival** to **open your gate** ?
-        This should be the same value as your ["High accuracy mode trigger range for zone"](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gps-location-trackers-)
-      default: 1000
-      selector:
-        number:
-          min: 200
-          max: 5000
-          unit_of_measurement: meters
-    activation_zone:
-      name: 🔒 Gate activation zone
-      description: At which **maximal distance** should your vehicle be able to automatically **open your gate** ? It will automatically **close** if you **leave** this zone
-      default: 1200
-      selector:
-        number:
-          min: 300
-          max: 5000
-          unit_of_measurement: meters
-    automatic_closing_arrival:
-      name: 🔒 Automatic closing
-      description: |-
-        Should the gate automatically **close** ?
-        *Warning : All auto-closing securities will not be operational if turned off*
-      default: true
-      selector:
-        boolean:
-    ble_entities:
-      name: 🔎 iBeacon tracker entities (optional)
-      description: |-
-        Each **[BLE rssi tracker entity](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-entities-)** to monitor your distance from the gate while leaving, to close it when you're out of reach
-        Needs [bluetooth transmitters](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-transmitter-) set on companion apps
-        *Note : Let empty if no ble*
-      default: []
-      selector:
-        entity:
-          multiple: true
-          filter:
-            domain: sensor
-            device_class: signal_strength
-    ble_scanner_switch:
-      name: ⏻ iBeacon scanner activator switch (optional)
-      description: |-
-        The **[switch](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-scanner-switch-)** you want to use to turn on and off your **iBeacon scanner** when a vehicle is leaving
-        *Note : Let empty if no ble / want to always keep iBeacon running*
-      default: ""
-      selector:
-        entity:
-          filter:
-            domain: switch
-    ble_transmitter_phone_control:
-      name: 📵 Phone iBeacon control
-      description: |-
-        Should your **phone iBeacon transmitter** automatically be turned **off** while not being used by the gate ?
-        *Note : Only necessary if ble tracker entities are set*
-        *Please manually set your [iBeacon transmitter](https://github.com/etiennec78/Home-Automation/blob/dev/Automatic%20Gate/sensors.md#bluetooth-transmitter-) to on in companion settings if disabled*
-      default: true
-      selector:
-        boolean:
-    itinerary_update_title:
-      name: 📃🛈 Itinerary status update title
-      description: The **title** displayed on the notification you will receive when the **status of your itinerary** changes
-      default: "Itinerary 🛈"
-      selector:
-        text:
-    itinerary_canceled_title:
-      name: 📃❌ Itinerary canceled title
-      description: The **title** displayed on the notification you will receive when your **itinerary gets canceled**
-      default: "Itinerary canceled ❌"
-      selector:
-        text:
-    gate_opening_title:
-      name: 📃🔓 Gate opening notification title
-      description: The **title** displayed on the notification you will receive when your **gate is opening**
-      default: "Gate opening 🔓"
-      selector:
-        text:
-    gate_closing_title:
-      name: 📃🔒 Gate closing notification title
-      description: The **title** displayed on the notification you will receive when your **gate is closing**
-      default: "Gate closing 🔒"
-      selector:
-        text:
-    awaiting_title:
-      name: 📃💤 Gate awaiting user notification title
-      description: |-
-        The **title** displayed on the notification you will receive when your gate is **awaiting another user**
-        *Note : {{awaiting_persons}} will be replaced by the lists of the users being awaited*
-      default: "Gate awaiting {{ awaiting_persons }} 💤"
-      selector:
-        text:
-    itinerary_started_message:
-      name: 💬🏁 Itinerary started notification
-      description: The **content** of the notification you will receive when your **itinerary starts**
-      default: "Your itinerary has been started"
-      selector:
-        text:
-    automatic_opening_message:
-      name: 💬🔓 Automatic opening notification
-      description: The **content** of the notification you will receive when your gate is **automatically opening**
-      default: "Automatic opening of the gate"
-      selector:
-        text:
-          multiline: true
-    automatic_closing_message:
-      name: 💬🔒 Automatic closing notification
-      description: The **content** of the notification you will receive when your gate is **automatically closing**
-      default: "Automatic closing of the gate"
-      selector:
-        text:
-          multiline: true
-    awaiting_message:
-      name: 💬💤 Gate awaiting user notification
-      description: The **content** of the notification you will receive when your gate is **awaiting another user**
-      default: "The gate will close once all users have entered/exited"
-      selector:
-        text:
-          multiline: true
-    vehicle_left_message:
-      name: 💬⚠️ Vehicle left notification
-      description: The **content** of the notification you will receive if you **leave your vehicle**
-      default: "You have left your vehicle"
-      selector:
-        text:
-          multiline: true
-    did_not_leave_message:
-      name: 💬⚠️ User did not leave notification
-      description: |-
-        The **content** of the notification you will receive if you **don't leave in time**
-        *Note : {{safety_delay}} will be replaced by your auto-close delay you have set above*
-      default: "The vehicle did not leave in less than {{ safety_delay }} minutes"
-      selector:
-        text:
-          multiline: true
-    did_not_arrive_message:
-      name: 💬⚠️ User did not arrive notification
-      description: |-
-        The **content** of the notification you will receive if you **don't arrive in time**
-        *Note : {{safety_delay}} will be replaced by your auto-close delay you have set above*
-      default: "The vehicle did not arrive in less than {{ safety_delay }} minutes"
-      selector:
-        text:
-          multiline: true
-    timed_out_message:
-      name: 💬⚠️ Timed out notification
-      description: |-
-        The **content** of the notification you will receive if you **time out**
-        *Note : {{timeout_delay}} will be replaced by your auto-close delay you have set above*
-      default: "Your position has not been updated in {{ timeout_delay }} minutes"
-      selector:
-        text:
-          multiline: true
-    vehicle_away_message:
-      name: 💬⚠️ Vehicle not in activation zone notification
-      description: The **content** of the notification you will receive if **you are not in your activation zone**
-      default: "The vehicle is not in the activation zone"
-      selector:
-        text:
-          multiline: true
-    travel_time_did_not_respond:
-      name: 💬⚠️ Travel time integration did not respond
-      description: The **content** of the notification you will receive if your **travel time integraton did not respond** during the itinerary
-      default: "Your travel time integration did not respond during your itinerary"
+        Notification settings to translate texts or change notification behavior
+      input:
+        opening_notification:
+          name: 👐 Opening notification
+          description: |-
+            Should the automation notify you when your gate opens?
+            *Note : If your gate already notifies you like my esphome firmware, you can turn this off*
+          default: true
+          selector:
+            boolean:
+        itinerary_update_title:
+          name: 📃ℹ️ Itinerary status update title
+          description: The **title** displayed on the notification you will receive when the **status of your itinerary** changes
+          default: "Itinerary ℹ️"
+          selector:
+            text:
+        itinerary_canceled_title:
+          name: 📃❌ Itinerary canceled title
+          description: The **title** displayed on the notification you will receive when your **itinerary gets canceled**
+          default: "Itinerary canceled ❌"
+          selector:
+            text:
+        gate_opening_title:
+          name: 📃🔓 Gate opening notification title
+          description: The **title** displayed on the notification you will receive when your **gate is opening**
+          default: "Gate opening 🔓"
+          selector:
+            text:
+        gate_closing_title:
+          name: 📃🔒 Gate closing notification title
+          description: The **title** displayed on the notification you will receive when your **gate is closing**
+          default: "Gate closing 🔒"
+          selector:
+            text:
+        awaiting_title:
+          name: 📃💤 Gate awaiting user notification title
+          description: |-
+            The **title** displayed on the notification you will receive when your gate is **awaiting another user**
+            *Note : {{awaiting_persons}} will be replaced by the list of the users being awaited*
+          default: "Gate awaiting {{ awaiting_persons }} 💤"
+          selector:
+            text:
+        itinerary_started_message:
+          name: 💬🚀 Itinerary started notification
+          description: The **content** of the notification you will receive when your **itinerary starts**
+          default: "Your itinerary has been started"
+          selector:
+            text:
+        user_arrival_message:
+          name: 💬🏁 User arrival notification
+          description: The **content** of the notification you will receive when you **arrive at your destination**
+          default: "You have arrived at your destination"
+          selector:
+            text:
+              multiline: true
+        automatic_opening_message:
+          name: 💬🔓 Automatic opening notification
+          description: The **content** of the notification you will receive when your gate is **automatically opening**
+          default: "Automatic opening of the gate"
+          selector:
+            text:
+              multiline: true
+        automatic_closing_message:
+          name: 💬🔒 Automatic closing notification
+          description: The **content** of the notification you will receive when your gate is **automatically closing**
+          default: "Automatic closing of the gate"
+          selector:
+            text:
+              multiline: true
+        awaiting_message:
+          name: 💬💤 Gate awaiting user notification
+          description: The **content** of the notification you will receive when your gate is **awaiting another user**
+          default: "The gate will close once all users have entered/exited"
+          selector:
+            text:
+              multiline: true
+        vehicle_left_message:
+          name: 💬⚠️ Vehicle left notification
+          description: The **content** of the notification you will receive if you **leave your vehicle**
+          default: "You have left your vehicle"
+          selector:
+            text:
+              multiline: true
+        did_not_leave_message:
+          name: 💬⚠️ User did not leave notification
+          description: |-
+            The **content** of the notification you will receive if you **don't leave in time**
+            *Note : {{safety_delay}} will be replaced by your auto-close delay you have set above*
+          default: "The vehicle did not leave in less than {{ safety_delay }} minutes"
+          selector:
+            text:
+              multiline: true
+        did_not_arrive_message:
+          name: 💬⚠️ User did not arrive notification
+          description: |-
+            The **content** of the notification you will receive if you **don't arrive in time**
+            *Note : {{safety_delay}} will be replaced by your auto-close delay you have set above*
+          default: "The vehicle did not arrive in less than {{ safety_delay }} minutes"
+          selector:
+            text:
+              multiline: true
+        timed_out_message:
+          name: 💬⚠️ Timed out notification
+          description: |-
+            The **content** of the notification you will receive if you **time out**
+            *Note : {{timeout_delay}} will be replaced by your auto-close delay you have set above*
+          default: "Your position has not been updated in {{ timeout_delay }} minutes"
+          selector:
+            text:
+              multiline: true
+        vehicle_away_message:
+          name: 💬⚠️ Vehicle not in activation zone notification
+          description: The **content** of the notification you will receive if **you are not in your activation zone**
+          default: "The vehicle is not in the activation zone"
+          selector:
+            text:
+              multiline: true
+        travel_time_did_not_respond:
+          name: 💬⚠️ Travel time integration did not respond
+          description: The **content** of the notification you will receive if your **travel time integraton did not respond** during the itinerary
+          default: "Your travel time integration did not respond during your itinerary"
+
+    optional_sensors:
+      name: Optional sensors
+      icon: mdi:dots-horizontal-circle-outline
+      collapsed: true
+      input:
+        ble_entities:
+          name: 🔎 iBeacon tracker entities
+          description: |-
+            Each **[BLE rssi tracker entity](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-entities-)** to monitor your distance from the gate while leaving, to close it when you're out of reach
+            Needs [bluetooth transmitters](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-transmitter-) set on companion apps
+            *Note : Let empty if no ble*
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain: sensor
+                device_class: signal_strength
+        ble_scanner_switch:
+          name: ⏯️ iBeacon scanner activator switch
+          description: |-
+            The **[switch](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-scanner-switch-)** you want to use to turn on and off your **iBeacon scanner** when a vehicle is leaving
+            *Note : Let empty if no ble / want to always keep iBeacon running*
+          default: ""
+          selector:
+            entity:
+              filter:
+                domain: switch
+        ble_transmitter_phone_control:
+          name: 📵 Phone iBeacon control
+          description: |-
+            Should your **phone iBeacon transmitter** automatically be turned **off** while not being used by the gate ?
+            *Note : Only necessary if ble tracker entities are set*
+            *Please manually set your [iBeacon transmitter](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-transmitter-) to on in companion settings if disabled*
+          default: true
+          selector:
+            boolean:
 
 variables:
   gate: !input gate
@@ -371,7 +433,7 @@ variables:
   ble_entities: !input ble_entities
   ble_scanner_switch: !input ble_scanner_switch
   ble_transmitter_phone_control: !input ble_transmitter_phone_control
-  automatic_closing_arrival: !input automatic_closing_arrival
+  automatic_closing: !input automatic_closing
 
 trigger:
   # Triggers when one of the users connect to a vehicle (if you have more than one, make a custom vehcle sensor : example in sensors.md)
@@ -459,7 +521,7 @@ action:
                 # Notify the user that the gate is opening automatically
                 - service: "{{ notify_device }}"
                   data:
-                    title: !input gate_closing_title
+                    title: !input gate_opening_title
                     message: !input automatic_opening_message
                     data:
                       car_ui: true
@@ -468,10 +530,10 @@ action:
                       importance: high
                       tag: gate-movement
                       timeout: 300
-      # If the automatic closing input is set to true
+      # If automatic closing is enabled
       - if:
           - condition: template
-            value_template: !input automatic_closing_arrival
+            value_template: "{{ automatic_closing == 'on' }}"
         then:
           # Wait for the gate to be closed by the user, or the iBeacon to be out of reach for 20s, or the vehicle to be left, or the user to leave, all while not waiting more than the auto-close delay
           - wait_for_trigger:
@@ -631,7 +693,7 @@ action:
                       message: clear_notification
                       data:
                         tag: gate-movement
-        # If the automatic closing input is set to false
+        # If automatic closing is disabled
         else:
           # Wait for the user to leave
           - wait_for_trigger:
@@ -846,7 +908,7 @@ action:
                             # Notify the user that the gate is opening automatically
                             - service: "{{ notify_device }}"
                               data:
-                                title: !input gate_closing_title
+                                title: !input gate_opening_title
                                 message: !input automatic_opening_message
                                 data:
                                   car_ui: true
@@ -855,10 +917,10 @@ action:
                                   importance: high
                                   tag: gate-movement
                                   timeout: 300
-                  # If the automatic closing input is set to true
+                  # If automatic closing is not fully disabled
                   - if:
                       - condition: template
-                        value_template: !input automatic_closing_arrival
+                        value_template: "{{ automatic_closing != 'off' }}"
                     then:
                       # Wait for the gate to be closed manually, or the vehicle to be left, or the user to leave the activation zone, all while not waiting more than the auto-close delay
                       - wait_for_trigger:
@@ -962,6 +1024,27 @@ action:
                                             importance: high
                                             tag: gate-movement
                                             timeout: 300
+                                  # If the user has stopped his car, arrived, and auto-closing is enabled
+                                  - conditions:
+                                      - condition: template
+                                        value_template: "{{ wait.trigger.id == 'vehicle_left' and
+                                                            is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id]) and
+                                                            automatic_closing == 'on' }}"
+                                    sequence:
+                                      # Notify the user that the gate will close automatically since he has arrived
+                                      - service: "{{ notify_device }}"
+                                        data:
+                                          title: !input gate_closing_title
+                                          message: !input user_arrival_message
+                                          data:
+                                            car_ui: true
+                                            notification_icon: mdi:flag-checkered
+                                            channel: Gate alerts
+                                            importance: high
+                                            tag: gate-movement
+                                            timeout: 300
+                                      - delay:
+                                          minutes: !input auto_close_arrival_delay
                                   # If the user has left his car
                                   - conditions:
                                       - condition: template
@@ -979,18 +1062,16 @@ action:
                                             importance: high
                                             tag: gate-movement
                                             timeout: 300
+                                # If the user has arrived but don't have automatic gate enabled
                                 default:
-                                  # Notify the user that the gate will close automatically
+                                  # Remove the notification received by the user when his itinerary was started
                                   - service: "{{ notify_device }}"
                                     data:
-                                      message: !input automatic_closing_message
+                                      message: clear_notification
                                       data:
-                                        car_ui: true
-                                        notification_icon: mdi:gate
-                                        channel: Gate alerts
-                                        importance: high
-                                        tag: gate-movement
-                                        timeout: 300
+                                        tag: itinerary-status
+                                  # Stop the whole script as it was successful
+                                  - stop: Successful
                               # Close the gate
                               - choose:
                                 - conditions:
@@ -1015,7 +1096,7 @@ action:
                             tag: itinerary-status
                       # Stop the whole script as it was successful
                       - stop: Successful
-                    # If the automatic closing input is set to false
+                    # If automatic closing is disabled
                     else:
                       # Wait for the user to stop his car
                       - wait_for_trigger:

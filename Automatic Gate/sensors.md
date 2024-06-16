@@ -23,7 +23,7 @@ Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware/gate.yaml) o
 
 * *⚠️ Use high precision while driving in your ETA calculation zone or you could time out*
 * *If your location tracker has report latency (wifi/ble), and you plug Android Auto just after leaving, your gate could open thinking you are still there*
-* *Your High accuracy mode trigger range should be the same as your ETA planning zone in your blueprint config*
+* *If high precision mode does not trigger, please increase its range (try 2500m if you don't use Android Auto)*
 
 Install through [companion app](https://companion.home-assistant.io/docs/core/location/) settings : *Settings > Companion app > Manage sensors > Background location ✔*
 
@@ -75,6 +75,13 @@ template:
       state: >
         {{ '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user0_bluetooth_connection', 'connected_paired_devices') }}
 ```
+
+*Note : If your vehicle repeatedly cuts the USB power supply during engine start-up, you should add `delay_off: 00:00:03` in binary_sensor attributes (e.g, after state:)*
+
+* `00:00:00:00:00:00:00` is your vehicle mac address
+* `Bt-Device` is the device name of your vehicle
+* `sensor.user0_bluetooth_connection` is your bluetooth companion sensor
+* `connected_paired_devices` needs to be left untouched
 
 ### Option 3 : Both (for multiple vehicles)
 
@@ -226,6 +233,40 @@ Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware) or any othe
 ## Bluetooth scanner switch ⏻
 
 **A switch which can turn on/off your BLE scanner. Not useful if you want your BLE scanner running 24/7**
+
+## Last notification 🔔
+
+Only necessary for itinerary tracker notification [automation](Extra/Automations)
+
+**An empty input datetime helper which will store the last time a tracking notification was sent to your devices**
+
+Install an [input datetime helper](https://www.home-assistant.io/integrations/input_datetime/) through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Date and/or time*
+
+Settings :
+
+* Name : `Last notification`
+* Icon : `mdi:bell`
+* What do you want to input : `Date and time`
+
+Or in your [configuration.yaml](https://www.home-assistant.io/docs/configuration/) file :
+
+```yaml
+input_datetime:
+  planned_opening:
+    name: Last notification
+    icon : mdi:bell
+    has_date: true
+    has_time: true
+```
+
+Then you may mute this sensor by adding this line to your [configuration.yaml](https://www.home-assistant.io/docs/configuration/) file
+
+```yaml
+logbook:
+  exclude:
+    entities:
+      - input_datetime.last_notification
+```
 
 ## Notify all devices group 🔔
 

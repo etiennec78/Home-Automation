@@ -16,7 +16,7 @@ blueprint:
     * Adjustable notifications 💬
 
     ## More info ℹ️
-    * Version : 1.0.6
+    * Version : 1.0.7
     * Set up sensors : [click here](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md)
     * Flowchart : [click here](https://miro.com/app/board/uXjVMpH4Tno=/)
     * Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Automations)
@@ -97,6 +97,24 @@ blueprint:
         target:
           entity:
             domain: tts
+    last_notification_sensor:
+      name: 📅 Last notification sensor
+      description: |-
+        An empty **[input datetime](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#last-notification-) helper** which will store the **last time** a **tracking notification was sent** to your devices
+        *Note : You may mute this sensor in your logs as detailed in the wiki*
+      selector:
+        entity:
+          filter:
+            domain: input_datetime
+    notif_refresh_rate:
+      name: 🔁 Notification refresh rate
+      description: The minimum time between sending two tracking notifications, to avoid quickly reaching the notification quota if your position is updated frequently
+      default: 3
+      selector:
+        number:
+          min: 0
+          max: 60
+          unit_of_measurement: minutes
     itinerary_started_message:
       name: 💬 Itinerary started notification
       description: |-
@@ -129,6 +147,8 @@ variables:
   devices_to_notify: !input notify_devices
   speaker_tts_devices: !input speaker_tts_devices
   speaker_tts_service: !input speaker_tts_service
+  last_notification_sensor: !input last_notification_sensor
+  notif_refresh_rate: !input notif_refresh_rate
 
 trigger:
   - platform: state
@@ -206,6 +226,15 @@ action:
             # Only continue the loop if the wait_for_trigger was triggered by a travel time update
             - condition: template
               value_template: "{{ wait.trigger.id == 'travel_time' }}"
+            # Only continue the sequence if the user has not received a notification recently
+            - condition: template
+              value_template: "{{ as_timestamp(states(last_notification_sensor)) + notif_refresh_rate*60 >= as_timestamp(now()) }}"
+            # Set last notification sensor to the current time
+            - service: input_datetime.set_datetime
+              target:
+                entity_id: !input last_notification_sensor
+              data:
+                datetime: "{{ now() }}"
             # Calculate ETA
             - variables:
                 remaining: "{{ state_attr(travel_time_sensor, 'duration') * 60 }}"
@@ -227,7 +256,7 @@ action:
                         alert_once: true
                         timeout: "{{ remaining | int }}"
                         chronometer: true
-                        when: "{{ arrival_timestamp }}"
+                        when: "{{ arrival_timestamp | int }}"
     # If "Track travel time" boolean input is set to false
     else:
       # Wait for the user to leave his vehicle

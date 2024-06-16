@@ -12,7 +12,7 @@ Supports the following features :
 * Opening and closing **even while moving**, by sending a double pulse, and inverting time taken to move to the current position 🔄
 * **Error reporting** in HA, to see why the gate decided not to move ⛔
 * **BLE scanner**, with automatically turns entity status to unavailable after no signal for 25s 📡
-* **BLE switch**, which allows you to **turn off** the continuous BLE scanning ⏻
+* **BLE switch**, which allows you to **turn off** the continuous BLE scanning ⏯️
 
 *Note : Since this gate firmware relies on a single opening pin without any extra sensors, please keep in mind that it won't be able to register any state change from another source than itself. If you open your gate with your remote, please also close it with your remote, as closing with your esp32 would invert the virtual state of the gate*
 
@@ -22,7 +22,7 @@ Supports the following features :
 
 ## How to install 🚀
 
-### Prerequisites 🏁
+### Prerequisites 📝
 
 1. An [ESP32 with relay](https://amzn.to/3y2UtCr)
 2. [ESPHome installed](https://esphome.io/guides/installing_esphome.html)

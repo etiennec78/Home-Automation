@@ -1,0 +1,71 @@
+name: Bug report
+about: Report an issue with a project of this repository to help me find a fix
+labels: bug
+assignees: etiennec78
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Bug description
+  - type: textarea
+    validations:
+      required: true
+    attributes:
+      label: Describe the bug
+      description: >-
+        Provide a clear and concise description of what the problem is
+  - type: textarea
+    attributes:
+      label: Expected behavior
+      description: >-
+        Provide a clear and concise description of what you expected to happen
+  - type: markdown
+    attributes:
+      value: |
+        ## Logs
+  - type: textarea
+    attributes:
+      label: Blueprint configuration
+      description: >-
+        You can get your blueprint configuration by going into :
+        *[Settings > Automations & scenes](https://my.home-assistant.io/redirect/automations) > Blueprint name > Three dots (top right) > Edit in YAML*
+  - type: textarea
+    attributes:
+      label: Blueprint traces
+      description: >-
+        You can download your blueprint traces by going into :
+        *[Settings > Automations & scenes](https://my.home-assistant.io/redirect/automations) > Blueprint name > Traces (top right) > Three dots (top right) > Download trace*
+  - type: markdown
+    attributes:
+      value: |
+        ## Environment
+  - type: input
+    id: version
+    validations:
+      required: true
+    attributes:
+      label: What version of Home Assistant are you running ?
+      placeholder: core-
+      description: >
+        Can be found in: [Settings > System > Repairs > Three Dots in Upper Right > System information](https://my.home-assistant.io/redirect/system_health/).
+  - type: dropdown
+    validations:
+      required: true
+    attributes:
+      label: What type of installation are you running?
+      description: >
+        Can be found in: [Settings > System > Repairs > Three Dots in Upper Right > System information](https://my.home-assistant.io/redirect/system_health/).
+      options:
+        - Home Assistant OS
+        - Home Assistant Container
+        - Home Assistant Supervised
+        - Home Assistant Core
+  - type: markdown
+    attributes:
+      value: |
+        ## Additional information
+  - type: textarea
+    attributes:
+      label: Additional information
+      description: >
+        Add any other context about the problem here
