@@ -407,7 +407,7 @@ blueprint:
           description: |-
             Should your **phone iBeacon transmitter** automatically be turned **off** while not being used by the gate ?
             *Note : Only necessary if ble tracker entities are set*
-            *Please manually set your [iBeacon transmitter](https://github.com/etiennec78/Home-Automation/blob/dev/Automatic%20Gate/sensors.md#bluetooth-transmitter-) to on in companion settings if disabled*
+            *Please manually set your [iBeacon transmitter](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-transmitter-) to on in companion settings if disabled*
           default: true
           selector:
             boolean:
