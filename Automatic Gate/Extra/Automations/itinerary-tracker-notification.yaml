@@ -228,7 +228,7 @@ action:
               value_template: "{{ wait.trigger.id == 'travel_time' }}"
             # Only continue the sequence if the user has not received a notification recently
             - condition: template
-              value_template: "{{ as_timestamp(states(last_notification_sensor)) + notif_refresh_rate*60 >= as_timestamp(now()) }}"
+              value_template: "{{ as_timestamp(states(last_notification_sensor)) + notif_refresh_rate*60 <= as_timestamp(now()) }}"
             # Set last notification sensor to the current time
             - service: input_datetime.set_datetime
               target:
