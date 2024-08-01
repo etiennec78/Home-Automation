@@ -730,10 +730,10 @@ action:
             channel: Itinerary status
             importance: high
             tag: itinerary-status
-      # If the travel time refresh rate is set to "While near home"
+      # If the travel time refresh rate is set to "Continuously"
       - if:
           - condition: template
-            value_template:  "{{ travel_time_rate == 'While near home' }}"
+            value_template:  "{{ travel_time_rate == 'Continuously' }}"
         # Then update the user travel time once to display an approximation on the dashboard (while taking into account the time elapsed
         then:
           - service: homeassistant.update_entity
