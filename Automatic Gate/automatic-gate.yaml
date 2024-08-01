@@ -217,7 +217,7 @@ blueprint:
                   value: "off"
         safety_delay:
           name: 🔒 Auto-close safety delay
-          description: The time the gate will wait before **automatically closing** after you have arrived home and left your car
+          description: The time the gate will wait before **automatically closing** if your gate is open but you still haven't left or arrived
           default: 5
           selector:
             number:
