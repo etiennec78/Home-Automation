@@ -166,34 +166,7 @@ script:
                                     id: gate
                                     state: ON
 
-                                #######################
-                                # NOTIFY GATE OPENING #
-                                #######################
-
-                                - homeassistant.service:
-                                    service: notify.all_devices
-                                    data:
-                                        message: !secret opening_tts_message
-                                        title: !secret opening_tts_title
-                                    data_template:
-                                        data: |
-                                            {{ '{"tag": "gate-movement", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Gate alerts", "importance": "high"}' | from_json }}
-                                - homeassistant.service:
-                                    service: tts.speak
-                                    data:
-                                        cache: "true"
-                                        media_player_entity_id: !secret player_entity
-                                        message: !secret opening_tts_message
-                                    data_template:
-                                        target: |
-                                            {{ '{"entity_id": "tts.piper"}' | from_json }}
-                                # Optional, starts a HA script when your gate opens
-                                # - homeassistant.service:
-                                #     service: !secret opening_script_name
-
-                                ######################
-                                # UPDATE GATE STATUS #
-                                ######################
+                                - script.execute: notify_gate_opening
 
                                 - text_sensor.template.publish:
                                     id: gate_status
@@ -210,31 +183,7 @@ script:
                                             id: gate
                                             state: ON
 
-                                        #######################
-                                        # NOTIFY GATE OPENING #
-                                        #######################
-
-                                        - homeassistant.service:
-                                            service: notify.all_devices
-                                            data:
-                                                message: !secret opening_tts_message
-                                                title: !secret opening_tts_title
-                                            data_template:
-                                                data: |
-                                                    {{ '{"tag": "gate-movement", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Gate alerts", "importance": "high"}' | from_json }}
-                                        - homeassistant.service:
-                                            service: tts.speak
-                                            data:
-                                                cache: "true"
-                                                media_player_entity_id: !secret player_entity
-                                                message: !secret opening_tts_message
-                                            data_template:
-                                                target: |
-                                                    {{ '{"entity_id": "tts.piper"}' | from_json }}
-
-                                        ######################
-                                        # UPDATE GATE STATUS #
-                                        ######################
+                                        - script.execute: notify_gate_opening
 
                                         - text_sensor.template.publish:
                                             id: gate_status
@@ -259,6 +208,30 @@ script:
                 - script.execute:
                     id: set_error
                     message: "not-ready"
+
+  - id: notify_gate_opening
+    mode: restart
+    then:
+        - homeassistant.service:
+            service: notify.all_devices
+            data:
+                message: !secret opening_tts_message
+                title: !secret opening_tts_title
+            data_template:
+                data: |
+                    {{ '{"tag": "gate-movement", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Gate alerts", "importance": "high"}' | from_json }}
+        - homeassistant.service:
+            service: tts.speak
+            data:
+                cache: "true"
+                media_player_entity_id: !secret player_entity
+                message: !secret opening_tts_message
+            data_template:
+                target: |
+                    {{ '{"entity_id": "tts.piper"}' | from_json }}
+        # Optional, starts a HA script when your gate opens
+        # - homeassistant.service:
+        #     service: !secret opening_script_name
 
   - id: close_gate
     mode: parallel
@@ -313,7 +286,6 @@ script:
                     id: set_error
                     message: "not-ready"
 
-
   - id: set_timer
     mode: restart
     then:
@@ -363,6 +335,7 @@ script:
                     - script.execute:
                         id: set_error
                         message: "bad-moving-state"
+
   - id: set_error
     mode: restart
     parameters:
