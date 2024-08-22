@@ -6,6 +6,7 @@ esphome:
   on_boot:
     priority: 0
     then:
+        # Initialise sensors
         - text_sensor.template.publish:
             id: gate_status
             state: "closed"
@@ -25,10 +26,12 @@ api:
   encryption:
     key: !secret api_key
 
+# Enable OTA updates
 ota:
   - platform: esphome
     password: !secret ota_password
 
+# Enable wifi
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
@@ -37,6 +40,7 @@ wifi:
     gateway: 192.168.0.254
     subnet: 255.255.255.0
 
+# Enable iBeacon scanner
 esp32_ble_tracker:
   scan_parameters:
     continuous: false
@@ -66,6 +70,7 @@ sensor:
       - timeout: 25s
 
 text_sensor:
+  # Declare text sensors
   - platform: template
     id: gate_status
     name: "Gate status"
@@ -84,6 +89,7 @@ text_sensor:
   #   entity_id: !secret device_tracker_2_id
 
 binary_sensor:
+  # Declare binary sensors
   - platform: template
     id: error
     name: "Error"
@@ -95,6 +101,7 @@ binary_sensor:
     disabled_by_default: true
 
 globals:
+  # Initialise a global variable tracking gate moving time
   - id: sleep_time
     type: float
     restore_value: no
@@ -102,7 +109,7 @@ globals:
 
 
 switch:
-    # Real relay connected to my gate
+  # Hidden switch to activate the real relay connected to your gate
   - platform: gpio
     pin: 16
     id: gate_pulse
@@ -111,7 +118,7 @@ switch:
     - delay: 1s
     - switch.turn_off: gate_pulse
 
-    # Virtual switch monitoring the state of my gate
+  # Virtual switch which guesses the state of your gate
   - platform: template
     id: gate
     name: "Gate"
@@ -140,6 +147,7 @@ script:
     mode: parallel
     then:
         - if:
+            # Check that the gate is ready to take new inputs (in case of a multiple opening requests received at the same time when lagging)
             condition:
                 - binary_sensor.is_off: standby
             then:
@@ -162,6 +170,7 @@ script:
                                     id: gate_status
                                     state: "closed"
                             then:
+                                # Accept the opening request and change the switch state
                                 - switch.template.publish:
                                     id: gate
                                     state: ON
@@ -171,20 +180,24 @@ script:
                                 - text_sensor.template.publish:
                                     id: gate_status
                                     state: "opening"
+                                # Start a timer for the time it will take to fully close the gate
                                 - script.execute: set_timer
                             else:
                                 - if:
+                                    # If the gate is currently closing but is still in movement
                                     condition:
                                         - text_sensor.state:
                                             id: gate_status
                                             state: "closing"
                                     then:
+                                        # Accept the opening request and change the switch state
                                         - switch.template.publish:
                                             id: gate
                                             state: ON
 
                                         - script.execute: notify_gate_opening
 
+                                        # Send two delayed pulses to the gate to make it stop then open
                                         - text_sensor.template.publish:
                                             id: gate_status
                                             state: "paused"
@@ -195,6 +208,7 @@ script:
                                         - text_sensor.template.publish:
                                             id: gate_status
                                             state: "opening"
+                                        # Start a timer for the time it will take to fully close the gate
                                         - script.execute: set_timer
                                     else:
                                         - script.execute:
@@ -212,6 +226,7 @@ script:
   - id: notify_gate_opening
     mode: restart
     then:
+        # Notify mobile devices that the gate is opening
         - homeassistant.service:
             service: notify.all_devices
             data:
@@ -220,6 +235,7 @@ script:
             data_template:
                 data: |
                     {{ '{"tag": "gate-movement", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Gate alerts", "importance": "high"}' | from_json }}
+        # Play a TTS on a speaker to notify that the gate is opening
         - homeassistant.service:
             service: tts.speak
             data:
@@ -237,6 +253,7 @@ script:
     mode: parallel
     then:
         - if:
+            # Check that the gate is ready to take new inputs (in case of a multiple closing requests received at the same time when lagging)
             condition:
                 - binary_sensor.is_off: standby
             then:
@@ -249,23 +266,29 @@ script:
                             id: gate_status
                             state: "open"
                     then:
+                        # Accept the closing request and change the switch state
                         - switch.template.publish:
                             id: gate
                             state: OFF
                         - text_sensor.template.publish:
                             id: gate_status
                             state: "closing"
+                        # Start a timer for the time it will take to fully close the gate
                         - script.execute: set_timer
                     else:
                         - if:
+                            # If the gate is currently opening but is still in movement
                             condition:
                                 text_sensor.state:
                                     id: gate_status
                                     state: "opening"
                             then:
+                                # Accept the closing request and change the switch state
                                 - switch.template.publish:
                                     id: gate
                                     state: OFF
+
+                                # Send two delayed pulses to the gate to make it stop then close
                                 - text_sensor.template.publish:
                                     id: gate_status
                                     state: "paused"
@@ -276,6 +299,7 @@ script:
                                 - text_sensor.template.publish:
                                     id: gate_status
                                     state: "closing"
+                                # Start a timer for the time it will take to fully close the gate
                                 - script.execute: set_timer
                             else:
                                 - script.execute:
@@ -289,22 +313,28 @@ script:
   - id: set_timer
     mode: restart
     then:
+      # Get the time remaining of the latest timer
       - component.update: elapsed_time
+      # Reset the timer if it has hit 0 or keep its current value
       - lambda: |-
           if (id(elapsed_time).state == 0) {
             id(sleep_time) = 42;
           } else {
             id(sleep_time) = id(elapsed_time).state;
           }
+      # Send a pulse to the gate
       - switch.turn_on: gate_pulse
       - sensor.duty_time.start: elapsed_time
       - delay: 1s
       - binary_sensor.template.publish:
           id: standby
           state: OFF
+      # Wait for the gate to finish moving
       - delay: !lambda "return (id(sleep_time)-1)*1000;"
+      # Reset the timer
       - sensor.duty_time.stop: elapsed_time
       - sensor.duty_time.reset: elapsed_time
+      # Update the gate state
       - if:
           condition:
               - text_sensor.state:
@@ -350,6 +380,7 @@ script:
         - text_sensor.template.publish:
             id: error_message
             state: !lambda return message;
+        # Notify mobile devices that the gate couldn't move because of an error
         - homeassistant.service:
             service: notify.all_devices
             data:
@@ -365,6 +396,7 @@ script:
         - text_sensor.template.publish:
             id: error_message
             state: ""
+        # Clear the notification
         - homeassistant.service:
             service: notify.all_devices
             data:
