@@ -75,6 +75,14 @@ text_sensor:
     name: "Error message"
     icon: "mdi:chat-alert"
 
+  # Optional device trackers to let devices open the gate if they're connected to home wifi but aren't reporting their position
+  # - platform: homeassistant
+  #   id: device_tracker_1
+  #   entity_id: !secret device_tracker_1_id
+  # - platform: homeassistant
+  #   id: device_tracker_2
+  #   entity_id: !secret device_tracker_2_id
+
 binary_sensor:
   - platform: template
     id: error
@@ -139,8 +147,14 @@ script:
                     id: standby
                     state: ON
                 - if:
+                    # Check if a GPS device tracker is near home
                     condition:
                         - lambda: 'return id(nearest_distance).state < 1000;'
+                        # Optional, only if you have set wifi device trackers (l.79)
+                        # - lambda: |-
+                        #     return id(nearest_distance).state < 1000
+                        #         or id(device_tracker_1).state == "home"
+                        #         or id(device_tracker_2).state == "home";
                     then:
                         - if:
                             condition:
@@ -173,9 +187,9 @@ script:
                                     data_template:
                                         target: |
                                             {{ '{"entity_id": "tts.piper"}' | from_json }}
-                                # optional
-                                - homeassistant.service:
-                                    service: script.flash_lamp
+                                # Optional, starts a HA script when your gate opens
+                                # - homeassistant.service:
+                                #     service: !secret opening_script_name
 
                                 ######################
                                 # UPDATE GATE STATUS #
