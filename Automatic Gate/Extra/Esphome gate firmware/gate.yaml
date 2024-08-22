@@ -45,7 +45,7 @@ sensor:
   # Sensors for android auto, nearest distance of any device from home, state of the gate, and variables
   - platform: homeassistant
     id: nearest_distance
-    entity_id: !secret nearest_device_sensor
+    entity_id: !secret nearest_distance_sensor
   - platform: duty_time
     id: elapsed_time
     disabled_by_default: true
