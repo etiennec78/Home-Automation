@@ -1,5 +1,5 @@
 esphome:
-  name: portail
+  name: gate
   platform: esp32
   board: esp32dev #ESP32-WROOM-32E (version printed on the chip)
 
