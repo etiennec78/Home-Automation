@@ -215,8 +215,8 @@ script:
         - homeassistant.service:
             service: notify.all_devices
             data:
-                message: !secret opening_tts_message
-                title: !secret opening_tts_title
+                message: !secret opening_notification_message
+                title: !secret opening_notification_title
             data_template:
                 data: |
                     {{ '{"tag": "gate-movement", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Gate alerts", "importance": "high"}' | from_json }}
@@ -225,7 +225,7 @@ script:
             data:
                 cache: "true"
                 media_player_entity_id: !secret player_entity
-                message: !secret opening_tts_message
+                message: !secret opening_notification_message
             data_template:
                 target: |
                     {{ '{"entity_id": "tts.piper"}' | from_json }}
