@@ -242,9 +242,7 @@ script:
                 cache: "true"
                 media_player_entity_id: !secret player_entity
                 message: !secret opening_notification_message
-            data_template:
-                target: |
-                    {{ '{"entity_id": "tts.piper"}' | from_json }}
+                entity_id: tts.piper
         # Optional, starts a HA script when your gate opens
         # - homeassistant.service:
         #     service: !secret opening_script_name
