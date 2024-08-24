@@ -107,6 +107,10 @@ globals:
     restore_value: no
     initial_value: "0"
 
+button:
+  # A button to reset the gate in case the virtual state doesn't match the real state
+  - platform: restart
+    name: "Restart gate firmware"
 
 switch:
   # Hidden switch to activate the real relay connected to your gate
