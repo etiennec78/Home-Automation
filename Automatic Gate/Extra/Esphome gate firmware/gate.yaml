@@ -238,7 +238,7 @@ script:
                 title: !secret opening_notification_title
             data_template:
                 data: |
-                    {{ '{"tag": "gate-movement", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Gate alerts", "importance": "high"}' | from_json }}
+                    {{ '{"tag": "gate-movement", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Gate alerts", "importance": "high", "push": {"sound": {"name": "default", "critical": 1}}}' | from_json }}
         # Play a TTS on a speaker to notify that the gate is opening
         - homeassistant.service:
             service: tts.speak
@@ -390,7 +390,7 @@ script:
                 message: !lambda return message;
             data_template:
                 data: |
-                    {{ '{"tag": "gate-error", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Gate alerts", "importance": "high"}' | from_json }}
+                    {{ '{"tag": "gate-error", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Gate alerts", "importance": "high", "push": {"sound": {"name": "default", "critical": 1}}}' | from_json }}
         - delay: 5s
         - binary_sensor.template.publish:
             id: error
