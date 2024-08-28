@@ -528,6 +528,10 @@ action:
                       notification_icon: mdi:gate-open
                       channel: Gate alerts
                       importance: high
+                      push:
+                        sound:
+                          name: "default"
+                          critical: 1
                       tag: gate-movement
                       timeout: 300
       # If automatic closing is enabled
@@ -621,6 +625,10 @@ action:
                                 notification_icon: mdi:alert-circle
                                 channel: Gate alerts
                                 importance: high
+                                push:
+                                  sound:
+                                    name: "default"
+                                    critical: 1
                                 tag: gate-movement
                                 timeout: 300
                         else:
@@ -633,6 +641,10 @@ action:
                                 notification_icon: mdi:gate
                                 channel: Gate alerts
                                 importance: high
+                                push:
+                                  sound:
+                                    name: "default"
+                                    critical: 1
                                 tag: gate-movement
                                 timeout: 300
                       # Close the gate
@@ -672,6 +684,10 @@ action:
                     notification_icon: mdi:sleep
                     channel: Gate alerts
                     importance: high
+                    push:
+                      sound:
+                        name: "default"
+                        critical: 1
                     tag: itinerary-status
               # Wait for the gate to be closed
               - wait_for_trigger:
@@ -729,6 +745,10 @@ action:
             notification_icon: mdi:map-check
             channel: Itinerary status
             importance: high
+            push:
+              sound:
+                name: "default"
+                critical: 1
             tag: itinerary-status
       # If the travel time refresh rate is set to "Continuously"
       - if:
@@ -840,6 +860,10 @@ action:
                                     notification_icon: mdi:alert-circle
                                     channel: Itinerary status
                                     importance: high
+                                    push:
+                                      sound:
+                                        name: "default"
+                                        critical: 1
                                     tag: itinerary-status
                                     timeout: 300
                               - stop: Timed out
@@ -870,6 +894,10 @@ action:
                             notification_icon: mdi:alert-circle
                             channel: Itinerary status
                             importance: high
+                            push:
+                              sound:
+                                name: "default"
+                                critical: 1
                             tag: itinerary-status
                             timeout: 300
                       - stop: Not in activation zone
@@ -915,6 +943,10 @@ action:
                                   notification_icon: mdi:gate-open
                                   channel: Gate alerts
                                   importance: high
+                                  push:
+                                    sound:
+                                      name: "default"
+                                      critical: 1
                                   tag: gate-movement
                                   timeout: 300
                   # If automatic closing is not fully disabled
@@ -982,6 +1014,10 @@ action:
                                     notification_icon: mdi:sleep
                                     channel: Itinerary status
                                     importance: high
+                                    push:
+                                      sound:
+                                        name: "default"
+                                        critical: 1
                                     tag: itinerary-status
                               # Wait for the gate to be closed
                               - wait_for_trigger:
@@ -1005,6 +1041,10 @@ action:
                                             notification_icon: mdi:alert-circle
                                             channel: Gate alerts
                                             importance: high
+                                            push:
+                                              sound:
+                                                name: "default"
+                                                critical: 1
                                             tag: gate-movement
                                             timeout: 300
                                   # If the user has exited the gate activation zone
@@ -1022,6 +1062,10 @@ action:
                                             notification_icon: mdi:alert-circle
                                             channel: Gate alerts
                                             importance: high
+                                            push:
+                                              sound:
+                                                name: "default"
+                                                critical: 1
                                             tag: gate-movement
                                             timeout: 300
                                   # If the user has stopped his car, arrived, and auto-closing is enabled
@@ -1041,6 +1085,10 @@ action:
                                             notification_icon: mdi:flag-checkered
                                             channel: Gate alerts
                                             importance: high
+                                            push:
+                                              sound:
+                                                name: "default"
+                                                critical: 1
                                             tag: gate-movement
                                             timeout: 300
                                       - delay:
@@ -1060,6 +1108,10 @@ action:
                                             notification_icon: mdi:alert-circle
                                             channel: Gate alerts
                                             importance: high
+                                            push:
+                                              sound:
+                                                name: "default"
+                                                critical: 1
                                             tag: gate-movement
                                             timeout: 300
                                 # If the user has arrived but don't have automatic gate enabled
@@ -1149,6 +1201,10 @@ action:
                 notification_icon: mdi:alert-circle
                 channel: Itinerary status
                 importance: high
+                push:
+                  sound:
+                    name: "default"
+                    critical: 1
                 tag: itinerary-status
                 timeout: 300
         else:
@@ -1162,6 +1218,10 @@ action:
                 notification_icon: mdi:alert-circle
                 channel: Itinerary status
                 importance: high
+                push:
+                  sound:
+                    name: "default"
+                    critical: 1
                 tag: itinerary-status
                 timeout: 300
 # Run in parralel to let the automation start with multiple users driving simultaneously

@@ -130,6 +130,10 @@ action:
               notification_icon: mdi:gate-alert
               channel: Gate alerts
               importance: high
+              push:
+                sound:
+                  name: "default"
+                  critical: 1
               tag: gate-left-open
               timeout: 3600
         # Play a TTS on each phone, only if this has been enabled
