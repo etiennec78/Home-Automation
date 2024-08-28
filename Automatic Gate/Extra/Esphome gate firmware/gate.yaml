@@ -390,7 +390,7 @@ script:
                 message: !lambda return message;
             data_template:
                 data: |
-                    {{ '{"tag": "gate-error", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Gate alerts", "importance": "high", "push": {"sound": {"name": "default", "critical": 1}}}' | from_json }}
+                    {{ '{"tag": "gate-error", "car_ui": true, "notification_icon": "mdi:gate-alert", "channel": "Gate alerts", "importance": "high", "push": {"sound": {"name": "default", "critical": 1}}}' | from_json }}
         - delay: 5s
         - binary_sensor.template.publish:
             id: error
