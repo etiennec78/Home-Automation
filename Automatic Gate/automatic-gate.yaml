@@ -99,7 +99,9 @@ blueprint:
             entity:
               multiple: true
               filter:
-                domain: person
+                domain:
+                  - device_tracker
+                  - person
         driving_sensors:
           name: 🚗 Driving sensors
           description: Each **[driving sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#driving-sensors-)** which should trigger the automation
