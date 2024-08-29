@@ -373,6 +373,10 @@ blueprint:
           name: 💬⚠️ Travel time integration did not respond
           description: The **content** of the notification you will receive if your **travel time integraton did not respond** during the itinerary
           default: "Your travel time integration did not respond during your itinerary"
+        not_home_message:
+          name: 💬⚠️ Not home notification
+          description: The **content** of the notification you will receive if your **iBeacon or WiFi tracker** did not report you at home
+          default: "You were not detected at home"
 
     optional_sensors:
       name: Optional sensors
@@ -411,6 +415,27 @@ blueprint:
           default: true
           selector:
             boolean:
+        only_open_near_iBeacon:
+          name: Only open while near iBeacon 🏠
+          description: |-
+            Should your gate only open if you are reachable from your iBeacon ?
+            *Note : Useful to prevent your gate from opening if you are parked outside in front of your house*
+          default: false
+          selector:
+            boolean:
+        wifi_devices:
+          name: WiFi devices 🏠
+          description: |-
+            WiFi entities to make your gate only open if you are connected to your WiFi network
+            *Notes :*
+            *Useful to prevent your gate from opening if you are parked outside in front of your house*
+            *WiFi can be slow to report new states*
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain: device_tracker
 
 variables:
   gate: !input gate
@@ -434,6 +459,8 @@ variables:
   ble_scanner_switch: !input ble_scanner_switch
   ble_transmitter_phone_control: !input ble_transmitter_phone_control
   automatic_closing: !input automatic_closing
+  only_open_near_iBeacon: !input only_open_near_iBeacon
+  wifi_devices: !input wifi_devices
 
 trigger:
   # Triggers when one of the users connect to a vehicle (if you have more than one, make a custom vehcle sensor : example in sensors.md)
@@ -463,12 +490,6 @@ action:
       # OPEN GATE ON EXIT #
       #####################
 
-      # Set the user itinerary text variable to "leaving"
-      - service: input_text.set_value
-        target:
-          entity_id: "{{ itinerary_sensor }}"
-        data:
-          value: leaving
       # If iBeacon automatic closing is enabled
       - if:
         - condition: template
@@ -492,6 +513,43 @@ action:
               - service: switch.turn_on
                 target:
                   entity_id: "{{ ble_scanner_switch }}"
+      # If the user chose to wait for iBeacon or WiFi before opening to ensure his vehicle was not parked outside
+      - if:
+        - condition: template
+          value_template: "{{ only_open_near_iBeacon and ble_entities != [] or wifi_devices != [] }}"
+        # Then wait for iBeacon or WiFi
+        then:
+          - wait_template: "{{ not is_state(ble_entities[idx], 'unknown') or is_state(wifi_devices[idx], 'home') }}"
+            continue_on_timeout: true
+            timeout: 10
+          # If the timeout wasn't reached
+          - if:
+            - condition: template
+              value_template: "{{ not wait.completed }}"
+            then:
+              # Notify the user that his itinerary has been canceled because he was not home
+              - service: "{{ notify_device }}"
+                data:
+                  title: !input itinerary_canceled_title
+                  message: !input not_home_message
+                  data:
+                    car_ui: true
+                    notification_icon: mdi:alert-circle
+                    channel: Itinerary status
+                    importance: high
+                    push:
+                      sound:
+                        name: "default"
+                        critical: 1
+                    tag: itinerary-status
+                    timeout: 300
+              - stop: Not home
+      # Set the user itinerary text variable to "leaving"
+      - service: input_text.set_value
+        target:
+          entity_id: "{{ itinerary_sensor }}"
+        data:
+          value: leaving
       # If the gate is closing/closed
       - if:
           - condition: template
