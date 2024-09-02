@@ -527,7 +527,7 @@ action:
           # If the timeout wasn't reached
           - if:
             - condition: template
-              value_template: "{{ not wait.completed }}"
+              value_template: "{{ wait.remaining != 0 }}"
             then:
               # Notify the user that his itinerary has been canceled because he was not home
               - service: "{{ notify_device }}"
@@ -673,7 +673,7 @@ action:
                       # If the timeout was reached
                       - if:
                           - condition: template
-                            value_template: "{{ wait.completed }}"
+                            value_template: "{{ wait.remaining == 0 }}"
                         then:
                           # Notify the user that the gate will close automatically since he didn't leave in time
                           - service: "{{ notify_device }}"
@@ -902,7 +902,7 @@ action:
                           # If the timeout ran out of time
                           - if:
                               - condition: template
-                                value_template: "{{ wait.completed }}"
+                                value_template: "{{ wait.remaining == 0 }}"
                             then:
                               # Remove the current itinerary since the user has timed out
                               - service: input_text.set_value
@@ -1089,7 +1089,7 @@ action:
                                   # If the timeout was reached
                                   - conditions:
                                       - condition: template
-                                        value_template: "{{ wait.completed }}"
+                                        value_template: "{{ wait.remaining == 0 }}"
                                     sequence:
                                       # Notify the user that the gate will close automatically since he took too long
                                       - service: "{{ notify_device }}"
