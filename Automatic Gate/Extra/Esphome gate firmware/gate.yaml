@@ -101,6 +101,13 @@ binary_sensor:
     disabled_by_default: true
 
 globals:
+  # Constants
+  # Please set the time it takes for your blind to fully move (in QUOTES, in seconds)
+  - id: MOVEMENT_DURATION
+    type: int
+    initial_value: !secret movement_duration
+
+  # Internal variables
   # Initialise a global variable tracking gate moving time
   - id: sleep_time
     type: float
@@ -320,7 +327,7 @@ script:
       # Reset the timer if it has hit 0 or keep its current value
       - lambda: |-
           if (id(elapsed_time).state == 0) {
-            id(sleep_time) = 42;
+            id(sleep_time) = id(MOVEMENT_DURATION);
           } else {
             id(sleep_time) = id(elapsed_time).state;
           }
