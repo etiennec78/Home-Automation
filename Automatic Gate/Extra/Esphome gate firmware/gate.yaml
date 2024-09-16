@@ -114,21 +114,28 @@ globals:
     restore_value: no
     initial_value: "0"
 
+output:
+  # Output for the real relay connected to your gate
+  - id: open_cover_pin
+    platform: gpio
+    pin:
+      number: !secret open_gate_pin
+      mode:
+        output: true
+
 button:
+  # Hidden button to activate the real relay connected to your gate
+  - platform: output
+    id: gate_relay
+    output: open_cover_pin
+    duration: 500ms
+    internal: true
+
   # A button to reset the gate in case the virtual state doesn't match the real state
   - platform: restart
     name: "Restart gate firmware"
 
 switch:
-  # Hidden switch to activate the real relay connected to your gate
-  - platform: gpio
-    pin: !secret open_gate_pin
-    id: gate_pulse
-    restore_mode: ALWAYS_OFF
-    on_turn_on:
-    - delay: 1s
-    - switch.turn_off: gate_pulse
-
   # Virtual switch which guesses the state of your gate
   - platform: template
     id: gate
@@ -212,7 +219,7 @@ script:
                                         - text_sensor.template.publish:
                                             id: gate_status
                                             state: "paused"
-                                        - switch.turn_on: gate_pulse
+                                        - button.press: gate_relay
 
                                         - delay: 2s
 
@@ -302,7 +309,7 @@ script:
                                 - text_sensor.template.publish:
                                     id: gate_status
                                     state: "paused"
-                                - switch.turn_on: gate_pulse
+                                - button.press: gate_relay
 
                                 - delay: 2s
 
@@ -333,7 +340,7 @@ script:
             id(sleep_time) = id(elapsed_time).state;
           }
       # Send a pulse to the gate
-      - switch.turn_on: gate_pulse
+      - button.press: gate_relay
       - sensor.duty_time.start: elapsed_time
       - delay: 1s
       - binary_sensor.template.publish:
