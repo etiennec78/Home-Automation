@@ -37,12 +37,12 @@ wled:
 output:
   - platform: ledc
     id: led_R
-    pin: GPIO15
+    pin: !secret red_led_gpio
   - platform: ledc
     id: led_G
-    pin: GPIO21
+    pin: !secret green_led_gpio
   - platform: ledc
-    pin: GPIO17
+    pin: !secret blue_led_gpio
     id: led_B
 
 light:
