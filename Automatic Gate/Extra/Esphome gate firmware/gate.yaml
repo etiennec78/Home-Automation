@@ -246,14 +246,15 @@ script:
             data_template:
                 data: |
                     {{ '{"tag": "gate-movement", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Gate alerts", "importance": "high", "push": {"sound": {"name": "default", "critical": 1}}}' | from_json }}
-        # Play a TTS on a speaker to notify that the gate is opening
-        - homeassistant.service:
-            service: tts.speak
-            data:
-                cache: "true"
-                media_player_entity_id: !secret player_entity
-                message: !secret opening_notification_message
-                entity_id: tts.piper
+        # Optional, play a TTS on a speaker to notify that the gate is opening
+        # - homeassistant.service:
+        #     service: tts.speak
+        #     data:
+        #         cache: "true"
+        #         media_player_entity_id: !secret player_entity
+        #         message: !secret opening_notification_message
+        #         entity_id: tts.piper
+
         # Optional, starts a HA script when your gate opens
         # - homeassistant.service:
         #     service: !secret opening_script_name
