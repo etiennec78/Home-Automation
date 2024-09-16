@@ -239,7 +239,7 @@ script:
     then:
         # Notify mobile devices that the gate is opening
         - homeassistant.service:
-            service: notify.all_devices
+            service: !secret notification_group
             data:
                 message: !secret opening_notification_message
                 title: !secret opening_notification_title
@@ -354,7 +354,7 @@ script:
                   id: gate_status
                   state: "closed"
               - homeassistant.service:
-                  service: notify.all_devices
+                  service: !secret notification_group
                   data:
                       message: clear_notification
                   data_template:
@@ -391,7 +391,7 @@ script:
             state: !lambda return message;
         # Notify mobile devices that the gate couldn't move because of an error
         - homeassistant.service:
-            service: notify.all_devices
+            service: !secret notification_group
             data:
                 title: !secret error_title
                 message: !lambda return message;
@@ -407,7 +407,7 @@ script:
             state: ""
         # Clear the notification
         - homeassistant.service:
-            service: notify.all_devices
+            service: !secret notification_group
             data:
                 message: clear_notification
             data_template:
