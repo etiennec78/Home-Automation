@@ -492,10 +492,10 @@ action:
       # OPEN GATE ON EXIT #
       #####################
 
-      # If iBeacon automatic closing is enabled
+      # If iBeacon automatic closing is enabled for this user
       - if:
         - condition: template
-          value_template: "{{ ble_entities != [] }}"
+          value_template: "{{ (ble_entities | length) - 1 >= idx }}"
         then:
           # Activate the BLE transmitter on the user's phone to close the gate when he has left, only if ble_transmitter_phone_control is turned on
           - if:
@@ -518,7 +518,7 @@ action:
       # If the user chose to wait for iBeacon or WiFi before opening to ensure his vehicle was not parked outside
       - if:
         - condition: template
-          value_template: "{{ only_open_near_iBeacon and ble_entities != [] or wifi_devices != [] }}"
+          value_template: "{{ only_open_near_iBeacon and (ble_entities | length) - 1 >= idx or (wifi_devices | length) - 1 >= idx }}"
         # Then wait for iBeacon or WiFi
         then:
           - wait_template: "{{ not is_state(ble_entities[idx], 'unknown') or is_state(wifi_devices[idx], 'home') }}"
@@ -606,7 +606,7 @@ action:
                 value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
               - platform: template
                 id: ble
-                value_template: "{{ ble_entities != [] and is_state(ble_entities[idx], 'unknown') }}"
+                value_template: "{{ (ble_entities | length) - 1 >= idx and is_state(ble_entities[idx], 'unknown') }}"
               - platform: template
                 id: vehicle_left
                 value_template: "{{ is_state(driving_sensor, 'off') }}"
@@ -621,10 +621,10 @@ action:
               entity_id: "{{ itinerary_sensor }}"
             data:
               value: none
-          # If iBeacon automatic closing is enabled and ble_transmitter_phone_control is turned on
+          # If iBeacon automatic closing is enabled for this user and ble_transmitter_phone_control is turned on
           - if:
               - condition: template
-                value_template: "{{ ble_entities != [] and ble_transmitter_phone_control }}"
+                value_template: "{{ (ble_entities | length) - 1 >= idx and ble_transmitter_phone_control }}"
             then:
               # Deactivate the BLE transmitter on user's phone
               - service: "{{ notify_device }}"
