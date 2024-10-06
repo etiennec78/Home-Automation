@@ -408,15 +408,22 @@ blueprint:
             entity:
               filter:
                 domain: switch
-        ble_transmitter_phone_control:
-          name: 📵 Phone iBeacon control
+        ble_transmitter_entities:
+          name: 📡 iBeacon transmitter entities
           description: |-
-            Should your **phone iBeacon transmitter** automatically be turned **off** while not being used by the gate ?
-            *Note : Only necessary if ble tracker entities are set*
-            *Please manually set your [iBeacon transmitter](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-transmitter-) to on in companion settings if disabled*
-          default: true
+            Each **[BLE transmitter entity]()** to restore previous iBeacon transmitter power settings after having closed the gate
+            Needs [bluetooth transmitters](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-transmitter-) set on companion apps
+            *Notes :*
+            *Let empty if you use iOS, don't want iBeacon, or only use iBeacon for this automation*
+            *If let empty, the iBeacon transmitter will be disabled on Android after having closed the gate*
+          default: []
           selector:
-            boolean:
+            entity:
+              multiple: true
+              filter:
+                integration: mobile_app
+                domain: sensor
+                device_class: enum
         only_open_near_iBeacon:
           name: Only open while near iBeacon 🏠
           description: |-
@@ -459,7 +466,7 @@ variables:
   activation_zone: !input activation_zone
   ble_entities: !input ble_entities
   ble_scanner_switch: !input ble_scanner_switch
-  ble_transmitter_phone_control: !input ble_transmitter_phone_control
+  ble_transmitter_entities: !input ble_transmitter_entities
   automatic_closing: !input automatic_closing
   only_open_near_iBeacon: !input only_open_near_iBeacon
   wifi_devices: !input wifi_devices
@@ -482,6 +489,19 @@ action:
       travel_time_sensor: "{{ travel_time_sensors[idx] }}"
       notify_device: "{{ 'notify.mobile_app_'+notify_devices[idx] }}"
       itinerary_sensor: "{{ itinerary_sensors[idx] }}"
+      old_ibeacon_transmitter_states: |-
+        {% if (ble_transmitter_entities | length) - 1 >= idx %}
+          {{ {
+            'state': states(ble_transmitter_entities[idx])
+              if states(ble_transmitter_entities[idx]) == 'Stopped' else none,
+            'transmit_power': (state_attr(ble_transmitter_entities[idx], 'Transmitting power') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
+              if state_attr(ble_transmitter_entities[idx], 'Transmitting power') != 'high' else none,
+            'advertise_mode': (state_attr(ble_transmitter_entities[idx], 'Advertise mode') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
+              if state_attr(ble_transmitter_entities[idx], 'Advertise mode') != 'lowLatency' else none
+          } }}
+        {% else %}
+          {{ none }}
+        {% endif %}
 
   # If the user is currently at the gate location
   - if:
@@ -492,16 +512,50 @@ action:
       # OPEN GATE ON EXIT #
       #####################
 
-      # If iBeacon automatic closing is enabled for this user
+      # If this user has an iBeacon entity set for automatic gate closing
       - if:
         - condition: template
           value_template: "{{ (ble_entities | length) - 1 >= idx }}"
         then:
-          # Activate the BLE transmitter on the user's phone to close the gate when he has left, only if ble_transmitter_phone_control is turned on
+          # If this user has a saved iBeacon transmitter state
           - if:
               - condition: template
-                value_template: !input ble_transmitter_phone_control
+                value_template: "{{ old_ibeacon_transmitter_states != none }}"
             then:
+              # Change iBeacon state if needed
+              - if:
+                  - condition: template
+                    value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
+                then:
+                  - service: "{{ notify_device }}"
+                    data:
+                      message: command_ble_transmitter
+                      data:
+                        command: turn_on
+              # Change iBeacon transmitting power if needed
+              - if:
+                  - condition: template
+                    value_template: "{{ old_ibeacon_transmitter_states['transmit_power'] != none }}"
+                then:
+                  - service: "{{ notify_device }}"
+                    data:
+                      message: command_ble_transmitter
+                      data:
+                        command: ble_set_transmit_power
+                        ble_transmit: ble_transmit_high
+              # Change iBeacon advertise mode if needed
+              - if:
+                  - condition: template
+                    value_template: "{{ old_ibeacon_transmitter_states['advertise_mode'] != none }}"
+                then:
+                  - service: "{{ notify_device }}"
+                    data:
+                      message: command_ble_transmitter
+                      data:
+                        command: ble_set_advertise_mode
+                        ble_advertise: ble_advertise_low_latency
+            # In case the user forgot to set an iBeacon transmitter sensor but has a scanner, then enable the iBeacon transmitter
+            else:
               - service: "{{ notify_device }}"
                 data:
                   message: command_ble_transmitter
@@ -510,7 +564,7 @@ action:
           # Activate the BLE scanner from the ESP32 connected to the gate, only if a switch has been set
           - if:
             - condition: template
-              value_template: "{{ ble_scanner_switch != '' }}"
+              value_template: "{{ ble_scanner_switch != '' and is_state(ble_scanner_switch, 'off') }}"
             then:
               - service: switch.turn_on
                 target:
@@ -621,12 +675,50 @@ action:
               entity_id: "{{ itinerary_sensor }}"
             data:
               value: none
-          # If iBeacon automatic closing is enabled for this user and ble_transmitter_phone_control is turned on
+          # If this user has an iBeacon entity set for automatic gate closing
           - if:
               - condition: template
-                value_template: "{{ (ble_entities | length) - 1 >= idx and ble_transmitter_phone_control }}"
+                value_template: "{{ (ble_entities | length) - 1 >= idx }}"
             then:
-              # Deactivate the BLE transmitter on user's phone
+              # If this user has a saved iBeacon transmitter state
+              - if:
+                  - condition: template
+                    value_template: "{{ old_ibeacon_transmitter_states != none }}"
+                then:
+                  # If the iBeacon transmitter was stopped, then stop it
+                  - if:
+                      - condition: template
+                        value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
+                    then:
+                      - service: "{{ notify_device }}"
+                        data:
+                          message: command_ble_transmitter
+                          data:
+                            command: turn_off
+                  # If the iBeacon transmitting power was not set to high, then restore it
+                  - if:
+                      - condition: template
+                        value_template: "{{ old_ibeacon_transmitter_states['transmit_power'] != none }}"
+                    then:
+                      - service: "{{ notify_device }}"
+                        data:
+                          message: command_ble_transmitter
+                          data:
+                            command: ble_set_transmit_power
+                            ble_transmit: "ble_transmit_{{ old_ibeacon_transmitter_states['transmit_power'] }}"
+                  # If the iBeacon transmitter advertise power was not set to low latency, then restore it
+                  - if:
+                      - condition: template
+                        value_template: "{{ old_ibeacon_transmitter_states['advertise_mode'] != none }}"
+                    then:
+                      - service: "{{ notify_device }}"
+                        data:
+                          message: command_ble_transmitter
+                          data:
+                            command: ble_set_advertise_mode
+                            ble_advertise: "ble_advertise_{{ old_ibeacon_transmitter_states['advertise_mode'] }}"
+            # In case the user forgot to set an iBeacon transmitter sensor but has a scanner, then disable the iBeacon transmitter
+            else:
               - service: "{{ notify_device }}"
                 data:
                   message: command_ble_transmitter
