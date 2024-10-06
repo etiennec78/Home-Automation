@@ -21,6 +21,8 @@ blueprint:
     * Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Automations)
     * Discord : etiennec78
     [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/etiennec78)
+  homeassistant:
+    min_version: 2024.10.0
   input:
     gate:
       name: ⛩️ Gate
@@ -106,23 +108,23 @@ variables:
   speaker_tts_devices: !input speaker_tts_devices
   speaker_tts_service: !input speaker_tts_service
 
-trigger:
+triggers:
   # Triggers when the gate becomes unavailable for too long
-  - platform: state
+  - trigger: state
     entity_id: !input gate
     to: unavailable
     for:
       minutes: !input offline_delay
 
-condition: []
+conditions: []
   # No condition
 
-action:
+actions:
   # Notify each user that the gate is offline
   - repeat:
       for_each: !input notify_devices
       sequence:
-        - service: "{{ 'notify.mobile_app_'+repeat.item }}"
+        - action: "{{ 'notify.mobile_app_'+repeat.item }}"
           data:
             message: !input offline_message
             title: !input offline_title
@@ -142,7 +144,7 @@ action:
             condition: template
             value_template: !input phone_tts
           then:
-            - service: "{{ 'notify.mobile_app_'+repeat.item }}"
+            - action: "{{ 'notify.mobile_app_'+repeat.item }}"
               data:
                 message: TTS
                 data:
@@ -151,7 +153,7 @@ action:
   - repeat:
       for_each: "{{ speaker_tts_devices }}"
       sequence:
-        - service: tts.speak
+        - action: tts.speak
           data:
             cache: true
             media_player_entity_id: "{{ repeat.item }}"
@@ -162,7 +164,7 @@ action:
       condition: template
       value_template: !input persistent_notification
     then:
-      - service: persistent_notification.create
+      - action: persistent_notification.create
         data:
           message: !input offline_message
           title: !input offline_title
@@ -181,7 +183,7 @@ action:
   - repeat:
       for_each: !input notify_devices
       sequence:
-        - service: "{{ 'notify.mobile_app_'+repeat.item }}"
+        - action: "{{ 'notify.mobile_app_'+repeat.item }}"
           data:
             message: clear_notification
             data:
@@ -191,7 +193,7 @@ action:
       condition: template
       value_template: !input persistent_notification
     then:
-      - service: persistent_notification.dismiss
+      - action: persistent_notification.dismiss
         data:
           notification_id: gate-offline
 mode: single
