@@ -52,6 +52,7 @@ blueprint:
           description: The **switch** or **cover** which controls your **[gate](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gate-%EF%B8%8F)**
           selector:
             entity:
+              multiple: true
               filter:
                 domain:
                   - switch
@@ -606,33 +607,16 @@ actions:
           entity_id: "{{ itinerary_sensor }}"
         data:
           value: leaving
-      # If the gate is closing/closed
+      # If one of the gates is closing/closed
       - if:
           - condition: template
-            value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
-        # Then open it because the user is leaving
+            value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list }}"
         then:
-          # Select the right action for the domain of the gate
-          - choose:
-            - conditions:
-                - condition: template
-                  value_template: "{{ states[gate].domain == 'switch' }}"
-              sequence:
-                - action: switch.turn_on
-                  target:
-                    entity_id: !input gate
-            - conditions:
-                - condition: template
-                  value_template: "{{ states[gate].domain == 'cover' }}"
-              sequence:
-                - action: cover.open_cover
-                  target:
-                    entity_id: !input gate
+          # Notify the user that at least one gate is opening automatically, only if opening notification is enabled
           - if:
               - condition: template
                 value_template: !input opening_notification
             then:
-                # Notify the user that the gate is opening automatically
                 - action: "{{ notify_device }}"
                   data:
                     title: !input gate_opening_title
@@ -648,16 +632,36 @@ actions:
                           critical: 1
                       tag: gate-movement
                       timeout: 300
+          # Then open each gate because the user is leaving
+          - repeat:
+              for_each: !input gate
+              sequence:
+                # Select the right action for the domain of the gate
+                - choose:
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ states[repeat.item].domain == 'switch' }}"
+                    sequence:
+                      - action: switch.turn_on
+                        target:
+                          entity_id: "{{ repeat.item }}"
+                  - conditions:
+                      - condition: template
+                        value_template: "{{ states[repeat.item].domain == 'cover' }}"
+                    sequence:
+                      - action: cover.open_cover
+                        target:
+                          entity_id: "{{ repeat.item }}"
       # If automatic closing is enabled
       - if:
           - condition: template
             value_template: "{{ automatic_closing == 'on' }}"
         then:
-          # Wait for the gate to be closed by the user, or the iBeacon to be out of reach for 20s, or the vehicle to be left, or the user to leave, all while not waiting more than the auto-close delay
+          # Wait for a gate to be closed by the user, or the iBeacon to be out of reach for 20s, or the vehicle to be left, or the user to leave, all while not waiting more than the auto-close delay
           - wait_for_trigger:
               - platform: template
                 id: manual
-                value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
+                value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list }}"
               - platform: template
                 id: ble
                 value_template: "{{ (ble_entities | length) - 1 >= idx and is_state(ble_entities[idx], 'unknown') }}"
@@ -799,22 +803,26 @@ actions:
                                     critical: 1
                                 tag: gate-movement
                                 timeout: 300
-                      # Close the gate
-                      - choose:
-                        - conditions:
-                            - condition: template
-                              value_template: "{{ states[gate].domain == 'switch' }}"
+                      # Close all gates
+                      - repeat:
+                          for_each: !input gate
                           sequence:
-                            - action: switch.turn_off
-                              target:
-                                entity_id: !input gate
-                        - conditions:
-                            - condition: template
-                              value_template: "{{ states[gate].domain == 'cover' }}"
-                          sequence:
-                            - action: cover.close_cover
-                              target:
-                                entity_id: !input gate
+                            # Select the right action for the domain of the gate
+                            - choose:
+                              - conditions:
+                                  - condition: template
+                                    value_template: "{{ states[repeat.item].domain == 'switch' }}"
+                                sequence:
+                                  - action: switch.turn_on
+                                    target:
+                                      entity_id: "{{ repeat.item }}"
+                              - conditions:
+                                  - condition: template
+                                    value_template: "{{ states[repeat.item].domain == 'cover' }}"
+                                sequence:
+                                  - action: cover.open_cover
+                                    target:
+                                      entity_id: "{{ repeat.item }}"
                       - stop: Successful
               # Get the names of the persons being awaited
               - variables:
@@ -1059,33 +1067,16 @@ actions:
                       value: on_approach
                     target:
                       entity_id: "{{ itinerary_sensor }}"
-                  # If the gate is closing/closed
+                  # If one of the gates is closing/closed
                   - if:
                       - condition: template
-                        value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
-                    # Then open it
+                        value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list }}"
                     then:
-                      # Select the right action for the domain of the gate
-                      - choose:
-                        - conditions:
-                            - condition: template
-                              value_template: "{{ states[gate].domain == 'switch' }}"
-                          sequence:
-                            - action: switch.turn_on
-                              target:
-                                entity_id: !input gate
-                        - conditions:
-                            - condition: template
-                              value_template: "{{ states[gate].domain == 'cover' }}"
-                          sequence:
-                            - action: cover.open_cover
-                              target:
-                                entity_id: !input gate
+                      # Notify the user that at least one gate is opening automatically, only if opening notification is enabled
                       - if:
                           - condition: template
                             value_template: !input opening_notification
                         then:
-                            # Notify the user that the gate is opening automatically
                             - action: "{{ notify_device }}"
                               data:
                                 title: !input gate_opening_title
@@ -1101,6 +1092,26 @@ actions:
                                       critical: 1
                                   tag: gate-movement
                                   timeout: 300
+                      # Then open each gate because the user is arriving
+                      - repeat:
+                          for_each: !input gate
+                          sequence:
+                            # Select the right action for the domain of the gate
+                            - choose:
+                              - conditions:
+                                  - condition: template
+                                    value_template: "{{ states[repeat.item].domain == 'switch' }}"
+                                sequence:
+                                  - action: switch.turn_on
+                                    target:
+                                      entity_id: "{{ repeat.item }}"
+                              - conditions:
+                                  - condition: template
+                                    value_template: "{{ states[repeat.item].domain == 'cover' }}"
+                                sequence:
+                                  - action: cover.open_cover
+                                    target:
+                                      entity_id: "{{ repeat.item }}"
                   # If automatic closing is not fully disabled
                   - if:
                       - condition: template
@@ -1276,22 +1287,26 @@ actions:
                                         tag: itinerary-status
                                   # Stop the whole script as it was successful
                                   - stop: Successful
-                              # Close the gate
-                              - choose:
-                                - conditions:
-                                    - condition: template
-                                      value_template: "{{ states[gate].domain == 'switch' }}"
+                              # Close all gates
+                              - repeat:
+                                  for_each: !input gate
                                   sequence:
-                                    - action: switch.turn_off
-                                      target:
-                                        entity_id: !input gate
-                                - conditions:
-                                    - condition: template
-                                      value_template: "{{ states[gate].domain == 'cover' }}"
-                                  sequence:
-                                    - action: cover.close_cover
-                                      target:
-                                        entity_id: !input gate
+                                    # Select the right action for the domain of the gate
+                                    - choose:
+                                      - conditions:
+                                          - condition: template
+                                            value_template: "{{ states[repeat.item].domain == 'switch' }}"
+                                        sequence:
+                                          - action: switch.turn_on
+                                            target:
+                                              entity_id: "{{ repeat.item }}"
+                                      - conditions:
+                                          - condition: template
+                                            value_template: "{{ states[repeat.item].domain == 'cover' }}"
+                                        sequence:
+                                          - action: cover.open_cover
+                                            target:
+                                              entity_id: "{{ repeat.item }}"
                       # Remove the notification received by the user when his itinerary was started or awaiting next user
                       - action: "{{ notify_device }}"
                         data:
