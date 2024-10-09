@@ -813,14 +813,14 @@ actions:
                                   - condition: template
                                     value_template: "{{ states[repeat.item].domain == 'switch' }}"
                                 sequence:
-                                  - action: switch.turn_on
+                                  - action: switch.turn_off
                                     target:
                                       entity_id: "{{ repeat.item }}"
                               - conditions:
                                   - condition: template
                                     value_template: "{{ states[repeat.item].domain == 'cover' }}"
                                 sequence:
-                                  - action: cover.open_cover
+                                  - action: cover.close_cover
                                     target:
                                       entity_id: "{{ repeat.item }}"
                       - stop: Successful
@@ -1297,14 +1297,14 @@ actions:
                                           - condition: template
                                             value_template: "{{ states[repeat.item].domain == 'switch' }}"
                                         sequence:
-                                          - action: switch.turn_on
+                                          - action: switch.turn_off
                                             target:
                                               entity_id: "{{ repeat.item }}"
                                       - conditions:
                                           - condition: template
                                             value_template: "{{ states[repeat.item].domain == 'cover' }}"
                                         sequence:
-                                          - action: cover.open_cover
+                                          - action: cover.close_cover
                                             target:
                                               entity_id: "{{ repeat.item }}"
                       # Remove the notification received by the user when his itinerary was started or awaiting next user
