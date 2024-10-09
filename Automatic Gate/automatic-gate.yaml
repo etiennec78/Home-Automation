@@ -555,13 +555,6 @@ actions:
                       data:
                         command: ble_set_advertise_mode
                         ble_advertise: ble_advertise_low_latency
-            # In case the user forgot to set an iBeacon transmitter sensor but has a scanner, then enable the iBeacon transmitter
-            else:
-              - action: "{{ notify_device }}"
-                data:
-                  message: command_ble_transmitter
-                  data:
-                    command: turn_on
           # Activate the BLE scanner from the ESP32 connected to the gate, only if a switch has been set
           - if:
             - condition: template
@@ -721,13 +714,6 @@ actions:
                           data:
                             command: ble_set_advertise_mode
                             ble_advertise: "ble_advertise_{{ old_ibeacon_transmitter_states['advertise_mode'] }}"
-            # In case the user forgot to set an iBeacon transmitter sensor but has a scanner, then disable the iBeacon transmitter
-            else:
-              - action: "{{ notify_device }}"
-                data:
-                  message: command_ble_transmitter
-                  data:
-                    command: turn_off
           # If the gate has been closed manually
           - if:
               - condition: template
