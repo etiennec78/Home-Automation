@@ -946,15 +946,24 @@ actions:
                   # Verify that your integration has responded with a new travel time
                   - condition: template
                     value_template: "{{ states[travel_time_sensor].last_updated > now() - timedelta(seconds=5) }}"
-                  # Calculate his Estimated Time of Arrival
+                  # Convert travel time to seconds
+                  - variables:
+                      travel_time_duration: |-
+                        {% if (state_attr(travel_time_sensor, 'duration') != none) %}
+                          {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
+                        {% elif (state_attr(travel_time_sensor, 'unit_of_measurement') == "min") %}
+                          {{ states(travel_time_sensor) | float * 60 }}
+                        {% elif (state_attr(travel_time_sensor, 'unit_of_measurement') == "s") %}
+                          {{ states(travel_time_sensor) | float }}
+                        {% else %}
+                          unknown
+                        {% endif %}
+                  # Calculate an Estimated Time of Arrival (with gate lead time)
                   - action: input_datetime.set_datetime
                     target:
                       entity_id: !input eta_sensor
                     data:
-                      datetime: >
-                        {{ (as_timestamp(now()) +
-                        (state_attr(travel_time_sensor, 'duration') *
-                        60) - lead_time) | timestamp_custom('%Y-%m-%d %H:%M:%S') }}
+                      datetime: "{{ (as_timestamp(now()) + travel_time_duration - lead_time) | timestamp_custom('%Y-%m-%d %H:%M:%S') }}"
                   # If the ETA is in the future
                   - if:
                       - condition: template
