@@ -603,7 +603,7 @@ actions:
       # If one of the gates is closing/closed
       - if:
           - condition: template
-            value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list }}"
+            value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
         then:
           # Notify the user that at least one gate is opening automatically, only if opening notification is enabled
           - if:
@@ -654,7 +654,7 @@ actions:
           - wait_for_trigger:
               - platform: template
                 id: manual
-                value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list }}"
+                value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
               - platform: template
                 id: ble
                 value_template: "{{ (ble_entities | length) - 1 >= idx and is_state(ble_entities[idx], 'unknown') }}"
@@ -838,7 +838,7 @@ actions:
               # Wait for the gate to be closed
               - wait_for_trigger:
                   - platform: template
-                    value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
+                    value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
               # Remove the notification received by the user when the gate was awaiting another user
               - action: "{{ notify_device }}"
                 data:
@@ -1065,7 +1065,7 @@ actions:
                   # If one of the gates is closing/closed
                   - if:
                       - condition: template
-                        value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list }}"
+                        value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
                     then:
                       # Notify the user that at least one gate is opening automatically, only if opening notification is enabled
                       - if:
@@ -1116,7 +1116,7 @@ actions:
                       - wait_for_trigger:
                           - platform: template
                             id: manual
-                            value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
+                            value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
                           - platform: template
                             id: vehicle_left
                             value_template: "{{ is_state(driving_sensor, 'off') }}"
@@ -1180,7 +1180,7 @@ actions:
                               # Wait for the gate to be closed
                               - wait_for_trigger:
                                   - platform: template
-                                    value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
+                                    value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
                             # If no one is currently approaching or leaving
                             else:
                               - choose:
