@@ -20,12 +20,14 @@ sections:
       - type: custom:mushroom-template-card
         # Show the ETA only if someone is driving towards home
         visibility:
-          - condition: state
-            entity: input_text.user0_itinerary
-            state: arriving
-          - condition: state
-            entity: input_text.user0_itinerary
-            state: on_approach
+          - condition: or
+            conditions:
+              - condition: state
+                entity: input_text.user0_itinerary
+                state: arriving
+              - condition: state
+                entity: input_text.user0_itinerary
+                state: on_approach
         # Estimated time remaining
         primary: >-
           Time remaining : {{((state_attr('sensor.user0_travel_time',
