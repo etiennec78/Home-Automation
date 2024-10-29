@@ -427,7 +427,7 @@ blueprint:
                 domain: sensor
                 device_class: enum
         only_open_near_iBeacon:
-          name: Only open while near iBeacon 🏠
+          name: 🏠 Only open while near iBeacon
           description: |-
             Should your gate only open if you are reachable from your iBeacon ?
             *Note : Useful to prevent your gate from opening if you are parked outside in front of your house*
@@ -435,7 +435,7 @@ blueprint:
           selector:
             boolean:
         wifi_devices:
-          name: WiFi devices 🏠
+          name: 🏠 WiFi devices
           description: |-
             WiFi entities to make your gate only open if you are connected to your WiFi network
             *Notes :*
