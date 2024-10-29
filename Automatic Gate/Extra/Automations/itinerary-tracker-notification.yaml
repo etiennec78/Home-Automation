@@ -1,5 +1,6 @@
 blueprint:
   name: Itinerary tracker notification
+  source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/Extra/Automations/itinerary-tracker-notification.yaml"
   domain: automation
   author: etiennec78
   description: |-

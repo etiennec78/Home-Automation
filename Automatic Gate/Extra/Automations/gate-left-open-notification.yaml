@@ -1,5 +1,6 @@
 blueprint:
   name: Gate left open notification
+  source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/Extra/Automations/gate-left-open-notification.yaml"
   domain: automation
   author: etiennec78
   description: |-
