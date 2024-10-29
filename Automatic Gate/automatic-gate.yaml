@@ -74,13 +74,6 @@ blueprint:
               min: 10
               max: 300
               unit_of_measurement: seconds
-        eta_sensor:
-          name: 📅 Planned time of opening
-          description: An empty **[input datetime](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#planned-opening-) helper** which will be used to set an **ETA** and plan the **opening of your gate** (see wiki)
-          selector:
-            entity:
-              filter:
-                domain: input_datetime
 
     per_person_sensors:
       name: Per person sensors
@@ -147,6 +140,14 @@ blueprint:
               multiple: true
               filter:
                 domain: input_text
+        eta_sensors:
+          name: 📅 Planned time of opening
+          description: Each empty **[input datetime](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#planned-opening-) helper** which will be used to set an **ETA** and plan the **opening of your gate** for each user (see wiki)
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain: input_datetime
 
     automation_settings:
       name: Automation settings
@@ -460,7 +461,7 @@ variables:
   proximity_sensors: !input proximity_sensors
   notify_devices: !input notify_devices
   itinerary_sensors: !input itinerary_sensors
-  eta_sensor: !input eta_sensor
+  eta_sensors: !input eta_sensors
   travel_time_rate: !input travel_time_rate
   continuously_refresh_interval: !input continuously_refresh_interval
   eta_zone: !input eta_zone
@@ -961,13 +962,13 @@ actions:
                   # Calculate an Estimated Time of Arrival (with gate lead time)
                   - action: input_datetime.set_datetime
                     target:
-                      entity_id: !input eta_sensor
+                      entity_id: "{{ eta_sensors[idx] }}"
                     data:
                       datetime: "{{ (as_timestamp(now()) + travel_time_duration - lead_time) | timestamp_custom('%Y-%m-%d %H:%M:%S') }}"
                   # If the ETA is in the future
                   - if:
                       - condition: template
-                        value_template: "{{ state_attr(eta_sensor, 'timestamp') > as_timestamp(now()) }}"
+                        value_template: "{{ state_attr(eta_sensors[idx], 'timestamp') > as_timestamp(now()) }}"
                     then:
                       # If the travel time refresh rate is set to "Once when near home"
                       - if:
@@ -976,10 +977,10 @@ actions:
                         # Then wait for ETA or car left
                         then:
                           - wait_for_trigger:
-                              - platform: time
-                                at: !input eta_sensor
                               - platform: template
                                 value_template: "{{ is_state(driving_sensor, 'off') }}"
+                            timeout:
+                              seconds: "{{ states(eta_sensors[idx]) | as_timestamp - now() | as_timestamp }}"
                         # If the travel time refresh rate is set to "Continuously" or "While near home"
                         else:
                           # Wait for ETA or new position or car left, and cancel if it hasn't been updated for too long (e.g: if device offline)
@@ -988,12 +989,10 @@ actions:
                                 event_type: state_changed
                                 event_data:
                                   entity_id: "{{ person }}"
-                              - platform: time
-                                at: !input eta_sensor
                               - platform: template
                                 value_template: "{{ is_state(driving_sensor, 'off') }}"
                             timeout:
-                              minutes: !input timeout_delay
+                              seconds: "{{ min(timeout_delay*60, states(eta_sensors[idx]) | as_timestamp - now() | as_timestamp) }}"
                           # If the timeout ran out of time
                           - if:
                               - condition: template
@@ -1027,7 +1026,7 @@ actions:
                   # This allows the loop to refresh the ETA with a new position or stop the script if the car was left
                   # This is quite a redundant condition as it has already been checked above, if you find a better way to restart the loop, feel free to make a PR
                   - condition: template
-                    value_template: "{{ state_attr(eta_sensor, 'timestamp') <= as_timestamp(now()) }}"
+                    value_template: "{{ state_attr(eta_sensors[idx], 'timestamp') <= as_timestamp(now()) }}"
                   - if:
                       # The user is not in the activation zone
                       - condition: template
