@@ -1,5 +1,6 @@
 blueprint:
   name: Automatic Gate
+  source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/automatic-gate.yaml"
   domain: automation
   author: etiennec78
   description: |-
