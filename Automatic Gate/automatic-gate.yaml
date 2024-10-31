@@ -733,10 +733,8 @@ actions:
             else:
               # If no one else is currently leaving
               - if:
-                  - condition: not
-                    conditions:
-                      - condition: template
-                        value_template: "{{ driving_sensors | select('is_state', 'leaving') | list != [] }}"
+                  - condition: template
+                    value_template: "{{ driving_sensors | select('is_state', 'leaving') | list == [] }}"
                 then:
                   # If the iBeacon scanner is only managed by this automation, and doesn't need to stay on
                   - if:
@@ -749,10 +747,8 @@ actions:
                           entity_id: "{{ ble_scanner_switch }}"
                   # If no one else is currently approaching
                   - if:
-                      - condition: not
-                        conditions:
-                          - condition: template
-                            value_template: "{{ driving_sensors | select('is_state', 'on_approach') | list != [] }}"
+                      - condition: template
+                        value_template: "{{ driving_sensors | select('is_state', 'on_approach') | list == [] }}"
                     then:
                       # If the timeout was reached
                       - if:
