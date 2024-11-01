@@ -654,16 +654,16 @@ actions:
         then:
           # Wait for a gate to be closed by the user, or the iBeacon to be out of reach for 20s, or the vehicle to be left, or the user to leave, all while not waiting more than the auto-close delay
           - wait_for_trigger:
-              - platform: template
+              - trigger: template
                 id: manual
                 value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
-              - platform: template
+              - trigger: template
                 id: ble
                 value_template: "{{ (ble_entities | length) - 1 >= idx and is_state(ble_entities[idx], 'unknown') }}"
-              - platform: template
+              - trigger: template
                 id: vehicle_left
                 value_template: "{{ is_state(driving_sensor, 'off') }}"
-              - platform: template
+              - trigger: template
                 id: gate_zone_left
                 value_template: "{{ not is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id]) }}"
             timeout:
@@ -835,7 +835,7 @@ actions:
                     tag: itinerary-status
               # Wait for the gate to be closed
               - wait_for_trigger:
-                  - platform: template
+                  - trigger: template
                     value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
               # Remove the notification received by the user when the gate was awaiting another user
               - action: "{{ notify_device }}"
@@ -857,7 +857,7 @@ actions:
         else:
           # Wait for the user to leave
           - wait_for_trigger:
-              - platform: template
+              - trigger: template
                 id: gate_zone_left
                 value_template: "{{ not is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id]) }}"
           # Remove the current itinerary
@@ -921,11 +921,11 @@ actions:
                     entity_id: "{{ travel_time_sensor }}"
             # Wait for a user position update or a deactivation of his driving sensor
             - wait_for_trigger:
-                - platform: event
+                - trigger: event
                   event_type: state_changed
                   event_data:
                     entity_id: "{{ person }}"
-                - platform: template
+                - trigger: template
                   value_template: "{{ is_state(driving_sensor, 'off') }}"
             # Repeat while the user is nearer than 1km of radius from the gate and is still driving
             # This allows to update to a precise ETA even if a traffic jam appears near your gate
@@ -974,7 +974,7 @@ actions:
                         # Then wait for ETA or car left
                         then:
                           - wait_for_trigger:
-                              - platform: template
+                              - trigger: template
                                 value_template: "{{ is_state(driving_sensor, 'off') }}"
                             timeout:
                               seconds: "{{ state_attr(eta_sensors[idx], 'timestamp') - as_timestamp(now()) }}"
@@ -982,11 +982,11 @@ actions:
                         else:
                           # Wait for ETA or new position or car left, and cancel if it hasn't been updated for too long (e.g: if device offline)
                           - wait_for_trigger:
-                              - platform: event
+                              - trigger: event
                                 event_type: state_changed
                                 event_data:
                                   entity_id: "{{ person }}"
-                              - platform: template
+                              - trigger: template
                                 value_template: "{{ is_state(driving_sensor, 'off') }}"
                             timeout:
                               seconds: "{{ min(timeout_delay*60, state_attr(eta_sensors[idx], 'timestamp') - as_timestamp(now())) }}"
@@ -1111,13 +1111,13 @@ actions:
                     then:
                       # Wait for the gate to be closed manually, or the vehicle to be left, or the user to leave the activation zone, all while not waiting more than the auto-close delay
                       - wait_for_trigger:
-                          - platform: template
+                          - trigger: template
                             id: manual
                             value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
-                          - platform: template
+                          - trigger: template
                             id: vehicle_left
                             value_template: "{{ is_state(driving_sensor, 'off') }}"
-                          - platform: template
+                          - trigger: template
                             id: activation_zone_left
                             value_template: "{{ states(proximity_sensors[idx]) | int > activation_zone }}"
                         timeout:
@@ -1176,7 +1176,7 @@ actions:
                                     tag: itinerary-status
                               # Wait for the gate to be closed
                               - wait_for_trigger:
-                                  - platform: template
+                                  - trigger: template
                                     value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
                             # If no one is currently approaching or leaving
                             else:
@@ -1311,7 +1311,7 @@ actions:
                     else:
                       # Wait for the user to stop his car
                       - wait_for_trigger:
-                        - platform: template
+                        - trigger: template
                           value_template: "{{ is_state(driving_sensor, 'off') }}"
                       # Remove the current itinerary
                       - action: input_text.set_value

@@ -176,7 +176,7 @@ actions:
           notification_id: gate-left-open
   # Wait for the gate to be closed, while running this automation for at most one hour
   - wait_for_trigger:
-    - platform: template
+    - trigger: template
       value_template: "{{ is_state(gate, ['off', 'closed', 'closing']) }}"
     timeout:
       hours: 1
