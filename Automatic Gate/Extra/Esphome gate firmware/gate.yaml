@@ -102,10 +102,12 @@ binary_sensor:
 
 globals:
   # Constants
-  # Please set the time it takes for your blind to fully move (in QUOTES, in seconds)
   - id: MOVEMENT_DURATION
     type: int
     initial_value: !secret movement_duration
+  - id: ACTIVATION_ZONE
+    type: int
+    initial_value: !secret activation_zone
 
   # Internal variables
   # Initialise a global variable tracking gate moving time
@@ -175,10 +177,10 @@ script:
                 - if:
                     # Check if a GPS device tracker is near home
                     condition:
-                        - lambda: 'return id(nearest_distance).state < 1000;'
+                        - lambda: 'return id(nearest_distance).state < id(ACTIVATION_ZONE);'
                         # Optional, only if you have set wifi device trackers (l.79)
                         # - lambda: |-
-                        #     return id(nearest_distance).state < 1000
+                        #     return id(nearest_distance).state < id(ACTIVATION_ZONE)
                         #         or id(device_tracker_1).state == "home"
                         #         or id(device_tracker_2).state == "home";
                     then:
