@@ -64,14 +64,16 @@ blueprint:
           filter:
             domain: person
     notify_devices:
-      name: 💬 Notify services
+      name: 💬 Notify devices
       description: |-
-        Each **service** of **device to notify** (Find the service ids by going into [Developer tools > Services tab](https://my.home-assistant.io/redirect/developer_states) > searching for "notify.") (same order)
-        *Note : Please put people who don't have a driving sensor at the end of the list*
+        Each [**device** to **notify**](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-services-)**
+        *Note : Optional*
+      default: []
       selector:
-        text:
+        device:
           multiple: true
-          prefix: notify.mobile_app_
+          filter:
+            integration: mobile_app
     on_tap_link:
       name: 👆 On tap link
       description: |-
@@ -147,7 +149,8 @@ variables:
   persons: !input persons
   driving_sensors: !input driving_sensors
   travel_time_sensors: !input travel_time_sensors
-  devices_to_notify: !input notify_devices
+  notify_devices: !input notify_devices
+  notify_services: "{{ notify_devices | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}"
   speaker_tts_devices: !input speaker_tts_devices
   speaker_tts_service: !input speaker_tts_service
   last_notification_sensor: !input last_notification_sensor
@@ -176,10 +179,10 @@ actions:
   # Notify each user except the driver that an itinerary has been started
   - repeat:
       for_each: |-
-        {% set temp = devices_to_notify.pop(idx) %}
-        {{ devices_to_notify }}
+        {% set temp = notify_services.pop(idx) %}
+        {{ notify_services }}
       sequence:
-        - action: "notify.mobile_app_{{ repeat.item }}"
+        - action: "{{ repeat.item }}"
           data:
             message: !input itinerary_started_message
             data:
@@ -245,9 +248,9 @@ actions:
                 arrival: "{{ arrival_timestamp | timestamp_custom('%H:%M') }}"
             # Send an ETA notification update to each user
             - repeat:
-                for_each: "{{ devices_to_notify }}"
+                for_each: "{{ notify_services }}"
                 sequence:
-                  - action: "notify.mobile_app_{{ repeat.item }}"
+                  - action: "{{ repeat.item }}"
                     data:
                       message: !input itinerary_ongoing_message
                       data:
@@ -274,9 +277,9 @@ actions:
     then:
       # Send an arrival notification to each user
       - repeat:
-          for_each: "{{ devices_to_notify }}"
+          for_each: "{{ notify_services }}"
           sequence:
-            - action: "notify.mobile_app_{{ repeat.item }}"
+            - action: "{{ repeat.item }}"
               data:
                 message: !input driver_arrived_message
                 data:
@@ -290,9 +293,9 @@ actions:
     else:
       # Remove itinerary notification for each user
       - repeat:
-          for_each: "{{ devices_to_notify }}"
+          for_each: "{{ notify_services }}"
           sequence:
-            - action: "notify.mobile_app_{{ repeat.item }}"
+            - action: "{{ repeat.item }}"
               data:
                 message: clear_notification
                 data:
