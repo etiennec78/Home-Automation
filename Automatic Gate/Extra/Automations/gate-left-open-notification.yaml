@@ -46,15 +46,16 @@ blueprint:
           max: 30
           unit_of_measurement: minutes
     notify_devices:
-      name: 💬 Notify services
+      name: 💬 Notify devices
       description: |-
-        Each **service** of **device to notify** (Find the service ids by going into [Developer tools > Services tab](https://my.home-assistant.io/redirect/developer_states) > searching for "notify.")
+        Each [**device** to **notify**](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-services-)**
         *Note : Optional*
       default: []
       selector:
-        text:
+        device:
           multiple: true
-          prefix: notify.mobile_app_
+          filter:
+            integration: mobile_app
     persistent_notification:
       name: 🔔 Persistent notification
       description: Be notified by a **[persistent notification](https://www.home-assistant.io/integrations/persistent_notification)** directly on the **frontend**
@@ -105,6 +106,8 @@ blueprint:
 variables:
   gate: !input gate
   left_open_delay: !input left_open_delay
+  notify_devices: !input notify_devices
+  notify_services: "{{ notify_devices | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}"
   speaker_tts_devices: !input speaker_tts_devices
   speaker_tts_service: !input speaker_tts_service
 
@@ -127,9 +130,9 @@ conditions: []
 actions:
   # Notify each user that the gate has been left open
   - repeat:
-      for_each: !input notify_devices
+      for_each: "{{ notify_services }}"
       sequence:
-        - action: "{{ 'notify.mobile_app_'+repeat.item }}"
+        - action: "{{ repeat.item }}"
           data:
             message: !input left_open_message
             title: !input left_open_title
@@ -149,7 +152,7 @@ actions:
             condition: template
             value_template: !input phone_tts
           then:
-            - action: "{{ 'notify.mobile_app_'+repeat.item }}"
+            - action: "{{ repeat.item }}"
               data:
                 message: TTS
                 data:
@@ -186,9 +189,9 @@ actions:
     continue_on_timeout: false
   # Remove the notification sent to the users
   - repeat:
-      for_each: !input notify_devices
+      for_each: "{{ notify_services }}"
       sequence:
-        - action: "{{ 'notify.mobile_app_'+repeat.item }}"
+        - action: "{{ repeat.item }}"
           data:
             message: clear_notification
             data:

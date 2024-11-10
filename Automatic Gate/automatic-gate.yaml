@@ -127,12 +127,13 @@ blueprint:
                 domain: sensor
                 device_class: distance
         notify_devices:
-          name: 💬 Notify services
-          description: Each **[service](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-services-)** of **device to notify** (Find the service ids by going into [Developer tools > Services tab](https://my.home-assistant.io/redirect/developer_states/) > searching for "notify.")
+          name: 💬 Notify devices
+          description: Each [**device** to **notify**](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-services-)
           selector:
-            text:
+            device:
               multiple: true
-              prefix: notify.mobile_app_
+              filter:
+                integration: mobile_app
         itinerary_sensors:
           name: 🗺️ Itinerary sensors
           description: Each empty **[itinerary input text](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#itinerary-sensors-%EF%B8%8F)** helper to store each user **itinerary state**
@@ -461,6 +462,7 @@ variables:
   travel_time_sensors: !input travel_time_sensors
   proximity_sensors: !input proximity_sensors
   notify_devices: !input notify_devices
+  notify_services: "{{ notify_devices | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}"
   itinerary_sensors: !input itinerary_sensors
   eta_sensors: !input eta_sensors
   travel_time_rate: !input travel_time_rate
@@ -490,7 +492,7 @@ actions:
       person: "{{ persons[idx] }}"
       driving_sensor: "{{ trigger.entity_id }}"
       travel_time_sensor: "{{ travel_time_sensors[idx] }}"
-      notify_device: "{{ 'notify.mobile_app_'+notify_devices[idx] }}"
+      notify_service: "{{ notify_services[idx] }}"
       itinerary_sensor: "{{ itinerary_sensors[idx] }}"
       old_ibeacon_transmitter_states: |-
         {% if (ble_transmitter_entities | length) - 1 >= idx %}
@@ -530,7 +532,7 @@ actions:
                   - condition: template
                     value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
                 then:
-                  - action: "{{ notify_device }}"
+                  - action: "{{ notify_service }}"
                     data:
                       message: command_ble_transmitter
                       data:
@@ -540,7 +542,7 @@ actions:
                   - condition: template
                     value_template: "{{ old_ibeacon_transmitter_states['transmit_power'] != none }}"
                 then:
-                  - action: "{{ notify_device }}"
+                  - action: "{{ notify_service }}"
                     data:
                       message: command_ble_transmitter
                       data:
@@ -551,7 +553,7 @@ actions:
                   - condition: template
                     value_template: "{{ old_ibeacon_transmitter_states['advertise_mode'] != none }}"
                 then:
-                  - action: "{{ notify_device }}"
+                  - action: "{{ notify_service }}"
                     data:
                       message: command_ble_transmitter
                       data:
@@ -580,7 +582,7 @@ actions:
               value_template: "{{ wait.remaining == 0 }}"
             then:
               # Notify the user that his itinerary has been canceled because he was not home
-              - action: "{{ notify_device }}"
+              - action: "{{ notify_service }}"
                 data:
                   title: !input itinerary_canceled_title
                   message: !input not_home_message
@@ -612,7 +614,7 @@ actions:
               - condition: template
                 value_template: !input opening_notification
             then:
-                - action: "{{ notify_device }}"
+                - action: "{{ notify_service }}"
                   data:
                     title: !input gate_opening_title
                     message: !input automatic_opening_message
@@ -689,7 +691,7 @@ actions:
                       - condition: template
                         value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
                     then:
-                      - action: "{{ notify_device }}"
+                      - action: "{{ notify_service }}"
                         data:
                           message: command_ble_transmitter
                           data:
@@ -699,7 +701,7 @@ actions:
                       - condition: template
                         value_template: "{{ old_ibeacon_transmitter_states['transmit_power'] != none }}"
                     then:
-                      - action: "{{ notify_device }}"
+                      - action: "{{ notify_service }}"
                         data:
                           message: command_ble_transmitter
                           data:
@@ -710,7 +712,7 @@ actions:
                       - condition: template
                         value_template: "{{ old_ibeacon_transmitter_states['advertise_mode'] != none }}"
                     then:
-                      - action: "{{ notify_device }}"
+                      - action: "{{ notify_service }}"
                         data:
                           message: command_ble_transmitter
                           data:
@@ -756,7 +758,7 @@ actions:
                             value_template: "{{ wait.remaining == 0 }}"
                         then:
                           # Notify the user that the gate will close automatically since he didn't leave in time
-                          - action: "{{ notify_device }}"
+                          - action: "{{ notify_service }}"
                             data:
                               title: !input gate_closing_title
                               message: !input did_not_leave_message
@@ -773,7 +775,7 @@ actions:
                                 timeout: 300
                         else:
                           # Notify the user that the gate will close automatically
-                          - action: "{{ notify_device }}"
+                          - action: "{{ notify_service }}"
                             data:
                               message: !input automatic_closing_message
                               data:
@@ -819,7 +821,7 @@ actions:
                     {% endfor %}
                     {{ data.awaiting_persons | join(', ') }}
               # Notify the user that the gate will wait for next person
-              - action: "{{ notify_device }}"
+              - action: "{{ notify_service }}"
                 data:
                   title: !input awaiting_title
                   message: !input awaiting_message
@@ -838,7 +840,7 @@ actions:
                   - trigger: template
                     value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
               # Remove the notification received by the user when the gate was awaiting another user
-              - action: "{{ notify_device }}"
+              - action: "{{ notify_service }}"
                 data:
                   message: clear_notification
                   data:
@@ -848,7 +850,7 @@ actions:
                   condition: template
                   value_template: !input opening_notification
                 then:
-                  - action: "{{ notify_device }}"
+                  - action: "{{ notify_service }}"
                     data:
                       message: clear_notification
                       data:
@@ -880,7 +882,7 @@ actions:
         data:
           value: arriving
       # Notify the user that his itinerary has been started
-      - action: "{{ notify_device }}"
+      - action: "{{ notify_service }}"
         data:
           title: !input itinerary_update_title
           message: !input itinerary_started_message
@@ -1003,7 +1005,7 @@ actions:
                                 data:
                                   value: none
                               # Notify the user that his itinerary has been canceled
-                              - action: "{{ notify_device }}"
+                              - action: "{{ notify_service }}"
                                 data:
                                   title: !input itinerary_canceled_title
                                   message: !input timed_out_message
@@ -1037,7 +1039,7 @@ actions:
                         data:
                           value: none
                       # Notify the user that his itinerary has been canceled
-                      - action: "{{ notify_device }}"
+                      - action: "{{ notify_service }}"
                         data:
                           title: !input itinerary_canceled_title
                           message: !input vehicle_away_message
@@ -1069,7 +1071,7 @@ actions:
                           - condition: template
                             value_template: !input opening_notification
                         then:
-                            - action: "{{ notify_device }}"
+                            - action: "{{ notify_service }}"
                               data:
                                 title: !input gate_opening_title
                                 message: !input automatic_opening_message
@@ -1134,7 +1136,7 @@ actions:
                             value_template: "{{ wait.trigger.id == 'manual' }}"
                         then:
                           # Remove the notification received by the user when his itinerary was started
-                          - action: "{{ notify_device }}"
+                          - action: "{{ notify_service }}"
                             data:
                               message: clear_notification
                               data:
@@ -1160,7 +1162,7 @@ actions:
                                     {% endfor %}
                                     {{ data.awaiting_persons | join(', ') }}
                               # Notify the user that the gate will wait for next person
-                              - action: "{{ notify_device }}"
+                              - action: "{{ notify_service }}"
                                 data:
                                   title: !input awaiting_title
                                   message: !input awaiting_message
@@ -1187,7 +1189,7 @@ actions:
                                         value_template: "{{ wait.remaining == 0 }}"
                                     sequence:
                                       # Notify the user that the gate will close automatically since he took too long
-                                      - action: "{{ notify_device }}"
+                                      - action: "{{ notify_service }}"
                                         data:
                                           title: !input gate_closing_title
                                           message: !input did_not_arrive_message
@@ -1208,7 +1210,7 @@ actions:
                                         value_template: "{{ wait.trigger.id == 'activation_zone_left' }}"
                                     sequence:
                                       # Notify the user that the gate will close automatically since he has exited the zone
-                                      - action: "{{ notify_device }}"
+                                      - action: "{{ notify_service }}"
                                         data:
                                           title: !input gate_closing_title
                                           message: !input vehicle_away_message
@@ -1231,7 +1233,7 @@ actions:
                                                             automatic_closing == 'on' }}"
                                     sequence:
                                       # Notify the user that the gate will close automatically since he has arrived
-                                      - action: "{{ notify_device }}"
+                                      - action: "{{ notify_service }}"
                                         data:
                                           title: !input gate_closing_title
                                           message: !input user_arrival_message
@@ -1254,7 +1256,7 @@ actions:
                                         value_template: "{{ wait.trigger.id == 'vehicle_left' }}"
                                     sequence:
                                       # Notify the user that the gate will close automatically since he has left his car
-                                      - action: "{{ notify_device }}"
+                                      - action: "{{ notify_service }}"
                                         data:
                                           title: !input gate_closing_title
                                           message: !input vehicle_left_message
@@ -1272,7 +1274,7 @@ actions:
                                 # If the user has arrived but don't have automatic gate enabled
                                 default:
                                   # Remove the notification received by the user when his itinerary was started
-                                  - action: "{{ notify_device }}"
+                                  - action: "{{ notify_service }}"
                                     data:
                                       message: clear_notification
                                       data:
@@ -1300,7 +1302,7 @@ actions:
                                             target:
                                               entity_id: "{{ repeat.item }}"
                       # Remove the notification received by the user when his itinerary was started or awaiting next user
-                      - action: "{{ notify_device }}"
+                      - action: "{{ notify_service }}"
                         data:
                           message: clear_notification
                           data:
@@ -1320,7 +1322,7 @@ actions:
                         data:
                           value: none
                       # Remove the notification received by the user when his itinerary was started
-                      - action: "{{ notify_device }}"
+                      - action: "{{ notify_service }}"
                         data:
                           message: clear_notification
                           data:
@@ -1330,7 +1332,7 @@ actions:
                           condition: template
                           value_template: !input opening_notification
                         then:
-                          - action: "{{ notify_device }}"
+                          - action: "{{ notify_service }}"
                             data:
                               message: clear_notification
                               data:
@@ -1351,7 +1353,7 @@ actions:
             and states[travel_time_sensor].last_updated < now() - timedelta(minutes=5) }}"
         then:
           # Notify the user that his travel time integration did not respond during the itinerary
-          - action: "{{ notify_device }}"
+          - action: "{{ notify_service }}"
             data:
               title: !input itinerary_canceled_title
               message: !input travel_time_did_not_respond
@@ -1368,7 +1370,7 @@ actions:
                 timeout: 300
         else:
           # Notify the user that his itinerary has been canceled because he has left his car
-          - action: "{{ notify_device }}"
+          - action: "{{ notify_service }}"
             data:
               title: !input itinerary_canceled_title
               message: !input vehicle_left_message
