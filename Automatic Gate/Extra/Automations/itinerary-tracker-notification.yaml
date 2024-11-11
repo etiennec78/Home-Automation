@@ -150,7 +150,6 @@ variables:
   driving_sensors: !input driving_sensors
   travel_time_sensors: !input travel_time_sensors
   notify_devices: !input notify_devices
-  notify_services: "{{ notify_devices | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}"
   speaker_tts_devices: !input speaker_tts_devices
   speaker_tts_service: !input speaker_tts_service
   last_notification_sensor: !input last_notification_sensor
@@ -168,6 +167,8 @@ conditions: []
 actions:
   # Store the list index of the driver, and extract the recurrent sensors at this index of the list
   - variables:
+      # without a context.id key, popping an element from the list will be global to all future instances
+      notify_services: "{{ {context.id: notify_devices | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list} }}"
       idx: "{{ driving_sensors.index(trigger.entity_id) }}"
       driving_sensor: "{{ driving_sensors[idx] }}"
       travel_time_sensor: "{{ travel_time_sensors[idx] }}"
@@ -179,8 +180,8 @@ actions:
   # Notify each user except the driver that an itinerary has been started
   - repeat:
       for_each: |-
-        {% set temp = notify_services.pop(idx) %}
-        {{ notify_services }}
+        {% set temp = notify_services[context.id].pop(idx) %}
+        {{ notify_services[context.id] }}
       sequence:
         - action: "{{ repeat.item }}"
           data:
@@ -248,7 +249,7 @@ actions:
                 arrival: "{{ arrival_timestamp | timestamp_custom('%H:%M') }}"
             # Send an ETA notification update to each user
             - repeat:
-                for_each: "{{ notify_services }}"
+                for_each: "{{ notify_services[context.id] }}"
                 sequence:
                   - action: "{{ repeat.item }}"
                     data:
@@ -277,7 +278,7 @@ actions:
     then:
       # Send an arrival notification to each user
       - repeat:
-          for_each: "{{ notify_services }}"
+          for_each: "{{ notify_services[context.id] }}"
           sequence:
             - action: "{{ repeat.item }}"
               data:
@@ -293,7 +294,7 @@ actions:
     else:
       # Remove itinerary notification for each user
       - repeat:
-          for_each: "{{ notify_services }}"
+          for_each: "{{ notify_services[context.id] }}"
           sequence:
             - action: "{{ repeat.item }}"
               data:
