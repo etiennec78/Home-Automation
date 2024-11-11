@@ -190,6 +190,8 @@ actions:
               notification_icon: mdi:car
               tag: itinerary-status
               channel: Itinerary status
+              # Hack to retrieve the notification service when dismissed
+              confirmation: "{{ repeat.item }}"
               url: !input on_tap_link
               clickAction: !input on_tap_link
               alert_once: true
@@ -230,6 +232,21 @@ actions:
                 - trigger: template
                   id: vehicle_left
                   value_template: "{{ is_state(driving_sensor, 'off') }}"
+                - trigger: event
+                  id: notification_cleared
+                  event_type: mobile_app_notification_cleared
+                  event_data:
+                    tag: itinerary-status
+            # If an user removed the notification, then stop sending notification updates to his device
+            - if:
+                condition: template
+                value_template: "{{ wait.trigger.id == 'notification_cleared' }}"
+              then:
+                - variables:
+                    removed_service: |-
+                      {{ notify_services[context.id].pop(
+                          notify_services[context.id].index(
+                            wait.trigger.event.data.confirmation)) }}
             # Only continue the loop if the wait_for_trigger was triggered by a travel time update
             - condition: template
               value_template: "{{ wait.trigger.id == 'travel_time' }}"
@@ -258,6 +275,8 @@ actions:
                         notification_icon: mdi:map-marker-account
                         tag: itinerary-status
                         channel: Itinerary status
+                        # Hack to retrieve the notification service when dismissed
+                        confirmation: "{{ repeat.item }}"
                         url: !input on_tap_link
                         clickAction: !input on_tap_link
                         alert_once: true
