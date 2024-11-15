@@ -644,22 +644,14 @@ actions:
           - repeat:
               for_each: !input gate
               sequence:
-                # Select the right action for the domain of the gate
-                - choose:
-                  - conditions:
-                      - condition: template
-                        value_template: "{{ states[repeat.item].domain == 'switch' }}"
-                    sequence:
-                      - action: switch.turn_on
-                        target:
-                          entity_id: "{{ repeat.item }}"
-                  - conditions:
-                      - condition: template
-                        value_template: "{{ states[repeat.item].domain == 'cover' }}"
-                    sequence:
-                      - action: cover.open_cover
-                        target:
-                          entity_id: "{{ repeat.item }}"
+                - action: |-
+                    {% if states[repeat.item].domain == 'switch' %}
+                      switch.turn_on
+                    {% elif states[repeat.item].domain == 'cover' %}
+                      cover.open_cover
+                    {% endif %}
+                  target:
+                    entity_id: "{{ repeat.item }}"
       # If automatic closing is enabled
       - if:
           - condition: template
@@ -804,22 +796,14 @@ actions:
                       - repeat:
                           for_each: !input gate
                           sequence:
-                            # Select the right action for the domain of the gate
-                            - choose:
-                              - conditions:
-                                  - condition: template
-                                    value_template: "{{ states[repeat.item].domain == 'switch' }}"
-                                sequence:
-                                  - action: switch.turn_off
-                                    target:
-                                      entity_id: "{{ repeat.item }}"
-                              - conditions:
-                                  - condition: template
-                                    value_template: "{{ states[repeat.item].domain == 'cover' }}"
-                                sequence:
-                                  - action: cover.close_cover
-                                    target:
-                                      entity_id: "{{ repeat.item }}"
+                            - action: |-
+                                {% if states[repeat.item].domain == 'switch' %}
+                                  switch.turn_off
+                                {% elif states[repeat.item].domain == 'cover' %}
+                                  cover.close_cover
+                                {% endif %}
+                              target:
+                                entity_id: "{{ repeat.item }}"
                       # Lock all locks
                       - repeat:
                           for_each: !input locks
@@ -1108,22 +1092,14 @@ actions:
                       - repeat:
                           for_each: !input gate
                           sequence:
-                            # Select the right action for the domain of the gate
-                            - choose:
-                              - conditions:
-                                  - condition: template
-                                    value_template: "{{ states[repeat.item].domain == 'switch' }}"
-                                sequence:
-                                  - action: switch.turn_on
-                                    target:
-                                      entity_id: "{{ repeat.item }}"
-                              - conditions:
-                                  - condition: template
-                                    value_template: "{{ states[repeat.item].domain == 'cover' }}"
-                                sequence:
-                                  - action: cover.open_cover
-                                    target:
-                                      entity_id: "{{ repeat.item }}"
+                            - action: |-
+                                {% if states[repeat.item].domain == 'switch' %}
+                                  switch.turn_on
+                                {% elif states[repeat.item].domain == 'cover' %}
+                                  cover.open_cover
+                                {% endif %}
+                              target:
+                                entity_id: "{{ repeat.item }}"
                   # If automatic closing is not fully disabled
                   - if:
                       - condition: template
@@ -1303,22 +1279,14 @@ actions:
                               - repeat:
                                   for_each: !input gate
                                   sequence:
-                                    # Select the right action for the domain of the gate
-                                    - choose:
-                                      - conditions:
-                                          - condition: template
-                                            value_template: "{{ states[repeat.item].domain == 'switch' }}"
-                                        sequence:
-                                          - action: switch.turn_off
-                                            target:
-                                              entity_id: "{{ repeat.item }}"
-                                      - conditions:
-                                          - condition: template
-                                            value_template: "{{ states[repeat.item].domain == 'cover' }}"
-                                        sequence:
-                                          - action: cover.close_cover
-                                            target:
-                                              entity_id: "{{ repeat.item }}"
+                                    - action: |-
+                                        {% if states[repeat.item].domain == 'switch' %}
+                                          switch.turn_off
+                                        {% elif states[repeat.item].domain == 'cover' %}
+                                          cover.close_cover
+                                        {% endif %}
+                                      target:
+                                        entity_id: "{{ repeat.item }}"
                               # Unlock all locks
                               - repeat:
                                   for_each: !input locks
