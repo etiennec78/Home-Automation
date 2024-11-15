@@ -449,6 +449,17 @@ blueprint:
               multiple: true
               filter:
                 domain: device_tracker
+        locks:
+          name: 🔐 Locks
+          description: |-
+            The **locks** that open your home's **doors**
+            *Note : They will lock on exit once the gate is closed, and unlock once the vehicle has arrived and been turned off*
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain: lock
 
 variables:
   gate: !input gate
@@ -809,6 +820,13 @@ actions:
                                   - action: cover.close_cover
                                     target:
                                       entity_id: "{{ repeat.item }}"
+                      # Lock all locks
+                      - repeat:
+                          for_each: !input locks
+                          sequence:
+                            - action: lock.lock
+                              target:
+                                entity_id: "{{ repeat.item }}"
                       - stop: Successful
               # Get the names of the persons being awaited
               - variables:
@@ -1301,6 +1319,13 @@ actions:
                                           - action: cover.close_cover
                                             target:
                                               entity_id: "{{ repeat.item }}"
+                              # Unlock all locks
+                              - repeat:
+                                  for_each: !input locks
+                                  sequence:
+                                    - action: lock.lock
+                                      target:
+                                        entity_id: "{{ repeat.item }}"
                       # Remove the notification received by the user when his itinerary was started or awaiting next user
                       - action: "{{ notify_service }}"
                         data:
