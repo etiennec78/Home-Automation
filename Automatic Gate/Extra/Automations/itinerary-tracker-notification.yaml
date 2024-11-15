@@ -178,7 +178,7 @@ actions:
             message: !input itinerary_started_message
             data:
               notification_icon: mdi:car
-              tag: itinerary-status
+              tag: itinerary-tracker
               channel: Itinerary status
               # Hack to retrieve the notification service when dismissed
               confirmation: "{{ repeat.item }}"
@@ -226,7 +226,7 @@ actions:
                   id: notification_cleared
                   event_type: mobile_app_notification_cleared
                   event_data:
-                    tag: itinerary-status
+                    tag: itinerary-tracker
             # If an user removed the notification, then stop sending notification updates to his device
             - if:
                 condition: template
@@ -254,7 +254,7 @@ actions:
                       message: !input itinerary_ongoing_message
                       data:
                         notification_icon: mdi:map-marker-account
-                        tag: itinerary-status
+                        tag: itinerary-tracker
                         channel: Itinerary status
                         # Hack to retrieve the notification service when dismissed
                         confirmation: "{{ repeat.item }}"
@@ -274,7 +274,7 @@ actions:
                   id: notification_cleared
                   event_type: mobile_app_notification_cleared
                   event_data:
-                    tag: itinerary-status
+                    tag: itinerary-tracker
               timeout:
                 minutes: "{{ notif_refresh_rate }}"
               continue_on_timeout: true
@@ -309,7 +309,7 @@ actions:
                 message: !input driver_arrived_message
                 data:
                   notification_icon: mdi:home-map-marker
-                  tag: itinerary-status
+                  tag: itinerary-tracker
                   channel: Itinerary status
                   url: !input on_tap_link
                   clickAction: !input on_tap_link
@@ -324,5 +324,5 @@ actions:
               data:
                 message: clear_notification
                 data:
-                  tag: itinerary-status
+                  tag: itinerary-tracker
 mode: single
