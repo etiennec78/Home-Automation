@@ -814,13 +814,15 @@ actions:
                       - stop: Successful
               # Get the names of the persons being awaited
               - variables:
-                  awaiting_persons: >-
-                    {% set awaiting_sensors = itinerary_sensors | select('is_state', 'on_approach') | list +
-                                              itinerary_sensors | select('is_state', 'leaving') | list %}
+                  awaiting_persons: |-
                     {% set data = namespace(awaiting_persons=[]) %}
-                    {% for i in range(awaiting_sensors|length) %}
-                    {% set data.awaiting_persons = data.awaiting_persons + [state_attr(persons[i], 'friendly_name')] %}
+
+                    {% for sensor_idx in range(itinerary_sensors | length) %}
+                      {% if sensor_idx != idx and is_state(itinerary_sensors[sensor_idx], ['on_approach', 'leaving']) %}
+                        {% set data.awaiting_persons = data.awaiting_persons + [state_attr(persons[sensor_idx], 'friendly_name')] %}
+                      {% endif %}
                     {% endfor %}
+
                     {{ data.awaiting_persons | join(', ') }}
               # Notify the user that the gate will wait for next person
               - action: "{{ notify_service }}"
@@ -1138,22 +1140,20 @@ actions:
                         else:
                           # If someone is currently approaching or leaving
                           - if:
-                              - condition: or
-                                conditions:
-                                - condition: template
-                                  value_template: "{{ itinerary_sensors | select('is_state', 'on_approach') | list != [] }}"
-                                - condition: template
-                                  value_template: "{{ itinerary_sensors | select('is_state', 'leaving') | list != [] }}"
+                              - condition: template
+                                value_template: "{{ itinerary_sensors | select('is_state', ['on_approach', 'leaving']) | list != [] }}"
                             then:
                               # Get the names of the persons being awaited
                               - variables:
-                                  awaiting_persons: >-
-                                    {% set awaiting_sensors = itinerary_sensors | select('is_state', 'on_approach') | list +
-                                                              itinerary_sensors | select('is_state', 'leaving') | list %}
+                                  awaiting_persons: |-
                                     {% set data = namespace(awaiting_persons=[]) %}
-                                    {% for i in range(awaiting_sensors|length) %}
-                                    {% set data.awaiting_persons = data.awaiting_persons + [state_attr(persons[i], 'friendly_name')] %}
+
+                                    {% for sensor_idx in range(itinerary_sensors | length) %}
+                                      {% if sensor_idx != idx and is_state(itinerary_sensors[sensor_idx], ['on_approach', 'leaving']) %}
+                                        {% set data.awaiting_persons = data.awaiting_persons + [state_attr(persons[sensor_idx], 'friendly_name')] %}
+                                      {% endif %}
                                     {% endfor %}
+
                                     {{ data.awaiting_persons | join(', ') }}
                               # Notify the user that the gate will wait for next person
                               - action: "{{ notify_service }}"
