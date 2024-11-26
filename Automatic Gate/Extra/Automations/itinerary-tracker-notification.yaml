@@ -135,6 +135,24 @@ blueprint:
       default: "{{ driver_name }} just arrived home"
       selector:
         text:
+    notify_persons_home:
+      name: 🔔🏠 Notify persons home
+      description: Should the automation notify persons that are home ?
+      default: true
+      selector:
+        boolean:
+    notify_persons_driving:
+      name: 🔔🚗 Notify persons driving
+      description: Should the automation notify other drivers ?
+      default: false
+      selector:
+        boolean:
+    notify_everyone_else:
+      name: 🔔🧩 Notify everyone else
+      description: Should the automation notify everyone else ?
+      default: false
+      selector:
+        boolean:
 
 variables:
   persons: !input persons
@@ -144,6 +162,9 @@ variables:
   speaker_tts_devices: !input speaker_tts_devices
   speaker_tts_service: !input speaker_tts_service
   notif_refresh_rate: !input notif_refresh_rate
+  notify_persons_home: !input notify_persons_home
+  notify_persons_driving: !input notify_persons_driving
+  notify_everyone_else: !input notify_everyone_else
 
 triggers:
   - trigger: state
@@ -157,9 +178,26 @@ conditions: []
 actions:
   # Store the list index of the driver, and extract the recurrent sensors at this index of the list
   - variables:
-      # without a context.id key, popping an element from the list will be global to all future instances
-      notify_services: "{{ {context.id: notify_devices | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list} }}"
       idx: "{{ driving_sensors.index(trigger.entity_id) }}"
+      # without a context.id key, popping an element from the list will be global to all future instances
+      notify_services: |-
+        {% set data = namespace(devices_list=[]) %}
+
+        {% for notify_idx in range(notify_devices | length) %}
+          {% if notify_idx != idx %}
+            {% if notify_persons_home and
+                    is_state(persons[notify_idx], 'home')
+               or notify_persons_driving and
+                    is_state(driving_sensors[notify_idx], 'on')
+               or notify_everyone_else and
+                    not(is_state(persons[notify_idx], 'home') or
+                        is_state(driving_sensors[notify_idx], 'on')) %}
+              {% set data.devices_list = data.devices_list + [notify_devices[notify_idx]] %}
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+
+        {{ {context.id: data.devices_list | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list} }}
       driving_sensor: "{{ driving_sensors[idx] }}"
       travel_time_sensor: "{{ travel_time_sensors[idx] }}"
       driver: "{{ persons[idx] }}"
@@ -169,9 +207,7 @@ actions:
     value_template: "{{ not is_state(driver, 'home') }}"
   # Notify each user except the driver that an itinerary has been started
   - repeat:
-      for_each: |-
-        {% set temp = notify_services[context.id].pop(idx) %}
-        {{ notify_services[context.id] }}
+      for_each: "{{ notify_services[context.id] }}"
       sequence:
         - action: "{{ repeat.item }}"
           data:
