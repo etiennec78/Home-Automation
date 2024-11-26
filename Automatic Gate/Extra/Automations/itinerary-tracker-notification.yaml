@@ -105,12 +105,6 @@ blueprint:
       icon: mdi:cog
       collapsed: true
       input:
-        track_travel_time:
-          name: 📍 Track travel time
-          description: Should the automation display and update the delay remaining before arrival on the notification received ?
-          default: true
-          selector:
-            boolean:
         notif_refresh_rate:
           name: 🔁 Notification refresh rate
           description: The minimum time between sending two tracking notifications, to avoid quickly reaching the notification quota if your position is updated frequently
@@ -216,7 +210,6 @@ actions:
 
         {{ {context.id: data.devices_list | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list} }}
       driving_sensor: "{{ driving_sensors[idx] }}"
-      travel_time_sensor: "{{ travel_time_sensors[idx] }}"
       driver: "{{ persons[idx] }}"
       driver_name: "{{ state_attr(driver, 'friendly_name') }}"
   # Only continue if the driver is not home
@@ -254,11 +247,13 @@ actions:
                 media_player_entity_id: "{{ repeat.item }}"
                 message: !input itinerary_started_message
               target: "{{ speaker_tts_service }}"
-  # If "Track travel time" boolean input is set to true
+  # If travel time sensors are set
   - if:
       condition: template
-      value_template: !input track_travel_time
+      value_template: "{{ travel_time_sensors != [] }}"
     then:
+      - variables:
+          travel_time_sensor: "{{ travel_time_sensors[idx] }}"
       # Repeat while the driver is still driving
       - repeat:
           while:
@@ -341,7 +336,7 @@ actions:
                       {{ notify_services[context.id].pop(
                           notify_services[context.id].index(
                             wait.trigger.event.data.confirmation)) }}
-    # If "Track travel time" boolean input is set to false
+    # If there are no travel time sensors set
     else:
       # Wait for the user to leave his vehicle
       - wait_for_trigger:
