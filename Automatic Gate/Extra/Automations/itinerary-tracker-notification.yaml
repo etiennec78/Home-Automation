@@ -373,4 +373,4 @@ actions:
                 message: clear_notification
                 data:
                   tag: itinerary-tracker
-mode: single
+mode: parallel
