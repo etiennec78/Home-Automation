@@ -15,7 +15,7 @@ esphome:
             state: OFF
         - text_sensor.template.publish:
             id: error_message
-            state: ""
+            state: "unknown"
 
 # Enable logging
 logger:
@@ -414,7 +414,7 @@ script:
             state: OFF
         - text_sensor.template.publish:
             id: error_message
-            state: ""
+            state: "unknown"
         # Clear the notification
         - homeassistant.service:
             service: !secret notification_group
