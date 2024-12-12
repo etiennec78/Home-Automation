@@ -223,7 +223,7 @@ script:
                                             state: "paused"
                                         - button.press: gate_relay
 
-                                        - delay: 2s
+                                        - delay: 1s
 
                                         - text_sensor.template.publish:
                                             id: gate_status
@@ -313,7 +313,7 @@ script:
                                     state: "paused"
                                 - button.press: gate_relay
 
-                                - delay: 2s
+                                - delay: 1s
 
                                 - text_sensor.template.publish:
                                     id: gate_status
