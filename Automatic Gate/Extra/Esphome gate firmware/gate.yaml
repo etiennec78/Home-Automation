@@ -76,6 +76,16 @@ text_sensor:
     id: error_message
     name: "Error message"
     icon: "mdi:chat-alert"
+    on_value:
+      then:
+        - if:
+            condition:
+              - lambda: 'return id(error_message).state != "unknown";'
+            then:
+              - delay: 2s
+              - text_sensor.template.publish:
+                  id: error_message
+                  state: "unknown"
 
   # Optional device trackers to let devices open the gate if they're connected to home wifi but aren't reporting their position
   # - platform: homeassistant
@@ -233,17 +243,17 @@ script:
                                         # Start a timer for the time it will take to fully close the gate
                                         - script.execute: set_timer
                                     else:
-                                        - script.execute:
-                                            id: set_error
-                                            message: "wrong-state"
+                                      - text_sensor.template.publish:
+                                          id: error_message
+                                          state: "wrong-state"
                     else:
-                        - script.execute:
-                            id: set_error
-                            message: "nobody-near-home"
+                      - text_sensor.template.publish:
+                          id: error_message
+                          state: "nobody-near-home"
             else:
-                - script.execute:
-                    id: set_error
-                    message: "not-ready"
+              - text_sensor.template.publish:
+                  id: error_message
+                  state: "not-ready"
 
 
   - id: close_gate
@@ -296,13 +306,13 @@ script:
                                 # Start a timer for the time it will take to fully close the gate
                                 - script.execute: set_timer
                             else:
-                                - script.execute:
-                                    id: set_error
-                                    message: "wrong-state"
+                              - text_sensor.template.publish:
+                                  id: error_message
+                                  state: "wrong-state"
             else:
-                - script.execute:
-                    id: set_error
-                    message: "not-ready"
+              - text_sensor.template.publish:
+                  id: error_message
+                  state: "not-ready"
 
   - id: set_timer
     mode: restart
@@ -345,19 +355,6 @@ script:
                         id: gate_status
                         state: "open"
                 else:
-                    - script.execute:
-                        id: set_error
-                        message: "bad-moving-state"
-
-  - id: set_error
-    mode: restart
-    parameters:
-      message: string
-    then:
-        - text_sensor.template.publish:
-            id: error_message
-            state: !lambda return message;
-        - delay: 5s
-        - text_sensor.template.publish:
-            id: error_message
-            state: "unknown"
+                  - text_sensor.template.publish:
+                      id: error_message
+                      state: "bad-moving-state"
