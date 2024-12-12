@@ -195,8 +195,6 @@ script:
                                     id: gate
                                     state: ON
 
-                                - script.execute: notify_gate_opening
-
                                 - text_sensor.template.publish:
                                     id: gate_status
                                     state: "opening"
@@ -214,8 +212,6 @@ script:
                                         - switch.template.publish:
                                             id: gate
                                             state: ON
-
-                                        - script.execute: notify_gate_opening
 
                                         # Send two delayed pulses to the gate to make it stop then open
                                         - text_sensor.template.publish:
@@ -243,30 +239,6 @@ script:
                     id: set_error
                     message: "not-ready"
 
-  - id: notify_gate_opening
-    mode: restart
-    then:
-        # Notify mobile devices that the gate is opening
-        - homeassistant.service:
-            service: !secret notification_group
-            data:
-                message: !secret opening_notification_message
-                title: !secret opening_notification_title
-            data_template:
-                data: |
-                    {{ '{"tag": "gate-movement", "car_ui": true, "notification_icon": "mdi:gate-open", "channel": "Gate alerts", "importance": "high", "push": {"sound": {"name": "default", "critical": 1}}}' | from_json }}
-        # Optional, play a TTS on a speaker to notify that the gate is opening
-        # - homeassistant.service:
-        #     service: tts.speak
-        #     data:
-        #         cache: "true"
-        #         media_player_entity_id: !secret player_entity
-        #         message: !secret opening_notification_message
-        #         entity_id: tts.piper
-
-        # Optional, starts a HA script when your gate opens
-        # - homeassistant.service:
-        #     service: !secret opening_script_name
 
   - id: close_gate
     mode: parallel
@@ -363,13 +335,6 @@ script:
               - text_sensor.template.publish:
                   id: gate_status
                   state: "closed"
-              - homeassistant.service:
-                  service: !secret notification_group
-                  data:
-                      message: clear_notification
-                  data_template:
-                      data: |
-                          {{ '{"tag": "gate-movement"}' | from_json }}
           else:
             - if:
                 condition:
@@ -399,15 +364,6 @@ script:
         - text_sensor.template.publish:
             id: error_message
             state: !lambda return message;
-        # Notify mobile devices that the gate couldn't move because of an error
-        - homeassistant.service:
-            service: !secret notification_group
-            data:
-                title: !secret error_title
-                message: !lambda return message;
-            data_template:
-                data: |
-                    {{ '{"tag": "gate-error", "car_ui": true, "notification_icon": "mdi:gate-alert", "channel": "Gate alerts", "importance": "high", "push": {"sound": {"name": "default", "critical": 1}}}' | from_json }}
         - delay: 5s
         - binary_sensor.template.publish:
             id: error
@@ -415,11 +371,3 @@ script:
         - text_sensor.template.publish:
             id: error_message
             state: "unknown"
-        # Clear the notification
-        - homeassistant.service:
-            service: !secret notification_group
-            data:
-                message: clear_notification
-            data_template:
-                data: |
-                    {{ '{"tag": "gate-error"}' | from_json }}
