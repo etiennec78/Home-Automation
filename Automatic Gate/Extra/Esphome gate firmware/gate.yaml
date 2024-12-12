@@ -132,6 +132,9 @@ button:
     output: open_cover_pin
     duration: 500ms
     internal: true
+    on_press:
+      - script.execute:
+          id: set_standby
 
   # A button to reset the gate in case the virtual state doesn't match the real state
   - platform: restart
@@ -163,6 +166,19 @@ switch:
 
 
 script:
+  - id: set_standby
+    # Set the mode to restart to avoid having an old instance mark the gate as ready too soon
+    mode: restart
+    then:
+      - binary_sensor.template.publish:
+          id: standby
+          state: ON
+      - delay: 2s
+      - binary_sensor.template.publish:
+          id: standby
+          state: OFF
+
+
   - id: open_gate
     mode: parallel
     then:
@@ -171,9 +187,6 @@ script:
             condition:
                 - binary_sensor.is_off: standby
             then:
-                - binary_sensor.template.publish:
-                    id: standby
-                    state: ON
                 - if:
                     # Check if a GPS device tracker is near home
                     condition:
@@ -248,9 +261,6 @@ script:
             condition:
                 - binary_sensor.is_off: standby
             then:
-                - binary_sensor.template.publish:
-                    id: standby
-                    state: ON
                 - if:
                     condition:
                         - text_sensor.state:
@@ -316,10 +326,6 @@ script:
       # Send a pulse to the gate
       - button.press: gate_relay
       - sensor.duty_time.start: elapsed_time
-      - delay: 1s
-      - binary_sensor.template.publish:
-          id: standby
-          state: OFF
       # Wait for the gate to finish moving
       - delay: !lambda "return (id(sleep_time)-1)*1000;"
       # Reset the timer
@@ -355,9 +361,6 @@ script:
     parameters:
       message: string
     then:
-        - binary_sensor.template.publish:
-            id: standby
-            state: OFF
         - binary_sensor.template.publish:
             id: error
             state: ON
