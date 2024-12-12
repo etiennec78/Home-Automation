@@ -10,9 +10,6 @@ esphome:
         - text_sensor.template.publish:
             id: gate_status
             state: "closed"
-        - binary_sensor.template.publish:
-            id: error
-            state: OFF
         - text_sensor.template.publish:
             id: error_message
             state: "unknown"
@@ -90,10 +87,6 @@ text_sensor:
 
 binary_sensor:
   # Declare binary sensors
-  - platform: template
-    id: error
-    name: "Error"
-    icon: "mdi:alert-circle"
   - platform: template
     id: standby
     name: "Gate on standby"
@@ -361,16 +354,10 @@ script:
     parameters:
       message: string
     then:
-        - binary_sensor.template.publish:
-            id: error
-            state: ON
         - text_sensor.template.publish:
             id: error_message
             state: !lambda return message;
         - delay: 5s
-        - binary_sensor.template.publish:
-            id: error
-            state: OFF
         - text_sensor.template.publish:
             id: error_message
             state: "unknown"
