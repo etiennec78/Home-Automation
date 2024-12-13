@@ -6,10 +6,9 @@ esphome:
   on_boot:
     priority: 0
     then:
-        # Initialise sensors
-        - text_sensor.template.publish:
-            id: gate_status
-            state: "closed"
+        - cover.template.publish:
+            id: gate
+            position: 0
         - text_sensor.template.publish:
             id: error_message
             state: "unknown"
@@ -39,13 +38,10 @@ esp32_ble_tracker:
     continuous: false
 
 sensor:
-  # Sensors for android auto, nearest distance of any device from home, state of the gate, and variables
+  # Sensors for nearest device distance, iBeacon scanners
   - platform: homeassistant
     id: nearest_distance
     entity_id: !secret nearest_distance_sensor
-  - platform: duty_time
-    id: elapsed_time
-    disabled_by_default: true
   - platform: ble_rssi
     name: !secret ibeacon_user0_name
     ibeacon_uuid: !secret ibeacon_user0_uuid
@@ -63,11 +59,6 @@ sensor:
       - timeout: 25s
 
 text_sensor:
-  # Declare text sensors
-  - platform: template
-    id: gate_status
-    name: "Gate status"
-    icon: "mdi:information"
   - platform: template
     id: error_message
     name: "Error message"
@@ -92,7 +83,7 @@ text_sensor:
   #   entity_id: !secret device_tracker_2_id
 
 binary_sensor:
-  # Declare binary sensors
+  # Binary sensor to monitor when the gate isn't able to accept new requests
   - platform: template
     id: standby
     name: "Gate on standby"
@@ -109,10 +100,8 @@ globals:
     initial_value: !secret activation_zone
 
   # Internal variables
-  # Initialise a global variable tracking gate moving time
-  - id: sleep_time
-    type: float
-    restore_value: no
+  - id: direction
+    type: int
     initial_value: "0"
 
 output:
@@ -140,17 +129,6 @@ button:
     name: "Restart gate firmware"
 
 switch:
-  # Virtual switch which guesses the state of your gate
-  - platform: template
-    id: gate
-    name: "Gate"
-    icon: "mdi:gate"
-    restore_mode: ALWAYS_OFF
-    turn_on_action:
-        - script.execute: open_gate
-    turn_off_action:
-        - script.execute: close_gate
-
   # Virtual switch to enable the internal iBeacon scanner
   - platform: template
     id: ibeacon_switch
@@ -163,6 +141,29 @@ switch:
     turn_off_action:
       - esp32_ble_tracker.stop_scan:
 
+cover:
+  # Cover to group buttons into one entity
+  - platform: template
+    id: gate
+    name: "Gate"
+    device_class: gate
+    has_position: true
+    open_action:
+      - script.execute:
+          id: validate_movement
+          position_requested: 1.0
+    close_action:
+      - script.execute:
+          id: validate_movement
+          position_requested: 0.0
+    stop_action:
+      - script.execute:
+          id: validate_movement
+          position_requested: -1.0
+    position_action:
+      - script.execute:
+          id: validate_movement
+          position_requested: !lambda "return pos;"
 
 script:
   - id: set_standby
@@ -178,179 +179,153 @@ script:
           state: OFF
 
 
-  - id: open_gate
+  - id: validate_movement
+    parameters:
+      position_requested: float
+    # Set the mode to parallel to continue the old request if the new one was rejected or delayed
     mode: parallel
     then:
-        - if:
-            # Check that the gate is ready to take new inputs (in case of a multiple opening requests received at the same time when lagging)
-            condition:
-                - binary_sensor.is_off: standby
-            then:
-                - if:
-                    # Check if a GPS device tracker is near home
-                    condition:
-                        - lambda: 'return id(nearest_distance).state < id(ACTIVATION_ZONE);'
-                        # Optional, only if you have set wifi device trackers (l.79)
-                        # - lambda: |-
-                        #     return id(nearest_distance).state < id(ACTIVATION_ZONE)
-                        #         or id(device_tracker_1).state == "home"
-                        #         or id(device_tracker_2).state == "home";
-                    then:
-                        - if:
-                            condition:
-                                - text_sensor.state:
-                                    id: gate_status
-                                    state: "closed"
-                            then:
-                                # Accept the opening request and change the switch state
-                                - switch.template.publish:
-                                    id: gate
-                                    state: ON
-
-                                - text_sensor.template.publish:
-                                    id: gate_status
-                                    state: "opening"
-                                # Start a timer for the time it will take to fully close the gate
-                                - script.execute: set_timer
-                            else:
-                                - if:
-                                    # If the gate is currently closing but is still in movement
-                                    condition:
-                                        - text_sensor.state:
-                                            id: gate_status
-                                            state: "closing"
-                                    then:
-                                        # Accept the opening request and change the switch state
-                                        - switch.template.publish:
-                                            id: gate
-                                            state: ON
-
-                                        # Send two delayed pulses to the gate to make it stop then open
-                                        - text_sensor.template.publish:
-                                            id: gate_status
-                                            state: "paused"
-                                        - button.press: gate_relay
-
-                                        - delay: 1s
-
-                                        - text_sensor.template.publish:
-                                            id: gate_status
-                                            state: "opening"
-                                        # Start a timer for the time it will take to fully close the gate
-                                        - script.execute: set_timer
-                                    else:
-                                      - text_sensor.template.publish:
-                                          id: error_message
-                                          state: "wrong-state"
-                    else:
-                      - text_sensor.template.publish:
-                          id: error_message
-                          state: "nobody-near-home"
-            else:
-              - text_sensor.template.publish:
-                  id: error_message
-                  state: "not-ready"
-
-
-  - id: close_gate
-    mode: parallel
-    then:
-        - if:
-            # Check that the gate is ready to take new inputs (in case of a multiple closing requests received at the same time when lagging)
-            condition:
-                - binary_sensor.is_off: standby
-            then:
-                - if:
-                    condition:
-                        - text_sensor.state:
-                            id: gate_status
-                            state: "open"
-                    then:
-                        # Accept the closing request and change the switch state
-                        - switch.template.publish:
-                            id: gate
-                            state: OFF
-                        - text_sensor.template.publish:
-                            id: gate_status
-                            state: "closing"
-                        # Start a timer for the time it will take to fully close the gate
-                        - script.execute: set_timer
-                    else:
-                        - if:
-                            # If the gate is currently opening but is still in movement
-                            condition:
-                                text_sensor.state:
-                                    id: gate_status
-                                    state: "opening"
-                            then:
-                                # Accept the closing request and change the switch state
-                                - switch.template.publish:
-                                    id: gate
-                                    state: OFF
-
-                                # Send two delayed pulses to the gate to make it stop then close
-                                - text_sensor.template.publish:
-                                    id: gate_status
-                                    state: "paused"
-                                - button.press: gate_relay
-
-                                - delay: 1s
-
-                                - text_sensor.template.publish:
-                                    id: gate_status
-                                    state: "closing"
-                                # Start a timer for the time it will take to fully close the gate
-                                - script.execute: set_timer
-                            else:
-                              - text_sensor.template.publish:
-                                  id: error_message
-                                  state: "wrong-state"
-            else:
-              - text_sensor.template.publish:
-                  id: error_message
-                  state: "not-ready"
-
-  - id: set_timer
-    mode: restart
-    then:
-      # Get the time remaining of the latest timer
-      - component.update: elapsed_time
-      # Reset the timer if it has hit 0 or keep its current value
-      - lambda: |-
-          if (id(elapsed_time).state == 0) {
-            id(sleep_time) = id(MOVEMENT_DURATION);
-          } else {
-            id(sleep_time) = id(elapsed_time).state;
-          }
-      # Send a pulse to the gate
-      - button.press: gate_relay
-      - sensor.duty_time.start: elapsed_time
-      # Wait for the gate to finish moving
-      - delay: !lambda "return (id(sleep_time)-1)*1000;"
-      # Reset the timer
-      - sensor.duty_time.stop: elapsed_time
-      - sensor.duty_time.reset: elapsed_time
-      # Update the gate state
+      # Check if a GPS device tracker is near home, only if this is not a closing request
       - if:
           condition:
-              - text_sensor.state:
-                  id: gate_status
-                  state: "closing"
+              - lambda: "return id(nearest_distance).state < id(ACTIVATION_ZONE)
+                        or position_requested*100 < round(id(gate).position*100) and position_requested != -1.0;"
+
+              # Optional, let your gate open if a router device tracker is home (comment the lambda above if used)
+              # - lambda: |-
+              #     return id(nearest_distance).state < id(ACTIVATION_ZONE)
+              #         or position_requested*100 < round(id(gate).position*100) and position_requested != -1.0
+              #         or id(device_tracker_1).state == "home"
+              #         or id(device_tracker_2).state == "home";
           then:
-              - text_sensor.template.publish:
-                  id: gate_status
-                  state: "closed"
-          else:
+            # Check that the gate is ready to take new requests
             - if:
                 condition:
-                    - text_sensor.state:
-                        id: gate_status
-                        state: "opening"
+                  - binary_sensor.is_off: standby
                 then:
-                    - text_sensor.template.publish:
-                        id: gate_status
-                        state: "open"
+                  # Check if this is a stopping request
+                  - if:
+                      condition:
+                        - lambda: "return position_requested == -1.0 or round(position_requested*100) == round(id(gate).position*100);"
+                      then:
+                        - script.execute: stop_gate
+                      else:
+                        # Start moving the gate
+                        - script.execute:
+                            id: move_gate
+                            position_requested: !lambda "return position_requested;"
                 else:
                   - text_sensor.template.publish:
                       id: error_message
+                      state: "not-ready"
+          else:
+            - text_sensor.template.publish:
+                id: error_message
+                state: "nobody-near-home"
+
+
+  - id: stop_gate
+    mode: single
+    then:
+      - if:
+          condition:
+            - lambda: "return id(gate).current_operation != COVER_OPERATION_IDLE;"
+          then:
+            # Stop updating the position
+            - script.stop: move_gate
+            # Pulse to stop
+            - button.press: gate_relay
+            # Report the gate as idle
+            - cover.template.publish:
+                id: gate
+                current_operation: IDLE
+
+
+  - id: move_gate
+    parameters:
+      position_requested: float
+    # Set the mode to restart to cancel the current movement if a new one was requested and accepted
+    mode: restart
+    then:
+      # If the gate is fully closed or fully open, then start it with one pulse
+      - if:
+          condition:
+            - lambda: "return round(id(gate).position*100) == 0 or round(id(gate).position*100) == 100;"
+          then:
+            - button.press: gate_relay
+            - delay: 1s
+
+          # If the gate is not fully closed or open
+          else:
+            # If the gate is not moving, then start it
+            - if:
+                condition:
+                  - lambda: "return id(gate).current_operation == COVER_OPERATION_IDLE;"
+                then:
+                  - button.press: gate_relay
+                  - globals.set:
+                      id: direction
+                      value: !lambda "return not id(direction);"
+                  - delay: 1s
+
+            # If the gate is opening but the direction requested is closing
+            - if:
+                condition:
+                  - lambda: "return id(direction) == 0 and position_requested < id(gate).position;"
+                then:
+                  - button.press: gate_relay
+                  - delay: 1s
+                  - button.press: gate_relay
+                  - delay: 1s
+            - if:
+                condition:
+                  - lambda: "return id(direction) == 1 and position_requested > id(gate).position;"
+                then:
+                  - text_sensor.template.publish:
+                      id: error_message
                       state: "bad-moving-state"
+                  - script.stop: move_gate
+
+      # If the position requested will open the gate, then mark the gate as opening
+      - if:
+          condition:
+            - lambda: "return position_requested > id(gate).position;"
+          then:
+            - cover.template.publish:
+                id: gate
+                current_operation: OPENING
+            - globals.set:
+                id: direction
+                value: "0"
+
+          # If the position requested will close the gate, then mark the gate as closing
+          else:
+            - cover.template.publish:
+                id: gate
+                current_operation: CLOSING
+            - globals.set:
+                id: direction
+                value: "1"
+
+      # While the gate has not finished moving, update its position
+      - while:
+            condition:
+              - lambda: "return round(id(gate).position*100) != round(position_requested*100);"
+            then:
+              - delay: !lambda  "return id(MOVEMENT_DURATION) * 10;" # Divided by 100 (steps) but multiplied by 1000 to get milliseconds
+              - cover.template.publish:
+                  id: gate
+                  position: !lambda "return id(gate).position + 0.01 * pow(-1, id(direction));"
+
+      # If the requested position wasn't an extremity, then send a pulse to stop the gate
+      - if:
+          condition:
+            - lambda: "return not(position_requested == 1.0 or position_requested == 0.0);"
+          then:
+            - script.execute: stop_gate
+          else:
+            # Report the gate as idle and set its state to the position requested to avoid unprecisions
+            - cover.template.publish:
+                id: gate
+                current_operation: IDLE
+                state: !lambda "return position_requested;"
