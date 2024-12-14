@@ -6,9 +6,6 @@ esphome:
   on_boot:
     priority: 0
     then:
-        - cover.template.publish:
-            id: gate
-            position: 0
         - text_sensor.template.publish:
             id: error_message
             state: "unknown"
@@ -103,6 +100,7 @@ globals:
   - id: direction
     type: int
     initial_value: "0"
+    restore_value: yes
   - id: pulses_needed
     type: int
     initial_value: "0"
@@ -127,7 +125,7 @@ button:
       - script.execute:
           id: set_standby
 
-  # A button to reset the gate in case the virtual state doesn't match the real state
+  # A button to restart the gate (the current state will be remembered)
   - platform: restart
     name: "Restart gate firmware"
 
