@@ -226,6 +226,7 @@ actions:
               notification_icon: mdi:car
               tag: itinerary-tracker
               channel: Itinerary status
+              sticky: true
               # Hack to retrieve the notification service when dismissed
               confirmation: "{{ repeat.item }}"
               url: !input on_tap_link
@@ -304,6 +305,7 @@ actions:
                         notification_icon: mdi:map-marker-account
                         tag: itinerary-tracker
                         channel: Itinerary status
+                        sticky: true
                         # Hack to retrieve the notification service when dismissed
                         confirmation: "{{ repeat.item }}"
                         url: !input on_tap_link
