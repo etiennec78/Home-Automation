@@ -95,6 +95,9 @@ globals:
   - id: ACTIVATION_ZONE
     type: int
     initial_value: !secret activation_zone
+  - id: INVERTED_MODE
+    type: bool
+    initial_value: !secret inverted_mode
 
   # Internal variables
   - id: direction
@@ -270,6 +273,13 @@ script:
             - script.stop: move_gate
             # Pulse to stop
             - button.press: gate_relay
+            # If inverted mode is enabled and the gate is closing, pulse to invert
+            - if:
+                condition:
+                  - lambda: "return id(INVERTED_MODE) and id(direction) == 1;"
+                then:
+                  - delay: 1s
+                  - button.press: gate_relay
             # Report the gate as idle
             - cover.template.publish:
                 id: gate
@@ -297,34 +307,55 @@ script:
 
           # If the gate is not fully closed or open
           else:
-            # If the gate is not moving, then start it
+            # If the gate operates in "inverted" mode
             - if:
                 condition:
-                  - lambda: "return id(gate).current_operation == COVER_OPERATION_IDLE;"
+                  - lambda: "return id(INVERTED_MODE);"
                 then:
-                  - globals.set:
-                      id: pulses_needed
-                      value: "1"
-                  - globals.set:
-                      id: direction
-                      value: !lambda "return not id(direction);"
+                  # Only continue if the gate is not already moving in the requested direction
+                  - if:
+                      condition:
+                        - lambda: "return id(gate).current_operation == COVER_OPERATION_IDLE
+                                      or id(direction) == 0 and position_requested < id(gate).position
+                                      or id(direction) == 1 and position_requested > id(gate).position;"
+                      then:
+                        # Invert the direction
+                        - globals.set:
+                            id: pulses_needed
+                            value: "1"
+                        # If this is an opening request an the gate is idle,
+                        # or this is a closing request and the gate is moving
+                        - if:
+                            condition:
+                              - lambda: "return (position_requested > id(gate).position) == (id(gate).current_operation == COVER_OPERATION_IDLE);"
+                            then:
+                              # Start/Pause the gate
+                              - globals.set:
+                                  id: pulses_needed
+                                  value: !lambda "return id(pulses_needed) + 1;"
+                # If the gate doesn't operate in "inverted" mode
+                else:
+                  # If the gate is not moving, then start it
+                  - if:
+                      condition:
+                        - lambda: "return id(gate).current_operation == COVER_OPERATION_IDLE;"
+                      then:
+                        - globals.set:
+                            id: pulses_needed
+                            value: "1"
+                        - globals.set:
+                            id: direction
+                            value: !lambda "return not id(direction);"
 
-            # If the gate is opening but the direction requested is closing
-            - if:
-                condition:
-                  - lambda: "return id(direction) == 0 and position_requested < id(gate).position;"
-                then:
-                  - globals.set:
-                      id: pulses_needed
-                      value: !lambda "return id(pulses_needed) + 2;"
-            - if:
-                condition:
-                  - lambda: "return id(direction) == 1 and position_requested > id(gate).position;"
-                then:
-                  - text_sensor.template.publish:
-                      id: error_message
-                      state: "bad-moving-state"
-                  - script.stop: move_gate
+                  # If the last gate direction is opposite to the one requested
+                  - if:
+                      condition:
+                        - lambda: "return id(direction) == 0 and position_requested < id(gate).position
+                                or id(direction) == 1 and position_requested > id(gate).position;"
+                      then:
+                        - globals.set:
+                            id: pulses_needed
+                            value: !lambda "return id(pulses_needed) + 2;"
 
 
   - id: move_gate
