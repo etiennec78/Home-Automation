@@ -103,6 +103,9 @@ globals:
   - id: direction
     type: int
     initial_value: "0"
+  - id: pulses_needed
+    type: int
+    initial_value: "0"
 
 output:
   # Output for the real relay connected to your gate
@@ -210,10 +213,28 @@ script:
                       then:
                         - script.execute: stop_gate
                       else:
-                        # Start moving the gate
                         - script.execute:
-                            id: move_gate
+                            id: count_pulses
                             position_requested: !lambda "return position_requested;"
+                        - script.wait: count_pulses
+                        # Check that the position requested is far enough to make the pin not pulse twice in a too short period, making it continuous
+                        - if:
+                            condition:
+                              - lambda: |-
+                                  return position_requested == 0.0 or position_requested == 1.0
+                                        or round(id(gate).position*100) == round(position_requested*100) or position_requested == -1.0
+                                        or id(MOVEMENT_DURATION)*abs(position_requested-id(gate).position) > 1;
+                            then:
+                              # Accept the request and start moving the gate
+                              - script.execute:
+                                  id: move_gate
+                                  position_requested: !lambda "return position_requested;"
+                                  pulses_needed: !lambda "return id(pulses_needed);"
+                            else:
+                              # Stop the gate when possible
+                              - script.execute:
+                                  id: validate_movement
+                                  position_requested: -1.0
                 else:
                   - text_sensor.template.publish:
                       id: error_message
@@ -241,19 +262,24 @@ script:
                 current_operation: IDLE
 
 
-  - id: move_gate
+  - id: count_pulses
     parameters:
       position_requested: float
-    # Set the mode to restart to cancel the current movement if a new one was requested and accepted
-    mode: restart
+    # Set the mode to single to only have one instance running and avoid sending wrong values
+    mode: single
     then:
+      # Reset the number of pulses needed
+      - globals.set:
+          id: pulses_needed
+          value: "0"
       # If the gate is fully closed or fully open, then start it with one pulse
       - if:
           condition:
             - lambda: "return round(id(gate).position*100) == 0 or round(id(gate).position*100) == 100;"
           then:
-            - button.press: gate_relay
-            - delay: 1s
+            - globals.set:
+                id: pulses_needed
+                value: "1"
 
           # If the gate is not fully closed or open
           else:
@@ -262,21 +288,21 @@ script:
                 condition:
                   - lambda: "return id(gate).current_operation == COVER_OPERATION_IDLE;"
                 then:
-                  - button.press: gate_relay
+                  - globals.set:
+                      id: pulses_needed
+                      value: "1"
                   - globals.set:
                       id: direction
                       value: !lambda "return not id(direction);"
-                  - delay: 1s
 
             # If the gate is opening but the direction requested is closing
             - if:
                 condition:
                   - lambda: "return id(direction) == 0 and position_requested < id(gate).position;"
                 then:
-                  - button.press: gate_relay
-                  - delay: 1s
-                  - button.press: gate_relay
-                  - delay: 1s
+                  - globals.set:
+                      id: pulses_needed
+                      value: !lambda "return id(pulses_needed) + 2;"
             - if:
                 condition:
                   - lambda: "return id(direction) == 1 and position_requested > id(gate).position;"
@@ -285,6 +311,20 @@ script:
                       id: error_message
                       state: "bad-moving-state"
                   - script.stop: move_gate
+
+
+  - id: move_gate
+    parameters:
+      position_requested: float
+      pulses_needed: int
+    # Set the mode to restart to cancel the current movement if a new one was requested and accepted
+    mode: restart
+    then:
+      - repeat:
+          count: !lambda "return pulses_needed;"
+          then:
+            - button.press: gate_relay
+            - delay: 1s
 
       # If the position requested will open the gate, then mark the gate as opening
       - if:
