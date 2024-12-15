@@ -117,12 +117,12 @@ triggers:
     entity_id: !input gate
     to: "on"
     for:
-      minutes: 7
+      minutes: !input left_open_delay
   - trigger: state
     entity_id: !input gate
     to: "open"
     for:
-      minutes: 7
+      minutes: !input left_open_delay
 
 conditions: []
   # No condition
