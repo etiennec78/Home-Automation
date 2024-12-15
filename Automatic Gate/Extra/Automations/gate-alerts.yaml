@@ -235,6 +235,9 @@ triggers:
       - "on"
       - "open"
       - "opening"
+    not_from:
+      - "unknown"
+      - "unavailable"
     for:
       minutes: !input notification_delay
     enabled: "{{ notification_type == 'open' }}"
@@ -246,6 +249,9 @@ triggers:
       - "off"
       - "closing"
       - "closed"
+    not_from:
+      - "unknown"
+      - "unavailable"
     for:
       minutes: !input notification_delay
     enabled: "{{ notification_type == 'close' }}"
@@ -253,6 +259,9 @@ triggers:
     entity_id: !input gate
     to:
       - "closed"
+    not_from:
+      - "unknown"
+      - "unavailable"
     for:
       minutes: !input notification_delay
     enabled: "{{ notification_type == 'close' and states[gate].domain == 'cover' and state_attr(gate, 'supported_features') | bitwise_and(4) == 0 }}"
