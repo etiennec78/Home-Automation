@@ -133,6 +133,21 @@ blueprint:
       selector:
         text:
           multiline: true
+    notification_still_open_title:
+      name: 📃 Notification still open title
+      description: |-
+        **Title** for notifications when the gate finishes moving and is open
+      default: Gate open 🔓
+      selector:
+        text:
+    notification_still_open_message:
+      name: 💬 Notification still open message
+      description: |-
+        **Message** content for notifications when the gate finishes moving and is open
+      default: Gate is still open
+      selector:
+        text:
+          multiline: true
     closing_button_text:
       name: 💬 Closing button
       description: Text for the **close** gate **button**
@@ -237,69 +252,105 @@ actions:
   - variables:
       closing_order_id: "{{ 'closing_order_' ~ this.context.id }}"
 
-  # Notify each user
-  - repeat:
-      for_each: "{{ notify_services }}"
-      sequence:
-        - action: "{{ repeat.item }}"
-          data:
-            title: !input notification_title
-            message: !input notification_message
-            data:
-              car_ui: true
-              notification_icon: mdi:gate-alert
-              channel: Gate alerts
-              importance: high
-              push:
-                sound:
-                  name: "default"
-                  critical: 1
-              tag: "{{ notification_tag }}"
-              timeout: |-
-                {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
-                  30
-                {% else %}
-                  3600
-                {% endif %}
-              actions: |-
-                {% if notification_type == 'open' %}
-                  {{ [{'action': closing_order_id, 'title': closing_button_text}] }}
-                {% else %}
-                  {{ [] }}
-                {% endif %}
-
-        # Play a TTS on each phone, only if this has been enabled
-        - if:
-            condition: template
-            value_template: !input phone_tts
-          then:
-            - action: "{{ repeat.item }}"
-              data:
-                message: TTS
-                data:
-                  tts_text: !input notification_message
-
-  # Play a TTS on each speaker selected, only if at least one has been selected
-  - repeat:
-      for_each: "{{ speaker_tts_devices }}"
-      sequence:
-        - action: tts.speak
-          data:
-            cache: true
-            media_player_entity_id: "{{ repeat.item }}"
-            message: !input notification_message
-          target: "{{ speaker_tts_service }}"
-
-  # Send a persistent notification on the dashboard, only if this has been enabled
+  # If the gate is now paused or fully open (only gates supporting position tracking)
   - if:
       condition: template
-      value_template: !input persistent_notification
+      value_template: "{{ notification_type == 'open' and is_state(gate, 'open') and notification_delay == 0 and state_attr(gate, 'supported_features') | bitwise_and(4) == 4 }}"
     then:
-      - action: persistent_notification.create
-        data:
-          title: !input notification_title
-          message: !input notification_message
-          notification_id: "{{ notification_tag }}"
+      # Replace the opening notification on each phone silently
+      - repeat:
+          for_each: "{{ notify_services }}"
+          sequence:
+            - action: "{{ repeat.item }}"
+              data:
+                title: !input notification_still_open_title
+                message: !input notification_still_open_message
+                data:
+                  notification_icon: mdi:gate-alert
+                  channel: Gate alerts
+                  sticky: true
+                  persistent: true
+                  tag: "{{ notification_tag }}"
+                  timeout: 3600
+                  alert_once: true
+                  actions:
+                    - action: "{{ closing_order_id }}"
+                      title: !input closing_button_text
+
+      # Replace the opening persistent notification on the dashboard, only if it has been enabled
+      - if:
+          condition: template
+          value_template: !input persistent_notification
+        then:
+          - action: persistent_notification.create
+            data:
+              title: !input notification_still_open_title
+              message: !input notification_still_open_message
+              notification_id: "{{ notification_tag }}"
+    else:
+      # Notify each user
+      - repeat:
+          for_each: "{{ notify_services }}"
+          sequence:
+            - action: "{{ repeat.item }}"
+              data:
+                title: !input notification_title
+                message: !input notification_message
+                data:
+                  car_ui: true
+                  notification_icon: mdi:gate-alert
+                  channel: Gate alerts
+                  importance: high
+                  push:
+                    sound:
+                      name: "default"
+                      critical: 1
+                  tag: "{{ notification_tag }}"
+                  timeout: |-
+                    {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
+                      30
+                    {% else %}
+                      3600
+                    {% endif %}
+                  actions: |-
+                    {% if notification_type == 'open' %}
+                      {{ [{'action': closing_order_id, 'title': closing_button_text}] }}
+                    {% else %}
+                      {{ [] }}
+                    {% endif %}
+
+            # Play a TTS on each phone, only if this has been enabled
+            - if:
+                condition: template
+                value_template: !input phone_tts
+              then:
+                - action: "{{ repeat.item }}"
+                  data:
+                    message: TTS
+                    data:
+                      tts_text: !input notification_message
+
+      # Play a TTS on each speaker selected, only if at least one has been selected
+      - repeat:
+          for_each: "{{ speaker_tts_devices }}"
+          sequence:
+            - action: tts.speak
+              data:
+                cache: true
+                media_player_entity_id: "{{ repeat.item }}"
+                message: !input notification_message
+              target: "{{ speaker_tts_service }}"
+
+      # Send a persistent notification on the dashboard, only if this has been enabled
+      - if:
+          condition: template
+          value_template: !input persistent_notification
+        then:
+          - action: persistent_notification.create
+            data:
+              title: !input notification_title
+              message: !input notification_message
+              notification_id: "{{ notification_tag }}"
 
   - wait_for_trigger:
     # Wait for the gate to be closed
@@ -375,4 +426,4 @@ actions:
         data:
           notification_id: "{{ notification_tag }}"
 
-mode: single
+mode: restart
