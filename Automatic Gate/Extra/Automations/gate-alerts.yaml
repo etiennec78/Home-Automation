@@ -373,6 +373,9 @@ actions:
                     message: TTS
                     data:
                       tts_text: !input notification_message
+                      channel: Gate alerts
+                      importance: high
+                      ttl: 0
 
       # Play a TTS on each selected speaker
       - repeat:
