@@ -9,6 +9,7 @@ blueprint:
     ## Description 📝
     A blueprint that **notifies** selected users when the gate:
     * **Opens**
+    * **Closes**
     * Has been left **open** for **too long**
     * Has been **offline** for **too long**
 
@@ -46,6 +47,8 @@ blueprint:
           options:
             - label: Opening
               value: "open"
+            - label: Closing
+              value: "close"
             - label: Offline
               value: "offline"
     notification_delay:
@@ -107,6 +110,7 @@ blueprint:
       default: |-
         Gate opening 🔓
         Gate left open 🔓
+        Gate closing 🔒
         Gate offline 🌐
       selector:
         text:
@@ -118,6 +122,7 @@ blueprint:
       default: |-
         Gate is opening
         Gate has been left open for {{ notification_delay }} minutes
+        Gate is closing
         Gate has been offline for {{ notification_delay }} minutes
       selector:
         text:
@@ -134,6 +139,8 @@ variables:
   notification_tag: |-
     {% if notification_type == 'open' %}
       gate-opening
+    {% elif notification_type == 'close' %}
+      gate-closing
     {% elif notification_type == 'offline' %}
       gate-offline
     {% endif %}
@@ -154,6 +161,24 @@ triggers:
       minutes: !input notification_delay
     enabled: "{{ notification_type == 'open' }}"
 
+  # Triggers when the gate is closing
+  - trigger: state
+    entity_id: !input gate
+    to:
+      - "off"
+      - "closing"
+      - "closed"
+    for:
+      minutes: !input notification_delay
+    enabled: "{{ notification_type == 'close' }}"
+  - trigger: state
+    entity_id: !input gate
+    to:
+      - "closed"
+    for:
+      minutes: !input notification_delay
+    enabled: "{{ notification_type == 'close' and states[gate].domain == 'cover' and state_attr(gate, 'supported_features') | bitwise_and(4) == 0 }}"
+
   # Triggers when the gate becomes unavailable for the selected duration
   - trigger: state
     entity_id: !input gate
@@ -162,8 +187,10 @@ triggers:
       minutes: !input notification_delay
     enabled: "{{ notification_type == 'offline' }}"
 
-conditions: []
-  # No condition
+conditions:
+  # If triggered by the cover being fully closed, only send a notification if it does not support position tracking
+  - condition: template
+    value_template: "{{ notification_type != 'close' or not is_state(gate, 'closed') or state_attr(gate, 'supported_features') | bitwise_and(4) == 0 }}"
 
 actions:
   # Notify each user
@@ -184,7 +211,12 @@ actions:
                   name: "default"
                   critical: 1
               tag: "{{ notification_tag }}"
-              timeout: 3600
+              timeout: |-
+                {% if is_state(gate, ['off', 'closed']) %}
+                  30
+                {% else %}
+                  3600
+                {% endif %}
 
         # Play a TTS on each phone, only if this has been enabled
         - if:
@@ -225,14 +257,32 @@ actions:
       id: closed
       value_template: "{{ is_state(gate, ['off', 'closed']) }}"
 
+    # Wait for the gate to start opening
+    - trigger: template
+      id: started_opening
+      value_template: "{{ is_state(gate, ['on', 'opening']) }}"
+      enabled: "{{ notification_type == 'close' }}"
+
     # Wait for the gate to start closing
     - trigger: template
       id: started_closing
       value_template: "{{ is_state(gate, 'closing') }}"
       enabled: "{{ notification_type == 'open' }}"
 
-    timeout: 3600
-    continue_on_timeout: false
+    # Don't wait more than 1h, or remove notification after 30s if gate closing without position tracking
+    timeout: |-
+      {% if is_state(gate, ['off', 'closed']) %}
+        30
+      {% else %}
+        3600
+      {% endif %}
+
+  # Don't remove notifications if the timer ran out but the problem is still present
+  - if:
+      condition: template
+      value_template: "{{ wait.remaining == 0 and not is_state(gate, ['off', 'closed']) }}"
+    then:
+      - stop: Timer ran out
 
   # Remove the notification sent to the users
   - repeat:
