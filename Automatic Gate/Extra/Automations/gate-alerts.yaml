@@ -356,6 +356,8 @@ actions:
                     {% else %}
                       43200
                     {% endif %}
+                  chronometer: "{{ notification_delay != 0 }}"
+                  when: "{{ (utcnow() - timedelta(minutes=7)) | as_timestamp | int }}"
                   actions: |-
                     {% if notification_type == 'open' %}
                       {{ [{'action': closing_order_id, 'title': closing_button_text}] }}
