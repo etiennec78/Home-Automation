@@ -303,7 +303,7 @@ actions:
                   sticky: true
                   persistent: true
                   tag: "{{ notification_tag }}"
-                  timeout: 3600
+                  timeout: 43200
                   alert_once: true
                   actions:
                     - action: "{{ closing_order_id }}"
@@ -345,7 +345,7 @@ actions:
                     {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
                       30
                     {% else %}
-                      3600
+                      43200
                     {% endif %}
                   actions: |-
                     {% if notification_type == 'open' %}
@@ -416,12 +416,12 @@ actions:
         action: "{{ closing_order_id }}"
       enabled: "{{ notification_type == 'open' }}"
 
-    # Don't wait more than 1h, or remove notification after 30s in case of an error or gate closing without position tracking
+    # Don't wait more than 12h, or remove notification after 30s in case of an error or gate closing without position tracking
     timeout: |-
       {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
         30
       {% else %}
-        3600
+        43200
       {% endif %}
 
   # Don't remove notifications if the timer ran out but the problem is still present
