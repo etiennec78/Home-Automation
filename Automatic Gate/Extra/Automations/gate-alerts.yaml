@@ -21,6 +21,7 @@ blueprint:
     * Companion app TTS support 📳
     * Speakers TTS support 🔊
     * Adjustable notifications 💬
+    * Customizable extra actions ➕
     * Close gate button in notifications 🔒
 
     ## More Info ℹ️
@@ -139,6 +140,14 @@ blueprint:
       selector:
         text:
           multiline: true
+    extra_actions:
+      name: ➕ Extra actions
+      description: |-
+        Additional **actions** to execute when **triggered**
+        *Note : Optional*
+      default: []
+      selector:
+        action:
     notification_still_open_title:
       name: 📃 Notification still open title
       description: |-
@@ -361,6 +370,9 @@ actions:
               title: !input notification_title
               message: !input notification_message
               notification_id: "{{ notification_tag }}"
+
+      # Add user extra actions
+      - sequence: !input extra_actions
 
   - wait_for_trigger:
     # Wait for the gate to be closed
