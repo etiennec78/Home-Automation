@@ -10,6 +10,7 @@ blueprint:
     A blueprint that **notifies** selected users when the gate:
     * **Opens**
     * **Closes**
+    * Encounters an **error**
     * Has been left **open** for **too long**
     * Has been **offline** for **too long**
 
@@ -49,6 +50,8 @@ blueprint:
               value: "open"
             - label: Closing
               value: "close"
+            - label: Error
+              value: "error"
             - label: Offline
               value: "offline"
     notification_delay:
@@ -111,6 +114,7 @@ blueprint:
         Gate opening 🔓
         Gate left open 🔓
         Gate closing 🔒
+        Gate error ⚠
         Gate offline 🌐
       selector:
         text:
@@ -118,15 +122,25 @@ blueprint:
     notification_message:
       name: 💬 Notification message
       description: |-
-        **Notification** and **TTS** content. Use {{notification_delay}} for the notification delay
+        **Notification** and **TTS** content. Use {{error}} for error messages and {{notification_delay}} for the notification delay
       default: |-
         Gate is opening
         Gate has been left open for {{ notification_delay }} minutes
         Gate is closing
+        Gate has encountered an error: {{ error }}
         Gate has been offline for {{ notification_delay }} minutes
       selector:
         text:
           multiline: true
+    error_message_sensor:
+      name: ⚠️ Error message sensor
+      description: |-
+        Sensor that provides gate error messages
+        *Note : Only needed for error notification type*
+      default: []
+      selector:
+        entity:
+          domain: sensor
 
 variables:
   gate: !input gate
@@ -136,11 +150,20 @@ variables:
   notify_services: "{{ notify_devices | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}"
   speaker_tts_devices: !input speaker_tts_devices
   speaker_tts_service: !input speaker_tts_service
+  error_message_sensor: !input error_message_sensor
+  error: |-
+    {% if error_message_sensor == [] %}
+      none
+    {% else %}
+      {{ states(error_message_sensor) }}
+    {% endif %}
   notification_tag: |-
     {% if notification_type == 'open' %}
       gate-opening
     {% elif notification_type == 'close' %}
       gate-closing
+    {% elif notification_type == 'error' %}
+      gate-error
     {% elif notification_type == 'offline' %}
       gate-offline
     {% endif %}
@@ -179,6 +202,15 @@ triggers:
       minutes: !input notification_delay
     enabled: "{{ notification_type == 'close' and states[gate].domain == 'cover' and state_attr(gate, 'supported_features') | bitwise_and(4) == 0 }}"
 
+  # Triggers when the gate encounters an error
+  - trigger: state
+    entity_id: !input error_message_sensor
+    not_to:
+      - "unknown"
+      - "unavailable"
+      - ""
+    enabled: "{{ notification_type == 'error' }}"
+
   # Triggers when the gate becomes unavailable for the selected duration
   - trigger: state
     entity_id: !input gate
@@ -212,7 +244,7 @@ actions:
                   critical: 1
               tag: "{{ notification_tag }}"
               timeout: |-
-                {% if is_state(gate, ['off', 'closed']) %}
+                {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
                   30
                 {% else %}
                   3600
@@ -269,9 +301,9 @@ actions:
       value_template: "{{ is_state(gate, 'closing') }}"
       enabled: "{{ notification_type == 'open' }}"
 
-    # Don't wait more than 1h, or remove notification after 30s if gate closing without position tracking
+    # Don't wait more than 1h, or remove notification after 30s in case of an error or gate closing without position tracking
     timeout: |-
-      {% if is_state(gate, ['off', 'closed']) %}
+      {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
         30
       {% else %}
         3600
@@ -280,7 +312,7 @@ actions:
   # Don't remove notifications if the timer ran out but the problem is still present
   - if:
       condition: template
-      value_template: "{{ wait.remaining == 0 and not is_state(gate, ['off', 'closed']) }}"
+      value_template: "{{ wait.remaining == 0 and not(notification_type == 'error' or is_state(gate, ['off', 'closed'])) }}"
     then:
       - stop: Timer ran out
 
