@@ -8,6 +8,7 @@ blueprint:
 
     ## Description 📝
     A blueprint that **notifies** selected users when the gate:
+    * **Opens**
     * Has been left **open** for **too long**
     * Has been **offline** for **too long**
 
@@ -104,6 +105,7 @@ blueprint:
       description: |-
         **Title** shown in the notification
       default: |-
+        Gate opening 🔓
         Gate left open 🔓
         Gate offline 🌐
       selector:
@@ -114,6 +116,7 @@ blueprint:
       description: |-
         **Notification** and **TTS** content. Use {{notification_delay}} for the notification delay
       default: |-
+        Gate is opening
         Gate has been left open for {{ notification_delay }} minutes
         Gate has been offline for {{ notification_delay }} minutes
       selector:
@@ -146,6 +149,7 @@ triggers:
     to:
       - "on"
       - "open"
+      - "opening"
     for:
       minutes: !input notification_delay
     enabled: "{{ notification_type == 'open' }}"
