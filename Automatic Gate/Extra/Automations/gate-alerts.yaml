@@ -87,6 +87,12 @@ blueprint:
       default: false
       selector:
         boolean:
+    car_visible:
+      name: 🚗 Visible in Android Auto/CarPlay
+      description: Show notifications on your **car's dashboard**
+      default: true
+      selector:
+        boolean:
     speaker_tts_devices:
       name: 🔊 TTS speakers
       description: |-
@@ -180,6 +186,7 @@ variables:
       {{ states(error_message_sensor) }}
     {% endif %}
   closing_button_text: !input closing_button_text
+  car_visible: !input car_visible
   notification_tag: |-
     {% if notification_type == 'open' %}
       gate-opening
@@ -297,14 +304,17 @@ actions:
                 title: !input notification_title
                 message: !input notification_message
                 data:
-                  car_ui: true
+                  car_ui: "{{ car_visible }}"
                   notification_icon: mdi:gate-alert
                   channel: Gate alerts
                   importance: high
+                  ttl: 0
+                  sticky: true
+                  persistent: "{{ notification_type == 'open' }}"
                   push:
                     sound:
                       name: "default"
-                      critical: 1
+                      critical: "{{ int(car_visible) }}"
                   tag: "{{ notification_tag }}"
                   timeout: |-
                     {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
