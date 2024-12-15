@@ -33,151 +33,167 @@ blueprint:
   homeassistant:
     min_version: 2024.10.0
   input:
-    gate:
-      name: ⛩️ Gate
-      description: The **switch** or **cover** which controls your **gate**
-      selector:
-        entity:
-          filter:
-            domain:
-              - switch
-              - cover
-    notification_type:
-      name: 🔔 Notification type
-      description: Type of **event** that should trigger notifications
-      selector:
-        select:
-          options:
-            - label: Opening
-              value: "open"
-            - label: Closing
-              value: "close"
-            - label: Error
-              value: "error"
-            - label: Offline
-              value: "offline"
-    notification_delay:
-      name: ⌛ Notification delay
-      description: Wait **time** in minutes before sending notifications
-      default: 0
-      selector:
-        number:
-          min: 0
-          max: 30
-          unit_of_measurement: minutes
-    notify_devices:
-      name: 💬 Notify devices
-      description: |-
-        Each [**device** to **notify**](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-services-)**
-        *Note : Optional*
-      default: []
-      selector:
-        device:
-          multiple: true
-          filter:
-            integration: mobile_app
-    persistent_notification:
-      name: 🔔 Persistent notification
-      description: Be notified by a **[persistent notification](https://www.home-assistant.io/integrations/persistent_notification)** directly on the **frontend**
-      default: false
-      selector:
-        boolean:
-    phone_tts:
-      name: 📳 Phone TTS
-      description: Let your **phones** read the **notification on speaker** when received
-      default: false
-      selector:
-        boolean:
-    car_visible:
-      name: 🚗 Visible in Android Auto/CarPlay
-      description: Show notifications on your **car's dashboard**
-      default: true
-      selector:
-        boolean:
-    speaker_tts_devices:
-      name: 🔊 TTS speakers
-      description: |-
-        The **home speakers** your want to play a TTS on
-        *Note : Optional*
-      default: []
-      selector:
-        entity:
-          multiple: true
-          domain: media_player
-    speaker_tts_service:
-      name: 🎙️ TTS service
-      description: |-
-        The **TTS service** you want to use for your speakers
-        *Note : Optional*
-      default: []
-      selector:
-        target:
-          entity:
-            domain: tts
-    notification_title:
-      name: 📃 Notification title
-      description: |-
-        **Title** shown in the notification
-      default: |-
-        Gate opening 🔓
-        Gate left open 🔓
-        Gate closing 🔒
-        Gate error ⚠
-        Gate offline 🌐
-      selector:
-        text:
-          multiline: true
-    notification_message:
-      name: 💬 Notification message
-      description: |-
-        **Notification** and **TTS** content. Use {{error}} for error messages and {{notification_delay}} for the notification delay
-      default: |-
-        Gate is opening
-        Gate has been left open for {{ notification_delay }} minutes
-        Gate is closing
-        Gate has encountered an error: {{ error }}
-        Gate has been offline for {{ notification_delay }} minutes
-      selector:
-        text:
-          multiline: true
-    extra_actions:
-      name: ➕ Extra actions
-      description: |-
-        Additional **actions** to execute when **triggered**
-        *Note : Optional*
-      default: []
-      selector:
-        action:
-    notification_still_open_title:
-      name: 📃 Notification still open title
-      description: |-
-        **Title** for notifications when the gate finishes moving and is open
-      default: Gate open 🔓
-      selector:
-        text:
-    notification_still_open_message:
-      name: 💬 Notification still open message
-      description: |-
-        **Message** content for notifications when the gate finishes moving and is open
-      default: Gate is still open
-      selector:
-        text:
-          multiline: true
-    closing_button_text:
-      name: 💬 Closing button
-      description: Text for the **close** gate **button**
-      default: Close
-      selector:
-        text:
-    error_message_sensor:
-      name: ⚠️ Error message sensor
-      description: |-
-        Sensor that provides gate error messages
-        *Note : Only needed for error notification type*
-      default: []
-      selector:
-        entity:
-          domain: sensor
+    common_settings:
+      name: Common Settings
+      icon: "mdi:cog"
+      input:
+        gate:
+          name: ⛩️ Gate
+          description: Gate **switch** or **cover** entity
+          selector:
+            entity:
+              filter:
+                domain:
+                  - switch
+                  - cover
+        notification_type:
+          name: 🔔 Notification type
+          description: Type of **event** that should trigger notifications
+          selector:
+            select:
+              options:
+                - label: Opening
+                  value: "open"
+                - label: Closing
+                  value: "close"
+                - label: Error
+                  value: "error"
+                - label: Offline
+                  value: "offline"
+        notification_delay:
+          name: ⌛ Notification delay
+          description: Wait **time** in minutes before sending notifications
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 30
+              unit_of_measurement: minutes
+        notify_devices:
+          name: 💬 Notify devices
+          description: |-
+            Mobile **[devices](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-services-)** to **notify**
+            *Note: Optional*
+          default: []
+          selector:
+            device:
+              multiple: true
+              filter:
+                integration: mobile_app
+        notification_title:
+          name: 📃 Notification title
+          description: |-
+            **Title** shown in the notification
+          default: |-
+            Gate opening 🔓
+            Gate left open 🔓
+            Gate closing 🔒
+            Gate error ⚠
+            Gate offline 🌐
+          selector:
+            text:
+              multiline: true
+        notification_message:
+          name: 💬 Notification message
+          description: |-
+            **Notification** and **TTS** content. Use {{error}} for error messages and {{notification_delay}} for the notification delay
+          default: |-
+            Gate is opening
+            Gate has been left open for {{ notification_delay }} minutes
+            Gate is closing
+            Gate has encountered an error: {{ error }}
+            Gate has been offline for {{ notification_delay }} minutes
+          selector:
+            text:
+              multiline: true
+        car_visible:
+          name: 🚗 Visible in Android Auto/CarPlay
+          description: Show notifications on your **car's dashboard**
+          default: true
+          selector:
+            boolean:
+        speaker_tts_devices:
+          name: 🔊 TTS speakers
+          description: |-
+            **Speakers** for **text-to-speech** announcements
+            *Note: Optional*
+          default: []
+          selector:
+            entity:
+              multiple: true
+              domain: media_player
+        speaker_tts_service:
+          name: 🎙️ TTS service
+          description: |-
+            **TTS service** you want to use for your speakers
+            *Note: Optional*
+          default: []
+          selector:
+            target:
+              entity:
+                domain: tts
+        persistent_notification:
+          name: 🔔 Persistent notification
+          description: Show notifications in Home Assistant **[dashboard](https://www.home-assistant.io/integrations/persistent_notification)**
+          default: false
+          selector:
+            boolean:
+        phone_tts:
+          name: 📳 Phone TTS
+          description: Read notifications **aloud** on selected **Android** phones
+          default: false
+          selector:
+            boolean:
+        extra_actions:
+          name: ➕ Extra Actions
+          description: |-
+            Additional **actions** to execute when **triggered**
+            *Note: Optional*
+          default: []
+          selector:
+            action:
+
+    opening_settings:
+      name: Opening Settings
+      icon: "mdi:gate-open"
+      collapsed: true
+      input:
+        notification_still_open_title:
+          name: 📃 Notification still open title
+          description: |-
+            **Title** for notifications when the gate finishes moving and is open
+          default: Gate open 🔓
+          selector:
+            text:
+        notification_still_open_message:
+          name: 💬 Notification still open message
+          description: |-
+            **Message** content for notifications when the gate finishes moving and is open
+          default: Gate is still open
+          selector:
+            text:
+              multiline: true
+        closing_button_text:
+          name: 💬 Closing Button
+          description: Text for the **close** gate **button**
+          default: Close
+          selector:
+            text:
+
+    error_settings:
+      name: Error Settings
+      icon: "mdi:gate-alert"
+      collapsed: true
+      input:
+        error_message_sensor:
+          name: ⚠️ Error Message Sensor
+          description: |-
+            Sensor that provides gate error messages
+            *Note: Only needed for error notification type*
+          default: []
+          selector:
+            entity:
+              domain: sensor
 
 variables:
   gate: !input gate
@@ -338,7 +354,7 @@ actions:
                       {{ [] }}
                     {% endif %}
 
-            # Play a TTS on each phone, only if this has been enabled
+            # Play a TTS on each phone, only if it has been enabled
             - if:
                 condition: template
                 value_template: !input phone_tts
@@ -349,7 +365,7 @@ actions:
                     data:
                       tts_text: !input notification_message
 
-      # Play a TTS on each speaker selected, only if at least one has been selected
+      # Play a TTS on each selected speaker
       - repeat:
           for_each: "{{ speaker_tts_devices }}"
           sequence:
@@ -360,7 +376,7 @@ actions:
                 message: !input notification_message
               target: "{{ speaker_tts_service }}"
 
-      # Send a persistent notification on the dashboard, only if this has been enabled
+      # Send a persistent notification on the dashboard, only if it has been enabled
       - if:
           condition: template
           value_template: !input persistent_notification
