@@ -299,6 +299,11 @@ actions:
                       {{ notify_services[context.id].pop(
                           notify_services[context.id].index(
                             wait.trigger.event.data.confirmation)) }}
+                - if:
+                    - condition: template
+                      value_template: "{{ notify_services[context.id] | length == 0 }}"
+                  then:
+                    - stop: No devices left to notify
             # Only continue the loop if the wait_for_trigger was triggered by a travel time update
             - condition: template
               value_template: "{{ wait.trigger.id == 'travel_time' }}"
