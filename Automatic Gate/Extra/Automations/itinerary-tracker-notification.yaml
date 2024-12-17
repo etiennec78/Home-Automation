@@ -209,9 +209,12 @@ actions:
         {% endfor %}
 
         {{ {context.id: data.devices_list | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list} }}
+
+      services_registered: "{{ notify_services[context.id] | length }}"
       driving_sensor: "{{ driving_sensors[idx] }}"
       driver: "{{ persons[idx] }}"
       driver_name: "{{ state_attr(driver, 'friendly_name') }}"
+
   # Only continue if the driver is not home
   - condition: template
     value_template: "{{ not is_state(driver, 'home') }}"
@@ -268,6 +271,8 @@ actions:
                   event_type: state_changed
                   event_data:
                     entity_id: "{{ travel_time_sensor }}"
+                  # Only send position notifications if this loop doesn't contain a cooldown
+                  enabled: "{{ (repeat.index - (services_registered - notify_services[context.id] | length)) % 2 == 1 }}"
                 - trigger: template
                   id: vehicle_left
                   value_template: "{{ is_state(driving_sensor, 'off') }}"
@@ -276,6 +281,14 @@ actions:
                   event_type: mobile_app_notification_cleared
                   event_data:
                     tag: itinerary-tracker
+              timeout:
+                # Enable cooldown every other loop, excluding those triggered by events other than position
+                minutes: |-
+                  {% if (repeat.index - (services_registered - notify_services[context.id] | length)) % 2 == 0 %}
+                    {{ notif_refresh_rate }}
+                  {% else %}
+                    720
+                  {% endif %}
             # If an user removed the notification, then stop sending notification updates to his device
             - if:
                 condition: template
@@ -314,30 +327,6 @@ actions:
                         timeout: "{{ remaining | int }}"
                         chronometer: true
                         when: "{{ arrival_timestamp | int }}"
-            # Stop updating notifications on travel time updates until a timeout has been reached
-            # Still wait for car left or notification dismissed
-            - wait_for_trigger:
-                - trigger: template
-                  id: vehicle_left
-                  value_template: "{{ is_state(driving_sensor, 'off') }}"
-                - trigger: event
-                  id: notification_cleared
-                  event_type: mobile_app_notification_cleared
-                  event_data:
-                    tag: itinerary-tracker
-              timeout:
-                minutes: "{{ notif_refresh_rate }}"
-              continue_on_timeout: true
-            # If an user removed the notification, then stop sending notification updates to his device
-            - if:
-                condition: template
-                value_template: "{{ wait.trigger.id == 'notification_cleared' }}"
-              then:
-                - variables:
-                    removed_service: |-
-                      {{ notify_services[context.id].pop(
-                          notify_services[context.id].index(
-                            wait.trigger.event.data.confirmation)) }}
     # If there are no travel time sensors set
     else:
       # Wait for the user to leave his vehicle
