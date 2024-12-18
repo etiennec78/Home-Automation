@@ -100,28 +100,12 @@ blueprint:
               entity:
                 domain: tts
 
-    notification_settings:
-      name: Notification settings
-      icon: mdi:cog
+    persons_to_notify:
+      name: Persons to notify
+      icon: mdi:bell-ring
       collapsed: true
+      description: If notify everyone is disabled, the bluprint will check for any of these conditions per user
       input:
-        notif_refresh_rate:
-          name: 🔁 Notification refresh rate
-          description: The minimum time between sending two tracking notifications, to avoid quickly reaching the notification quota if your position is updated frequently
-          default: 3
-          selector:
-            number:
-              min: 0
-              max: 60
-              unit_of_measurement: minutes
-        on_tap_link:
-          name: 👆 On tap link
-          description: |-
-            The **link** you will go to if you **tap** on the notification
-            *Note : Can be Home Assistant relative links*
-          default: "/lovelace/vehicle-tracker-map"
-          selector:
-            text:
         notify_everyone:
           name: 🔔🧩 Notify everyone
           description: Should the automation notify everyone ?
@@ -149,6 +133,29 @@ blueprint:
           default: false
           selector:
             boolean:
+
+    notification_settings:
+      name: Notification settings
+      icon: mdi:cog
+      collapsed: true
+      input:
+        notif_refresh_rate:
+          name: 🔁 Notification refresh rate
+          description: The minimum time between sending two tracking notifications, to avoid quickly reaching the notification quota if your position is updated frequently
+          default: 3
+          selector:
+            number:
+              min: 0
+              max: 60
+              unit_of_measurement: minutes
+        on_tap_link:
+          name: 👆 On tap link
+          description: |-
+            The **link** you will go to if you **tap** on the notification
+            *Note : Can be Home Assistant relative links*
+          default: "/lovelace/vehicle-tracker-map"
+          selector:
+            text:
         itinerary_started_message:
           name: 💬 Itinerary started notification
           description: |-
@@ -179,13 +186,13 @@ variables:
   notify_devices: !input notify_devices
   driving_sensors: !input driving_sensors
   travel_time_sensors: !input travel_time_sensors
-  speaker_tts_devices: !input speaker_tts_devices
-  speaker_tts_service: !input speaker_tts_service
-  notif_refresh_rate: !input notif_refresh_rate
   notify_everyone: !input notify_everyone
   zones_to_notify: !input zones_to_notify
   notify_persons_away: !input notify_persons_away
   notify_persons_driving: !input notify_persons_driving
+  speaker_tts_devices: !input speaker_tts_devices
+  speaker_tts_service: !input speaker_tts_service
+  notif_refresh_rate: !input notif_refresh_rate
 
 triggers:
   - trigger: state
