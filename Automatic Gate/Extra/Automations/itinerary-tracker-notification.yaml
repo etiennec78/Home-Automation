@@ -122,12 +122,15 @@ blueprint:
           default: "/lovelace/vehicle-tracker-map"
           selector:
             text:
-        notify_persons_home:
-          name: 🔔🏠 Notify persons home
-          description: Should the automation notify persons that are home ?
-          default: true
+        zones_to_notify:
+          name: 🔔📍 Zones to notify
+          description: Persons in these zones will be notified
+          default:
+            - zone.home
           selector:
-            boolean:
+            entity:
+              multiple: true
+              domain: zone
         notify_persons_driving:
           name: 🔔🚗 Notify persons driving
           description: Should the automation notify other drivers ?
@@ -173,7 +176,7 @@ variables:
   speaker_tts_devices: !input speaker_tts_devices
   speaker_tts_service: !input speaker_tts_service
   notif_refresh_rate: !input notif_refresh_rate
-  notify_persons_home: !input notify_persons_home
+  zones_to_notify: !input zones_to_notify
   notify_persons_driving: !input notify_persons_driving
   notify_everyone_else: !input notify_everyone_else
 
@@ -196,8 +199,8 @@ actions:
 
         {% for notify_idx in range(notify_devices | length) %}
           {% if notify_idx != idx %}
-            {% if notify_persons_home and
-                    is_state(persons[notify_idx], 'home')
+            {% if zones_to_notify and
+                    is_state(persons[notify_idx], zones_to_notify)
                or notify_persons_driving and
                     is_state(driving_sensors[notify_idx], 'on')
                or notify_everyone_else and
