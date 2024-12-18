@@ -137,6 +137,12 @@ blueprint:
             entity:
               multiple: true
               domain: zone
+        notify_persons_away:
+          name: 🔔🚪 Notify persons away
+          description: Should the automation notify persons that are not in any zone ?
+          default: false
+          selector:
+            boolean:
         notify_persons_driving:
           name: 🔔🚗 Notify persons driving
           description: Should the automation notify other drivers ?
@@ -176,9 +182,10 @@ variables:
   speaker_tts_devices: !input speaker_tts_devices
   speaker_tts_service: !input speaker_tts_service
   notif_refresh_rate: !input notif_refresh_rate
-  zones_to_notify: !input zones_to_notify
-  notify_persons_driving: !input notify_persons_driving
   notify_everyone: !input notify_everyone
+  zones_to_notify: !input zones_to_notify
+  notify_persons_away: !input notify_persons_away
+  notify_persons_driving: !input notify_persons_driving
 
 triggers:
   - trigger: state
@@ -204,6 +211,8 @@ actions:
             {% if notify_idx != idx %}
               {% if zones_to_notify and
                       is_state(persons[notify_idx], zones_to_notify)
+                or notify_persons_away and
+                      is_state(persons[notify_idx], 'away')
                 or notify_persons_driving and
                       is_state(driving_sensors[notify_idx], 'on') %}
                 {% set data.devices_list = data.devices_list + [notify_devices[notify_idx]] %}
