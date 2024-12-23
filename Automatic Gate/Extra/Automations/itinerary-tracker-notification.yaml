@@ -217,9 +217,9 @@ actions:
           {% for notify_idx in range(notify_devices | length) %}
             {% if notify_idx != idx %}
               {% if zones_to_notify and
-                      is_state(persons[notify_idx], zones_to_notify)
+                      is_state(persons[notify_idx], zones_to_notify | map('replace', 'zone.', '') | list)
                 or notify_persons_away and
-                      is_state(persons[notify_idx], 'away')
+                      is_state(persons[notify_idx], 'not_home')
                 or notify_persons_driving and
                       is_state(driving_sensors[notify_idx], 'on') %}
                 {% set data.devices_list = data.devices_list + [notify_devices[notify_idx]] %}
