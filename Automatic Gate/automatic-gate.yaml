@@ -260,14 +260,6 @@ blueprint:
       description: |-
         Notification settings to translate texts or change notification behavior
       input:
-        opening_notification:
-          name: 👐 Opening notification
-          description: |-
-            Should the automation notify you when your gate opens?
-            *Note : If your gate already notifies you like my esphome firmware, you can turn this off*
-          default: true
-          selector:
-            boolean:
         itinerary_update_title:
           name: 📃ℹ️ Itinerary status update title
           description: The **title** displayed on the notification you will receive when the **status of your itinerary** changes
@@ -467,7 +459,6 @@ variables:
   lead_time: !input lead_time
   safety_delay: !input safety_delay
   timeout_delay: !input timeout_delay
-  opening_notification: !input opening_notification
   persons: !input persons
   driving_sensors: !input driving_sensors
   travel_time_sensors: !input travel_time_sensors
@@ -620,26 +611,6 @@ actions:
           - condition: template
             value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
         then:
-          # Notify the user that at least one gate is opening automatically, only if opening notification is enabled
-          - if:
-              - condition: template
-                value_template: !input opening_notification
-            then:
-                - action: "{{ notify_service }}"
-                  data:
-                    title: !input gate_opening_title
-                    message: !input automatic_opening_message
-                    data:
-                      car_ui: true
-                      notification_icon: mdi:gate-open
-                      channel: Gate alerts
-                      importance: high
-                      push:
-                        sound:
-                          name: "default"
-                          critical: 1
-                      tag: gate-movement
-                      timeout: 300
           # Then open each gate because the user is leaving
           - repeat:
               for_each: !input gate
@@ -849,16 +820,6 @@ actions:
                   message: clear_notification
                   data:
                     tag: itinerary-status
-              # Remove the notification received by the user when his gate was opening
-              - if:
-                  condition: template
-                  value_template: !input opening_notification
-                then:
-                  - action: "{{ notify_service }}"
-                    data:
-                      message: clear_notification
-                      data:
-                        tag: gate-movement
         # If automatic closing is disabled
         else:
           # Wait for the user to leave
@@ -1070,26 +1031,6 @@ actions:
                       - condition: template
                         value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
                     then:
-                      # Notify the user that at least one gate is opening automatically, only if opening notification is enabled
-                      - if:
-                          - condition: template
-                            value_template: !input opening_notification
-                        then:
-                            - action: "{{ notify_service }}"
-                              data:
-                                title: !input gate_opening_title
-                                message: !input automatic_opening_message
-                                data:
-                                  car_ui: true
-                                  notification_icon: mdi:gate-open
-                                  channel: Gate alerts
-                                  importance: high
-                                  push:
-                                    sound:
-                                      name: "default"
-                                      critical: 1
-                                  tag: gate-movement
-                                  timeout: 300
                       # Then open each gate because the user is arriving
                       - repeat:
                           for_each: !input gate
@@ -1320,16 +1261,6 @@ actions:
                           message: clear_notification
                           data:
                             tag: itinerary-status
-                      # Remove the notification received by the user when his gate was opening
-                      - if:
-                          condition: template
-                          value_template: !input opening_notification
-                        then:
-                          - action: "{{ notify_service }}"
-                            data:
-                              message: clear_notification
-                              data:
-                                tag: gate-movement
                       # Stop the whole script as it ran successfully
                       - stop: Successful
       # If both loop were broken
