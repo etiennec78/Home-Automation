@@ -116,16 +116,6 @@ blueprint:
               filter:
                 domain: sensor
                 device_class: duration
-        proximity_sensors:
-          name: 📏 Proximity sensors
-          description: Each **[proximity sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#proximity-sensors-)** from the proximity integration to calculate user distance from your gate
-          selector:
-            entity:
-              multiple: true
-              filter:
-                integration: proximity
-                domain: sensor
-                device_class: distance
         notify_devices:
           name: 💬 Notify devices
           description: Each [**device** to **notify**](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-services-)
@@ -462,7 +452,6 @@ variables:
   persons: !input persons
   driving_sensors: !input driving_sensors
   travel_time_sensors: !input travel_time_sensors
-  proximity_sensors: !input proximity_sensors
   notify_devices: !input notify_devices
   notify_services: "{{ notify_devices | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}"
   itinerary_sensors: !input itinerary_sensors
@@ -900,7 +889,7 @@ actions:
             - repeat:
                 while:
                   - condition: template
-                    value_template: "{{ states(proximity_sensors[idx]) | int < eta_zone }}"
+                    value_template: "{{ distance(person, gate_location) < eta_zone }}"
                   - condition: template
                     value_template: "{{ is_state(driving_sensor, 'on') }}"
                 sequence:
@@ -995,7 +984,7 @@ actions:
                   - if:
                       # The user is not in the activation zone
                       - condition: template
-                        value_template: "{{ states(proximity_sensors[idx]) | int > activation_zone }}"
+                        value_template: "{{ distance(person, gate_location) > activation_zone }}"
                     then:
                       # Remove the current itinerary since the user was not in the activation zone when the gate tried to open
                       - action: input_text.set_value
@@ -1058,7 +1047,7 @@ actions:
                             value_template: "{{ is_state(driving_sensor, 'off') }}"
                           - trigger: template
                             id: activation_zone_left
-                            value_template: "{{ states(proximity_sensors[idx]) | int > activation_zone }}"
+                            value_template: "{{ distance(person, gate_location) > activation_zone }}"
                         timeout:
                           minutes: !input safety_delay
                       # Remove the current itinerary since the user has either arrived or took too long
