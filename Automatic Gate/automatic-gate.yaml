@@ -1221,7 +1221,7 @@ actions:
                               - repeat:
                                   for_each: !input locks
                                   sequence:
-                                    - action: lock.lock
+                                    - action: lock.unlock
                                       target:
                                         entity_id: "{{ repeat.item }}"
                       # Remove the notification received by the user when his itinerary was started or awaiting next user
