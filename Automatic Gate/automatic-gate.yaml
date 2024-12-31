@@ -899,7 +899,9 @@ actions:
                       entity_id: "{{ travel_time_sensor }}"
                   # Verify that your integration has responded with a new travel time
                   - condition: template
-                    value_template: "{{ states[travel_time_sensor].last_updated > now() - timedelta(seconds=5) }}"
+                    value_template: |-
+                        {{ states[travel_time_sensor].last_updated > now() - timedelta(seconds=5)
+                             and states[travel_time_sensor].last_changed > now() - timedelta(minutes=5) }}
                   # Convert travel time to seconds
                   - variables:
                       travel_time_duration: |-
