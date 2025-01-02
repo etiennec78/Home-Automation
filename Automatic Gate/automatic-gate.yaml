@@ -889,7 +889,7 @@ actions:
             - repeat:
                 while:
                   - condition: template
-                    value_template: "{{ distance(person, gate_location) < eta_zone }}"
+                    value_template: "{{ distance(person, gate_location)*1000 < eta_zone }}"
                   - condition: template
                     value_template: "{{ is_state(driving_sensor, 'on') }}"
                 sequence:
@@ -986,7 +986,7 @@ actions:
                   - if:
                       # The user is not in the activation zone
                       - condition: template
-                        value_template: "{{ distance(person, gate_location) > activation_zone }}"
+                        value_template: "{{ distance(person, gate_location)*1000 > activation_zone }}"
                     then:
                       # Remove the current itinerary since the user was not in the activation zone when the gate tried to open
                       - action: input_text.set_value
@@ -1049,7 +1049,7 @@ actions:
                             value_template: "{{ is_state(driving_sensor, 'off') }}"
                           - trigger: template
                             id: activation_zone_left
-                            value_template: "{{ distance(person, gate_location) > activation_zone }}"
+                            value_template: "{{ distance(person, gate_location)*1000 > activation_zone }}"
                         timeout:
                           minutes: !input safety_delay
                       # Remove the current itinerary since the user has either arrived or took too long
