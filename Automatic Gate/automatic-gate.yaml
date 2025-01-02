@@ -829,6 +829,9 @@ actions:
 
     # If the user is currently away from the gate location
     else:
+      # Stop if the user started driving in the eta zone
+      - condition: template
+        value_template: "{{ distance(person, gate_location)*1000 < eta_zone }}"
       # Set the user itinerary text variable to "arriving"
       - action: input_text.set_value
         target:
