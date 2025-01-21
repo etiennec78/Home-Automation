@@ -207,16 +207,13 @@ actions:
   # Store the list index of the driver, and extract the recurrent sensors at this index of the list
   - variables:
       idx: "{{ driving_sensors.index(trigger.entity_id) }}"
-      # without a context.id key, popping an element from the list will be global to all future instances
       notify_services: |-
         {% set data = namespace(devices_list=[]) %}
 
-        {% if notify_everyone %}
-          {% set data.devices_list = notify_devices %}
-        {% else %}
           {% for notify_idx in range(notify_devices | length) %}
             {% if notify_idx != idx %}
-              {% if zones_to_notify and
+              {% if notify_everyone
+                or zones_to_notify and
                       is_state(persons[notify_idx], zones_to_notify | map('replace', 'zone.', '') | list)
                 or notify_persons_away and
                       is_state(persons[notify_idx], 'not_home')
@@ -226,11 +223,9 @@ actions:
               {% endif %}
             {% endif %}
           {% endfor %}
-        {% endif %}
 
-        {{ {context.id: data.devices_list | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list} }}
+        {{ data.devices_list | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}
 
-      services_registered: "{{ notify_services[context.id] | length }}"
       driving_sensor: "{{ driving_sensors[idx] }}"
       driver: "{{ persons[idx] }}"
       driver_name: "{{ state_attr(driver, 'friendly_name') }}"
@@ -240,7 +235,7 @@ actions:
     value_template: "{{ not is_state(driver, 'home') }}"
   # Notify each user except the driver that an itinerary has been started
   - repeat:
-      for_each: "{{ notify_services[context.id] }}"
+      for_each: "{{ notify_services }}"
       sequence:
         - action: "{{ repeat.item }}"
           data:
@@ -250,8 +245,6 @@ actions:
               tag: itinerary-tracker
               channel: Itinerary status
               sticky: true
-              # Hack to retrieve the notification service when dismissed
-              confirmation: "{{ repeat.item }}"
               url: !input on_tap_link
               clickAction: !input on_tap_link
               alert_once: true
@@ -292,38 +285,18 @@ actions:
                   event_data:
                     entity_id: "{{ travel_time_sensor }}"
                   # Only send position notifications if this loop doesn't contain a cooldown
-                  enabled: "{{ (repeat.index - (services_registered - notify_services[context.id] | length)) % 2 == 1 }}"
+                  enabled: "{{ repeat.index % 2 == 1 }}"
                 - trigger: template
                   id: vehicle_left
                   value_template: "{{ is_state(driving_sensor, 'off') }}"
-                - trigger: event
-                  id: notification_cleared
-                  event_type: mobile_app_notification_cleared
-                  event_data:
-                    tag: itinerary-tracker
               timeout:
                 # Enable cooldown every other loop, excluding those triggered by events other than position
                 minutes: |-
-                  {% if (repeat.index - (services_registered - notify_services[context.id] | length)) % 2 == 0 %}
+                  {% if repeat.index % 2 == 0 %}
                     {{ notif_refresh_rate }}
                   {% else %}
                     720
                   {% endif %}
-            # If an user removed the notification, then stop sending notification updates to his device
-            - if:
-                condition: template
-                value_template: "{{ wait.trigger.id == 'notification_cleared' }}"
-              then:
-                - variables:
-                    removed_service: |-
-                      {{ notify_services[context.id].pop(
-                          notify_services[context.id].index(
-                            wait.trigger.event.data.confirmation)) }}
-                - if:
-                    - condition: template
-                      value_template: "{{ notify_services[context.id] | length == 0 }}"
-                  then:
-                    - stop: No devices left to notify
             # Only continue the loop if the wait_for_trigger was triggered by a travel time update
             - condition: template
               value_template: "{{ wait.trigger.id == 'travel_time' }}"
@@ -334,7 +307,7 @@ actions:
                 arrival: "{{ arrival_timestamp | timestamp_custom('%H:%M') }}"
             # Send an ETA notification update to each user
             - repeat:
-                for_each: "{{ notify_services[context.id] }}"
+                for_each: "{{ notify_services }}"
                 sequence:
                   - action: "{{ repeat.item }}"
                     data:
@@ -344,8 +317,6 @@ actions:
                         tag: itinerary-tracker
                         channel: Itinerary status
                         sticky: true
-                        # Hack to retrieve the notification service when dismissed
-                        confirmation: "{{ repeat.item }}"
                         url: !input on_tap_link
                         clickAction: !input on_tap_link
                         alert_once: true
@@ -366,7 +337,7 @@ actions:
     then:
       # Send an arrival notification to each user
       - repeat:
-          for_each: "{{ notify_services[context.id] }}"
+          for_each: "{{ notify_services }}"
           sequence:
             - action: "{{ repeat.item }}"
               data:
@@ -382,7 +353,7 @@ actions:
     else:
       # Remove itinerary notification for each user
       - repeat:
-          for_each: "{{ notify_services[context.id] }}"
+          for_each: "{{ notify_services }}"
           sequence:
             - action: "{{ repeat.item }}"
               data:
