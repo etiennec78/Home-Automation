@@ -674,7 +674,12 @@ actions:
                 value_template: "{{ is_state(driving_sensor, 'off') }}"
               - trigger: template
                 id: gate_zone_left
-                value_template: "{{ not is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id]) }}"
+                value_template: |-
+                  {% if state_attr(person, 'gps_accuracy') is none %}
+                    {{ distance(person, gate_location)*1000 > activation_zone }}
+                  {% else %}
+                    {{ distance(person, gate_location)*1000 > state_attr(gate_location, 'radius') + state_attr(person, 'gps_accuracy') }}
+                  {% endif %}
             timeout:
               minutes: !input safety_delay
           # Remove the current itinerary since the user has either left or took too long
