@@ -1,14 +1,14 @@
 esphome:
   name: gate
-  platform: esp32
-  board: esp32dev #ESP32-WROOM-32E (version printed on the chip)
-
   on_boot:
     priority: 0
     then:
         - text_sensor.template.publish:
             id: error_message
             state: "unknown"
+
+esp32:
+  board: esp32dev #ESP32-WROOM-32E (version printed on the chip)
 
 # Enable logging
 logger:
