@@ -9,6 +9,8 @@ esphome:
 
 esp32:
   board: esp32dev #ESP32-WROOM-32E (version printed on the chip)
+  framework:
+    type: esp-idf
 
 # Enable logging
 logger:
