@@ -924,11 +924,7 @@ actions:
                     {{ states[travel_time_sensor].last_updated | as_timestamp
                         + travel_time_duration
                         - lead_time }}
-                  seconds_before_opening: |-
-                    {{ states[travel_time_sensor].last_updated | as_timestamp
-                        + travel_time_duration
-                        - lead_time
-                        - now() | as_timestamp }}
+                  seconds_before_opening: "{{ opening_time - now() | as_timestamp }}"
               # If the ETA is in the future
               - if:
                   - condition: template
