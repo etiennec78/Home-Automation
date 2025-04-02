@@ -44,7 +44,7 @@ blueprint:
         notify_devices:
           name: 💬 Notify devices
           description: |-
-            Each [**device** to **notify**](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-services-)**
+            Each [**device** to **notify**](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-services-)
             *Note : Optional*
           default: []
           selector:
