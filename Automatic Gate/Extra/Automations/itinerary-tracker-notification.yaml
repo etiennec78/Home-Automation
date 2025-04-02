@@ -24,7 +24,7 @@ blueprint:
     * Discord : etiennec78
     [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/etiennec78)
   homeassistant:
-    min_version: 2024.10.0
+    min_version: 2025.4.0
   input:
     per_person_sensors:
       name: Per person sensors
@@ -229,6 +229,7 @@ actions:
       driving_sensor: "{{ driving_sensors[idx] }}"
       driver: "{{ persons[idx] }}"
       driver_name: "{{ state_attr(driver, 'friendly_name') }}"
+      cooldown: 0
 
   # Only continue if the driver is not home
   - condition: template
@@ -285,17 +286,17 @@ actions:
                   event_data:
                     entity_id: "{{ travel_time_sensor }}"
                   # Only send position notifications if this loop doesn't contain a cooldown
-                  enabled: "{{ repeat.index % 2 == 1 }}"
+                  enabled: "{{ cooldown <= now() | as_timestamp }}"
                 - trigger: template
                   id: vehicle_left
                   value_template: "{{ is_state(driving_sensor, 'off') }}"
               timeout:
-                # Enable cooldown every other loop, excluding those triggered by events other than position
-                minutes: |-
-                  {% if repeat.index % 2 == 0 %}
-                    {{ notif_refresh_rate }}
+                # Wait for the end of the cooldown, or wait indefinitely
+                seconds: |-
+                  {% if cooldown > now() | as_timestamp %}
+                    {{ cooldown - now() | as_timestamp }}
                   {% else %}
-                    720
+                    43200
                   {% endif %}
             # Only continue the loop if the wait_for_trigger was triggered by a travel time update
             - condition: template
@@ -323,6 +324,8 @@ actions:
                         timeout: "{{ remaining | int }}"
                         chronometer: true
                         when: "{{ arrival_timestamp | int }}"
+            - variables:
+                cooldown: "{{ now() | as_timestamp + notif_refresh_rate*60 }}"
     # If there are no travel time sensors set
     else:
       # Wait for the user to leave his vehicle
