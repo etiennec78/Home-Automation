@@ -262,6 +262,7 @@ actions:
       driver_name: "{{ state_attr(driver, 'friendly_name') }}"
       cooldown: 0
       remaining: 0
+      nearly_arrived_sent: false
 
   # Only continue if the driver is not home
   - condition: template
@@ -339,7 +340,10 @@ actions:
                 seconds: |-
                   {% if cooldown > now() | as_timestamp %}
                     {{ cooldown - now() | as_timestamp }}
-                  {% elif nearly_arrived_tts and remaining > 3*60 %}
+                  {% elif nearly_arrived_tts
+                    and not nearly_arrived_sent
+                    and remaining > 3*60
+                  %}
                     {{ remaining - 3*60 }}
                   {% else %}
                     43200
@@ -357,6 +361,7 @@ actions:
                 - condition: template
                   value_template: |-
                     {{ nearly_arrived_tts
+                      and not nearly_arrived_sent
                       and remaining <= 3*60
                       and speaker_tts_devices != []
                       and speaker_tts_service != ''
@@ -373,6 +378,9 @@ actions:
                           media_player_entity_id: "{{ repeat.item }}"
                           message: !input nearly_arrived_message
                         target: "{{ speaker_tts_service }}"
+                # Mark the TTS as already sent
+                - variables:
+                    nearly_arrived_sent: true
             # Only continue the loop if the wait_for_trigger was triggered by a travel time update
             - condition: template
               value_template: "{{ wait.trigger.id == 'travel_time' }}"
@@ -407,6 +415,7 @@ actions:
                 - condition: template
                   value_template: |-
                     {{ nearly_arrived_tts
+                      and not nearly_arrived_sent
                       and remaining <= 3*60
                       and speaker_tts_devices != []
                       and speaker_tts_service != ''
@@ -423,6 +432,9 @@ actions:
                           media_player_entity_id: "{{ repeat.item }}"
                           message: !input nearly_arrived_message
                         target: "{{ speaker_tts_service }}"
+                # Mark the TTS as already sent
+                - variables:
+                    nearly_arrived_sent: true
             - variables:
                 cooldown: "{{ now() | as_timestamp + notif_refresh_rate*60 }}"
     # If there are no travel time sensors set
