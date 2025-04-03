@@ -111,6 +111,15 @@ blueprint:
           default: True
           selector:
             boolean:
+        nearly_arrived_time:
+          name: ⏱️ Nearly arrived time trigger
+          description: The remaining time at which the automation will sent a nearly arrived TTS
+          default: 3
+          selector:
+            number:
+              min: 0
+              max: 60
+              unit_of_measurement: minutes
 
     persons_to_notify:
       name: Persons to notify
@@ -214,6 +223,7 @@ variables:
   speaker_tts_service: !input speaker_tts_service
   drive_start_tts: !input drive_start_tts
   nearly_arrived_tts: !input nearly_arrived_tts
+  nearly_arrived_time: !input nearly_arrived_time
   notif_refresh_rate: !input notif_refresh_rate
 
 triggers:
@@ -342,9 +352,9 @@ actions:
                     {{ cooldown - now() | as_timestamp }}
                   {% elif nearly_arrived_tts
                     and not nearly_arrived_sent
-                    and remaining > 3*60
+                    and remaining > nearly_arrived_time*60
                   %}
-                    {{ remaining - 3*60 }}
+                    {{ remaining - nearly_arrived_time*60 }}
                   {% else %}
                     43200
                   {% endif %}
@@ -362,7 +372,7 @@ actions:
                   value_template: |-
                     {{ nearly_arrived_tts
                       and not nearly_arrived_sent
-                      and remaining <= 3*60
+                      and remaining <= nearly_arrived_time*60
                       and speaker_tts_devices != []
                       and speaker_tts_service != ''
                       and persons | select('is_state', 'home') | list != []
@@ -416,7 +426,7 @@ actions:
                   value_template: |-
                     {{ nearly_arrived_tts
                       and not nearly_arrived_sent
-                      and remaining <= 3*60
+                      and remaining <= nearly_arrived_time*60
                       and speaker_tts_devices != []
                       and speaker_tts_service != ''
                       and persons | select('is_state', 'home') | list != []
