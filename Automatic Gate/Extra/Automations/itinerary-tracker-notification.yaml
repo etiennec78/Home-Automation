@@ -213,15 +213,21 @@ actions:
           {% for notify_idx in range(notify_devices | length) %}
             {% if notify_idx != idx %}
               {% if notify_everyone
-                or zones_to_notify and
-                      is_state(persons[notify_idx],
-                        zones_to_notify | map('state_attr', 'friendly_name') | list
-                        + zones_to_notify | map('replace', 'zone.', '') | list
-                      )
-                or notify_persons_away and
-                      is_state(persons[notify_idx], 'not_home')
-                or notify_persons_driving and
-                      is_state(driving_sensors[notify_idx], 'on') %}
+                or zones_to_notify
+                  and notify_idx < persons | length
+                  and is_state(persons[notify_idx],
+                    zones_to_notify | map('state_attr', 'friendly_name') | list
+                    + zones_to_notify | map('replace', 'zone.', '') | list
+                  )
+
+                or notify_persons_away
+                  and notify_idx < persons | length
+                  and is_state(persons[notify_idx], 'not_home')
+
+                or notify_persons_driving
+                  and notify_idx < driving_sensors | length
+                  and is_state(driving_sensors[notify_idx], 'on')
+              %}
                 {% set data.devices_list = data.devices_list + [notify_devices[notify_idx]] %}
               {% endif %}
             {% endif %}
