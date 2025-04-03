@@ -375,6 +375,7 @@ actions:
                   value_template: |-
                     {{ nearly_arrived_tts
                       and not nearly_arrived_sent
+                      and next_refresh != 0
                       and remaining <= nearly_arrived_time*60
                       and speaker_tts_devices != []
                       and speaker_tts_service != ''
