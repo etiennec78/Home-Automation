@@ -166,15 +166,14 @@ blueprint:
       icon: mdi:cog
       collapsed: true
       input:
-        notif_refresh_rate:
-          name: 🔁 Notification refresh rate
-          description: The minimum time between sending two tracking notifications, to avoid quickly reaching the notification quota if your position is updated frequently
-          default: 3
+        notif_refresh_rate_ftn:
+          name: 🔁 Notification refresh rate function
+          description: |-
+            The function used to calculate the **seconds** between two tracking notifications to lower your quota consumption
+            *Note : {{remaining}} will be replaced by the seconds remaining until the arrival*
+          default: "{{ max(10, (remaining)/4) }}"
           selector:
-            number:
-              min: 0
-              max: 60
-              unit_of_measurement: minutes
+            template:
         on_tap_link:
           name: 👆 On tap link
           description: |-
@@ -231,7 +230,6 @@ variables:
   nearly_arrived_tts: !input nearly_arrived_tts
   driver_arrived_tts: !input driver_arrived_tts
   nearly_arrived_time: !input nearly_arrived_time
-  notif_refresh_rate: !input notif_refresh_rate
 
 triggers:
   - trigger: state
@@ -277,7 +275,7 @@ actions:
       driving_sensor: "{{ driving_sensors[idx] }}"
       driver: "{{ persons[idx] }}"
       driver_name: "{{ state_attr(driver, 'friendly_name') }}"
-      cooldown: 0
+      next_refresh: 0
       remaining: 0
       nearly_arrived_sent: false
 
@@ -343,7 +341,7 @@ actions:
                   event_data:
                     entity_id: "{{ travel_time_sensor }}"
                   # Only send position notifications if this loop doesn't contain a cooldown
-                  enabled: "{{ cooldown <= now() | as_timestamp }}"
+                  enabled: "{{ next_refresh <= now() | as_timestamp }}"
                 - trigger: template
                   id: vehicle_left
                   value_template: "{{ is_state(driving_sensor, 'off') }}"
@@ -355,8 +353,8 @@ actions:
               timeout:
                 # Wait for the end of the cooldown, or for the nearly arrived tts, or wait indefinitely
                 seconds: |-
-                  {% if cooldown > now() | as_timestamp %}
-                    {{ cooldown - now() | as_timestamp }}
+                  {% if next_refresh > now() | as_timestamp %}
+                    {{ next_refresh - now() | as_timestamp }}
                   {% elif nearly_arrived_tts
                     and not nearly_arrived_sent
                     and remaining > nearly_arrived_time*60
@@ -453,7 +451,8 @@ actions:
                 - variables:
                     nearly_arrived_sent: true
             - variables:
-                cooldown: "{{ now() | as_timestamp + notif_refresh_rate*60 }}"
+                cooldown: !input notif_refresh_rate_ftn
+                next_refresh: "{{ now() | as_timestamp + cooldown }}"
     # If there are no travel time sensors set
     else:
       # Wait for the user to leave his vehicle
