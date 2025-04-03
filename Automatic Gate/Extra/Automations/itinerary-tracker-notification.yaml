@@ -261,6 +261,7 @@ actions:
       driver: "{{ persons[idx] }}"
       driver_name: "{{ state_attr(driver, 'friendly_name') }}"
       cooldown: 0
+      remaining: 0
 
   # Only continue if the driver is not home
   - condition: template
@@ -334,10 +335,12 @@ actions:
                   event_data:
                     tag: itinerary-tracker
               timeout:
-                # Wait for the end of the cooldown, or wait indefinitely
+                # Wait for the end of the cooldown, or for the nearly arrived tts, or wait indefinitely
                 seconds: |-
                   {% if cooldown > now() | as_timestamp %}
                     {{ cooldown - now() | as_timestamp }}
+                  {% elif nearly_arrived_tts and remaining > 3*60 %}
+                    {{ remaining - 3*60 }}
                   {% else %}
                     43200
                   {% endif %}
@@ -349,6 +352,27 @@ actions:
                 - variables:
                     notify_services: |-
                       {{ notify_services | difference([wait.trigger.event.data.confirmation]) }}
+            # If the travel time remaining needs to trigger the nearly arrived tts
+            - if:
+                - condition: template
+                  value_template: |-
+                    {{ nearly_arrived_tts
+                      and remaining <= 3*60
+                      and speaker_tts_devices != []
+                      and speaker_tts_service != ''
+                      and persons | select('is_state', 'home') | list != []
+                    }}
+              then:
+                # Play a TTS on each device
+                - repeat:
+                    for_each: "{{ speaker_tts_devices }}"
+                    sequence:
+                      - action: tts.speak
+                        data:
+                          cache: true
+                          media_player_entity_id: "{{ repeat.item }}"
+                          message: !input nearly_arrived_message
+                        target: "{{ speaker_tts_service }}"
             # Only continue the loop if the wait_for_trigger was triggered by a travel time update
             - condition: template
               value_template: "{{ wait.trigger.id == 'travel_time' }}"
@@ -378,31 +402,27 @@ actions:
                         timeout: "{{ remaining | int }}"
                         chronometer: true
                         when: "{{ arrival_timestamp | int }}"
+            # If the new travel time remaining needs to trigger the nearly arrived tts
             - if:
                 - condition: template
-                  value_template: "{{ nearly_arrived_tts and remaining <= 3*60 }}"
+                  value_template: |-
+                    {{ nearly_arrived_tts
+                      and remaining <= 3*60
+                      and speaker_tts_devices != []
+                      and speaker_tts_service != ''
+                      and persons | select('is_state', 'home') | list != []
+                    }}
               then:
-                # If nearly_arrived_tts is enabled, someone is currently home, and tts devices and service are set
-                - if:
-                    - condition: template
-                      value_template: |-
-                        {{
-                          nearly_arrived_tts
-                          and speaker_tts_devices != []
-                          and speaker_tts_service != ''
-                          and persons | select('is_state', 'home') | list != []
-                        }}
-                  then:
-                    # Play a TTS on each device
-                    - repeat:
-                        for_each: "{{ speaker_tts_devices }}"
-                        sequence:
-                          - action: tts.speak
-                            data:
-                              cache: true
-                              media_player_entity_id: "{{ repeat.item }}"
-                              message: !input nearly_arrived_message
-                            target: "{{ speaker_tts_service }}"
+                # Play a TTS on each device
+                - repeat:
+                    for_each: "{{ speaker_tts_devices }}"
+                    sequence:
+                      - action: tts.speak
+                        data:
+                          cache: true
+                          media_player_entity_id: "{{ repeat.item }}"
+                          message: !input nearly_arrived_message
+                        target: "{{ speaker_tts_service }}"
             - variables:
                 cooldown: "{{ now() | as_timestamp + notif_refresh_rate*60 }}"
     # If there are no travel time sensors set
