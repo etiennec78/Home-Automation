@@ -214,7 +214,10 @@ actions:
             {% if notify_idx != idx %}
               {% if notify_everyone
                 or zones_to_notify and
-                      is_state(persons[notify_idx], zones_to_notify | map('replace', 'zone.', '') | list)
+                      is_state(persons[notify_idx],
+                        zones_to_notify | map('state_attr', 'friendly_name') | list
+                        + zones_to_notify | map('replace', 'zone.', '') | list
+                      )
                 or notify_persons_away and
                       is_state(persons[notify_idx], 'not_home')
                 or notify_persons_driving and
