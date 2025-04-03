@@ -82,7 +82,7 @@ blueprint:
         speaker_tts_devices:
           name: 🔊 TTS speakers
           description: |-
-            The **home speakers** your want to play a TTS on when someone starts driving
+            The **home speakers** your want to play TTS on
             *Note : Optional*
           default: []
           selector:
@@ -99,6 +99,12 @@ blueprint:
             target:
               entity:
                 domain: tts
+        drive_start_tts:
+          name: 🚀 Drive start TTS
+          description: Notify over TTS when someone starts driving
+          default: True
+          selector:
+            boolean:
 
     persons_to_notify:
       name: Persons to notify
@@ -192,6 +198,7 @@ variables:
   notify_persons_driving: !input notify_persons_driving
   speaker_tts_devices: !input speaker_tts_devices
   speaker_tts_service: !input speaker_tts_service
+  drive_start_tts: !input drive_start_tts
   notif_refresh_rate: !input notif_refresh_rate
 
 triggers:
@@ -260,11 +267,16 @@ actions:
               url: !input on_tap_link
               clickAction: !input on_tap_link
               alert_once: true
-  # If someone is currently home, and tts devices and service are set
+  # If drive_start_tts is enabled, someone is currently home, and tts devices and service are set
   - if:
       - condition: template
         value_template: |-
-          {{ speaker_tts_devices != [] and speaker_tts_service != '' and persons | select('is_state', 'home') | list != [] }}
+          {{
+            drive_start_tts
+            and speaker_tts_devices != []
+            and speaker_tts_service != ''
+            and persons | select('is_state', 'home') | list != []
+          }}
     then:
       # Play a TTS on each device
       - repeat:
