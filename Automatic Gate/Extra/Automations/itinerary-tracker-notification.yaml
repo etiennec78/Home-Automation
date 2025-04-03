@@ -105,6 +105,12 @@ blueprint:
           default: True
           selector:
             boolean:
+        nearly_arrived_tts:
+          name: 🏁 Nearly arrived TTS
+          description: Notify over TTS when the driver has nearly arrived
+          default: True
+          selector:
+            boolean:
 
     persons_to_notify:
       name: Persons to notify
@@ -178,6 +184,14 @@ blueprint:
           default: "{{ driver_name }} will arrive approximately at {{ arrival }}"
           selector:
             text:
+        nearly_arrived_message:
+          name: 💬 Driver has nearly arrived notification
+          description: |-
+            The **content** of the notification you will receive when the driver has **arrived**
+            *Note : {{driver_name}} will be replaced by the drivers' name and {remaining_minutes} by its remaining time*
+          default: "{{ driver_name }} will arrive in {{ remaining_minutes }} minutes"
+          selector:
+            text:
         driver_arrived_message:
           name: 💬 Driver has arrived notification
           description: |-
@@ -199,6 +213,7 @@ variables:
   speaker_tts_devices: !input speaker_tts_devices
   speaker_tts_service: !input speaker_tts_service
   drive_start_tts: !input drive_start_tts
+  nearly_arrived_tts: !input nearly_arrived_tts
   notif_refresh_rate: !input notif_refresh_rate
 
 triggers:
@@ -340,6 +355,7 @@ actions:
             # Calculate ETA
             - variables:
                 remaining: "{{ state_attr(travel_time_sensor, 'duration') * 60 }}"
+                remaining_minutes: "{{ round(remaining/60) }}"
                 arrival_timestamp: "{{ as_timestamp(now()) + remaining }}"
                 arrival: "{{ arrival_timestamp | timestamp_custom('%H:%M') }}"
             # Send an ETA notification update to each user
@@ -362,6 +378,31 @@ actions:
                         timeout: "{{ remaining | int }}"
                         chronometer: true
                         when: "{{ arrival_timestamp | int }}"
+            - if:
+                - condition: template
+                  value_template: "{{ nearly_arrived_tts and remaining <= 3*60 }}"
+              then:
+                # If nearly_arrived_tts is enabled, someone is currently home, and tts devices and service are set
+                - if:
+                    - condition: template
+                      value_template: |-
+                        {{
+                          nearly_arrived_tts
+                          and speaker_tts_devices != []
+                          and speaker_tts_service != ''
+                          and persons | select('is_state', 'home') | list != []
+                        }}
+                  then:
+                    # Play a TTS on each device
+                    - repeat:
+                        for_each: "{{ speaker_tts_devices }}"
+                        sequence:
+                          - action: tts.speak
+                            data:
+                              cache: true
+                              media_player_entity_id: "{{ repeat.item }}"
+                              message: !input nearly_arrived_message
+                            target: "{{ speaker_tts_service }}"
             - variables:
                 cooldown: "{{ now() | as_timestamp + notif_refresh_rate*60 }}"
     # If there are no travel time sensors set
