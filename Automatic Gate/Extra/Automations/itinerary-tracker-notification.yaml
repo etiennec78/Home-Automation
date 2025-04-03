@@ -106,8 +106,14 @@ blueprint:
           selector:
             boolean:
         nearly_arrived_tts:
-          name: 🏁 Nearly arrived TTS
+          name: 🛬 Nearly arrived TTS
           description: Notify over TTS when the driver has nearly arrived
+          default: True
+          selector:
+            boolean:
+        driver_arrived_tts:
+          name: 🏁 Arrived TTS
+          description: Notify over TTS when the driver has arrived
           default: True
           selector:
             boolean:
@@ -223,6 +229,7 @@ variables:
   speaker_tts_service: !input speaker_tts_service
   drive_start_tts: !input drive_start_tts
   nearly_arrived_tts: !input nearly_arrived_tts
+  driver_arrived_tts: !input driver_arrived_tts
   nearly_arrived_time: !input nearly_arrived_time
   notif_refresh_rate: !input notif_refresh_rate
 
@@ -473,6 +480,26 @@ actions:
                   url: !input on_tap_link
                   clickAction: !input on_tap_link
                   timeout: 300
+      # If driver_arrived_tts is enabled, someone is currently home, and tts devices and service are set
+      - if:
+          - condition: template
+            value_template: |-
+              {{ driver_arrived_tts
+                and speaker_tts_devices != []
+                and speaker_tts_service != ''
+                and persons | select('is_state', 'home') | list != []
+              }}
+        then:
+          # Play a TTS on each device
+          - repeat:
+              for_each: "{{ speaker_tts_devices }}"
+              sequence:
+                - action: tts.speak
+                  data:
+                    cache: true
+                    media_player_entity_id: "{{ repeat.item }}"
+                    message: !input driver_arrived_message
+                  target: "{{ speaker_tts_service }}"
     # If the driver has not arrived home
     else:
       # Remove itinerary notification for each user
