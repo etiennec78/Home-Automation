@@ -228,8 +228,8 @@ trigger_variables:
   gate: !input gate
 
 triggers:
-  # Triggers when the gate is opening or fully open
-  - trigger: state
+  - alias: Wait for gate opening or fully open
+    trigger: state
     entity_id: !input gate
     to:
       - "on"
@@ -242,8 +242,8 @@ triggers:
       minutes: !input notification_delay
     enabled: "{{ notification_type == 'open' }}"
 
-  # Triggers when the gate is closing
-  - trigger: state
+  - alias: Wait for gate closing
+    trigger: state
     entity_id: !input gate
     to:
       - "off"
@@ -266,8 +266,8 @@ triggers:
       minutes: !input notification_delay
     enabled: "{{ notification_type == 'close' and states[gate].domain == 'cover' and state_attr(gate, 'supported_features') | bitwise_and(4) == 0 }}"
 
-  # Triggers when the gate encounters an error
-  - trigger: state
+  - alias: Wait for error
+    trigger: state
     entity_id: !input error_message_sensor
     not_to:
       - "unknown"
@@ -275,8 +275,8 @@ triggers:
       - ""
     enabled: "{{ notification_type == 'error' }}"
 
-  # Triggers when the gate becomes unavailable for the selected duration
-  - trigger: state
+  - alias: Wait for gate unavailable for duration
+    trigger: state
     entity_id: !input gate
     to: "unavailable"
     for:
@@ -284,22 +284,22 @@ triggers:
     enabled: "{{ notification_type == 'offline' }}"
 
 conditions:
-  # If triggered by the cover being fully closed, only send a notification if it does not support position tracking
-  - condition: template
+  - alias: If triggered by gate fully closed, only continue if it does not support position tracking
+    condition: template
     value_template: "{{ notification_type != 'close' or not is_state(gate, 'closed') or state_attr(gate, 'supported_features') | bitwise_and(4) == 0 }}"
 
 actions:
-  # Set a closing order ID to track the notification closing button press
-  - variables:
+  - alias: Set closing order ID to track notification closing button press
+    variables:
       closing_order_id: "{{ 'closing_order_' ~ this.context.id }}"
 
-  # If the gate is now paused or fully open (only gates supporting position tracking)
-  - if:
+  - alias: If gate paused or fully open, and supporting position
+    if:
       condition: template
       value_template: "{{ notification_type == 'open' and is_state(gate, 'open') and notification_delay == 0 and state_attr(gate, 'supported_features') | bitwise_and(4) == 4 }}"
     then:
-      # Replace the opening notification on each phone silently
-      - repeat:
+      - alias: Replace opening notif on each phone silently
+        repeat:
           for_each: "{{ notify_services }}"
           sequence:
             - action: "{{ repeat.item }}"
@@ -319,8 +319,8 @@ actions:
                     - action: "{{ closing_order_id }}"
                       title: !input closing_button_text
 
-      # Replace the opening persistent notification on the dashboard, only if it has been enabled
-      - if:
+      - alias: Replace opening persistent notification if enabled
+        if:
           condition: template
           value_template: !input persistent_notification
         then:
@@ -330,8 +330,8 @@ actions:
               message: !input notification_still_open_message
               notification_id: "{{ notification_tag }}"
     else:
-      # Notify each user
-      - repeat:
+      - alias: Notify each user
+        repeat:
           for_each: "{{ notify_services }}"
           sequence:
             - action: "{{ repeat.item }}"
@@ -366,8 +366,8 @@ actions:
                       {{ [] }}
                     {% endif %}
 
-            # Play a TTS on each phone, only if it has been enabled
-            - if:
+            - alias: Play TTS on each phone, if enabled
+              if:
                 condition: template
                 value_template: !input phone_tts
               then:
@@ -380,8 +380,8 @@ actions:
                       importance: max
                       ttl: 0
 
-      # Play a TTS on each selected speaker
-      - repeat:
+      - alias: Play TTS on each speaker
+        repeat:
           for_each: "{{ speaker_tts_devices }}"
           sequence:
             - action: tts.speak
@@ -391,8 +391,8 @@ actions:
                 message: !input notification_message
               target: "{{ speaker_tts_service }}"
 
-      # Send a persistent notification on the dashboard, only if it has been enabled
-      - if:
+      - alias: Send persistent notification to dashboard, if enabled
+        if:
           condition: template
           value_template: !input persistent_notification
         then:
@@ -402,29 +402,29 @@ actions:
               message: !input notification_message
               notification_id: "{{ notification_tag }}"
 
-      # Add user extra actions
-      - sequence: !input extra_actions
+      - alias: Exec user extra actions
+        sequence: !input extra_actions
 
   - wait_for_trigger:
-    # Wait for the gate to be closed
-    - trigger: template
+    - alias: Wait for gate closed
+      trigger: template
       id: closed
       value_template: "{{ is_state(gate, ['off', 'closed']) }}"
 
-    # Wait for the gate to start opening
-    - trigger: template
+    - alias: Wait for gate opening
+      trigger: template
       id: started_opening
       value_template: "{{ is_state(gate, ['on', 'opening']) }}"
       enabled: "{{ notification_type == 'close' }}"
 
-    # Wait for the gate to start closing
-    - trigger: template
+    - alias: Wait for gate closing
+      trigger: template
       id: started_closing
       value_template: "{{ is_state(gate, 'closing') }}"
       enabled: "{{ notification_type == 'open' }}"
 
-    # Wait for the user to press the closing button
-    - trigger: event
+    - alias: Wait for closing button press
+      trigger: event
       id: closing_order
       event_type: mobile_app_notification_action
       event_data:
@@ -439,15 +439,15 @@ actions:
         43200
       {% endif %}
 
-  # Don't remove notifications if the timer ran out but the problem is still present
-  - if:
+  - alias: Stop if timer ran out but problem still present
+    if:
       condition: template
       value_template: "{{ wait.remaining == 0 and not(notification_type == 'error' or is_state(gate, ['off', 'closed'])) }}"
     then:
       - stop: Timer ran out
 
-  # If a user pressed the closing button, then close the gate
-  - if:
+  - alias: Close gate if user pressed closing button
+    if:
       condition: template
       value_template: "{{ wait.trigger.id == 'closing_order' }}"
     then:
@@ -460,8 +460,8 @@ actions:
         target:
           entity_id: "{{ gate }}"
 
-  # Remove the notification sent to the users
-  - repeat:
+  - alias: Remove notification sent to users
+    repeat:
       for_each: "{{ notify_services }}"
       sequence:
         - action: "{{ repeat.item }}"
@@ -470,8 +470,8 @@ actions:
             data:
               tag: "{{ notification_tag }}"
 
-  # Remove the persistent notification from the dashboard
-  - if:
+  - alias: Remove persistent notification
+    if:
       condition: template
       value_template: !input persistent_notification
     then:
