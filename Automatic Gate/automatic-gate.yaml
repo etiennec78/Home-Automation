@@ -459,8 +459,8 @@ variables:
   wifi_devices: !input wifi_devices
 
 triggers:
-  # Triggers when one of the users connect to a vehicle (if you have more than one, make a custom vehcle sensor : example in sensors.md)
-  - trigger: state
+  - alias: Trigger when user connects to vehicle
+    trigger: state
     entity_id: !input driving_sensors
     from: "off"
     to: "on"
@@ -468,8 +468,8 @@ triggers:
 conditions: []
 
 actions:
-  # Store the list index of the user who triggered the automation, and extract the recurrent sensors at this index of the list
-  - variables:
+  - alias: Store list index of driver, extract driver sensors, save iBeacon states
+    variables:
       idx: "{{ driving_sensors.index(trigger.entity_id) }}"
       person: "{{ persons[idx] }}"
       driving_sensor: "{{ trigger.entity_id }}"
@@ -490,8 +490,8 @@ actions:
           {{ none }}
         {% endif %}
 
-  # If the user is currently at the gate location
-  - if:
+  - alias: If driver at gate location
+    if:
       - condition: template
         value_template: "{{ is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id]) }}"
     then:
@@ -499,18 +499,18 @@ actions:
       # OPEN GATE ON EXIT #
       #####################
 
-      # If this user has an iBeacon entity set for automatic gate closing
-      - if:
+      - alias: If driver has iBeacon entity set for auto-closing
+        if:
         - condition: template
           value_template: "{{ (ble_entities | length) - 1 >= idx }}"
         then:
-          # If this user has a saved iBeacon transmitter state
-          - if:
+          - alias: If driver has a saved iBeacon transmitter state
+            if:
               - condition: template
                 value_template: "{{ old_ibeacon_transmitter_states != none }}"
             then:
-              # Change iBeacon state if needed
-              - if:
+              - alias: Change iBeacon state if needed
+                if:
                   - condition: template
                     value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
                 then:
@@ -519,8 +519,8 @@ actions:
                       message: command_ble_transmitter
                       data:
                         command: turn_on
-              # Change iBeacon transmitting power if needed
-              - if:
+              - alias: Change iBeacon transmitting power if needed
+                if:
                   - condition: template
                     value_template: "{{ old_ibeacon_transmitter_states['transmit_power'] != none }}"
                 then:
@@ -530,8 +530,8 @@ actions:
                       data:
                         command: ble_set_transmit_power
                         ble_transmit: ble_transmit_high
-              # Change iBeacon advertise mode if needed
-              - if:
+              - alias: Change iBeacon advertise mode if needed
+                if:
                   - condition: template
                     value_template: "{{ old_ibeacon_transmitter_states['advertise_mode'] != none }}"
                 then:
@@ -541,30 +541,30 @@ actions:
                       data:
                         command: ble_set_advertise_mode
                         ble_advertise: ble_advertise_low_latency
-          # Activate the BLE scanner from the ESP32 connected to the gate, only if a switch has been set
-          - if:
+          - alias: Activate iBeacon scanner if switch set
+            if:
             - condition: template
               value_template: "{{ ble_scanner_switch != '' and is_state(ble_scanner_switch, 'off') }}"
             then:
               - action: switch.turn_on
                 target:
                   entity_id: "{{ ble_scanner_switch }}"
-      # If the user chose to wait for iBeacon or WiFi before opening to ensure his vehicle was not parked outside
-      - if:
+      - alias: If driver chose to wait for iBeacon or WiFi before opening to ensure that vehicle is not parked outside
+        if:
         - condition: template
           value_template: "{{ only_open_near_iBeacon and (ble_entities | length) - 1 >= idx or (wifi_devices | length) - 1 >= idx }}"
-        # Then wait for iBeacon or WiFi
         then:
-          - wait_template: "{{ not is_state(ble_entities[idx], 'unknown') or is_state(wifi_devices[idx], 'home') }}"
+          - alias: Wait for iBeacon or WiFi to report home
+            wait_template: "{{ not is_state(ble_entities[idx], 'unknown') or is_state(wifi_devices[idx], 'home') }}"
             continue_on_timeout: true
             timeout: 10
-          # If the timeout was reached
-          - if:
+          - alias: If timeout reached
+            if:
             - condition: template
               value_template: "{{ wait.remaining == 0 }}"
             then:
-              # Notify the user that his itinerary has been canceled because he was not home
-              - action: "{{ notify_service }}"
+              - alias: Notify driver of itinerary cancelation as he was not home
+                action: "{{ notify_service }}"
                 data:
                   title: !input itinerary_canceled_title
                   message: !input not_home_message
@@ -579,20 +579,20 @@ actions:
                         critical: 1
                     tag: itinerary-status
                     timeout: 300
-              # Restore iBeacon states
-              - sequence: &restore_ibeacons
-                  # If this user has an iBeacon entity set for automatic gate closing
-                  - if:
+              - alias: Restore iBeacon states
+                sequence: &restore_ibeacons
+                  - alias: If driver has an iBeacon entity set for auto-closing
+                    if:
                       - condition: template
                         value_template: "{{ (ble_entities | length) - 1 >= idx }}"
                     then:
-                      # If this user has a saved iBeacon transmitter state
-                      - if:
+                      - alias: If driver has a saved iBeacon transmitter state
+                        if:
                           - condition: template
                             value_template: "{{ old_ibeacon_transmitter_states != none }}"
                         then:
-                          # If the iBeacon transmitter was stopped, then stop it
-                          - if:
+                          - alias: If iBeacon transmitter was stopped, stop it
+                            if:
                               - condition: template
                                 value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
                             then:
@@ -601,8 +601,8 @@ actions:
                                   message: command_ble_transmitter
                                   data:
                                     command: turn_off
-                          # If the iBeacon transmitting power was not set to high, then restore it
-                          - if:
+                          - alias: If iBeacon transmitting power was not set to high, restore it
+                            if:
                               - condition: template
                                 value_template: "{{ old_ibeacon_transmitter_states['transmit_power'] != none }}"
                             then:
@@ -612,8 +612,8 @@ actions:
                                   data:
                                     command: ble_set_transmit_power
                                     ble_transmit: "ble_transmit_{{ old_ibeacon_transmitter_states['transmit_power'] }}"
-                          # If the iBeacon transmitter advertise power was not set to low latency, then restore it
-                          - if:
+                          - alias: If iBeacon transmitter advertise power was not set to low latency, restore it
+                            if:
                               - condition: template
                                 value_template: "{{ old_ibeacon_transmitter_states['advertise_mode'] != none }}"
                             then:
@@ -623,29 +623,29 @@ actions:
                                   data:
                                     command: ble_set_advertise_mode
                                     ble_advertise: "ble_advertise_{{ old_ibeacon_transmitter_states['advertise_mode'] }}"
-                  - # If the iBeacon scanner switch has been set, and doesn't need to stay on
+                  - alias: If iBeacon switch set, and doesn't need to stay on
                     if:
                       - condition: template
                         value_template: "{{ ble_scanner_switch != '' and itinerary_sensors | select('is_state', ['on_approach', 'leaving']) | list == [] }}"
                     then:
-                      # Deactivate the BLE scanner from the ESP32 connected to the gate
-                      - action: switch.turn_off
+                      - alias: Deactivate iBeacon scanner
+                        action: switch.turn_off
                         target:
                           entity_id: "{{ ble_scanner_switch }}"
               - stop: Not home
-      # Set the user itinerary text variable to "leaving"
-      - action: input_text.set_value
+      - alias: Set driver itinerary to "leaving"
+        action: input_text.set_value
         target:
           entity_id: "{{ itinerary_sensor }}"
         data:
           value: leaving
-      # If one of the gates is closing/closed
-      - if:
+      - alias: If one of the gates is closing/closed
+        if:
           - condition: template
             value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
         then:
-          # Then open each gate because the user is leaving
-          - repeat:
+          - alias: Open each gate because driver is leaving
+            repeat:
               for_each: !input gate
               sequence:
                 - action: |-
@@ -656,13 +656,13 @@ actions:
                     {% endif %}
                   target:
                     entity_id: "{{ repeat.item }}"
-      # If automatic closing is enabled
-      - if:
+      - alias: If auto-closing is enabled
+        if:
           - condition: template
             value_template: "{{ automatic_closing == 'on' }}"
         then:
-          # Wait for a gate to be closed by the user, or the iBeacon to be out of reach for 20s, or the vehicle to be left, or the user to leave, all while not waiting more than the auto-close delay
-          - wait_for_trigger:
+          - alias: Wait for gate closed manually, iBeacon out of reach for 20s, vehicle left, driver left, for at most auto-close delay
+            wait_for_trigger:
               - trigger: template
                 id: manual
                 value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
@@ -682,26 +682,26 @@ actions:
                   {% endif %}
             timeout:
               minutes: !input safety_delay
-          # Remove the current itinerary since the user has either left or took too long
-          - action: input_text.set_value
+          - alias: Remove current itinerary as driver left or took too long
+            action: input_text.set_value
             target:
               entity_id: "{{ itinerary_sensor }}"
             data:
               value: none
-          # Restore iBeacon states
-          - <<: *restore_ibeacons
-          # If no one else is currently leaving or approaching
-          - if:
+          - alias: Restore iBeacon states
+            <<: *restore_ibeacons
+          - alias: If no one else leaving or approaching
+            if:
               - condition: template
                 value_template: "{{ itinerary_sensors | select('is_state', ['on_approach', 'leaving']) | list == [] }}"
             then:
-              # If the timeout was reached
-              - if:
+              - alias: If timeout reached
+                if:
                   - condition: template
                     value_template: "{{ wait.remaining == 0 }}"
                 then:
-                  # Notify the user that the gate will close automatically since he didn't leave in time
-                  - action: "{{ notify_service }}"
+                  - alias: Notify driver that gate will auto-close as he didn't leave in time
+                    action: "{{ notify_service }}"
                     data:
                       title: !input gate_closing_title
                       message: !input did_not_leave_message
@@ -717,8 +717,8 @@ actions:
                         tag: gate-movement
                         timeout: 300
                 else:
-                  # Notify the user that the gate will close automatically
-                  - action: "{{ notify_service }}"
+                  - alias: Notify driver that gate will auto-close
+                    action: "{{ notify_service }}"
                     data:
                       message: !input automatic_closing_message
                       data:
@@ -732,8 +732,8 @@ actions:
                             critical: 1
                         tag: gate-movement
                         timeout: 300
-              # Close all gates
-              - repeat:
+              - alias: Close all gates
+                repeat:
                   for_each: !input gate
                   sequence:
                     - action: |-
@@ -744,16 +744,16 @@ actions:
                         {% endif %}
                       target:
                         entity_id: "{{ repeat.item }}"
-              # Lock all locks
-              - repeat:
+              - alias: Lock all locks
+                repeat:
                   for_each: !input locks
                   sequence:
                     - action: lock.lock
                       target:
                         entity_id: "{{ repeat.item }}"
             else:
-              # Get the names of the persons being awaited
-              - variables:
+              - alias: Get names of awaited persons
+                variables:
                   awaiting_persons: |-
                     {% set data = namespace(awaiting_persons=[]) %}
 
@@ -764,8 +764,8 @@ actions:
                     {% endfor %}
 
                     {{ data.awaiting_persons | join(', ') }}
-              # Notify the user that the gate will wait for next person
-              - action: "{{ notify_service }}"
+              - alias: Notify driver that gate will wait for next person
+                action: "{{ notify_service }}"
                 data:
                   title: !input awaiting_title
                   message: !input awaiting_message
@@ -779,33 +779,32 @@ actions:
                         name: "default"
                         critical: 1
                     tag: itinerary-status
-              # Wait for the gate to be closed
-              - wait_for_trigger:
+              - alias: Wait for gate closed
+                wait_for_trigger:
                   - trigger: template
                     value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
-              # Remove the notification received by the user when the gate was awaiting another user
-              - action: "{{ notify_service }}"
+              - alias: Remove awaiting user notification
+                action: "{{ notify_service }}"
                 data:
                   message: clear_notification
                   data:
                     tag: itinerary-status
-        # If automatic closing is disabled
         else:
-          # Wait for the user to leave
-          - wait_for_trigger:
+          - alias: Wait for driver to leave
+            wait_for_trigger:
               - trigger: template
                 id: gate_zone_left
                 value_template: "{{ not is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id]) }}"
-          # Remove the current itinerary
-          - action: input_text.set_value
+          - alias: Remove current itinerary
+            action: input_text.set_value
             target:
               entity_id: "{{ itinerary_sensor }}"
             data:
               value: none
-          # Restore iBeacon states
-          - <<: *restore_ibeacons
-      # Wait for the user to travel 350m away from the eta zone, then return to 100m, to start an itinerary
-      - repeat:
+          - alias: Restore iBeacon states
+            <<: *restore_ibeacons
+      - alias: Wait for driver to travel 350m away from eta zone, then return to 100m, to start itinerary
+        repeat:
           count: 2
           sequence:
             - wait_for_trigger:
@@ -818,31 +817,30 @@ actions:
                 - trigger: template
                   id: returned_to_gate_zone
                   value_template: "{{ distance(person, gate_location)*1000 < eta_zone + 100 }}"
-            # Don't continue if the user has stopped his vehicle
-            - if:
+            - alias: Don't continue if driver stopped vehicle
+              if:
                 - condition: template
                   value_template: "{{ wait.trigger.id == 'vehicle_left' }}"
               then:
                 - stop: Arrived to destination
 
-    # If the user is currently away from the gate location
     else:
-      # Stop if the user started driving in the eta zone
-      - condition: template
+      - alias: Stop if driver started driving in eta zone
+        condition: template
         value_template: "{{ distance(person, gate_location)*1000 > eta_zone }}"
 
   ###################
   # START ITINERARY #
   ###################
 
-  # Set the user itinerary text variable to "arriving"
-  - action: input_text.set_value
+  - alias: Set driver itinerary to "arriving"
+    action: input_text.set_value
     target:
       entity_id: "{{ itinerary_sensor }}"
     data:
       value: arriving
-  # Notify the user that his itinerary has been started
-  - action: "{{ notify_service }}"
+  - alias: Notify driver of itinerary start
+    action: "{{ notify_service }}"
     data:
       title: !input itinerary_update_title
       message: !input itinerary_started_message
@@ -856,60 +854,60 @@ actions:
             name: "default"
             critical: 1
         tag: itinerary-status
-  # If the travel time refresh rate is set to "Continuously"
-  - if:
+  - alias: If travel time refresh rate set to "Continuously"
+    if:
       - condition: template
         value_template:  "{{ travel_time_rate == 'Continuously' }}"
-    # Then update the user travel time once to display an approximation on the dashboard (while taking into account the time elapsed
     then:
-      - action: homeassistant.update_entity
+      - alias: Update travel time once to display ETA on dashboard
+        action: homeassistant.update_entity
         target:
           entity_id: "{{ travel_time_sensor }}"
-  # Repeat while the user is driving
-  - repeat:
+  - alias: Repeat while driver still driving
+    repeat:
       while:
         - condition: template
           value_template: "{{ is_state(driving_sensor, 'on') }}"
       sequence:
-        # If the travel time has expired and its refresh rate is set to "Continuously"
-        - if:
+        - alias: If travel time expired and refresh rate set to "Continuously"
+          if:
             - condition: template
               value_template:  "{{ travel_time_rate == 'Continuously' and
                 states[travel_time_sensor].last_updated + timedelta(minutes=1) < now() }}"
-          # Then refresh the travel time to display a precise value on the dashboard
           then:
-            - action: homeassistant.update_entity
+            - alias: Refresh travel time
+              action: homeassistant.update_entity
               target:
                 entity_id: "{{ travel_time_sensor }}"
-        # Wait for a user position update or a deactivation of his driving sensor
-        - wait_for_trigger:
+        - alias: Wait for new driver position or vehicle left
+          wait_for_trigger:
             - trigger: event
               event_type: state_changed
               event_data:
                 entity_id: "{{ person }}"
             - trigger: template
               value_template: "{{ is_state(driving_sensor, 'off') }}"
-        # Repeat while the user is nearer than 1km of radius from the gate and is still driving
-        # This allows to update to a precise ETA even if a traffic jam appears near your gate
-        # It will return to the previous loop if the user has entered the radius but passed by and didn't go directly to your gate zone
-        - repeat:
+        - alias: Repeat while driver nearer than 1km from gate and still driving
+          # This allows to update to a precise ETA even if a traffic jam appears near your gate
+          # It will return to the previous loop if the driver has entered the radius but passed by
+          repeat:
             while:
               - condition: template
                 value_template: "{{ distance(person, gate_location)*1000 < eta_zone }}"
               - condition: template
                 value_template: "{{ is_state(driving_sensor, 'on') }}"
             sequence:
-              # Update the user travel time when there is a new position
-              - action: homeassistant.update_entity
+              - alias: Update travel time if new position
+                action: homeassistant.update_entity
                 target:
                   entity_id: "{{ travel_time_sensor }}"
-              # Verify that your integration has responded with a new travel time
-              - condition: template
+              - alias: Wait for travel time integration to refresh
+                condition: template
                 value_template: |-
                     {{ states[travel_time_sensor].last_updated > now() - timedelta(seconds=5)
                           and states[travel_time_sensor].last_changed > now() - timedelta(minutes=5) }}
-              # Convert travel time to seconds
-              - variables:
+              - alias: Convert travel time to seconds and set opening time
+                variables:
                   travel_time_duration: |-
                     {% if (state_attr(travel_time_sensor, 'duration') != none) %}
                       {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
@@ -925,26 +923,25 @@ actions:
                         + travel_time_duration
                         - lead_time }}
                   seconds_before_opening: "{{ opening_time - now() | as_timestamp }}"
-              # If the ETA is in the future
-              - if:
+              - alias: If ETA in the future
+                if:
                   - condition: template
                     value_template: "{{ seconds_before_opening > 1 }}"
                 then:
-                  # If the travel time refresh rate is set to "Once when near home"
-                  - if:
+                  - alias: If travel time refresh rate set to "Once when near home"
+                    if:
                       - condition: template
                         value_template: "{{ travel_time_rate == 'Once when near home' }}"
-                    # Then wait for ETA or car left
                     then:
-                      - wait_for_trigger:
+                      - alias: Wait for ETA or vehicle left
+                        wait_for_trigger:
                           - trigger: template
                             value_template: "{{ is_state(driving_sensor, 'off') }}"
                         timeout:
                           seconds: "{{ seconds_before_opening }}"
-                    # If the travel time refresh rate is set to "Continuously" or "While near home"
                     else:
-                      # Wait for ETA or new position or car left, and cancel if it hasn't been updated for too long (e.g: if device offline)
-                      - wait_for_trigger:
+                      - alias: Wait for ETA, new position, vehicle left, and cancel if deviced timed out
+                        wait_for_trigger:
                           - trigger: event
                             event_type: state_changed
                             event_data:
@@ -953,20 +950,20 @@ actions:
                             value_template: "{{ is_state(driving_sensor, 'off') }}"
                         timeout:
                           seconds: "{{ min(timeout_delay*60, seconds_before_opening) }}"
-                      # If the timeout ran out of time (not because of eta reached)
-                      - if:
+                      - alias: If timeout ran out of time (not because of eta reached)
+                        if:
                           - condition: template
                             value_template: "{{ wait.remaining == 0 and
                                                 opening_time > now() | as_timestamp }}"
                         then:
-                          # Remove the current itinerary since the user has timed out
-                          - action: input_text.set_value
+                          - alias: Remove current itinerary as driver timed out
+                            action: input_text.set_value
                             target:
                               entity_id: "{{ itinerary_sensor }}"
                             data:
                               value: none
-                          # Notify the user that his itinerary has been canceled
-                          - action: "{{ notify_service }}"
+                          - alias: Notify driver about itinerary cancellation
+                            action: "{{ notify_service }}"
                             data:
                               title: !input itinerary_canceled_title
                               message: !input timed_out_message
@@ -983,24 +980,23 @@ actions:
                                 timeout: 300
                           - stop: Timed out
 
-              # Restart the second repeat loop if the wait_for_trigger was triggered by a position or car sensor update
-              # This allows the loop to refresh the ETA with a new position or stop the script if the car was left
-              # This is quite a redundant condition as it has already been checked above, if you find a better way to restart the loop, feel free to make a PR
+              # Restart the second repeat loop if the wait_for_trigger was triggered by a position or vehicle sensor update
+              # This allows the loop to refresh the ETA with a new position or stop the script if the vehicle was left
               - condition: template
                 value_template: "{{ opening_time <= as_timestamp(now()) }}"
               - if:
-                  # The user is not in the activation zone
-                  - condition: template
+                  - alias: User is not in activation zone
+                    condition: template
                     value_template: "{{ distance(person, gate_location)*1000 > activation_zone }}"
                 then:
-                  # Remove the current itinerary since the user was not in the activation zone when the gate tried to open
-                  - action: input_text.set_value
+                  - alias: Stop itinerary as driver was not in activation zone when gate tried to open
+                    action: input_text.set_value
                     target:
                       entity_id: "{{ itinerary_sensor }}"
                     data:
                       value: none
-                  # Notify the user that his itinerary has been canceled
-                  - action: "{{ notify_service }}"
+                  - alias: Notify driver about itinerary cancellation
+                    action: "{{ notify_service }}"
                     data:
                       title: !input itinerary_canceled_title
                       message: !input vehicle_away_message
@@ -1016,19 +1012,19 @@ actions:
                         tag: itinerary-status
                         timeout: 300
                   - stop: Not in activation zone
-              # Set the user itinerary text variable to "on_approach", because the user is near the gate and will arrive soon
-              - action: input_text.set_value
+              - alias: Set driver itinerary text variable to "on_approach", because driver is near gate and will arrive soon
+                action: input_text.set_value
                 data:
                   value: on_approach
                 target:
                   entity_id: "{{ itinerary_sensor }}"
-              # If one of the gates is closing/closed
-              - if:
+              - alias: If one of the gates is closing/closed
+                if:
                   - condition: template
                     value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
                 then:
-                  # Then open each gate because the user is arriving
-                  - repeat:
+                  - alias: Open each gate because driver is arriving
+                    repeat:
                       for_each: !input gate
                       sequence:
                         - action: |-
@@ -1039,13 +1035,13 @@ actions:
                             {% endif %}
                           target:
                             entity_id: "{{ repeat.item }}"
-              # If automatic closing is not fully disabled
-              - if:
+              - alias: If auto-closing is not fully disabled
+                if:
                   - condition: template
                     value_template: "{{ automatic_closing != 'off' }}"
                 then:
-                  # Wait for the gate to be closed manually, or the vehicle to be left, or the user to leave the activation zone, all while not waiting more than the auto-close delay
-                  - wait_for_trigger:
+                  - alias: Wait for gate closed manually, or vehicle left, or driver left, for at most auto-close delay
+                    wait_for_trigger:
                       - trigger: template
                         id: manual
                         value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
@@ -1057,31 +1053,31 @@ actions:
                         value_template: "{{ distance(person, gate_location)*1000 > activation_zone }}"
                     timeout:
                       minutes: !input safety_delay
-                  # Remove the current itinerary since the user has either arrived or took too long
-                  - action: input_text.set_value
+                  - alias: Stop itinerary as driver arrived or took too long
+                    action: input_text.set_value
                     target:
                       entity_id: "{{ itinerary_sensor }}"
                     data:
                       value: none
-                  # If the gate has been closed manually
-                  - if:
+                  - alias: If gate closed manually
+                    if:
                       - condition: template
                         value_template: "{{ wait.trigger.id == 'manual' }}"
                     then:
-                      # Remove the notification received by the user when his itinerary was started
-                      - action: "{{ notify_service }}"
+                      - alias: Remove itinerary started notification
+                        action: "{{ notify_service }}"
                         data:
                           message: clear_notification
                           data:
                             tag: itinerary-status
                     else:
-                      # If someone is currently approaching or leaving
-                      - if:
+                      - alias: If someone is currently approaching or leaving
+                        if:
                           - condition: template
                             value_template: "{{ itinerary_sensors | select('is_state', ['on_approach', 'leaving']) | list != [] }}"
                         then:
-                          # Get the names of the persons being awaited
-                          - variables:
+                          - alias: Get names of awaited persons
+                            variables:
                               awaiting_persons: |-
                                 {% set data = namespace(awaiting_persons=[]) %}
 
@@ -1092,8 +1088,8 @@ actions:
                                 {% endfor %}
 
                                 {{ data.awaiting_persons | join(', ') }}
-                          # Notify the user that the gate will wait for next person
-                          - action: "{{ notify_service }}"
+                          - alias: Notify driver that gate will wait for next person
+                            action: "{{ notify_service }}"
                             data:
                               title: !input awaiting_title
                               message: !input awaiting_message
@@ -1107,20 +1103,19 @@ actions:
                                     name: "default"
                                     critical: 1
                                 tag: itinerary-status
-                          # Wait for the gate to be closed
-                          - wait_for_trigger:
+                          - alias: Wait for gate closed
+                            wait_for_trigger:
                               - trigger: template
                                 value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
-                        # If no one is currently approaching or leaving
                         else:
                           - choose:
-                              # If the timeout was reached
-                              - conditions:
+                              - alias: If timeout reached
+                                conditions:
                                   - condition: template
                                     value_template: "{{ wait.remaining == 0 }}"
                                 sequence:
-                                  # Notify the user that the gate will close automatically since he took too long
-                                  - action: "{{ notify_service }}"
+                                  - alias: Notify driver that gate will auto-close as he took too long
+                                    action: "{{ notify_service }}"
                                     data:
                                       title: !input gate_closing_title
                                       message: !input did_not_arrive_message
@@ -1135,13 +1130,13 @@ actions:
                                             critical: 1
                                         tag: gate-movement
                                         timeout: 300
-                              # If the user has exited the gate activation zone
-                              - conditions:
+                              - alias: If driver exited gate activation zone
+                                conditions:
                                   - condition: template
                                     value_template: "{{ wait.trigger.id == 'activation_zone_left' }}"
                                 sequence:
-                                  # Notify the user that the gate will close automatically since he has exited the zone
-                                  - action: "{{ notify_service }}"
+                                  - alias: Notify driver that gate will auto-close as he exited the zone
+                                    action: "{{ notify_service }}"
                                     data:
                                       title: !input gate_closing_title
                                       message: !input vehicle_away_message
@@ -1156,15 +1151,15 @@ actions:
                                             critical: 1
                                         tag: gate-movement
                                         timeout: 300
-                              # If the user has stopped his car, arrived, and auto-closing is enabled
-                              - conditions:
+                              - alias: If driver arrived, stopped vehicle, and auto-closing is enabled
+                                conditions:
                                   - condition: template
                                     value_template: "{{ wait.trigger.id == 'vehicle_left' and
                                                         is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id]) and
                                                         automatic_closing == 'on' }}"
                                 sequence:
-                                  # Notify the user that the gate will close automatically since he has arrived
-                                  - action: "{{ notify_service }}"
+                                  - alias: Notify driver that gate will auto-close as he arrived
+                                    action: "{{ notify_service }}"
                                     data:
                                       title: !input gate_closing_title
                                       message: !input user_arrival_message
@@ -1181,13 +1176,13 @@ actions:
                                         timeout: 300
                                   - delay:
                                       minutes: !input auto_close_arrival_delay
-                              # If the user has left his car
-                              - conditions:
+                              - alias: If driver left vehicle
+                                conditions:
                                   - condition: template
                                     value_template: "{{ wait.trigger.id == 'vehicle_left' }}"
                                 sequence:
-                                  # Notify the user that the gate will close automatically since he has left his car
-                                  - action: "{{ notify_service }}"
+                                  - alias: Notify driver that gate will auto-close as he left vehicle
+                                    action: "{{ notify_service }}"
                                     data:
                                       title: !input gate_closing_title
                                       message: !input vehicle_left_message
@@ -1202,18 +1197,18 @@ actions:
                                             critical: 1
                                         tag: gate-movement
                                         timeout: 300
-                            # If the user has arrived but don't have automatic gate enabled
+                            # If driver arrived but doesn't have automatic gate enabled
                             default:
-                              # Remove the notification received by the user when his itinerary was started
-                              - action: "{{ notify_service }}"
+                              - alias: Remove itinerary started notification
+                                action: "{{ notify_service }}"
                                 data:
                                   message: clear_notification
                                   data:
                                     tag: itinerary-status
-                              # Stop the whole script as it was successful
-                              - stop: Successful
-                          # Close all gates
-                          - repeat:
+                              - alias: Stop whole script as successful
+                                stop: Successful
+                          - alias: Close all gates
+                            repeat:
                               for_each: !input gate
                               sequence:
                                 - action: |-
@@ -1224,56 +1219,54 @@ actions:
                                     {% endif %}
                                   target:
                                     entity_id: "{{ repeat.item }}"
-                          # Unlock all locks
-                          - repeat:
+                          - alias: Unlock all locks
+                            repeat:
                               for_each: !input locks
                               sequence:
                                 - action: lock.unlock
                                   target:
                                     entity_id: "{{ repeat.item }}"
-                  # Remove the notification received by the user when his itinerary was started or awaiting next user
-                  - action: "{{ notify_service }}"
+                  - alias: Remove itinerary started notification
+                    action: "{{ notify_service }}"
                     data:
                       message: clear_notification
                       data:
                         tag: itinerary-status
-                  # Stop the whole script as it was successful
-                  - stop: Successful
-                # If automatic closing is disabled
+                  - alias: Stop whole script as successful
+                    stop: Successful
                 else:
-                  # Wait for the user to stop his car
-                  - wait_for_trigger:
+                  - alias: Wait for driver to stop vehicle
+                    wait_for_trigger:
                     - trigger: template
                       value_template: "{{ is_state(driving_sensor, 'off') }}"
-                  # Remove the current itinerary
-                  - action: input_text.set_value
+                  - alias: Remove current itinerary
+                    action: input_text.set_value
                     target:
                       entity_id: "{{ itinerary_sensor }}"
                     data:
                       value: none
-                  # Remove the notification received by the user when his itinerary was started
-                  - action: "{{ notify_service }}"
+                  - alias: Remove itinerary started notification
+                    action: "{{ notify_service }}"
                     data:
                       message: clear_notification
                       data:
                         tag: itinerary-status
-                  # Stop the whole script as it ran successfully
-                  - stop: Successful
-  # If both loop were broken
-  # Remove the current itinerary since the user has left his vehicle or timed out
-  - action: input_text.set_value
+                  - alias: Stop whole script as it ran successfully
+                    stop: Successful
+  - alias: If both loop were broken, remove current itinerary as driver left vehicle or timed out
+    action: input_text.set_value
     data:
       value: none
     target:
       entity_id: "{{ itinerary_sensor }}"
-  # If the car has been left in the gate zone and the travel time was not updated during the itinerary
-  - if:
+  - alias: If vehicle left in gate zone and travel time was not updated
+    if:
       condition: template
       value_template: "{{ is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id])
         and states[travel_time_sensor].last_updated < now() - timedelta(minutes=5) }}"
     then:
-      # Notify the user that his travel time integration did not respond during the itinerary
-      - action: "{{ notify_service }}"
+      - alias: Notify driver that travel time integration did not respond
+        action: "{{ notify_service }}"
         data:
           title: !input itinerary_canceled_title
           message: !input travel_time_did_not_respond
@@ -1289,8 +1282,8 @@ actions:
             tag: itinerary-status
             timeout: 300
     else:
-      # Notify the user that his itinerary has been canceled because he has left his car
-      - action: "{{ notify_service }}"
+      - alias: Send itinerary canceled notification to driver as he left vehicle
+        action: "{{ notify_service }}"
         data:
           title: !input itinerary_canceled_title
           message: !input vehicle_left_message
