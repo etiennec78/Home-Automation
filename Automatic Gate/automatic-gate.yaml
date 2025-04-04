@@ -254,12 +254,6 @@ blueprint:
           default: "Itinerary canceled ❌"
           selector:
             text:
-        gate_opening_title:
-          name: 📃🔓 Gate opening notification title
-          description: The **title** displayed on the notification you will receive when your **gate is opening**
-          default: "Gate opening 🔓"
-          selector:
-            text:
         gate_closing_title:
           name: 📃🔒 Gate closing notification title
           description: The **title** displayed on the notification you will receive when your **gate is closing**
@@ -284,13 +278,6 @@ blueprint:
           name: 💬🏁 User arrival notification
           description: The **content** of the notification you will receive when you **arrive at your destination**
           default: "You have arrived at your destination"
-          selector:
-            text:
-              multiline: true
-        automatic_opening_message:
-          name: 💬🔓 Automatic opening notification
-          description: The **content** of the notification you will receive when your gate is **automatically opening**
-          default: "Automatic opening of the gate"
           selector:
             text:
               multiline: true
