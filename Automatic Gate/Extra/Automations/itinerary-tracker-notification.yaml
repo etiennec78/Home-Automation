@@ -404,7 +404,7 @@ actions:
             # Calculate ETA
             - variables:
                 remaining: "{{ state_attr(travel_time_sensor, 'duration') * 60 }}"
-                remaining_minutes: "{{ remaining/60 | round }}"
+                remaining_minutes: "{{ (remaining/60) | round }}"
                 arrival_timestamp: "{{ as_timestamp(now()) + remaining }}"
                 arrival: "{{ arrival_timestamp | timestamp_custom('%H:%M') }}"
             # Send an ETA notification update to each user
