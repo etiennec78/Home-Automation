@@ -30,16 +30,31 @@ sections:
                 state: on_approach
         # Estimated time remaining
         primary: >-
-          Time remaining : {{((state_attr('sensor.user0_travel_time',
-          'duration') | float * 60 - as_timestamp(now()) +
-          as_timestamp(states.sensor.user0_travel_time.last_updated))/60)
-          | round(0)}}min
+          Time remaining :
+          {% if state_attr('sensor.user0_travel_time', 'duration') is not none %}
+              {{
+                ((
+                  + as_timestamp(states.sensor.user0_travel_time.last_updated)
+                  - as_timestamp(now())
+                  state_attr('sensor.user0_travel_time', 'duration') | float * 60
+                ) /60 )
+                | round(0)
+              }}min
+          {% else %}
+              Unknown
+          {% endif %}
         # Estimated time of arrival
         secondary: >-
           Arrival :
-          {{(as_timestamp(states.sensor.user0_travel_time.last_updated) +
-          state_attr('sensor.user0_travel_time', 'duration') | float *
-          60) | timestamp_custom('%H:%M')}}
+          {% if state_attr('sensor.user0_travel_time', 'duration') is not none %}
+            {{
+              (as_timestamp(states.sensor.user0_travel_time.last_updated)
+              + state_attr('sensor.user0_travel_time', 'duration') | float * 60)
+              | timestamp_custom('%H:%M')
+            }}
+          {% else %}
+            Unknown
+          {% endif %}
         icon: mdi:map-clock
         entity: sensor.user0_travel_time
         icon_color: blue
