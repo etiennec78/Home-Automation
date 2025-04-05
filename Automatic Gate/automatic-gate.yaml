@@ -815,8 +815,11 @@ actions:
 
     else:
       - alias: Stop if driver started driving in eta zone
-        condition: template
-        value_template: "{{ distance(person, gate_location)*1000 > eta_zone }}"
+        if:
+          - condition: template
+            value_template: "{{ distance(person, gate_location)*1000 > eta_zone }}"
+        then:
+          - stop: Started too close to home
 
   ###################
   # START ITINERARY #
