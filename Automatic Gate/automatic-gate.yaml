@@ -455,7 +455,7 @@ triggers:
 conditions: []
 
 actions:
-  - alias: Store list index of driver, extract driver sensors, save iBeacon states
+  - alias: Store list index of driver, extract driver sensors
     variables:
       idx: "{{ driving_sensors.index(trigger.entity_id) }}"
       person: "{{ persons[idx] }}"
@@ -463,19 +463,6 @@ actions:
       travel_time_sensor: "{{ travel_time_sensors[idx] }}"
       notify_service: "{{ notify_services[idx] }}"
       itinerary_sensor: "{{ itinerary_sensors[idx] }}"
-      old_ibeacon_transmitter_states: |-
-        {% if (ble_transmitter_entities | length) - 1 >= idx %}
-          {{ {
-            'state': states(ble_transmitter_entities[idx])
-              if states(ble_transmitter_entities[idx]) == 'Stopped' else none,
-            'transmit_power': (state_attr(ble_transmitter_entities[idx], 'Transmitting power') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
-              if state_attr(ble_transmitter_entities[idx], 'Transmitting power') != 'high' else none,
-            'advertise_mode': (state_attr(ble_transmitter_entities[idx], 'Advertise mode') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
-              if state_attr(ble_transmitter_entities[idx], 'Advertise mode') != 'lowLatency' else none
-          } }}
-        {% else %}
-          {{ none }}
-        {% endif %}
 
   - alias: If driver at gate location
     if:
@@ -491,6 +478,21 @@ actions:
         - condition: template
           value_template: "{{ (ble_entities | length) - 1 >= idx }}"
         then:
+          - alias: Save iBeacon states
+            variables:
+              old_ibeacon_transmitter_states: |-
+                {% if (ble_transmitter_entities | length) - 1 >= idx %}
+                  {{ {
+                    'state': states(ble_transmitter_entities[idx])
+                      if states(ble_transmitter_entities[idx]) == 'Stopped' else none,
+                    'transmit_power': (state_attr(ble_transmitter_entities[idx], 'Transmitting power') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
+                      if state_attr(ble_transmitter_entities[idx], 'Transmitting power') != 'high' else none,
+                    'advertise_mode': (state_attr(ble_transmitter_entities[idx], 'Advertise mode') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
+                      if state_attr(ble_transmitter_entities[idx], 'Advertise mode') != 'lowLatency' else none
+                  } }}
+                {% else %}
+                  {{ none }}
+                {% endif %}
           - alias: If driver has a saved iBeacon transmitter state
             if:
               - condition: template
