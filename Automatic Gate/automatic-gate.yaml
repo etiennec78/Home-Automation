@@ -676,7 +676,7 @@ actions:
             data:
               value: none
           - alias: Restore iBeacon states
-            <<: *restore_ibeacons
+            sequence: *restore_ibeacons
           - alias: If no one else leaving or approaching
             if:
               - condition: template
@@ -789,7 +789,7 @@ actions:
             data:
               value: none
           - alias: Restore iBeacon states
-            <<: *restore_ibeacons
+            sequence: *restore_ibeacons
       - alias: Wait for driver to travel 350m away from eta zone, then return to 100m, to start itinerary
         repeat:
           count: 2
