@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Device xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-  <Name>Phillips LivingColors Micro</Name>
+  <Name>Philips LivingColors Micro</Name>
   <Description />
   <Author>etiennec78</Author>
   <Type>LedStripe</Type>
-  <Vendor>Phillips</Vendor>
+  <Vendor>Philips</Vendor>
   <Model>LivingColors Micro</Model>
   <Width>108.52</Width>
   <Height>110</Height>

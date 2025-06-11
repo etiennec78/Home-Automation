@@ -1,8 +1,8 @@
-# Esphome Phillips LivingColors firmware 💡
+# Esphome Philips LivingColors firmware 💡
 
 ## Description 📝
 
-A simple ESPHome configuration to hack a Phillips LivingColors Mini with an ESP32
+A simple ESPHome configuration to hack a Philips LivingColors Mini with an ESP32
 
 Has both E1.31 and WLED protocols enabled by default for light software control (e.g.: [Artemis](https://github.com/Artemis-RGB/Artemis))
 
@@ -33,4 +33,4 @@ Has both E1.31 and WLED protocols enabled by default for light software control 
 
 |       |       |       |
 | :---: | :---: | :---: |
-| <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Esphome%20Phillips%20LivingColors/livingcolors1.jpg?raw=true" width="100%" alt="First lamp components view" > | <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Esphome%20Phillips%20LivingColors/livingcolors2.jpg?raw=true" width="100%" alt="Second lamp components view"> | <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Esphome%20Phillips%20LivingColors/livingcolors3.jpg?raw=true" width="100%" alt="Third lamp components view"> |
+| <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Esphome%20Philips%20LivingColors/livingcolors1.jpg?raw=true" width="100%" alt="First lamp components view" > | <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Esphome%20Philips%20LivingColors/livingcolors2.jpg?raw=true" width="100%" alt="Second lamp components view"> | <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Esphome%20Philips%20LivingColors/livingcolors3.jpg?raw=true" width="100%" alt="Third lamp components view"> |
