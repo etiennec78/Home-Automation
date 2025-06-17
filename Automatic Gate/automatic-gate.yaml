@@ -254,12 +254,6 @@ blueprint:
           default: "Itinerary canceled ❌"
           selector:
             text:
-        gate_closing_title:
-          name: 📃🔒 Gate closing notification title
-          description: The **title** displayed on the notification you will receive when your **gate is closing**
-          default: "Gate closing 🔒"
-          selector:
-            text:
         awaiting_title:
           name: 📃💤 Gate awaiting user notification title
           description: |-
@@ -274,20 +268,6 @@ blueprint:
           default: "Your itinerary has been started"
           selector:
             text:
-        user_arrival_message:
-          name: 💬🏁 User arrival notification
-          description: The **content** of the notification you will receive when you **arrive at your destination**
-          default: "You have arrived at your destination"
-          selector:
-            text:
-              multiline: true
-        automatic_closing_message:
-          name: 💬🔒 Automatic closing notification
-          description: The **content** of the notification you will receive when your gate is **automatically closing**
-          default: "Automatic closing of the gate"
-          selector:
-            text:
-              multiline: true
         awaiting_message:
           name: 💬💤 Gate awaiting user notification
           description: The **content** of the notification you will receive when your gate is **awaiting another user**
@@ -689,10 +669,10 @@ actions:
                   - condition: template
                     value_template: "{{ wait.remaining == 0 }}"
                 then:
-                  - alias: Notify driver that gate will auto-close as he didn't leave in time
+                  - alias: Notify driver of itinerary cancelation as he didn't leave in time
                     action: "{{ notify_service }}"
                     data:
-                      title: !input gate_closing_title
+                      title: !input itinerary_canceled_title
                       message: !input did_not_leave_message
                       data:
                         car_ui: true
@@ -703,23 +683,7 @@ actions:
                           sound:
                             name: "default"
                             critical: 1
-                        tag: gate-movement
-                        timeout: 300
-                else:
-                  - alias: Notify driver that gate will auto-close
-                    action: "{{ notify_service }}"
-                    data:
-                      message: !input automatic_closing_message
-                      data:
-                        car_ui: true
-                        notification_icon: mdi:gate
-                        channel: Gate alerts
-                        importance: high
-                        push:
-                          sound:
-                            name: "default"
-                            critical: 1
-                        tag: gate-movement
+                        tag: itinerary-status
                         timeout: 300
               - alias: Close all gates
                 repeat:
@@ -1106,10 +1070,10 @@ actions:
                                   - condition: template
                                     value_template: "{{ wait.remaining == 0 }}"
                                 sequence:
-                                  - alias: Notify driver that gate will auto-close as he took too long
+                                  - alias: Notify driver of itinerary cancelation as he took too long
                                     action: "{{ notify_service }}"
                                     data:
-                                      title: !input gate_closing_title
+                                      title: !input itinerary_canceled_title
                                       message: !input did_not_arrive_message
                                       data:
                                         car_ui: true
@@ -1120,17 +1084,17 @@ actions:
                                           sound:
                                             name: "default"
                                             critical: 1
-                                        tag: gate-movement
+                                        tag: itinerary-status
                                         timeout: 300
                               - alias: If driver exited gate activation zone
                                 conditions:
                                   - condition: template
                                     value_template: "{{ wait.trigger.id == 'activation_zone_left' }}"
                                 sequence:
-                                  - alias: Notify driver that gate will auto-close as he exited the zone
+                                  - alias: Notify driver of itinerary cancelation as he exited the zone
                                     action: "{{ notify_service }}"
                                     data:
-                                      title: !input gate_closing_title
+                                      title: !input itinerary_canceled_title
                                       message: !input vehicle_away_message
                                       data:
                                         car_ui: true
@@ -1141,7 +1105,7 @@ actions:
                                           sound:
                                             name: "default"
                                             critical: 1
-                                        tag: gate-movement
+                                        tag: itinerary-status
                                         timeout: 300
                               - alias: If driver arrived, stopped vehicle, and auto-closing is enabled
                                 conditions:
@@ -1150,22 +1114,6 @@ actions:
                                                         is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id]) and
                                                         automatic_closing == 'on' }}"
                                 sequence:
-                                  - alias: Notify driver that gate will auto-close as he arrived
-                                    action: "{{ notify_service }}"
-                                    data:
-                                      title: !input gate_closing_title
-                                      message: !input user_arrival_message
-                                      data:
-                                        car_ui: true
-                                        notification_icon: mdi:flag-checkered
-                                        channel: Gate alerts
-                                        importance: high
-                                        push:
-                                          sound:
-                                            name: "default"
-                                            critical: 1
-                                        tag: gate-movement
-                                        timeout: 300
                                   - delay:
                                       minutes: !input auto_close_arrival_delay
                               - alias: If driver left vehicle
@@ -1173,10 +1121,10 @@ actions:
                                   - condition: template
                                     value_template: "{{ wait.trigger.id == 'vehicle_left' }}"
                                 sequence:
-                                  - alias: Notify driver that gate will auto-close as he left vehicle
+                                  - alias: Notify driver of itinerary cancelation as he left vehicle
                                     action: "{{ notify_service }}"
                                     data:
-                                      title: !input gate_closing_title
+                                      title: !input itinerary_canceled_title
                                       message: !input vehicle_left_message
                                       data:
                                         car_ui: true
@@ -1187,7 +1135,7 @@ actions:
                                           sound:
                                             name: "default"
                                             critical: 1
-                                        tag: gate-movement
+                                        tag: itinerary-status
                                         timeout: 300
                             # If driver arrived but doesn't have automatic gate enabled
                             default:
