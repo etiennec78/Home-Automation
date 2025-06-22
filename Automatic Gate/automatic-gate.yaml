@@ -41,7 +41,7 @@ blueprint:
     * Discord : etiennec78
     [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/etiennec78)
   homeassistant:
-    min_version: 2024.10.0
+    min_version: 2025.6.0
   input:
     essential_sensors:
       name: Essential sensors
