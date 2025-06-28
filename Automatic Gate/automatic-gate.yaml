@@ -265,7 +265,7 @@ blueprint:
         disabled_title:
           name: 📃🚫 Blueprint disabled notification title
           description: The **title** displayed on the notification you will receive when the blueprints **disables itself**
-          default: "Blueprint disabled 🚫"
+          default: "Automatic Gate disabled 🚫"
           selector:
             text:
         itinerary_started_message:
@@ -535,6 +535,11 @@ actions:
                         critical: 1
                     tag: itinerary-status
                     timeout: 300
+              - alias: Notify all users on the dashboard that the blueprint has disabled itself
+                action: persistent_notification.create
+                data:
+                  title: !input disabled_title
+                  message: !input disabled_triggered_frequently_message
               - alias: Disable the blueprint
                 action: automation.turn_off
                 target:
