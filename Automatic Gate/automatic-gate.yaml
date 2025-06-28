@@ -338,9 +338,9 @@ blueprint:
           name: 💬⚠️ Blueprint disabled notification
           description: |-
             The **content** of the notification you will receive if the blueprint **disables itself** after being **triggered too frequently**
-            *Note : {{tries}} will be replaced by the number of times the error occurred*
+            *Note : {{consecutive_errors}} will be replaced by the number of times the error occurred*
           default: |-
-            The blueprint has been triggered {{ tries }} times in a row
+            The blueprint has been triggered {{ consecutive_errors }} times in a row
             Please enable the blueprint manually once the issue has been fixed
           selector:
             text:
@@ -475,7 +475,7 @@ actions:
     then:
       - alias: Get how many times the error occurred in a row
         variable:
-          tries: |-
+          consecutive_errors: |-
             {% set sensor_value = states(itinerary_sensor) %}
             {% if sensor_value[:19] == 'error: frequently: ' %}
               {% if sensor_value[19:] | is_number %}
@@ -491,12 +491,12 @@ actions:
         target:
           entity_id: "{{ itinerary_sensor }}"
         data:
-          value: "error: frequently: {{ tries }}"
+          value: "error: frequently: {{ consecutive_errors }}"
       - choose:
           - alias: If this is the first time the error occurs in a row
             conditions:
               - condition: template
-                value_template: "{{ tries == 1 }}"
+                value_template: "{{ consecutive_errors == 1 }}"
             sequence:
               - alias: Notify driver that the blueprint is being triggered frequently
                 action: "{{ notify_service }}"
@@ -517,7 +517,7 @@ actions:
           - alias: If this is the third time the error occurs in a row
             conditions:
               - condition: template
-                value_template: "{{ tries == 3 }}"
+                value_template: "{{ consecutive_errors == 3 }}"
             sequence:
               - alias: Notify driver that the blueprint is disabling itself
                 action: "{{ notify_service }}"
