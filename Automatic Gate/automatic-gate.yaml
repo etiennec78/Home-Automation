@@ -456,8 +456,14 @@ actions:
       - alias: Stop if blueprint is triggered frequently
         if:
           - condition: template
-            value_template: "{{ states[itinerary_sensor].last_changed + timedelta(minutes=2) > now() }}"
+            value_template: "{{ states[itinerary_sensor].last_updated + timedelta(minutes=2) > now() }}"
         then:
+          - alias: Reset itinerary last_updated attribute
+            action: input_text.set_value
+            target:
+              entity_id: "{{ itinerary_sensor }}"
+            data:
+              value: none
           - stop: Blueprint triggered too frequently
             error: true
       - alias: If driver has iBeacon entity set for auto-closing
