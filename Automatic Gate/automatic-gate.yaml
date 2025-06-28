@@ -262,6 +262,12 @@ blueprint:
           default: "Gate awaiting {{ awaiting_persons }} 💤"
           selector:
             text:
+        disabled_title:
+          name: 📃🚫 Blueprint disabled notification title
+          description: The **title** displayed on the notification you will receive when the blueprints **disables itself**
+          default: "Automatic Gate disabled 🚫"
+          selector:
+            text:
         itinerary_started_message:
           name: 💬🚀 Itinerary started notification
           description: The **content** of the notification you will receive when your **itinerary starts**
@@ -324,6 +330,21 @@ blueprint:
           name: 💬⚠️ Not home notification
           description: The **content** of the notification you will receive if your **iBeacon or WiFi tracker** did not report you at home
           default: "You were not detected at home"
+        triggered_frequently_message:
+          name: 💬⚠️ Triggered frequently notification
+          description: The **content** of the notification you will receive if the blueprint is **triggered too frequently**
+          default: "The blueprint is being triggered repeatedly !"
+        disabled_triggered_frequently_message:
+          name: 💬⚠️ Blueprint disabled notification
+          description: |-
+            The **content** of the notification you will receive if the blueprint **disables itself** after being **triggered too frequently**
+            *Note : {{consecutive_errors}} will be replaced by the number of times the error occurred*
+          default: |-
+            The blueprint has been triggered {{ consecutive_errors }} times in a row
+            Please enable the blueprint manually once the issue has been fixed
+          selector:
+            text:
+              multiline: true
 
     optional_sensors:
       name: Optional sensors
@@ -443,7 +464,96 @@ actions:
       travel_time_sensor: "{{ travel_time_sensors[idx] }}"
       notify_service: "{{ notify_services[idx] }}"
       itinerary_sensor: "{{ itinerary_sensors[idx] }}"
+  - alias: Stop if blueprint is triggered frequently
+    if:
+      - alias: If blueprint triggered less than 2 minutes ago, and driver in activation zone
+        condition: template
+        value_template: |-
+          {% set gate_distance = distance(person, gate_location)*1000 %}
+          {% if state_attr(person, 'gps_accuracy') is not none %}
+            {% set gate_distance = gate_distance + state_attr(person, 'gps_accuracy') %}
+          {% endif %}
 
+          {{
+            states[itinerary_sensor].last_updated + timedelta(minutes=2) > now()
+            and gate_distance < activation_zone
+          }}
+    then:
+      - alias: Get how many times the error occurred in a row
+        variables:
+          consecutive_errors: |-
+            {% set sensor_value = states(itinerary_sensor) %}
+            {% if sensor_value[:19] == 'error: frequently: ' %}
+              {% if sensor_value[19:] | is_number %}
+                {{ sensor_value[19:] | int + 1 }}
+              {% else %}
+                1
+              {% endif %}
+            {% else %}
+              1
+            {% endif %}
+      - alias: Reset itinerary last_updated attribute
+        action: input_text.set_value
+        target:
+          entity_id: "{{ itinerary_sensor }}"
+        data:
+          value: "error: frequently: {{ consecutive_errors }}"
+      - choose:
+          - alias: If this is the first time the error occurs in a row
+            conditions:
+              - condition: template
+                value_template: "{{ consecutive_errors == 1 }}"
+            sequence:
+              - alias: Notify driver that the blueprint is being triggered frequently
+                action: "{{ notify_service }}"
+                data:
+                  title: !input itinerary_canceled_title
+                  message: !input triggered_frequently_message
+                  data:
+                    car_ui: true
+                    notification_icon: mdi:alert-circle
+                    channel: Itinerary status
+                    importance: max
+                    push:
+                      sound:
+                        name: "default"
+                        critical: 1
+                    tag: itinerary-status
+                    timeout: 300
+          - alias: If this is the third time the error occurs in a row
+            conditions:
+              - condition: template
+                value_template: "{{ consecutive_errors == 3 }}"
+            sequence:
+              - alias: Notify driver that the blueprint is disabling itself
+                action: "{{ notify_service }}"
+                data:
+                  title: !input disabled_title
+                  message: !input disabled_triggered_frequently_message
+                  data:
+                    car_ui: true
+                    notification_icon: mdi:alert-circle
+                    channel: Itinerary status
+                    importance: max
+                    push:
+                      sound:
+                        name: "default"
+                        critical: 1
+                    tag: itinerary-status
+                    timeout: 300
+              - alias: Notify all users on the dashboard that the blueprint has disabled itself
+                action: persistent_notification.create
+                data:
+                  title: !input disabled_title
+                  message: !input disabled_triggered_frequently_message
+              - alias: Disable the blueprint
+                action: automation.turn_off
+                target:
+                  entity_id: "{{ this.entity_id }}"
+                data:
+                  stop_actions: true
+      - stop: Blueprint triggered too frequently
+        error: true
   - alias: If driver at gate location
     if:
       - condition: template
