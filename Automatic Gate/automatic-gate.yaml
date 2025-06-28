@@ -262,6 +262,12 @@ blueprint:
           default: "Gate awaiting {{ awaiting_persons }} 💤"
           selector:
             text:
+        disabled_title:
+          name: 📃🚫 Blueprint disabled notification title
+          description: The **title** displayed on the notification you will receive when the blueprints **disables itself**
+          default: "Blueprint disabled 🚫"
+          selector:
+            text:
         itinerary_started_message:
           name: 💬🚀 Itinerary started notification
           description: The **content** of the notification you will receive when your **itinerary starts**
@@ -328,6 +334,17 @@ blueprint:
           name: 💬⚠️ Triggered frequently notification
           description: The **content** of the notification you will receive if the blueprint is **triggered too frequently**
           default: "The blueprint is being triggered repeatedly !"
+        disabled_triggered_frequently_message:
+          name: 💬⚠️ Blueprint disabled notification
+          description: |-
+            The **content** of the notification you will receive if the blueprint **disables itself** after being **triggered too frequently**
+            *Note : {{tries}} will be replaced by the number of times the error occurred*
+          default: |-
+            The blueprint has been triggered {{ tries }} times in a row
+            Please enable the blueprint manually once the issue has been fixed
+          selector:
+            text:
+              multiline: true
 
     optional_sensors:
       name: Optional sensors
@@ -508,6 +525,22 @@ actions:
                   - condition: template
                     value_template: "{{ tries == 3 }}"
                 sequence:
+                  - alias: Notify driver that the blueprint is disabling itself
+                    action: "{{ notify_service }}"
+                    data:
+                      title: !input disabled_title
+                      message: !input disabled_triggered_frequently_message
+                      data:
+                        car_ui: true
+                        notification_icon: mdi:alert-circle
+                        channel: Itinerary status
+                        importance: critical
+                        push:
+                          sound:
+                            name: "default"
+                            critical: 1
+                        tag: itinerary-status
+                        timeout: 300
                   - alias: Disable the blueprint
                     action: automation.turn_off
                     target:
