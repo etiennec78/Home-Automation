@@ -462,28 +462,46 @@ actions:
           - condition: template
             value_template: "{{ states[itinerary_sensor].last_updated + timedelta(minutes=2) > now() }}"
         then:
+          - alias: Get how many times the error occurred in a row
+            variable:
+              tries: |-
+                {% set sensor_value = states(itinerary_sensor) %}
+                {% if sensor_value[:19] == 'error: frequently: ' %}
+                  {% if sensor_value[19:] | is_number %}
+                    {{ sensor_value[19:] | int + 1 }}
+                  {% else %}
+                    1
+                  {% endif %}
+                {% else %}
+                  1
+                {% endif %}
           - alias: Reset itinerary last_updated attribute
             action: input_text.set_value
             target:
               entity_id: "{{ itinerary_sensor }}"
             data:
-              value: none
-          - alias: Notify driver that the blueprint is being triggered frequently
-            action: "{{ notify_service }}"
-            data:
-              title: !input itinerary_canceled_title
-              message: !input triggered_frequently_message
-              data:
-                car_ui: true
-                notification_icon: mdi:alert-circle
-                channel: Itinerary status
-                importance: critical
-                push:
-                  sound:
-                    name: "default"
-                    critical: 1
-                tag: itinerary-status
-                timeout: 300
+              value: "error: frequently: {{ tries }}"
+          - alias: If this is the first time the error occurs in a row
+            if:
+              - condition: template
+                value_template: "{{ tries == 1 }}"
+            then:
+              - alias: Notify driver that the blueprint is being triggered frequently
+                action: "{{ notify_service }}"
+                data:
+                  title: !input itinerary_canceled_title
+                  message: !input triggered_frequently_message
+                  data:
+                    car_ui: true
+                    notification_icon: mdi:alert-circle
+                    channel: Itinerary status
+                    importance: critical
+                    push:
+                      sound:
+                        name: "default"
+                        critical: 1
+                    tag: itinerary-status
+                    timeout: 300
           - stop: Blueprint triggered too frequently
             error: true
       - alias: If driver has iBeacon entity set for auto-closing
