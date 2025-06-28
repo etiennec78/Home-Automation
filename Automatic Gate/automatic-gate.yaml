@@ -274,6 +274,7 @@ blueprint:
           default: "Your itinerary has been started"
           selector:
             text:
+              multiline: true
         awaiting_message:
           name: 💬💤 Gate awaiting user notification
           description: The **content** of the notification you will receive when your gate is **awaiting another user**
@@ -326,14 +327,23 @@ blueprint:
           name: 💬⚠️ Travel time integration did not respond
           description: The **content** of the notification you will receive if your **travel time integraton did not respond** during the itinerary
           default: "Your travel time integration did not respond during your itinerary"
+          selector:
+            text:
+              multiline: true
         not_home_message:
           name: 💬⚠️ Not home notification
           description: The **content** of the notification you will receive if your **iBeacon or WiFi tracker** did not report you at home
           default: "You were not detected at home"
+          selector:
+            text:
+              multiline: true
         triggered_frequently_message:
           name: 💬⚠️ Triggered frequently notification
           description: The **content** of the notification you will receive if the blueprint is **triggered too frequently**
           default: "The blueprint is being triggered repeatedly !"
+          selector:
+            text:
+              multiline: true
         disabled_triggered_frequently_message:
           name: 💬⚠️ Blueprint disabled notification
           description: |-
