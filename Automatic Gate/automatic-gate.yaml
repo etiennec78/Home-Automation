@@ -466,11 +466,17 @@ actions:
       itinerary_sensor: "{{ itinerary_sensors[idx] }}"
   - alias: Stop if blueprint is triggered frequently
     if:
-      - condition: template
+      - alias: If blueprint triggered less than 2 minutes ago, and driver in activation zone
+        condition: template
         value_template: |-
+          {% set gate_distance = distance(person, gate_location)*1000 %}
+          {% if state_attr(person, 'gps_accuracy') is not none %}
+            {% set gate_distance = gate_distance + state_attr(person, 'gps_accuracy') %}
+          {% endif %}
+
           {{
             states[itinerary_sensor].last_updated + timedelta(minutes=2) > now()
-            and distance(person, gate_location)*1000 > activation_zone
+            and gate_distance < activation_zone
           }}
     then:
       - alias: Get how many times the error occurred in a row
