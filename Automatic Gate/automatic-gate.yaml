@@ -513,7 +513,7 @@ actions:
                         car_ui: true
                         notification_icon: mdi:alert-circle
                         channel: Itinerary status
-                        importance: critical
+                        importance: max
                         push:
                           sound:
                             name: "default"
@@ -534,7 +534,7 @@ actions:
                         car_ui: true
                         notification_icon: mdi:alert-circle
                         channel: Itinerary status
-                        importance: critical
+                        importance: max
                         push:
                           sound:
                             name: "default"
