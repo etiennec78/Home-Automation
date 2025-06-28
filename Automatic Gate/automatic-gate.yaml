@@ -453,6 +453,13 @@ actions:
       # OPEN GATE ON EXIT #
       #####################
 
+      - alias: Stop if blueprint is triggered frequently
+        if:
+          - condition: template
+            value_template: "{{ states[itinerary_sensor].last_changed + timedelta(minutes=2) > now() }}"
+        then:
+          - stop: Blueprint triggered too frequently
+            error: true
       - alias: If driver has iBeacon entity set for auto-closing
         if:
         - condition: template
