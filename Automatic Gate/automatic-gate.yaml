@@ -480,7 +480,7 @@ actions:
           }}
     then:
       - alias: Get how many times the error occurred in a row
-        variable:
+        variables:
           consecutive_errors: |-
             {% set sensor_value = states(itinerary_sensor) %}
             {% if sensor_value[:19] == 'error: frequently: ' %}
