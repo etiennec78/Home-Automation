@@ -481,27 +481,39 @@ actions:
               entity_id: "{{ itinerary_sensor }}"
             data:
               value: "error: frequently: {{ tries }}"
-          - alias: If this is the first time the error occurs in a row
-            if:
-              - condition: template
-                value_template: "{{ tries == 1 }}"
-            then:
-              - alias: Notify driver that the blueprint is being triggered frequently
-                action: "{{ notify_service }}"
-                data:
-                  title: !input itinerary_canceled_title
-                  message: !input triggered_frequently_message
-                  data:
-                    car_ui: true
-                    notification_icon: mdi:alert-circle
-                    channel: Itinerary status
-                    importance: critical
-                    push:
-                      sound:
-                        name: "default"
-                        critical: 1
-                    tag: itinerary-status
-                    timeout: 300
+          - choose:
+              - alias: If this is the first time the error occurs in a row
+                conditions:
+                  - condition: template
+                    value_template: "{{ tries == 1 }}"
+                sequence:
+                  - alias: Notify driver that the blueprint is being triggered frequently
+                    action: "{{ notify_service }}"
+                    data:
+                      title: !input itinerary_canceled_title
+                      message: !input triggered_frequently_message
+                      data:
+                        car_ui: true
+                        notification_icon: mdi:alert-circle
+                        channel: Itinerary status
+                        importance: critical
+                        push:
+                          sound:
+                            name: "default"
+                            critical: 1
+                        tag: itinerary-status
+                        timeout: 300
+              - alias: If this is the third time the error occurs in a row
+                conditions:
+                  - condition: template
+                    value_template: "{{ tries == 3 }}"
+                sequence:
+                  - alias: Disable the blueprint
+                    action: automation.turn_off
+                    target:
+                      entity_id: "{{ this.entity_id }}"
+                    data:
+                      stop_actions: true
           - stop: Blueprint triggered too frequently
             error: true
       - alias: If driver has iBeacon entity set for auto-closing
