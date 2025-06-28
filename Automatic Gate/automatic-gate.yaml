@@ -324,6 +324,10 @@ blueprint:
           name: 💬⚠️ Not home notification
           description: The **content** of the notification you will receive if your **iBeacon or WiFi tracker** did not report you at home
           default: "You were not detected at home"
+        triggered_frequently_message:
+          name: 💬⚠️ Triggered frequently notification
+          description: The **content** of the notification you will receive if the blueprint is **triggered too frequently**
+          default: "The blueprint is being triggered repeatedly !"
 
     optional_sensors:
       name: Optional sensors
@@ -464,6 +468,22 @@ actions:
               entity_id: "{{ itinerary_sensor }}"
             data:
               value: none
+          - alias: Notify driver that the blueprint is being triggered frequently
+            action: "{{ notify_service }}"
+            data:
+              title: !input itinerary_canceled_title
+              message: !input triggered_frequently_message
+              data:
+                car_ui: true
+                notification_icon: mdi:alert-circle
+                channel: Itinerary status
+                importance: critical
+                push:
+                  sound:
+                    name: "default"
+                    critical: 1
+                tag: itinerary-status
+                timeout: 300
           - stop: Blueprint triggered too frequently
             error: true
       - alias: If driver has iBeacon entity set for auto-closing
