@@ -1322,6 +1322,13 @@ actions:
                                                         is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id]) and
                                                         automatic_closing == 'on' }}"
                                 sequence:
+                                  - alias: Unlock all locks
+                                    repeat:
+                                      for_each: !input locks
+                                      sequence:
+                                        - action: lock.unlock
+                                          target:
+                                            entity_id: "{{ repeat.item }}"
                                   - delay:
                                       minutes: !input auto_close_arrival_delay
                               - alias: If driver left vehicle
@@ -1347,6 +1354,13 @@ actions:
                                         timeout: 300
                             # If driver arrived but doesn't have automatic gate enabled
                             default:
+                              - alias: Unlock all locks
+                                repeat:
+                                  for_each: !input locks
+                                  sequence:
+                                    - action: lock.unlock
+                                      target:
+                                        entity_id: "{{ repeat.item }}"
                               - alias: Remove itinerary started notification
                                 action: "{{ notify_service }}"
                                 data:
@@ -1365,13 +1379,6 @@ actions:
                                     {% elif states[repeat.item].domain == 'cover' %}
                                       cover.close_cover
                                     {% endif %}
-                                  target:
-                                    entity_id: "{{ repeat.item }}"
-                          - alias: Unlock all locks
-                            repeat:
-                              for_each: !input locks
-                              sequence:
-                                - action: lock.unlock
                                   target:
                                     entity_id: "{{ repeat.item }}"
                   - alias: Remove itinerary started notification
