@@ -677,6 +677,12 @@ actions:
                         critical: 1
                     tag: itinerary-status
                     timeout: 300
+              - alias: Marks error in driver itinerary sensor
+                action: input_text.set_value
+                target:
+                  entity_id: "{{ itinerary_sensor }}"
+                data:
+                  value: "error: not_home"
               - alias: Restore iBeacon states
                 sequence: &restore_ibeacons
                   - alias: If driver has an iBeacon entity set for auto-closing
