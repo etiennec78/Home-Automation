@@ -694,7 +694,7 @@ actions:
                         critical: 1
                     tag: itinerary-status
                     timeout: 300
-              - alias: Marks error in driver itinerary sensor
+              - alias: Mark error in driver itinerary sensor
                 action: input_text.set_value
                 target:
                   entity_id: "{{ itinerary_sensor }}"
@@ -1001,12 +1001,12 @@ actions:
               value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
           then:
             - sequence: &forbidden_zone
-                - alias: Remove current itinerary as driver entered forbidden zone
+                - alias: Mark error in driver itinerary sensor
                   action: input_text.set_value
                   target:
                     entity_id: "{{ itinerary_sensor }}"
                   data:
-                    value: none
+                    value: "error: forbidden_zone"
                 - alias: Notify driver of itinerary cancelation as he entered forbidden zone
                   action: "{{ notify_service }}"
                   data:
