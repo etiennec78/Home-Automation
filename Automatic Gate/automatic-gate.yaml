@@ -1329,6 +1329,12 @@ actions:
                                         - action: lock.unlock
                                           target:
                                             entity_id: "{{ repeat.item }}"
+                                  - alias: Remove itinerary started notification
+                                    action: "{{ notify_service }}"
+                                    data:
+                                      message: clear_notification
+                                      data:
+                                        tag: itinerary-status
                                   - delay:
                                       minutes: !input auto_close_arrival_delay
                               - alias: If driver left vehicle
