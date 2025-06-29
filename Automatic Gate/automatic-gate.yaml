@@ -361,6 +361,19 @@ blueprint:
       icon: mdi:dots-horizontal-circle-outline
       collapsed: true
       input:
+        wifi_devices:
+          name: 🏠 WiFi devices
+          description: |-
+            WiFi entities to make your gate only open if you are connected to your WiFi network
+            *Notes :*
+            *Useful to prevent your gate from opening if you are parked outside in front of your house*
+            *WiFi can be slow to report new states*
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain: device_tracker
         ble_entities:
           name: 🔎 iBeacon tracker entities
           description: |-
@@ -374,16 +387,6 @@ blueprint:
               filter:
                 domain: sensor
                 device_class: signal_strength
-        ble_scanner_switch:
-          name: ⏯️ iBeacon scanner activator switch
-          description: |-
-            The **[switch](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-scanner-switch-)** you want to use to turn on and off your **iBeacon scanner** when a vehicle is leaving
-            *Note : Let empty if no ble / want to always keep iBeacon running*
-          default: ""
-          selector:
-            entity:
-              filter:
-                domain: switch
         ble_transmitter_entities:
           name: 📡 iBeacon transmitter entities
           description: |-
@@ -400,6 +403,16 @@ blueprint:
                 integration: mobile_app
                 domain: sensor
                 device_class: enum
+        ble_scanner_switch:
+          name: ⏯️ iBeacon scanner activator switch
+          description: |-
+            The **[switch](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-scanner-switch-)** you want to use to turn on and off your **iBeacon scanner** when a vehicle is leaving
+            *Note : Let empty if no ble / want to always keep iBeacon running*
+          default: ""
+          selector:
+            entity:
+              filter:
+                domain: switch
         only_open_near_iBeacon:
           name: 🏠 Only open while near iBeacon
           description: |-
@@ -408,19 +421,6 @@ blueprint:
           default: false
           selector:
             boolean:
-        wifi_devices:
-          name: 🏠 WiFi devices
-          description: |-
-            WiFi entities to make your gate only open if you are connected to your WiFi network
-            *Notes :*
-            *Useful to prevent your gate from opening if you are parked outside in front of your house*
-            *WiFi can be slow to report new states*
-          default: []
-          selector:
-            entity:
-              multiple: true
-              filter:
-                domain: device_tracker
         locks:
           name: 🔐 Locks
           description: |-
