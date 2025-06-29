@@ -363,7 +363,9 @@ blueprint:
       input:
         wifi_devices:
           name: 🏠 WiFi devices
-          description: Each driver's WiFi device tracker
+          description: |-
+            Each driver's WiFi device tracker
+            *Note : Please place user sensors in the same order*
           default: []
           selector:
             entity:
@@ -373,9 +375,8 @@ blueprint:
         ble_entities:
           name: 🔎 iBeacon tracker entities
           description: |-
-            Each **[BLE rssi tracker entity](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-entities-)** to monitor your distance from the gate while leaving, to close it when you're out of reach
-            Needs [bluetooth transmitters](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-transmitter-) set on companion apps
-            *Note : Let empty if no ble*
+            Each **[BLE rssi tracker entity](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-entities-)** to monitor your distance from the gate
+            *Note : Please place user sensors in the same order*
           default: []
           selector:
             entity:
@@ -386,11 +387,8 @@ blueprint:
         ble_transmitter_entities:
           name: 📡 iBeacon transmitter entities
           description: |-
-            Each **[BLE transmitter entity]()** to restore previous iBeacon transmitter power settings after having closed the gate
-            Needs [bluetooth transmitters](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-transmitter-) set on companion apps
-            *Notes :*
-            *Let empty if you use iOS, don't want iBeacon, or only use iBeacon for this automation*
-            *If let empty, the iBeacon transmitter will be disabled on Android after having closed the gate*
+            Each **[BLE transmitter entity](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-transmitter-)** to restore previous iBeacon transmitter power settings when iBeacon is not needed anymore
+            *Notes : Let empty if you use iOS, or only use iBeacon for this automation*
           default: []
           selector:
             entity:
@@ -402,8 +400,8 @@ blueprint:
         ble_scanner_switch:
           name: ⏯️ iBeacon scanner activator switch
           description: |-
-            The **[switch](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-scanner-switch-)** you want to use to turn on and off your **iBeacon scanner** when a vehicle is leaving
-            *Note : Let empty if no ble / want to always keep iBeacon running*
+            The **[switch](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-scanner-switch-)** to automatically **start and stop iBeacon scanning** when needed
+            *Note : Leave empty if you want your iBeacon scanner to be always on*
           default: ""
           selector:
             entity:
@@ -412,17 +410,18 @@ blueprint:
         only_open_near_wifi:
           name: 🏠 Only open while connected to WiFi on departure
           description: |-
-            Should your gate only open if you are connected to WiFi on departure ?
-            *Note : Useful to prevent your gate from opening if you are parked outside in front of your house*
+            Should your gate only open if you are connected to WiFi while leaving ?
+            *Notes :*
+            *Useful for preventing your gate from opening if you are parked in front of your house*
             *WiFi can be slow to report new states*
           default: true
           selector:
             boolean:
         only_open_near_iBeacon:
-          name: 🏠 Only open while near iBeacon
+          name: 🏠 Only open while near iBeacon on departure
           description: |-
-            Should your gate only open if you are reachable from your iBeacon ?
-            *Note : Useful to prevent your gate from opening if you are parked outside in front of your house*
+            Should your gate only open if you can be reached by your iBeacon while leaving ?
+            *Note : useful for preventing your gate from opening if you are parked in front of your house*
           default: false
           selector:
             boolean:
