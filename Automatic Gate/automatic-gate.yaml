@@ -364,6 +364,13 @@ blueprint:
           selector:
             text:
               multiline: true
+        forbidden_zone_message:
+          name: 💬⚠️ Forbidden zone notification
+          description: The **content** of the notification you will receive if you enter a **forbidden zone**
+          default: "You entered a forbidden zone"
+          selector:
+            text:
+              multiline: true
 
     optional_sensors:
       name: Optional sensors
@@ -1000,6 +1007,22 @@ actions:
                     entity_id: "{{ itinerary_sensor }}"
                   data:
                     value: none
+                - alias: Notify driver of itinerary cancelation as he entered forbidden zone
+                  action: "{{ notify_service }}"
+                  data:
+                    title: !input itinerary_canceled_title
+                    message: !input forbidden_zone_message
+                    data:
+                      car_ui: true
+                      notification_icon: mdi:alert-circle
+                      channel: Gate alerts
+                      importance: high
+                      push:
+                        sound:
+                          name: "default"
+                          critical: 1
+                      tag: itinerary-status
+                      timeout: 300
             - stop: Forbidden zone
         - alias: Repeat while driver nearer than 1km from gate and still driving
           # This allows to update to a precise ETA even if a traffic jam appears near your gate
