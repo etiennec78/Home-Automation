@@ -211,7 +211,7 @@ variables:
     en:
       message:
         itinerary_started: "{{ driver_name }} just got into his car"
-        itinerary_ongoing: "{{ driver_name }} will arrive approximately at {{ arrival }}"
+        itinerary_ongoing: "{{ driver_name }} will arrive arround {{ arrival }}"
         nearly_arrived: "{{ driver_name }} will arrive in {{ remaining_minutes }} minutes"
         driver_arrived: "{{ driver_name }} just arrived home"
     fr:
