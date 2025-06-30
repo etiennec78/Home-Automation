@@ -140,6 +140,7 @@ blueprint:
             language:
               languages:
                 - en
+                - fr
 
     error_settings:
       name: Error Settings
@@ -201,6 +202,23 @@ variables:
         offline: Gate has been offline for {{ notification_delay }} minutes
       button:
         close: Close
+    fr:
+      title:
+        open: Ouverture portail 🔓
+        still_open: Portail ouvert 🔓
+        left_open: Portail laissé ouvert 🔓️
+        close: Fermeture portail 🔒
+        error: Erreur portail ⚠
+        offline: Portail hors ligne 🌐
+      message:
+        opening: Ouverture du portail en cours
+        still_open: Portail toujours ouvert
+        left_open: Le portail est ouvert depuis {{ notification_delay }} minutes
+        closing: Fermeture du portail en cours
+        error: "Le portail a rencontré une erreur: {{ error }}"
+        offline: Le portail est hors ligne depuis {{ notification_delay }} minutes
+      button:
+        close: Refermer
 
 trigger_variables:
   notification_type: !input notification_type
