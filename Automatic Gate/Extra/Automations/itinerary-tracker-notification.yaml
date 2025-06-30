@@ -180,7 +180,6 @@ blueprint:
           description: A json dictionary containing custom notification translations
           default: |-
             {
-              "title": {},
               "message": {}
             }
           selector:
@@ -291,18 +290,18 @@ actions:
       message: |-
         {# Custom translation #}
         {%
-          if 'title' in custom_translations_json
-          and title_id in custom_translations_json['title']
+          if 'message' in custom_translations_json
+          and message_id in custom_translations_json['message']
         %}
-          {{ custom_translations_json['title'][title_id] }}
+          {{ custom_translations_json['message'][message_id] }}
 
         {# Selected language #}
         {% elif message_id in strings[language]['message_id'] %}
-          {{ strings[language]['title'][message_id] }}
+          {{ strings[language]['message'][message_id] }}
 
         {# Fallback to english #}
         {% else %}
-          {{ strings['en']['title'][message_id] }}
+          {{ strings['en']['message'][message_id] }}
         {% endif %}
   - alias: Notify each user except the driver about itinerary start
     repeat:
