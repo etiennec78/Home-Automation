@@ -141,6 +141,17 @@ blueprint:
               languages:
                 - en
                 - fr
+        custom_translations:
+          name: Custom translations
+          description: A json dictionary containing custom notification translations
+          default: |-
+            {
+              "title": {},
+              "message": {}
+            }
+          selector:
+            text:
+              multiline: true
 
     error_settings:
       name: Error Settings
@@ -174,6 +185,8 @@ variables:
     {% endif %}
   car_visible: !input car_visible
   language: !input language
+  custom_translations: !input custom_translations
+  custom_translations_json: "{{ custom_translations | from_json }}"
   notification_tag: |-
     {% if notification_type == 'open' %}
       gate-opening
@@ -299,8 +312,15 @@ actions:
         variables: &get_translation
           string_id: "still_open"
           title: |-
+            {# Custom translation #}
+            {%
+              if 'title' in custom_translations_json
+              and string_id in custom_translations_json['title']
+            %}
+              {{ custom_translations_json['title'][string_id] }}
+
             {# Selected language #}
-            {% if string_id in strings[language]['title'] %}
+            {% elif string_id in strings[language]['title'] %}
               {{ strings[language]['title'][string_id] }}
 
             {# Fallback to english #}
@@ -308,8 +328,15 @@ actions:
               {{ strings['en']['title'][string_id] }}
             {% endif %}
           message: |-
+            {# Custom translation #}
+            {%
+              if 'message' in custom_translations_json
+              and string_id in custom_translations_json['message']
+            %}
+              {{ custom_translations_json['message'][string_id] }}
+
             {# Selected language #}
-            {% if string_id in strings[language]['message'] %}
+            {% elif string_id in strings[language]['message'] %}
               {{ strings[language]['message'][string_id] }}
 
             {# Fallback to english #}
@@ -320,8 +347,15 @@ actions:
         variables: &get_translation_button
           string_id: "close"
           button_text: |-
+            {# Custom translation #}
+            {%
+              if 'button' in custom_translations_json
+              and string_id in custom_translations_json['button']
+            %}
+              {{ custom_translations_json['button'][string_id] }}
+
             {# Selected language #}
-            {% if string_id in strings[language]['button'] %}
+            {% elif string_id in strings[language]['button'] %}
               {{ strings[language]['button'][string_id] }}
 
             {# Fallback to english #}
