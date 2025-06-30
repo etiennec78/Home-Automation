@@ -241,120 +241,6 @@ blueprint:
       collapsed: true
       description: |-
         Notification settings to translate texts or change notification behavior
-      input:
-        itinerary_update_title:
-          name: 📃ℹ️ Itinerary status update title
-          description: The **title** displayed on the notification you will receive when the **status of your itinerary** changes
-          default: "Itinerary ℹ️"
-          selector:
-            text:
-        itinerary_canceled_title:
-          name: 📃❌ Itinerary canceled title
-          description: The **title** displayed on the notification you will receive when your **itinerary gets canceled**
-          default: "Itinerary canceled ❌"
-          selector:
-            text:
-        awaiting_title:
-          name: 📃💤 Gate awaiting user notification title
-          description: |-
-            The **title** displayed on the notification you will receive when your gate is **awaiting another user**
-            *Note : {{awaiting_persons}} will be replaced by the list of the users being awaited*
-          default: "Gate awaiting {{ awaiting_persons }} 💤"
-          selector:
-            text:
-        disabled_title:
-          name: 📃🚫 Blueprint disabled notification title
-          description: The **title** displayed on the notification you will receive when the blueprints **disables itself**
-          default: "Automatic Gate disabled 🚫"
-          selector:
-            text:
-        itinerary_started_message:
-          name: 💬🚀 Itinerary started notification
-          description: The **content** of the notification you will receive when your **itinerary starts**
-          default: "Your itinerary has been started"
-          selector:
-            text:
-              multiline: true
-        awaiting_message:
-          name: 💬💤 Gate awaiting user notification
-          description: The **content** of the notification you will receive when your gate is **awaiting another user**
-          default: "The gate will close once all users have entered/exited"
-          selector:
-            text:
-              multiline: true
-        vehicle_left_message:
-          name: 💬⚠️ Vehicle left notification
-          description: The **content** of the notification you will receive if you **leave your vehicle**
-          default: "You have left your vehicle"
-          selector:
-            text:
-              multiline: true
-        did_not_leave_message:
-          name: 💬⚠️ User did not leave notification
-          description: |-
-            The **content** of the notification you will receive if you **don't leave in time**
-            *Note : {{safety_delay}} will be replaced by your auto-close delay you have set above*
-          default: "The vehicle did not leave in less than {{ safety_delay }} minutes"
-          selector:
-            text:
-              multiline: true
-        did_not_arrive_message:
-          name: 💬⚠️ User did not arrive notification
-          description: |-
-            The **content** of the notification you will receive if you **don't arrive in time**
-            *Note : {{safety_delay}} will be replaced by your auto-close delay you have set above*
-          default: "The vehicle did not arrive in less than {{ safety_delay }} minutes"
-          selector:
-            text:
-              multiline: true
-        timed_out_message:
-          name: 💬⚠️ Timed out notification
-          description: |-
-            The **content** of the notification you will receive if you **time out**
-            *Note : {{timeout_delay}} will be replaced by your auto-close delay you have set above*
-          default: "Your position has not been updated in {{ timeout_delay }} minutes"
-          selector:
-            text:
-              multiline: true
-        vehicle_away_message:
-          name: 💬⚠️ Vehicle not in activation zone notification
-          description: The **content** of the notification you will receive if **you are not in your activation zone**
-          default: "The vehicle is not in the activation zone"
-          selector:
-            text:
-              multiline: true
-        travel_time_did_not_respond:
-          name: 💬⚠️ Travel time integration did not respond
-          description: The **content** of the notification you will receive if your **travel time integraton did not respond** during the itinerary
-          default: "Your travel time integration did not respond during your itinerary"
-          selector:
-            text:
-              multiline: true
-        not_home_message:
-          name: 💬⚠️ Not home notification
-          description: The **content** of the notification you will receive if your **iBeacon or WiFi tracker** did not report you at home
-          default: "You were not detected at home"
-          selector:
-            text:
-              multiline: true
-        triggered_frequently_message:
-          name: 💬⚠️ Triggered frequently notification
-          description: The **content** of the notification you will receive if the blueprint is **triggered too frequently**
-          default: "The blueprint is being triggered repeatedly !"
-          selector:
-            text:
-              multiline: true
-        disabled_triggered_frequently_message:
-          name: 💬⚠️ Blueprint disabled notification
-          description: |-
-            The **content** of the notification you will receive if the blueprint **disables itself** after being **triggered too frequently**
-            *Note : {{consecutive_errors}} will be replaced by the number of times the error occurred*
-          default: |-
-            The blueprint has been triggered {{ consecutive_errors }} times in a row
-            Please enable the blueprint manually once the issue has been fixed
-          selector:
-            text:
-              multiline: true
 
     optional_sensors:
       name: Optional sensors
@@ -460,6 +346,26 @@ variables:
   only_open_near_wifi: !input only_open_near_wifi
   only_open_near_iBeacon: !input only_open_near_iBeacon
   wifi_devices: !input wifi_devices
+  strings:
+    title:
+      itinerary_update: "Itinerary ℹ️"
+      itinerary_canceled: "Itinerary canceled ❌"
+      awaiting: "Gate awaiting {{ awaiting_persons }} 💤"
+      disabled: "Automatic Gate disabled 🚫"
+    message:
+      itinerary_started: "Your itinerary has been started"
+      awaiting: "The gate will close once all users have entered/exited"
+      vehicle_left: "You have left your vehicle"
+      did_not_leave: "The vehicle did not leave in less than {{ safety_delay }} minutes"
+      did_not_arrive: "The vehicle did not arrive in less than {{ safety_delay }} minutes"
+      timed_out: "Your position has not been updated in {{ timeout_delay }} minutes"
+      vehicle_away: "The vehicle is not in the activation zone"
+      travel_time_did_not_respond: "Your travel time integration did not respond during your itinerary"
+      not_home: "You were not detected at home"
+      triggered_frequently: "The blueprint is being triggered repeatedly !"
+      disabled_triggered_frequently: |-
+        The blueprint has been triggered {{ consecutive_errors }} times in a row
+        Please enable the blueprint manually once the issue has been fixed
 
 triggers:
   - alias: Trigger when user connects to vehicle
@@ -519,11 +425,17 @@ actions:
               - condition: template
                 value_template: "{{ consecutive_errors == 1 }}"
             sequence:
+              - alias: Get notification content
+                variables: &get_translation
+                  title_id: "itinerary_canceled"
+                  message_id: "triggered_frequently"
+                  title: "{{ strings['title'][title_id] }}"
+                  message: "{{ strings['message'][message_id] }}"
               - alias: Notify driver that the blueprint is being triggered frequently
                 action: "{{ notify_service }}"
                 data:
-                  title: !input itinerary_canceled_title
-                  message: !input triggered_frequently_message
+                  title: "{{ title }}"
+                  message: "{{ message }}"
                   data:
                     car_ui: true
                     notification_icon: mdi:alert-circle
@@ -540,11 +452,16 @@ actions:
               - condition: template
                 value_template: "{{ consecutive_errors == 3 }}"
             sequence:
+              - alias: Get notification content
+                variables:
+                  title_id: "disabled"
+                  message_id: "disabled_triggered_frequently"
+                  <<: *get_translation
               - alias: Notify driver that the blueprint is disabling itself
                 action: "{{ notify_service }}"
                 data:
-                  title: !input disabled_title
-                  message: !input disabled_triggered_frequently_message
+                  title: "{{ title }}"
+                  message: "{{ message }}"
                   data:
                     car_ui: true
                     notification_icon: mdi:alert-circle
@@ -559,8 +476,8 @@ actions:
               - alias: Notify all users on the dashboard that the blueprint has disabled itself
                 action: persistent_notification.create
                 data:
-                  title: !input disabled_title
-                  message: !input disabled_triggered_frequently_message
+                  title: "{{ title }}"
+                  message: "{{ message }}"
               - alias: Disable the blueprint
                 action: automation.turn_off
                 target:
@@ -661,11 +578,16 @@ actions:
             - condition: template
               value_template: "{{ wait.remaining == 0 }}"
             then:
+              - alias: Get notification content
+                variables:
+                  title_id: "itinerary_canceled"
+                  message_id: "not_home"
+                  <<: *get_translation
               - alias: Notify driver of itinerary cancelation as he was not home
                 action: "{{ notify_service }}"
                 data:
-                  title: !input itinerary_canceled_title
-                  message: !input not_home_message
+                  title: "{{ title }}"
+                  message: "{{ message }}"
                   data:
                     car_ui: true
                     notification_icon: mdi:alert-circle
@@ -804,11 +726,16 @@ actions:
                   - condition: template
                     value_template: "{{ wait.remaining == 0 }}"
                 then:
+                  - alias: Get notification content
+                    variables:
+                      title_id: "itinerary_canceled"
+                      message_id: "did_not_leave"
+                      <<: *get_translation
                   - alias: Notify driver of itinerary cancelation as he didn't leave in time
                     action: "{{ notify_service }}"
                     data:
-                      title: !input itinerary_canceled_title
-                      message: !input did_not_leave_message
+                      title: "{{ title }}"
+                      message: "{{ message }}"
                       data:
                         car_ui: true
                         notification_icon: mdi:alert-circle
@@ -852,11 +779,16 @@ actions:
                     {% endfor %}
 
                     {{ data.awaiting_persons | join(', ') }}
+              - alias: Get notification content
+                variables:
+                  title_id: "awaiting"
+                  message_id: "awaiting"
+                  <<: *get_translation
               - alias: Notify driver that gate will wait for next person
                 action: "{{ notify_service }}"
                 data:
-                  title: !input awaiting_title
-                  message: !input awaiting_message
+                  title: "{{ title }}"
+                  message: "{{ message }}"
                   data:
                     car_ui: true
                     notification_icon: mdi:sleep
@@ -930,11 +862,16 @@ actions:
       entity_id: "{{ itinerary_sensor }}"
     data:
       value: arriving
+  - alias: Get notification content
+    variables:
+      title_id: "itinerary_update"
+      message_id: "itinerary_started"
+      <<: *get_translation
   - alias: Notify driver of itinerary start
     action: "{{ notify_service }}"
     data:
-      title: !input itinerary_update_title
-      message: !input itinerary_started_message
+      title: "{{ title }}"
+      message: "{{ message }}"
       data:
         car_ui: true
         notification_icon: mdi:map-check
@@ -1053,11 +990,16 @@ actions:
                               entity_id: "{{ itinerary_sensor }}"
                             data:
                               value: none
+                          - alias: Get notification content
+                            variables:
+                              title_id: "itinerary_canceled"
+                              message_id: "timed_out"
+                              <<: *get_translation
                           - alias: Notify driver about itinerary cancellation
                             action: "{{ notify_service }}"
                             data:
-                              title: !input itinerary_canceled_title
-                              message: !input timed_out_message
+                              title: "{{ title }}"
+                              message: "{{ message }}"
                               data:
                                 car_ui: true
                                 notification_icon: mdi:alert-circle
@@ -1086,11 +1028,16 @@ actions:
                       entity_id: "{{ itinerary_sensor }}"
                     data:
                       value: none
+                  - alias: Get notification content
+                    variables:
+                      title_id: "itinerary_canceled"
+                      message_id: "vehicle_away"
+                      <<: *get_translation
                   - alias: Notify driver about itinerary cancellation
                     action: "{{ notify_service }}"
                     data:
-                      title: !input itinerary_canceled_title
-                      message: !input vehicle_away_message
+                      title: "{{ title }}"
+                      message: "{{ message }}"
                       data:
                         car_ui: true
                         notification_icon: mdi:alert-circle
@@ -1179,11 +1126,16 @@ actions:
                                 {% endfor %}
 
                                 {{ data.awaiting_persons | join(', ') }}
+                          - alias: Get notification content
+                            variables:
+                              title_id: "awaiting"
+                              message_id: "awaiting"
+                              <<: *get_translation
                           - alias: Notify driver that gate will wait for next person
                             action: "{{ notify_service }}"
                             data:
-                              title: !input awaiting_title
-                              message: !input awaiting_message
+                              title: "{{ title }}"
+                              message: "{{ message }}"
                               data:
                                 car_ui: true
                                 notification_icon: mdi:sleep
@@ -1205,11 +1157,16 @@ actions:
                                   - condition: template
                                     value_template: "{{ wait.remaining == 0 }}"
                                 sequence:
+                                  - alias: Get notification content
+                                    variables:
+                                      title_id: "itinerary_canceled"
+                                      message_id: "did_not_arrive"
+                                      <<: *get_translation
                                   - alias: Notify driver of itinerary cancelation as he took too long
                                     action: "{{ notify_service }}"
                                     data:
-                                      title: !input itinerary_canceled_title
-                                      message: !input did_not_arrive_message
+                                      title: "{{ title }}"
+                                      message: "{{ message }}"
                                       data:
                                         car_ui: true
                                         notification_icon: mdi:alert-circle
@@ -1226,11 +1183,16 @@ actions:
                                   - condition: template
                                     value_template: "{{ wait.trigger.id == 'activation_zone_left' }}"
                                 sequence:
+                                  - alias: Get notification content
+                                    variables:
+                                      title_id: "itinerary_canceled"
+                                      message_id: "vehicle_away"
+                                      <<: *get_translation
                                   - alias: Notify driver of itinerary cancelation as he exited the zone
                                     action: "{{ notify_service }}"
                                     data:
-                                      title: !input itinerary_canceled_title
-                                      message: !input vehicle_away_message
+                                      title: "{{ title }}"
+                                      message: "{{ message }}"
                                       data:
                                         car_ui: true
                                         notification_icon: mdi:alert-circle
@@ -1269,11 +1231,16 @@ actions:
                                   - condition: template
                                     value_template: "{{ wait.trigger.id == 'vehicle_left' }}"
                                 sequence:
+                                  - alias: Get notification content
+                                    variables:
+                                      title_id: "itinerary_canceled"
+                                      message_id: "vehicle_left"
+                                      <<: *get_translation
                                   - alias: Notify driver of itinerary cancelation as he left vehicle
                                     action: "{{ notify_service }}"
                                     data:
-                                      title: !input itinerary_canceled_title
-                                      message: !input vehicle_left_message
+                                      title: "{{ title }}"
+                                      message: "{{ message }}"
                                       data:
                                         car_ui: true
                                         notification_icon: mdi:alert-circle
@@ -1353,11 +1320,16 @@ actions:
       value_template: "{{ is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id])
         and states[travel_time_sensor].last_updated < now() - timedelta(minutes=5) }}"
     then:
+      - alias: Get notification content
+        variables:
+          title_id: "itinerary_canceled"
+          message_id: "travel_time_did_not_respond"
+          <<: *get_translation
       - alias: Notify driver that travel time integration did not respond
         action: "{{ notify_service }}"
         data:
-          title: !input itinerary_canceled_title
-          message: !input travel_time_did_not_respond
+          title: "{{ title }}"
+          message: "{{ message }}"
           data:
             car_ui: true
             notification_icon: mdi:alert-circle
@@ -1370,11 +1342,16 @@ actions:
             tag: itinerary-status
             timeout: 300
     else:
+      - alias: Get notification content
+        variables:
+          title_id: "itinerary_canceled"
+          message_id: "vehicle_left"
+          <<: *get_translation
       - alias: Send itinerary canceled notification to driver as he left vehicle
         action: "{{ notify_service }}"
         data:
-          title: !input itinerary_canceled_title
-          message: !input vehicle_left_message
+          title: "{{ title }}"
+          message: "{{ message }}"
           data:
             car_ui: true
             notification_icon: mdi:alert-circle
