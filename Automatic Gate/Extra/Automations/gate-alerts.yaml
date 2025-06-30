@@ -211,7 +211,7 @@ variables:
         still_open: Gate is still open
         left_open: Gate has been left open for {{ notification_delay }} minutes
         closing: Gate is closing
-        error: Gate has encountered an error: {{ error }}
+        error: "Gate has encountered an error: {{ error }}"
         offline: Gate has been offline for {{ notification_delay }} minutes
       button:
         close: Close
