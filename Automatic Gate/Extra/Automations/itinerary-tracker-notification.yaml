@@ -61,7 +61,9 @@ blueprint:
             entity:
               multiple: true
               filter:
-                domain: binary_sensor
+                domain:
+                  - binary_sensor
+                  - input_boolean
         travel_time_sensors:
           name: ✈️ Travel time sensors
           description: |-
