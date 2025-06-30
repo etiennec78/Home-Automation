@@ -439,8 +439,18 @@ actions:
                 variables: &get_translation
                   title_id: "itinerary_canceled"
                   message_id: "triggered_frequently"
-                  title: "{{ strings[language]['title'][title_id] }}"
-                  message: "{{ strings[language]['message'][message_id] }}"
+                  title: |-
+                    {% if title_id in strings[language]['title'] %}
+                      {{ strings[language]['title'][title_id] }}
+                    {% else %}
+                      {{ strings['en']['title'][title_id] }}
+                    {% endif %}
+                  message: |-
+                    {% if message_id in strings[language]['message'] %}
+                      {{ strings[language]['message'][message_id] }}
+                    {% else %}
+                      {{ strings['en']['message'][message_id] }}
+                    {% endif %}
               - alias: Notify driver that the blueprint is being triggered frequently
                 action: "{{ notify_service }}"
                 data:
