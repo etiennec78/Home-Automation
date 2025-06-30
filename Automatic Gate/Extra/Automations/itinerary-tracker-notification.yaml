@@ -174,6 +174,7 @@ blueprint:
             language:
               languages:
                 - en
+                - fr
         notif_refresh_rate_ftn:
           name: 🔁 Notification refresh rate function
           description: |-
@@ -213,6 +214,12 @@ variables:
         itinerary_ongoing: "{{ driver_name }} will arrive approximately at {{ arrival }}"
         nearly_arrived: "{{ driver_name }} will arrive in {{ remaining_minutes }} minutes"
         driver_arrived: "{{ driver_name }} just arrived home"
+    fr:
+      message:
+        itinerary_started: "{{ driver_name }} vient de monter dans sa voiture"
+        itinerary_ongoing: "{{ driver_name }} arrivera vers {{ arrival }}"
+        nearly_arrived: "{{ driver_name }} arrivera dans {{ remaining_minutes }} minutes"
+        driver_arrived: "{{ driver_name }} vient d'arriver à la maison"
 
 triggers:
   - trigger: state
