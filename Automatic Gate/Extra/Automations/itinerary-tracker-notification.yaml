@@ -175,6 +175,17 @@ blueprint:
               languages:
                 - en
                 - fr
+        custom_translations:
+          name: Custom translations
+          description: A json dictionary containing custom notification translations
+          default: |-
+            {
+              "title": {},
+              "message": {}
+            }
+          selector:
+            text:
+              multiline: true
         notif_refresh_rate_ftn:
           name: 🔁 Notification refresh rate function
           description: |-
@@ -207,6 +218,9 @@ variables:
   nearly_arrived_tts: !input nearly_arrived_tts
   driver_arrived_tts: !input driver_arrived_tts
   nearly_arrived_time: !input nearly_arrived_time
+  language: !input language
+  custom_translations: !input custom_translations
+  custom_translations_json: "{{ custom_translations | from_json }}"
   strings:
     en:
       message:
@@ -275,8 +289,15 @@ actions:
     variables: &get_translation
       message_id: "itinerary_started"
       message: |-
+        {# Custom translation #}
+        {%
+          if 'title' in custom_translations_json
+          and title_id in custom_translations_json['title']
+        %}
+          {{ custom_translations_json['title'][title_id] }}
+
         {# Selected language #}
-        {% if message_id in strings[language]['message_id'] %}
+        {% elif message_id in strings[language]['message_id'] %}
           {{ strings[language]['title'][message_id] }}
 
         {# Fallback to english #}
