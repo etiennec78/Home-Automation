@@ -166,6 +166,14 @@ blueprint:
       icon: mdi:cog
       collapsed: true
       input:
+        language:
+          name: Notification language
+          description: The language in which notifications will be sent to you
+          default: "en"
+          selector:
+            language:
+              languages:
+                - en
         notif_refresh_rate_ftn:
           name: 🔁 Notification refresh rate function
           description: |-
@@ -180,38 +188,6 @@ blueprint:
             The **link** you will go to if you **tap** on the notification
             *Note : Can be Home Assistant relative links*
           default: "/lovelace/vehicle-tracker-map"
-          selector:
-            text:
-        itinerary_started_message:
-          name: 💬 Itinerary started notification
-          description: |-
-            The **content** of the notification or TTS you will receive when someone **begins to drive**
-            *Note : {{driver_name}} will be replaced by the drivers' name*
-          default: "{{ driver_name }} just got into his car"
-          selector:
-            text:
-        itinerary_ongoing_message:
-          name: 💬 Itinerary ongoing notification
-          description: |-
-            The **content** of the notification you will receive while receiving new **travel time updates**
-            *Note : {{driver_name}} will be replaced by the drivers' name and {{arrival}} by its ETA*
-          default: "{{ driver_name }} will arrive approximately at {{ arrival }}"
-          selector:
-            text:
-        nearly_arrived_message:
-          name: 💬 Driver has nearly arrived notification
-          description: |-
-            The **content** of the notification you will receive when the driver has **arrived**
-            *Note : {{driver_name}} will be replaced by the drivers' name and {remaining_minutes} by its remaining time*
-          default: "{{ driver_name }} will arrive in {{ remaining_minutes }} minutes"
-          selector:
-            text:
-        driver_arrived_message:
-          name: 💬 Driver has arrived notification
-          description: |-
-            The **content** of the notification you will receive when the driver has **arrived**
-            *Note : {{driver_name}} will be replaced by the drivers' name*
-          default: "{{ driver_name }} just arrived home"
           selector:
             text:
 
@@ -230,6 +206,13 @@ variables:
   nearly_arrived_tts: !input nearly_arrived_tts
   driver_arrived_tts: !input driver_arrived_tts
   nearly_arrived_time: !input nearly_arrived_time
+  strings:
+    en:
+      message:
+        itinerary_started: "{{ driver_name }} just got into his car"
+        itinerary_ongoing: "{{ driver_name }} will arrive approximately at {{ arrival }}"
+        nearly_arrived: "{{ driver_name }} will arrive in {{ remaining_minutes }} minutes"
+        driver_arrived: "{{ driver_name }} just arrived home"
 
 triggers:
   - trigger: state
@@ -281,13 +264,25 @@ actions:
   - alias: Only continue if driver not home
     condition: template
     value_template: "{{ not is_state(driver, 'home') }}"
+  - alias: Get notification translation
+    variables: &get_translation
+      message_id: "itinerary_started"
+      message: |-
+        {# Selected language #}
+        {% if message_id in strings[language]['message_id'] %}
+          {{ strings[language]['title'][message_id] }}
+
+        {# Fallback to english #}
+        {% else %}
+          {{ strings['en']['title'][message_id] }}
+        {% endif %}
   - alias: Notify each user except the driver about itinerary start
     repeat:
       for_each: "{{ notify_services }}"
       sequence:
         - action: "{{ repeat.item }}"
           data:
-            message: !input itinerary_started_message
+            message: "{{ message }}"
             data:
               notification_icon: mdi:car
               tag: itinerary-tracker
@@ -317,7 +312,7 @@ actions:
               data:
                 cache: true
                 media_player_entity_id: "{{ repeat.item }}"
-                message: !input itinerary_started_message
+                message: "{{ message }}"
               target: "{{ speaker_tts_service }}"
   - alias: If travel time sensors set
     if:
@@ -381,6 +376,10 @@ actions:
                       and persons | select('is_state', 'home') | list != []
                     }}
               then:
+                - alias: Get TTS translation
+                  variables:
+                    message_id: "nearly_arrived"
+                    <<: *get_translation
                 - alias: Play TTS on each device
                   repeat:
                     for_each: "{{ speaker_tts_devices }}"
@@ -389,7 +388,7 @@ actions:
                         data:
                           cache: true
                           media_player_entity_id: "{{ repeat.item }}"
-                          message: !input nearly_arrived_message
+                          message: "{{ message }}"
                         target: "{{ speaker_tts_service }}"
                 - alias: Mark nearly arrived TTS as already sent
                   variables:
@@ -406,13 +405,17 @@ actions:
                 remaining_minutes: "{{ (remaining/60) | round }}"
                 arrival_timestamp: "{{ as_timestamp(now()) + remaining }}"
                 arrival: "{{ arrival_timestamp | timestamp_custom('%H:%M') }}"
+            - alias: Get notification translation
+              variables:
+                message_id: "itinerary_ongoing"
+                <<: *get_translation
             - alias: Send ETA notification to each user
               repeat:
                 for_each: "{{ notify_services }}"
                 sequence:
                   - action: "{{ repeat.item }}"
                     data:
-                      message: !input itinerary_ongoing_message
+                      message: "{{ message }}"
                       data:
                         notification_icon: mdi:map-marker-account
                         tag: itinerary-tracker
@@ -438,6 +441,10 @@ actions:
                       and persons | select('is_state', 'home') | list != []
                     }}
               then:
+                - alias: Get TTS translation
+                  variables:
+                    message_id: "nearly_arrived"
+                    <<: *get_translation
                 - alias: Play TTS on each device
                   repeat:
                     for_each: "{{ speaker_tts_devices }}"
@@ -446,7 +453,7 @@ actions:
                         data:
                           cache: true
                           media_player_entity_id: "{{ repeat.item }}"
-                          message: !input nearly_arrived_message
+                          message: "{{ message }}"
                         target: "{{ speaker_tts_service }}"
                 - alias: Mark nearly arrived TTS as already sent
                   variables:
@@ -465,13 +472,17 @@ actions:
       condition: template
       value_template: "{{ is_state(driver, 'home') }}"
     then:
+      - alias: Get notification translation
+        variables:
+          message_id: "driver_arrived"
+          <<: *get_translation
       - alias: Send arrival notification to each user
         repeat:
           for_each: "{{ notify_services }}"
           sequence:
             - action: "{{ repeat.item }}"
               data:
-                message: !input driver_arrived_message
+                message: "{{ message }}"
                 data:
                   notification_icon: mdi:home-map-marker
                   tag: itinerary-tracker
@@ -497,7 +508,7 @@ actions:
                   data:
                     cache: true
                     media_player_entity_id: "{{ repeat.item }}"
-                    message: !input driver_arrived_message
+                    message: "{{ message }}"
                   target: "{{ speaker_tts_service }}"
     else:
       - alias: Remove itinerary notification for each user
