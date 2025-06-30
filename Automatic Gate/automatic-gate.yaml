@@ -239,11 +239,10 @@ blueprint:
       name: Notification settings
       icon: mdi:bell
       collapsed: true
-      description: |-
-        Notification settings to translate texts or change notification behavior
       input:
         language:
           name: Notification language
+          description: The language in which notifications will be sent to you
           default: "en"
           selector:
             language:
