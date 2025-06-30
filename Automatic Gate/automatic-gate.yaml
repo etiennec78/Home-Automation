@@ -249,6 +249,17 @@ blueprint:
               languages:
                 - en
                 - fr
+        custom_translations:
+          name: Custom translations
+          description: A json dictionary containing custom notification translations
+          default: |-
+            {
+              "title": {},
+              "message": {}
+            }
+          selector:
+            text:
+              multiline: true
 
     optional_sensors:
       name: Optional sensors
@@ -348,6 +359,8 @@ variables:
   eta_zone: !input eta_zone
   activation_zone: !input activation_zone
   language: !input language
+  custom_translations: !input custom_translations
+  custom_translations_json: "{{ custom_translations | from_json }}"
   ble_entities: !input ble_entities
   ble_scanner_switch: !input ble_scanner_switch
   ble_transmitter_entities: !input ble_transmitter_entities
@@ -466,14 +479,34 @@ actions:
                   title_id: "itinerary_canceled"
                   message_id: "triggered_frequently"
                   title: |-
-                    {% if title_id in strings[language]['title'] %}
+                    {# Custom translation #}
+                    {%
+                      if 'title' in custom_translations_json
+                      and title_id in custom_translations_json['title']
+                    %}
+                      {{ custom_translations_json['title'][title_id] }}
+
+                    {# Selected language #}
+                    {% elif title_id in strings[language]['title'] %}
                       {{ strings[language]['title'][title_id] }}
+
+                    {# Fallback to english #}
                     {% else %}
                       {{ strings['en']['title'][title_id] }}
                     {% endif %}
                   message: |-
-                    {% if message_id in strings[language]['message'] %}
+                    {# Custom translation #}
+                    {%
+                      if 'message' in custom_translations_json
+                      and message_id in custom_translations_json['message']
+                    %}
+                      {{ custom_translations_json['message'][message_id] }}
+
+                    {# Selected language #}
+                    {% elif message_id in strings[language]['message'] %}
                       {{ strings[language]['message'][message_id] }}
+
+                    {# Fallback to english #}
                     {% else %}
                       {{ strings['en']['message'][message_id] }}
                     {% endif %}
