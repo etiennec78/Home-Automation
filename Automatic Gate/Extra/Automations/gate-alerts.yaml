@@ -212,16 +212,7 @@ variables:
     {% endif %}
   closing_button_text: !input closing_button_text
   car_visible: !input car_visible
-  notification_tag: |-
-    {% if notification_type == 'open' %}
-      gate-opening
-    {% elif notification_type == 'close' %}
-      gate-closing
-    {% elif notification_type == 'error' %}
-      gate-error
-    {% elif notification_type == 'offline' %}
-      gate-offline
-    {% endif %}
+  notification_tag: "gate-{{ notification_type }}"
 
 trigger_variables:
   notification_type: !input notification_type
