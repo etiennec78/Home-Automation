@@ -298,7 +298,7 @@ actions:
           {{ custom_translations_json['message'][message_id] }}
 
         {# Selected language #}
-        {% elif message_id in strings[language]['message_id'] %}
+        {% elif message_id in strings[language]['message'] %}
           {{ strings[language]['message'][message_id] }}
 
         {# Fallback to english #}
