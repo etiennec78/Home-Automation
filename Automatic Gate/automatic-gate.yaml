@@ -412,12 +412,6 @@ variables:
           L'automation s'est déclenchée {{ consecutive_errors }} fois d'affilée
           Réactivez l'automatisation manuellement une fois le problème corrigé
 
-    timed_out_message: La position a mis trop de temps à se rafraîchir
-    vehicle_away_message:
-    travel_time_did_not_respond:
-
-
-
 triggers:
   - alias: Trigger when user connects to vehicle
     trigger: state
