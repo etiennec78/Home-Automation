@@ -410,7 +410,7 @@ actions:
               if notification_type == 'open'
               and notification_delay != 0
             %}
-              'left_open'
+              left_open
             {% else %}
               {{ notification_type }}
             {% endif %}
