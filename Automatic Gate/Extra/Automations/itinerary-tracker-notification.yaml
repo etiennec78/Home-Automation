@@ -168,7 +168,7 @@ blueprint:
       input:
         language:
           name: Notification language
-          description: The language in which notifications will be sent to you
+          description: The **language** in which **notifications** will be sent to you
           default: "en"
           selector:
             language:
@@ -177,7 +177,9 @@ blueprint:
                 - fr
         custom_translations:
           name: Custom translations
-          description: A json dictionary containing custom notification translations
+          description: |-
+            A **json** dictionary to change the default **notifications translations**
+            *Note : You can find the translation keys in the strings['en'] variable in the code or in your traces*
           default: |-
             {
               "message": {}
