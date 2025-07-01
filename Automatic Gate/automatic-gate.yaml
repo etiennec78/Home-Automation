@@ -375,7 +375,7 @@ variables:
       title:
         itinerary_update: "Itinerary ℹ️"
         itinerary_canceled: "Itinerary canceled ❌"
-        awaiting: "Gate awaiting {awaiting_persons} 💤"
+        awaiting: "Gate awaiting {awaited_persons} 💤"
         disabled: "Automatic Gate disabled 🚫"
       message:
         itinerary_started: "Your itinerary has been started"
@@ -395,7 +395,7 @@ variables:
       title:
         itinerary_update: "Itinéraire ℹ️"
         itinerary_canceled: "Itinéraire annulé ❌"
-        awaiting: "Portail en attente de {awaiting_persons} 💤"
+        awaiting: "Portail en attente de {awaited_persons} 💤"
         disabled: "Automatic Gate désactivé 🚫"
       message:
         itinerary_started: "L'itinéraire a démarré"
@@ -493,7 +493,7 @@ actions:
                   title: |-
                     {{
                       title_string.format(
-                        awaiting_persons=awaiting_persons
+                        awaited_persons=awaited_persons
                       )
                     }}
                   message_string: |-
@@ -858,16 +858,16 @@ actions:
             else:
               - alias: Get names of awaited persons
                 variables:
-                  awaiting_persons: |-
-                    {% set data = namespace(awaiting_persons=[]) %}
+                  awaited_persons: |-
+                    {% set data = namespace(awaited_persons=[]) %}
 
                     {% for sensor_idx in range(itinerary_sensors | length) %}
                       {% if sensor_idx != idx and is_state(itinerary_sensors[sensor_idx], ['on_approach', 'leaving']) %}
-                        {% set data.awaiting_persons = data.awaiting_persons + [state_attr(persons[sensor_idx], 'friendly_name')] %}
+                        {% set data.awaited_persons = data.awaited_persons + [state_attr(persons[sensor_idx], 'friendly_name')] %}
                       {% endif %}
                     {% endfor %}
 
-                    {{ data.awaiting_persons | join(', ') }}
+                    {{ data.awaited_persons | join(', ') }}
               - alias: Get notification translation
                 variables:
                   title_id: "awaiting"
@@ -1205,16 +1205,16 @@ actions:
                         then:
                           - alias: Get names of awaited persons
                             variables:
-                              awaiting_persons: |-
-                                {% set data = namespace(awaiting_persons=[]) %}
+                              awaited_persons: |-
+                                {% set data = namespace(awaited_persons=[]) %}
 
                                 {% for sensor_idx in range(itinerary_sensors | length) %}
                                   {% if sensor_idx != idx and is_state(itinerary_sensors[sensor_idx], ['on_approach', 'leaving']) %}
-                                    {% set data.awaiting_persons = data.awaiting_persons + [state_attr(persons[sensor_idx], 'friendly_name')] %}
+                                    {% set data.awaited_persons = data.awaited_persons + [state_attr(persons[sensor_idx], 'friendly_name')] %}
                                   {% endif %}
                                 {% endfor %}
 
-                                {{ data.awaiting_persons | join(', ') }}
+                                {{ data.awaited_persons | join(', ') }}
                           - alias: Get notification translation
                             variables:
                               title_id: "awaiting"
