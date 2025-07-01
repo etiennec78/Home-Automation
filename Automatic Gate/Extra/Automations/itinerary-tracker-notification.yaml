@@ -225,16 +225,16 @@ variables:
   strings:
     en:
       message:
-        itinerary_started: "{{ driver_name }} just got into his car"
-        itinerary_ongoing: "{{ driver_name }} will arrive arround {{ arrival }}"
-        nearly_arrived: "{{ driver_name }} will arrive in {{ remaining_minutes }} minutes"
-        driver_arrived: "{{ driver_name }} just arrived home"
+        itinerary_started: "{driver_name} just got into his car"
+        itinerary_ongoing: "{driver_name} will arrive arround {arrival}"
+        nearly_arrived: "{driver_name} will arrive in {remaining_minutes} minutes"
+        driver_arrived: "{driver_name} just arrived home"
     fr:
       message:
-        itinerary_started: "{{ driver_name }} vient de monter dans sa voiture"
-        itinerary_ongoing: "{{ driver_name }} arrivera vers {{ arrival }}"
-        nearly_arrived: "{{ driver_name }} arrivera dans {{ remaining_minutes }} minutes"
-        driver_arrived: "{{ driver_name }} vient d'arriver à la maison"
+        itinerary_started: "{driver_name} vient de monter dans sa voiture"
+        itinerary_ongoing: "{driver_name} arrivera vers {arrival}"
+        nearly_arrived: "{driver_name} arrivera dans {remaining_minutes} minutes"
+        driver_arrived: "{driver_name} vient d'arriver à la maison"
 
 triggers:
   - trigger: state
@@ -289,7 +289,7 @@ actions:
   - alias: Get notification translation
     variables: &get_translation
       message_id: "itinerary_started"
-      message: |-
+      message_string: |-
         {# Custom translation #}
         {%
           if 'message' in custom_translations_json
@@ -305,6 +305,14 @@ actions:
         {% else %}
           {{ strings['en']['message'][message_id] }}
         {% endif %}
+      message: |-
+        {{
+          message_string.format(
+            driver_name=driver_name,
+            arrival=arrival,
+            remaining_minutes=remaining_minutes
+          )
+        }}
   - alias: Notify each user except the driver about itinerary start
     repeat:
       for_each: "{{ notify_services }}"

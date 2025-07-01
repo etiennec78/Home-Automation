@@ -211,10 +211,10 @@ variables:
       message:
         open: Gate is opening
         still_open: Gate is still open
-        left_open: Gate has been left open for {{ notification_delay }} minutes
+        left_open: Gate has been left open for {notification_delay} minutes
         close: Gate is closing
-        error: "Gate has encountered an error: {{ error }}"
-        offline: Gate has been offline for {{ notification_delay }} minutes
+        error: "Gate has encountered an error: {error}"
+        offline: Gate has been offline for {notification_delay} minutes
       button:
         close: Close
     fr:
@@ -228,10 +228,10 @@ variables:
       message:
         open: Ouverture du portail en cours
         still_open: Portail toujours ouvert
-        left_open: Le portail est ouvert depuis {{ notification_delay }} minutes
+        left_open: Le portail est ouvert depuis {notification_delay} minutes
         close: Fermeture du portail en cours
-        error: "Le portail a rencontré une erreur: {{ error }}"
-        offline: Le portail est hors ligne depuis {{ notification_delay }} minutes
+        error: "Le portail a rencontré une erreur: {error}"
+        offline: Le portail est hors ligne depuis {notification_delay} minutes
       button:
         close: Refermer
 
@@ -329,7 +329,7 @@ actions:
             {% else %}
               {{ strings['en']['title'][string_id] }}
             {% endif %}
-          message: |-
+          message_string: |-
             {# Custom translation #}
             {%
               if 'message' in custom_translations_json
@@ -345,6 +345,13 @@ actions:
             {% else %}
               {{ strings['en']['message'][string_id] }}
             {% endif %}
+          message: |-
+            {{
+              message_string.format(
+                notification_delay=notification_delay,
+                error=error
+              )
+            }}
       - alias: Get button translation
         variables: &get_translation_button
           string_id: "close"

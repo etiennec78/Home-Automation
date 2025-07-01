@@ -375,41 +375,41 @@ variables:
       title:
         itinerary_update: "Itinerary ℹ️"
         itinerary_canceled: "Itinerary canceled ❌"
-        awaiting: "Gate awaiting {{ awaiting_persons }} 💤"
+        awaiting: "Gate awaiting {awaiting_persons} 💤"
         disabled: "Automatic Gate disabled 🚫"
       message:
         itinerary_started: "Your itinerary has been started"
         awaiting: "The gate will close once all users have entered/exited"
         vehicle_left: "You have left your vehicle"
-        did_not_leave: "The vehicle did not leave in less than {{ safety_delay }} minutes"
-        did_not_arrive: "The vehicle did not arrive in less than {{ safety_delay }} minutes"
-        timed_out: "Your position has not been updated in {{ timeout_delay }} minutes"
+        did_not_leave: "The vehicle did not leave in less than {safety_delay} minutes"
+        did_not_arrive: "The vehicle did not arrive in less than {safety_delay} minutes"
+        timed_out: "Your position has not been updated in {timeout_delay} minutes"
         vehicle_away: "The vehicle is not in the activation zone"
         travel_time_did_not_respond: "Your travel time integration did not respond during your itinerary"
         not_home: "You were not detected at home"
         triggered_frequently: "The blueprint is being triggered repeatedly !"
         disabled_triggered_frequently: |-
-          The blueprint has been triggered {{ consecutive_errors }} times in a row
+          The blueprint has been triggered {consecutive_errors} times in a row
           Please enable the blueprint manually once the issue has been fixed
     fr:
       title:
         itinerary_update: "Itinéraire ℹ️"
         itinerary_canceled: "Itinéraire annulé ❌"
-        awaiting: "Portail en attente de {{awaiting_persons}} 💤"
+        awaiting: "Portail en attente de {awaiting_persons} 💤"
         disabled: "Automatic Gate désactivé 🚫"
       message:
         itinerary_started: "L'itinéraire a démarré"
         awaiting: "Le portail se refermera une fois tous les conducteurs entrés/sortis"
         vehicle_left: "Le véhicule a été arrêté"
-        did_not_leave: "Le véhicule n'est pas sorti en moins de {{ safety_delay }} minutes"
-        did_not_arrive: "Le véhicule n'est pas arrivé en moins de {{ safety_delay }} minutes"
-        timed_out: "Votre position n'a pas été mise à jour ces {{ timeout_delay }} dernières minutes"
+        did_not_leave: "Le véhicule n'est pas sorti en moins de {safety_delay} minutes"
+        did_not_arrive: "Le véhicule n'est pas arrivé en moins de {safety_delay} minutes"
+        timed_out: "Votre position n'a pas été mise à jour ces {timeout_delay} dernières minutes"
         vehicle_away: "Le véhicule n'est pas dans la zone d'ouverture"
         travel_time_did_not_respond: "Votre intégration de temps de trajet n'a pas renvoyé de valeur"
         not_home: "Le véhicule n'est pas à la maison"
         triggered_frequently: "L'automatisation se déclenche à répétition !"
         disabled_triggered_frequently: |-
-          L'automation s'est déclenchée {{ consecutive_errors }} fois d'affilée
+          L'automation s'est déclenchée {consecutive_errors} fois d'affilée
           Réactivez l'automatisation manuellement une fois le problème corrigé
 
 triggers:
@@ -474,7 +474,7 @@ actions:
                 variables: &get_translation
                   title_id: "itinerary_canceled"
                   message_id: "triggered_frequently"
-                  title: |-
+                  title_string: |-
                     {# Custom translation #}
                     {%
                       if 'title' in custom_translations_json
@@ -490,7 +490,13 @@ actions:
                     {% else %}
                       {{ strings['en']['title'][title_id] }}
                     {% endif %}
-                  message: |-
+                  title: |-
+                    {{
+                      title_string.format(
+                        awaiting_persons=awaiting_persons
+                      )
+                    }}
+                  message_string: |-
                     {# Custom translation #}
                     {%
                       if 'message' in custom_translations_json
@@ -506,6 +512,14 @@ actions:
                     {% else %}
                       {{ strings['en']['message'][message_id] }}
                     {% endif %}
+                  message: |-
+                    {{
+                      message_string.format(
+                        safety_delay=safety_delay,
+                        timeout_delay=timeout_delay,
+                        consecutive_errors=consecutive_errors
+                      )
+                    }}
               - alias: Notify driver that the blueprint is being triggered frequently
                 action: "{{ notify_service }}"
                 data:
