@@ -189,16 +189,7 @@ variables:
   language: !input language
   custom_translations: !input custom_translations
   custom_translations_json: "{{ custom_translations | from_json }}"
-  notification_tag: |-
-    {% if notification_type == 'open' %}
-      gate-opening
-    {% elif notification_type == 'close' %}
-      gate-closing
-    {% elif notification_type == 'error' %}
-      gate-error
-    {% elif notification_type == 'offline' %}
-      gate-offline
-    {% endif %}
+  notification_tag: "gate-{{ notification_type }}"
   strings:
     en:
       title:
