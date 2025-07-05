@@ -80,32 +80,6 @@ blueprint:
               multiple: true
               filter:
                 integration: mobile_app
-        notification_title:
-          name: 📃 Notification title
-          description: |-
-            **Title** shown in the notification
-          default: |-
-            Gate opening 🔓
-            Gate left open 🔓
-            Gate closing 🔒
-            Gate error ⚠
-            Gate offline 🌐
-          selector:
-            text:
-              multiline: true
-        notification_message:
-          name: 💬 Notification message
-          description: |-
-            **Notification** and **TTS** content. Use {{error}} for error messages and {{notification_delay}} for the notification delay
-          default: |-
-            Gate is opening
-            Gate has been left open for {{ notification_delay }} minutes
-            Gate is closing
-            Gate has encountered an error: {{ error }}
-            Gate has been offline for {{ notification_delay }} minutes
-          selector:
-            text:
-              multiline: true
         car_visible:
           name: 🚗 Visible in Android Auto/CarPlay
           description: Show notifications on your **car's dashboard**
@@ -153,32 +127,33 @@ blueprint:
           selector:
             action:
 
-    opening_settings:
-      name: Opening Settings
-      icon: "mdi:gate-open"
+    language_settings:
+      name: Language Settings
+      icon: "mdi:translate"
       collapsed: true
       input:
-        notification_still_open_title:
-          name: 📃 Notification still open title
-          description: |-
-            **Title** for notifications when the gate finishes moving and is open
-          default: Gate open 🔓
+        language:
+          name: Notification language
+          description: The **language** in which **notifications** will be sent to you
+          default: "en"
           selector:
-            text:
-        notification_still_open_message:
-          name: 💬 Notification still open message
+            language:
+              languages:
+                - en
+                - fr
+        custom_translations:
+          name: Custom translations
           description: |-
-            **Message** content for notifications when the gate finishes moving and is open
-          default: Gate is still open
+            A **json** dictionary to change the default **notifications translations**
+            *Note : You can find the translation keys in the strings['en'] variable in the code or in your traces*
+          default: |-
+            {
+              "title": {},
+              "message": {}
+            }
           selector:
             text:
               multiline: true
-        closing_button_text:
-          name: 💬 Closing Button
-          description: Text for the **close** gate **button**
-          default: Close
-          selector:
-            text:
 
     error_settings:
       name: Error Settings
@@ -210,9 +185,46 @@ variables:
     {% else %}
       {{ states(error_message_sensor) }}
     {% endif %}
-  closing_button_text: !input closing_button_text
   car_visible: !input car_visible
+  language: !input language
+  custom_translations: !input custom_translations
+  custom_translations_json: "{{ custom_translations | from_json }}"
   notification_tag: "gate-{{ notification_type }}"
+  strings:
+    en:
+      title:
+        open: Gate opening 🔓
+        still_open: Gate open 🔓
+        left_open: Gate left open 🔓
+        close: Gate closing 🔒
+        error: Gate error ⚠
+        offline: Gate offline 🌐
+      message:
+        open: Gate is opening
+        still_open: Gate is still open
+        left_open: Gate has been left open for {notification_delay} minutes
+        close: Gate is closing
+        error: "Gate has encountered an error: {error}"
+        offline: Gate has been offline for {notification_delay} minutes
+      button:
+        close: Close
+    fr:
+      title:
+        open: Ouverture portail 🔓
+        still_open: Portail ouvert 🔓
+        left_open: Portail laissé ouvert 🔓️
+        close: Fermeture portail 🔒
+        error: Erreur portail ⚠
+        offline: Portail hors ligne 🌐
+      message:
+        open: Ouverture du portail en cours
+        still_open: Portail toujours ouvert
+        left_open: Le portail est ouvert depuis {notification_delay} minutes
+        close: Fermeture du portail en cours
+        error: "Le portail a rencontré une erreur: {error}"
+        offline: Le portail est hors ligne depuis {notification_delay} minutes
+      button:
+        close: Refermer
 
 trigger_variables:
   notification_type: !input notification_type
@@ -289,14 +301,75 @@ actions:
       condition: template
       value_template: "{{ notification_type == 'open' and is_state(gate, 'open') and notification_delay == 0 and state_attr(gate, 'supported_features') | bitwise_and(4) == 4 }}"
     then:
+      - alias: Get notification translation
+        variables: &get_translation
+          string_id: "still_open"
+          title: |-
+            {# Custom translation #}
+            {%
+              if 'title' in custom_translations_json
+              and string_id in custom_translations_json['title']
+            %}
+              {{ custom_translations_json['title'][string_id] }}
+
+            {# Selected language #}
+            {% elif string_id in strings[language]['title'] %}
+              {{ strings[language]['title'][string_id] }}
+
+            {# Fallback to english #}
+            {% else %}
+              {{ strings['en']['title'][string_id] }}
+            {% endif %}
+          message_string: |-
+            {# Custom translation #}
+            {%
+              if 'message' in custom_translations_json
+              and string_id in custom_translations_json['message']
+            %}
+              {{ custom_translations_json['message'][string_id] }}
+
+            {# Selected language #}
+            {% elif string_id in strings[language]['message'] %}
+              {{ strings[language]['message'][string_id] }}
+
+            {# Fallback to english #}
+            {% else %}
+              {{ strings['en']['message'][string_id] }}
+            {% endif %}
+          message: |-
+            {{
+              message_string.format(
+                notification_delay=notification_delay,
+                error=error
+              )
+            }}
+      - alias: Get button translation
+        variables: &get_translation_button
+          string_id: "close"
+          button_text: |-
+            {# Custom translation #}
+            {%
+              if 'button' in custom_translations_json
+              and string_id in custom_translations_json['button']
+            %}
+              {{ custom_translations_json['button'][string_id] }}
+
+            {# Selected language #}
+            {% elif string_id in strings[language]['button'] %}
+              {{ strings[language]['button'][string_id] }}
+
+            {# Fallback to english #}
+            {% else %}
+              {{ strings['en']['button'][string_id] }}
+            {% endif %}
       - alias: Replace opening notif on each phone silently
         repeat:
           for_each: "{{ notify_services }}"
           sequence:
             - action: "{{ repeat.item }}"
               data:
-                title: !input notification_still_open_title
-                message: !input notification_still_open_message
+                title: "{{ title }}"
+                message: "{{ message }}"
                 data:
                   notification_icon: mdi:gate-alert
                   channel: Gate alerts
@@ -308,7 +381,7 @@ actions:
                   alert_once: true
                   actions:
                     - action: "{{ closing_order_id }}"
-                      title: !input closing_button_text
+                      title: "{{ button_text }}"
 
       - alias: Replace opening persistent notification if enabled
         if:
@@ -317,18 +390,34 @@ actions:
         then:
           - action: persistent_notification.create
             data:
-              title: !input notification_still_open_title
-              message: !input notification_still_open_message
+              title: "{{ title }}"
+              message: "{{ message }}"
               notification_id: "{{ notification_tag }}"
     else:
+      - alias: Get notification translation
+        variables:
+          string_id: |-
+            {%
+              if notification_type == 'open'
+              and notification_delay != 0
+            %}
+              left_open
+            {% else %}
+              {{ notification_type }}
+            {% endif %}
+          <<: *get_translation
+      - alias: Get button translation
+        variables:
+          string_id: "close"
+          <<: *get_translation_button
       - alias: Notify each user
         repeat:
           for_each: "{{ notify_services }}"
           sequence:
             - action: "{{ repeat.item }}"
               data:
-                title: !input notification_title
-                message: !input notification_message
+                title: "{{ title }}"
+                message: "{{ message }}"
                 data:
                   car_ui: "{{ car_visible }}"
                   notification_icon: mdi:gate-alert
@@ -352,7 +441,7 @@ actions:
                   when: "{{ (utcnow() - timedelta(minutes=7)) | as_timestamp | int }}"
                   actions: |-
                     {% if notification_type == 'open' %}
-                      {{ [{'action': closing_order_id, 'title': closing_button_text}] }}
+                      {{ [{'action': closing_order_id, 'title': button_text}] }}
                     {% else %}
                       {{ [] }}
                     {% endif %}
@@ -366,7 +455,7 @@ actions:
                   data:
                     message: TTS
                     data:
-                      tts_text: !input notification_message
+                      tts_text: "{{ message }}"
                       channel: Gate alerts
                       importance: max
                       ttl: 0
@@ -379,7 +468,7 @@ actions:
               data:
                 cache: true
                 media_player_entity_id: "{{ repeat.item }}"
-                message: !input notification_message
+                message: "{{ message }}"
               target: "{{ speaker_tts_service }}"
 
       - alias: Send persistent notification to dashboard, if enabled
@@ -389,8 +478,8 @@ actions:
         then:
           - action: persistent_notification.create
             data:
-              title: !input notification_title
-              message: !input notification_message
+              title: "{{ title }}"
+              message: "{{ message }}"
               notification_id: "{{ notification_tag }}"
 
       - alias: Exec user extra actions
