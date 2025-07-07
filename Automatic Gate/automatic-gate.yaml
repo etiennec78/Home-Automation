@@ -236,6 +236,15 @@ blueprint:
               min: 0
               max: 30
               unit_of_measurement: minutes
+        forbidden_zones:
+          name: ⛔ Forbidden zones
+          description: If you enter any of these zones while driving home, your itinerary will be canceled
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain: zone
 
     notification_settings:
       name: Notification settings
@@ -372,6 +381,7 @@ variables:
   only_open_near_wifi: !input only_open_near_wifi
   only_open_near_iBeacon: !input only_open_near_iBeacon
   wifi_devices: !input wifi_devices
+  forbidden_zones: !input forbidden_zones
   strings:
     en:
       title:
@@ -393,6 +403,7 @@ variables:
         disabled_triggered_frequently: |-
           The blueprint has been triggered {consecutive_errors} times in a row
           Please enable the blueprint manually once the issue has been fixed
+        forbidden_zone: "You entered a forbidden zone"
     fr:
       title:
         itinerary_update: "Itinéraire ℹ️"
@@ -413,6 +424,7 @@ variables:
         disabled_triggered_frequently: |-
           L'automation s'est déclenchée {consecutive_errors} fois d'affilée
           Réactivez l'automatisation manuellement une fois le problème corrigé
+        forbidden_zone: "Vous êtes entré dans une zone interdite"
 
 triggers:
   - alias: Trigger when user connects to vehicle
@@ -690,7 +702,7 @@ actions:
                         critical: 1
                     tag: itinerary-status
                     timeout: 300
-              - alias: Marks error in driver itinerary sensor
+              - alias: Mark error in driver itinerary sensor
                 action: input_text.set_value
                 target:
                   entity_id: "{{ itinerary_sensor }}"
@@ -1006,6 +1018,40 @@ actions:
                 entity_id: "{{ person }}"
             - trigger: template
               value_template: "{{ is_state(driving_sensor, 'off') }}"
+        - alias: Stop if the user is in a forbidden zone
+          if:
+            - condition: template
+              value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
+          then:
+            - sequence: &forbidden_zone
+                - alias: Mark error in driver itinerary sensor
+                  action: input_text.set_value
+                  target:
+                    entity_id: "{{ itinerary_sensor }}"
+                  data:
+                    value: "error: forbidden_zone"
+                - alias: Get notification translation
+                  variables:
+                    title_id: "itinerary_canceled"
+                    message_id: "forbidden_zone"
+                    <<: *get_translation
+                - alias: Notify driver about itinerary cancellation
+                  action: "{{ notify_service }}"
+                  data:
+                    title: "{{ title }}"
+                    message: "{{ message }}"
+                    data:
+                      car_ui: true
+                      notification_icon: mdi:alert-circle
+                      channel: Itinerary status
+                      importance: high
+                      push:
+                        sound:
+                          name: "default"
+                          critical: 1
+                      tag: itinerary-status
+                      timeout: 300
+            - stop: Forbidden zone
         - alias: Repeat while driver nearer than 1km from gate and still driving
           # This allows to update to a precise ETA even if a traffic jam appears near your gate
           # It will return to the previous loop if the driver has entered the radius but passed by
@@ -1069,78 +1115,97 @@ actions:
                             value_template: "{{ is_state(driving_sensor, 'off') }}"
                         timeout:
                           seconds: "{{ min(timeout_delay*60, seconds_before_opening) }}"
-                      - alias: If timeout ran out of time (not because of eta reached)
-                        if:
-                          - condition: template
-                            value_template: "{{ wait.remaining == 0 and
-                                                opening_time > now() | as_timestamp }}"
-                        then:
-                          - alias: Remove current itinerary as driver timed out
-                            action: input_text.set_value
-                            target:
-                              entity_id: "{{ itinerary_sensor }}"
-                            data:
-                              value: none
-                          - alias: Get notification translation
-                            variables:
-                              title_id: "itinerary_canceled"
-                              message_id: "timed_out"
-                              <<: *get_translation
-                          - alias: Notify driver about itinerary cancellation
-                            action: "{{ notify_service }}"
-                            data:
-                              title: "{{ title }}"
-                              message: "{{ message }}"
-                              data:
-                                car_ui: true
-                                notification_icon: mdi:alert-circle
-                                channel: Itinerary status
-                                importance: high
-                                push:
-                                  sound:
-                                    name: "default"
-                                    critical: 1
-                                tag: itinerary-status
-                                timeout: 300
-                          - stop: Timed out
+                      - choose:
+                          - alias: "If timeout ran out of time (not because of eta reached)"
+                            conditions:
+                              - condition: template
+                                value_template: |-
+                                  {{
+                                    wait.remaining == 0
+                                    and opening_time > now() | as_timestamp
+                                  }}
+                            sequence:
+                              - alias: Remove current itinerary as driver timed out
+                                action: input_text.set_value
+                                target:
+                                  entity_id: "{{ itinerary_sensor }}"
+                                data:
+                                  value: none
+                              - alias: Get notification translation
+                                variables:
+                                  title_id: "itinerary_canceled"
+                                  message_id: "timed_out"
+                                  <<: *get_translation
+                              - alias: Notify driver about itinerary cancellation
+                                action: "{{ notify_service }}"
+                                data:
+                                  title: "{{ title }}"
+                                  message: "{{ message }}"
+                                  data:
+                                    car_ui: true
+                                    notification_icon: mdi:alert-circle
+                                    channel: Itinerary status
+                                    importance: high
+                                    push:
+                                      sound:
+                                        name: "default"
+                                        critical: 1
+                                    tag: itinerary-status
+                                    timeout: 300
+                              - stop: Timed out
+                          - alias: Stop if the user is in a forbidden zone
+                            conditions:
+                              - condition: template
+                                value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
+                            sequence:
+                              - sequence: *forbidden_zone
+                              - stop: Forbidden zone
 
               # Restart the second repeat loop if the wait_for_trigger was triggered by a position or vehicle sensor update
               # This allows the loop to refresh the ETA with a new position or stop the script if the vehicle was left
               - condition: template
                 value_template: "{{ opening_time <= as_timestamp(now()) }}"
-              - if:
-                  - alias: User is not in activation zone
-                    condition: template
-                    value_template: "{{ distance(person, gate_location)*1000 > activation_zone }}"
-                then:
-                  - alias: Stop itinerary as driver was not in activation zone when gate tried to open
-                    action: input_text.set_value
-                    target:
-                      entity_id: "{{ itinerary_sensor }}"
-                    data:
-                      value: none
-                  - alias: Get notification translation
-                    variables:
-                      title_id: "itinerary_canceled"
-                      message_id: "vehicle_away"
-                      <<: *get_translation
-                  - alias: Notify driver about itinerary cancellation
-                    action: "{{ notify_service }}"
-                    data:
-                      title: "{{ title }}"
-                      message: "{{ message }}"
-                      data:
-                        car_ui: true
-                        notification_icon: mdi:alert-circle
-                        channel: Itinerary status
-                        importance: high
-                        push:
-                          sound:
-                            name: "default"
-                            critical: 1
-                        tag: itinerary-status
-                        timeout: 300
-                  - stop: Not in activation zone
+              - choose:
+                  - alias: Stop if user not in activation zone
+                    conditions:
+                      - condition: template
+                        value_template: "{{ distance(person, gate_location)*1000 > activation_zone }}"
+                    sequence:
+                      - alias: Stop itinerary as driver was not in activation zone when gate tried to open
+                        action: input_text.set_value
+                        target:
+                          entity_id: "{{ itinerary_sensor }}"
+                        data:
+                          value: none
+                      - alias: Get notification translation
+                        variables:
+                          title_id: "itinerary_canceled"
+                          message_id: "vehicle_away"
+                          <<: *get_translation
+                      - alias: Notify driver about itinerary cancellation
+                        action: "{{ notify_service }}"
+                        data:
+                          title: "{{ title }}"
+                          message: "{{ message }}"
+                          data:
+                            car_ui: true
+                            notification_icon: mdi:alert-circle
+                            channel: Itinerary status
+                            importance: high
+                            push:
+                              sound:
+                                name: "default"
+                                critical: 1
+                            tag: itinerary-status
+                            timeout: 300
+                      - stop: Not in activation zone
+                  - alias: Stop if the user is in a forbidden zone
+                    conditions:
+                      - condition: template
+                        value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
+                    sequence:
+                      - sequence: *forbidden_zone
+                      - stop: Forbidden zone
               - alias: Set driver itinerary text variable to "on_approach", because driver is near gate and will arrive soon
                 action: input_text.set_value
                 data:
@@ -1169,7 +1234,7 @@ actions:
                   - condition: template
                     value_template: "{{ automatic_closing != 'off' }}"
                 then:
-                  - alias: Wait for gate closed manually, or vehicle left, or driver left, for at most auto-close delay
+                  - alias: Wait for gate closed manually, or vehicle left, or driver left, or forbidden zone, for at most auto-close delay
                     wait_for_trigger:
                       - trigger: template
                         id: manual
@@ -1180,6 +1245,9 @@ actions:
                       - trigger: template
                         id: activation_zone_left
                         value_template: "{{ distance(person, gate_location)*1000 > activation_zone }}"
+                      - trigger: template
+                        id: forbidden_zone
+                        value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
                     timeout:
                       minutes: !input safety_delay
                   - alias: Stop itinerary as driver arrived or took too long
@@ -1295,6 +1363,11 @@ actions:
                                             critical: 1
                                         tag: itinerary-status
                                         timeout: 300
+                              - alias: If driver entered forbidden zone
+                                conditions:
+                                  - condition: template
+                                    value_template: "{{ wait.trigger.id == 'forbidden_zone' }}"
+                                sequence: *forbidden_zone
                               - alias: If driver arrived, stopped vehicle, and auto-closing is enabled
                                 conditions:
                                   - condition: template
