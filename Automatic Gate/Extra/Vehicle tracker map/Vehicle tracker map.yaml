@@ -34,18 +34,19 @@ sections:
           {% if not is_state('sensor.user0_travel_time_duration', ['unknown', 'unavailable']) %}
             {% if state_attr('sensor.user0_travel_time_duration', 'unit_of_measurement') == "min" %}
               {{
-                ((
-                  as_timestamp(states.sensor.user0_travel_time_duration.last_updated)
-                  - as_timestamp(now())
-                  + states('sensor.user0_travel_time_duration) | float * 60
-                ) /60 )
-                | round(0)
+                (
+                  (
+                    states['sensor.user0_travel_time_duration'].last_updated | as_timestamp
+                    - now() | as_timestamp
+                    + states('sensor.user0_travel_time_duration') | float * 60
+                  ) / 60
+                ) | round(0)
               }}min
             {% else %}
               Unknown
             {% endif %}
           {% else %}
-              Unknown
+            Unknown
           {% endif %}
         # Estimated time of arrival
         secondary: >-
@@ -53,15 +54,16 @@ sections:
           {% if not is_state('sensor.user0_travel_time_duration', ['unknown', 'unavailable']) %}
             {% if state_attr('sensor.user0_travel_time_duration', 'unit_of_measurement') == "min" %}
               {{
-                (as_timestamp(states.sensor.user0_travel_time_duration.last_updated)
-                + states('sensor.user0_travel_time_duration) | float * 60)
-                | timestamp_custom('%H:%M')
+                (
+                  states['sensor.user0_travel_time_duration'].last_updated | as_timestamp
+                  + states('sensor.user0_travel_time_duration') | float * 60
+                ) | timestamp_custom('%H:%M')
               }}
             {% else %}
               Unknown
             {% endif %}
           {% else %}
-              Unknown
+            Unknown
           {% endif %}
         icon: mdi:map-clock
         entity: sensor.user0_travel_time_duration
