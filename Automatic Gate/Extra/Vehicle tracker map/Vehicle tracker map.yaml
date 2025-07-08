@@ -31,7 +31,7 @@ sections:
         # Estimated time remaining
         primary: >-
           Time remaining :
-          {% if states('sensor.user0_travel_time_duration) is not none %}
+          {% if not is_state('sensor.user0_travel_time_duration', ['unknown', 'unavailable']) %}
               {{
                 ((
                   as_timestamp(states.sensor.user0_travel_time_duration.last_updated)
@@ -46,7 +46,7 @@ sections:
         # Estimated time of arrival
         secondary: >-
           Arrival :
-          {% if states('sensor.user0_travel_time_duration) is not none %}
+          {% if not is_state('sensor.user0_travel_time_duration', ['unknown', 'unavailable']) %}
             {{
               (as_timestamp(states.sensor.user0_travel_time_duration.last_updated)
               + states('sensor.user0_travel_time_duration) | float * 60)
