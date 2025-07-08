@@ -12,11 +12,11 @@ sections:
     cards:
       # Let each user disable your automatic gate
       - type: entities
-          entities:
+        entities:
           - entity: automation.automatic_gate
-              secondary_info: none
-              name: Automatic gate
-              icon: mdi:car-connected
+            secondary_info: none
+            name: Automatic gate
+            icon: mdi:car-connected
       - type: custom:mushroom-template-card
         # Show the ETA only if someone is driving towards home
         visibility:
