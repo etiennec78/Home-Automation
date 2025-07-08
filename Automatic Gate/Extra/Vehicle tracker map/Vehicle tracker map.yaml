@@ -34,9 +34,9 @@ sections:
           {% if state_attr('sensor.user0_travel_time', 'duration') is not none %}
               {{
                 ((
-                  + as_timestamp(states.sensor.user0_travel_time.last_updated)
+                  as_timestamp(states.sensor.user0_travel_time.last_updated)
                   - as_timestamp(now())
-                  state_attr('sensor.user0_travel_time', 'duration') | float * 60
+                  + state_attr('sensor.user0_travel_time', 'duration') | float * 60
                 ) /60 )
                 | round(0)
               }}min
