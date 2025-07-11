@@ -1004,7 +1004,7 @@ actions:
           if:
             - condition: template
               value_template:  "{{ travel_time_rate == 'Continuously' and
-                states[travel_time_sensor].last_updated + timedelta(minutes=1) < now() }}"
+                states[travel_time_sensor].last_updated + timedelta(minutes=continuously_refresh_interval) < now() }}"
           then:
             - alias: Refresh travel time
               action: homeassistant.update_entity
