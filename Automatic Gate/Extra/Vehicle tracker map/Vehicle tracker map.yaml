@@ -19,6 +19,7 @@ sections:
             name: Automatic Gate
             icon: mdi:car-connected
 
+      # EDIT: Duplicate this card as many times as you have drivers set in Automatic Gate
       - type: custom:mushroom-template-card
         # Show the ETA only if someone is driving home
         visibility:
