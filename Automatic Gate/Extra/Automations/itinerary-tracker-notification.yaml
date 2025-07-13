@@ -440,7 +440,16 @@ actions:
               value_template: "{{ next_refresh <= now() | as_timestamp }}"
             - alias: Calculate ETA
               variables:
-                remaining: "{{ state_attr(travel_time_sensor, 'duration') * 60 }}"
+                remaining: |-
+                    {% if state_attr(travel_time_sensor, 'duration') != none %}
+                      {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
+                    {% elif state_attr(travel_time_sensor, 'unit_of_measurement') == "min" %}
+                      {{ states(travel_time_sensor) | float * 60 }}
+                    {% elif state_attr(travel_time_sensor, 'unit_of_measurement') == "s" %}
+                      {{ states(travel_time_sensor) | float }}
+                    {% else %}
+                      {{ none }}
+                    {% endif %}
                 remaining_minutes: "{{ (remaining/60) | round }}"
                 arrival_timestamp: "{{ as_timestamp(now()) + remaining }}"
                 arrival: "{{ arrival_timestamp | timestamp_custom('%H:%M') }}"
