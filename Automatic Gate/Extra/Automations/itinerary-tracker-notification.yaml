@@ -399,9 +399,16 @@ actions:
                 condition: template
                 value_template: "{{ wait.trigger.id == 'notification_cleared' }}"
               then:
-                - variables:
+                - alias: Remove the notification service
+                  variables:
                     notify_services: |-
                       {{ notify_services | difference([wait.trigger.event.data.confirmation]) }}
+                - alias: Stop if there are no more notification services
+                  if:
+                    - condition: template
+                      value_template: "{{ notify_services | length == 0 }}"
+                  then:
+                    - stop: No notification services remaining
             - alias: If travel time remaining needs to trigger nearly arrived TTS
               if:
                 - condition: template
