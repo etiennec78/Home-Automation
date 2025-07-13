@@ -443,9 +443,9 @@ actions:
                 remaining: |-
                     {% if state_attr(travel_time_sensor, 'duration') != none %}
                       {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
-                    {% elif state_attr(travel_time_sensor, 'unit_of_measurement' == "min") %}
+                    {% elif state_attr(travel_time_sensor, 'unit_of_measurement') == "min" %}
                       {{ states(travel_time_sensor) | float * 60 }}
-                    {% elif state_attr(travel_time_sensor, 'unit_of_measurement' == "s") %}
+                    {% elif state_attr(travel_time_sensor, 'unit_of_measurement') == "s" %}
                       {{ states(travel_time_sensor) | float }}
                     {% else %}
                       {{ none }}
