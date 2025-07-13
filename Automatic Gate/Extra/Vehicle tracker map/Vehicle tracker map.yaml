@@ -82,10 +82,12 @@ sections:
         layout_options:
           grid_columns: 4
           grid_rows: 1
-      # Show the positions history of user0 since 1 hour
+      # Display users' position history for the last 1 hour
       - type: map
         entities:
           - entity: person.user0
+          - entity: person.user1
+          - entity: person.user2
         hours_to_show: 1
         layout_options:
           grid_columns: 4
