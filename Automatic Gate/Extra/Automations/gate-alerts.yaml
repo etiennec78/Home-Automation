@@ -69,6 +69,15 @@ blueprint:
               min: 0
               max: 30
               unit_of_measurement: minutes
+        error_message_sensor:
+          name: ⚠️ Error Message Sensor
+          description: |-
+            Sensor that provides gate error messages
+            *Note: Only needed for error notification type*
+          default: []
+          selector:
+            entity:
+              domain: sensor
         notify_devices:
           name: 💬 Notify devices
           description: |-
@@ -154,21 +163,6 @@ blueprint:
           selector:
             text:
               multiline: true
-
-    error_settings:
-      name: Error Settings
-      icon: "mdi:gate-alert"
-      collapsed: true
-      input:
-        error_message_sensor:
-          name: ⚠️ Error Message Sensor
-          description: |-
-            Sensor that provides gate error messages
-            *Note: Only needed for error notification type*
-          default: []
-          selector:
-            entity:
-              domain: sensor
 
 variables:
   gate: !input gate
