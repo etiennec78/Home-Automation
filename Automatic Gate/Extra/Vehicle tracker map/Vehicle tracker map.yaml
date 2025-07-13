@@ -1,4 +1,5 @@
-# Itinerary tab to show the Estimated Time of Arrival of user0, disable the automatic gate, and see the position of user0
+# Itinerary tab to let you display drivers' ETAs, disable Automatic Gate and view people's locations
+# Please search for "EDIT" comments and modify each corresponding line
 title: Itinerary
 path: vehicle-tracker-map
 icon: mdi:map
@@ -10,35 +11,37 @@ sections:
   - type: grid
     column_span: 1
     cards:
-      # Let each user disable your automatic gate
+      # Let users disable Automatic Gate
       - type: entities
         entities:
-          - entity: automation.automatic_gate
+          - entity: automation.automatic_gate # EDIT
             secondary_info: none
-            name: Automatic gate
+            name: Automatic Gate
             icon: mdi:car-connected
+
+      # EDIT: Duplicate this card as many times as you have drivers set in Automatic Gate
       - type: custom:mushroom-template-card
-        # Show the ETA only if someone is driving towards home
+        # Show the ETA only if someone is driving home
         visibility:
-          - condition: or
-            conditions:
-              - condition: state
-                entity: input_text.user0_itinerary
-                state: arriving
-              - condition: state
-                entity: input_text.user0_itinerary
-                state: on_approach
+            - condition: state
+              entity: input_text.user0_itinerary # EDIT
+              state:
+                - arriving
+                - on_approach
         # Estimated time remaining
         primary: >-
+          {# EDIT #}
+          {% set travel_time_sensor = 'sensor.user0_travel_time_duration' %}
+
           Time remaining :
-          {% if not is_state('sensor.user0_travel_time_duration', ['unknown', 'unavailable']) %}
-            {% if state_attr('sensor.user0_travel_time_duration', 'unit_of_measurement') == "min" %}
+          {% if not is_state(travel_time_sensor, ['unknown', 'unavailable']) %}
+            {% if state_attr(travel_time_sensor, 'unit_of_measurement') == 'min' %}
               {{
                 (
                   (
-                    states['sensor.user0_travel_time_duration'].last_updated | as_timestamp
+                    states[travel_time_sensor].last_updated | as_timestamp
                     - now() | as_timestamp
-                    + states('sensor.user0_travel_time_duration') | float * 60
+                    + states(travel_time_sensor) | float * 60
                   ) / 60
                 ) | round(0)
               }}min
@@ -50,13 +53,16 @@ sections:
           {% endif %}
         # Estimated time of arrival
         secondary: >-
+          {# EDIT #}
+          {% set travel_time_sensor = 'sensor.user0_travel_time_duration' %}
+
           Arrival :
-          {% if not is_state('sensor.user0_travel_time_duration', ['unknown', 'unavailable']) %}
-            {% if state_attr('sensor.user0_travel_time_duration', 'unit_of_measurement') == "min" %}
+          {% if not is_state(travel_time_sensor, ['unknown', 'unavailable']) %}
+            {% if state_attr(travel_time_sensor, 'unit_of_measurement') == 'min' %}
               {{
                 (
-                  states['sensor.user0_travel_time_duration'].last_updated | as_timestamp
-                  + states('sensor.user0_travel_time_duration') | float * 60
+                  states[travel_time_sensor].last_updated | as_timestamp
+                  + states(travel_time_sensor) | float * 60
                 ) | timestamp_custom('%H:%M')
               }}
             {% else %}
@@ -66,14 +72,14 @@ sections:
             Unknown
           {% endif %}
         icon: mdi:map-clock
-        entity: sensor.user0_travel_time_duration
+        entity: sensor.user0_travel_time_duration # EDIT
         icon_color: blue
         # Refresh travel time sensor on tap
         tap_action:
           action: call-service
           service: homeassistant.update_entity
           target:
-            entity_id: sensor.user0_travel_time_duration
+            entity_id: sensor.user0_travel_time_duration # EDIT
         hold_action:
           action: more-info
         double_tap_action:
@@ -82,10 +88,13 @@ sections:
         layout_options:
           grid_columns: 4
           grid_rows: 1
-      # Show the positions history of user0 since 1 hour
+
+      # Display users' position history for the last 1 hour
       - type: map
         entities:
-          - entity: person.user0
+          - entity: person.user0 # EDIT
+          - entity: person.user1 # EDIT
+          - entity: person.user2 # EDIT
         hours_to_show: 1
         layout_options:
           grid_columns: 4
