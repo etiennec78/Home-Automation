@@ -449,10 +449,12 @@ actions:
       - alias: If blueprint triggered less than 2 minutes ago, and driver in activation zone
         condition: template
         value_template: |-
-          {% set gate_distance = distance(person, gate_location)*1000 %}
-          {% if state_attr(person, 'gps_accuracy') is not none %}
-            {% set gate_distance = gate_distance + state_attr(person, 'gps_accuracy') %}
+          {% if state_attr(person, 'gps_accuracy') is none %}
+            {% set accuracy = 100 %}
+          {% else %}
+            {% set accuracy = state_attr(person, 'gps_accuracy') %}
           {% endif %}
+          {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
 
           {{
             states[itinerary_sensor].last_updated + timedelta(minutes=2) > now()
@@ -805,10 +807,13 @@ actions:
                 id: gate_zone_left
                 value_template: |-
                   {% if state_attr(person, 'gps_accuracy') is none %}
-                    {{ distance(person, gate_location)*1000 > activation_zone }}
+                    {% set accuracy = 100 %}
                   {% else %}
-                    {{ distance(person, gate_location)*1000 > activation_zone + state_attr(person, 'gps_accuracy') }}
+                    {% set accuracy = state_attr(person, 'gps_accuracy') %}
                   {% endif %}
+                  {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
+
+                  {{ gate_distance > activation_zone }}
             timeout:
               minutes: !input safety_delay
           - alias: Remove current itinerary as driver left or took too long
@@ -936,10 +941,26 @@ actions:
                   value_template: "{{ is_state(driving_sensor, 'off') }}"
                 - trigger: template
                   id: left_gate_zone
-                  value_template: "{{ distance(person, gate_location)*1000 > eta_zone + 350 }}"
+                  value_template: |-
+                    {% if state_attr(person, 'gps_accuracy') is none %}
+                      {% set accuracy = 100 %}
+                    {% else %}
+                      {% set accuracy = state_attr(person, 'gps_accuracy') %}
+                    {% endif %}
+                    {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
+
+                    {{ gate_distance > eta_zone + 250 }}
                 - trigger: template
                   id: returned_to_gate_zone
-                  value_template: "{{ distance(person, gate_location)*1000 < eta_zone + 100 }}"
+                  value_template: |-
+                    {% if state_attr(person, 'gps_accuracy') is none %}
+                      {% set accuracy = 100 %}
+                    {% else %}
+                      {% set accuracy = state_attr(person, 'gps_accuracy') %}
+                    {% endif %}
+                    {% set gate_distance = distance(person, gate_location)*1000 + accuracy %}
+
+                    {{ gate_distance < eta_zone }}
             - alias: Don't continue if driver stopped vehicle
               if:
                 - condition: template
@@ -951,7 +972,15 @@ actions:
       - alias: Stop if driver started driving in eta zone
         if:
           - condition: template
-            value_template: "{{ distance(person, gate_location)*1000 < eta_zone }}"
+            value_template: |-
+              {% if state_attr(person, 'gps_accuracy') is none %}
+                {% set accuracy = 100 %}
+              {% else %}
+                {% set accuracy = state_attr(person, 'gps_accuracy') %}
+              {% endif %}
+              {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
+
+              {{ gate_distance < eta_zone }}
         then:
           - stop: Started too close to home
 
@@ -1052,13 +1081,21 @@ actions:
                       tag: itinerary-status
                       timeout: 300
             - stop: Forbidden zone
-        - alias: Repeat while driver nearer than 1km from gate and still driving
+        - alias: Repeat while driver in eta zone and still driving
           # This allows to update to a precise ETA even if a traffic jam appears near your gate
           # It will return to the previous loop if the driver has entered the radius but passed by
           repeat:
             while:
               - condition: template
-                value_template: "{{ distance(person, gate_location)*1000 < eta_zone }}"
+                value_template: |-
+                  {% if state_attr(person, 'gps_accuracy') is none %}
+                    {% set accuracy = 100 %}
+                  {% else %}
+                    {% set accuracy = state_attr(person, 'gps_accuracy') %}
+                  {% endif %}
+                  {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
+
+                  {{ gate_distance < eta_zone }}
               - condition: template
                 value_template: "{{ is_state(driving_sensor, 'on') }}"
             sequence:
@@ -1169,7 +1206,15 @@ actions:
                   - alias: Stop if user not in activation zone
                     conditions:
                       - condition: template
-                        value_template: "{{ distance(person, gate_location)*1000 > activation_zone }}"
+                        value_template: |-
+                          {% if state_attr(person, 'gps_accuracy') is none %}
+                            {% set accuracy = 100 %}
+                          {% else %}
+                            {% set accuracy = state_attr(person, 'gps_accuracy') %}
+                          {% endif %}
+                          {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
+
+                          {{ gate_distance > activation_zone }}
                     sequence:
                       - alias: Stop itinerary as driver was not in activation zone when gate tried to open
                         action: input_text.set_value
@@ -1244,7 +1289,15 @@ actions:
                         value_template: "{{ is_state(driving_sensor, 'off') }}"
                       - trigger: template
                         id: activation_zone_left
-                        value_template: "{{ distance(person, gate_location)*1000 > activation_zone }}"
+                        value_template: |-
+                          {% if state_attr(person, 'gps_accuracy') is none %}
+                            {% set accuracy = 100 %}
+                          {% else %}
+                            {% set accuracy = state_attr(person, 'gps_accuracy') %}
+                          {% endif %}
+                          {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
+
+                          {{ gate_distance > activation_zone }}
                       - trigger: template
                         id: forbidden_zone
                         value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
