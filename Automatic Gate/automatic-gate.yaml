@@ -807,7 +807,7 @@ actions:
                   {% if state_attr(person, 'gps_accuracy') is none %}
                     {{ distance(person, gate_location)*1000 > activation_zone }}
                   {% else %}
-                    {{ distance(person, gate_location)*1000 > state_attr(gate_location, 'radius') + state_attr(person, 'gps_accuracy') }}
+                    {{ distance(person, gate_location)*1000 > activation_zone + state_attr(person, 'gps_accuracy') }}
                   {% endif %}
             timeout:
               minutes: !input safety_delay
