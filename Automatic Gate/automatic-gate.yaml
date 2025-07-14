@@ -168,20 +168,12 @@ blueprint:
               min: 1
               max: 60
               unit_of_measurement: minutes
-        eta_zone:
-          name: 🚀 ETA planning zone
-          description: |-
-            At which **distance** from gate should your vehicle start planning its **Estimated Time of Arrival** to **open your gate** ?
-          default: 1000
-          selector:
-            number:
-              min: 200
-              max: 5000
-              unit_of_measurement: meters
         activation_zone:
           name: 🔒 Gate activation zone
-          description: At which **maximal distance** should your vehicle be able to automatically **open your gate** ? It will automatically **close** if you **leave** this zone
-          default: 1200
+          description: |-
+            At which **distance** from the gate should the automation start estimating when to **open your gate** ?
+            Note: It will automatically **close** if you **leave** this zone
+          default: 500
           selector:
             number:
               min: 300
@@ -369,7 +361,6 @@ variables:
   itinerary_sensors: !input itinerary_sensors
   travel_time_rate: !input travel_time_rate
   continuously_refresh_interval: !input continuously_refresh_interval
-  eta_zone: !input eta_zone
   activation_zone: !input activation_zone
   language: !input language
   custom_translations: !input custom_translations
@@ -931,7 +922,7 @@ actions:
               value: none
           - alias: Restore iBeacon states
             sequence: *restore_ibeacons
-      - alias: Wait for driver to travel 350m away from eta zone, then return to 100m, to start itinerary
+      - alias: Wait for driver to travel 250m away from activation zone, then return, to start itinerary
         repeat:
           count: 2
           sequence:
@@ -949,7 +940,7 @@ actions:
                     {% endif %}
                     {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
 
-                    {{ gate_distance > eta_zone + 250 }}
+                    {{ gate_distance > activation_zone + 250 }}
                 - trigger: template
                   id: returned_to_gate_zone
                   value_template: |-
@@ -960,7 +951,7 @@ actions:
                     {% endif %}
                     {% set gate_distance = distance(person, gate_location)*1000 + accuracy %}
 
-                    {{ gate_distance < eta_zone }}
+                    {{ gate_distance < activation_zone }}
             - alias: Don't continue if driver stopped vehicle
               if:
                 - condition: template
@@ -969,7 +960,7 @@ actions:
                 - stop: Arrived to destination
 
     else:
-      - alias: Stop if driver started driving in eta zone
+      - alias: Stop if driver started driving in activation zone
         if:
           - condition: template
             value_template: |-
@@ -980,7 +971,7 @@ actions:
               {% endif %}
               {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
 
-              {{ gate_distance < eta_zone }}
+              {{ gate_distance < activation_zone }}
         then:
           - stop: Started too close to home
 
@@ -1081,7 +1072,7 @@ actions:
                       tag: itinerary-status
                       timeout: 300
             - stop: Forbidden zone
-        - alias: Repeat while driver in eta zone and still driving
+        - alias: Repeat while driver in activation zone and still driving
           # This allows to update to a precise ETA even if a traffic jam appears near your gate
           # It will return to the previous loop if the driver has entered the radius but passed by
           repeat:
@@ -1095,7 +1086,7 @@ actions:
                   {% endif %}
                   {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
 
-                  {{ gate_distance < eta_zone }}
+                  {{ gate_distance < activation_zone }}
               - condition: template
                 value_template: "{{ is_state(driving_sensor, 'on') }}"
             sequence:
