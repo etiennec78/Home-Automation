@@ -1299,8 +1299,8 @@ actions:
                                 data: *clear_notification
                               - alias: Stop whole script as successful
                                 stop: Successful
-                              - alias: Close all gates
-                                repeat: *close_gates
+                          - alias: Close all gates
+                            repeat: *close_gates
                   - alias: Remove itinerary started notification
                     action: "{{ notify_service }}"
                     data: *clear_notification
