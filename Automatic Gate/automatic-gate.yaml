@@ -437,9 +437,12 @@ actions:
       itinerary_sensor: "{{ itinerary_sensors[idx] }}"
   - alias: Stop if blueprint is triggered frequently
     if:
-      - alias: If blueprint triggered less than 2 minutes ago, and driver in activation zone
+      - alias: If blueprint triggered less than 2 minutes ago
         condition: template
-        value_template: |-
+        value_template: "{{ states[itinerary_sensor].last_updated + timedelta(minutes=2) > now() }}"
+      - alias: If driver in activation zone
+        condition: template
+        value_template: &activation_zone_in_condition |-
           {% if state_attr(person, 'gps_accuracy') is none %}
             {% set accuracy = 100 %}
           {% else %}
@@ -447,10 +450,7 @@ actions:
           {% endif %}
           {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
 
-          {{
-            states[itinerary_sensor].last_updated + timedelta(minutes=2) > now()
-            and gate_distance < activation_zone
-          }}
+          {{ gate_distance < activation_zone }}
     then:
       - alias: Get how many times the error occurred in a row
         variables:
@@ -529,7 +529,7 @@ actions:
                     }}
               - alias: Notify driver that the blueprint is being triggered frequently
                 action: "{{ notify_service }}"
-                data:
+                data: &notification_data
                   title: "{{ title }}"
                   message: "{{ message }}"
                   data:
@@ -555,20 +555,7 @@ actions:
                   <<: *get_translation
               - alias: Notify driver that the blueprint is disabling itself
                 action: "{{ notify_service }}"
-                data:
-                  title: "{{ title }}"
-                  message: "{{ message }}"
-                  data:
-                    car_ui: true
-                    notification_icon: mdi:alert-circle
-                    channel: Itinerary status
-                    importance: max
-                    push:
-                      sound:
-                        name: "default"
-                        critical: 1
-                    tag: itinerary-status
-                    timeout: 300
+                data: *notification_data
               - alias: Notify all users on the dashboard that the blueprint has disabled itself
                 action: persistent_notification.create
                 data:
@@ -682,19 +669,9 @@ actions:
               - alias: Notify driver of itinerary cancelation as he was not home
                 action: "{{ notify_service }}"
                 data:
-                  title: "{{ title }}"
-                  message: "{{ message }}"
+                  <<: *notification_data
                   data:
-                    car_ui: true
-                    notification_icon: mdi:alert-circle
-                    channel: Itinerary status
                     importance: high
-                    push:
-                      sound:
-                        name: "default"
-                        critical: 1
-                    tag: itinerary-status
-                    timeout: 300
               - alias: Mark error in driver itinerary sensor
                 action: input_text.set_value
                 target:
@@ -761,23 +738,25 @@ actions:
           entity_id: "{{ itinerary_sensor }}"
         data:
           value: leaving
-      - alias: If one of the gates is closing/closed
-        if:
-          - condition: template
-            value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
-        then:
-          - alias: Open each gate because driver is leaving
-            repeat:
-              for_each: !input gate
-              sequence:
-                - action: |-
-                    {% if states[repeat.item].domain == 'switch' %}
-                      switch.turn_on
-                    {% elif states[repeat.item].domain == 'cover' %}
-                      cover.open_cover
-                    {% endif %}
-                  target:
-                    entity_id: "{{ repeat.item }}"
+      - alias: Open gates if one is closing/closed
+        sequence: &open_gates_if_closed
+          - alias: If one of the gates is closing/closed
+            if:
+              - condition: template
+                value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
+            then:
+              - alias: Open each gate because driver is leaving
+                repeat:
+                  for_each: !input gate
+                  sequence:
+                    - action: |-
+                        {% if states[repeat.item].domain == 'switch' %}
+                          switch.turn_on
+                        {% elif states[repeat.item].domain == 'cover' %}
+                          cover.open_cover
+                        {% endif %}
+                      target:
+                        entity_id: "{{ repeat.item }}"
       - alias: If auto-closing is enabled
         if:
           - condition: template
@@ -796,7 +775,7 @@ actions:
                 value_template: "{{ is_state(driving_sensor, 'off') }}"
               - trigger: template
                 id: gate_zone_left
-                value_template: |-
+                value_template: &activation_zone_out_trigger |-
                   {% if state_attr(person, 'gps_accuracy') is none %}
                     {% set accuracy = 100 %}
                   {% else %}
@@ -833,21 +812,11 @@ actions:
                   - alias: Notify driver of itinerary cancelation as he didn't leave in time
                     action: "{{ notify_service }}"
                     data:
-                      title: "{{ title }}"
-                      message: "{{ message }}"
+                      <<: *notification_data
                       data:
-                        car_ui: true
-                        notification_icon: mdi:alert-circle
-                        channel: Gate alerts
                         importance: high
-                        push:
-                          sound:
-                            name: "default"
-                            critical: 1
-                        tag: itinerary-status
-                        timeout: 300
               - alias: Close all gates
-                repeat:
+                repeat: &close_gates
                   for_each: !input gate
                   sequence:
                     - action: |-
@@ -867,7 +836,7 @@ actions:
                         entity_id: "{{ repeat.item }}"
             else:
               - alias: Get names of awaited persons
-                variables:
+                variables: &get_awaited
                   awaited_persons: |-
                     {% set data = namespace(awaited_persons=[]) %}
 
@@ -886,25 +855,18 @@ actions:
               - alias: Notify driver that gate will wait for next person
                 action: "{{ notify_service }}"
                 data:
-                  title: "{{ title }}"
-                  message: "{{ message }}"
+                  <<: *notification_data
                   data:
-                    car_ui: true
                     notification_icon: mdi:sleep
-                    channel: Gate alerts
                     importance: high
-                    push:
-                      sound:
-                        name: "default"
-                        critical: 1
-                    tag: itinerary-status
+                    timeout: ""
               - alias: Wait for gate closed
                 wait_for_trigger:
                   - trigger: template
                     value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
               - alias: Remove awaiting user notification
                 action: "{{ notify_service }}"
-                data:
+                data: &clear_notification
                   message: clear_notification
                   data:
                     tag: itinerary-status
@@ -963,15 +925,7 @@ actions:
       - alias: Stop if driver started driving in activation zone
         if:
           - condition: template
-            value_template: |-
-              {% if state_attr(person, 'gps_accuracy') is none %}
-                {% set accuracy = 100 %}
-              {% else %}
-                {% set accuracy = state_attr(person, 'gps_accuracy') %}
-              {% endif %}
-              {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
-
-              {{ gate_distance < activation_zone }}
+            value_template: *activation_zone_in_condition
         then:
           - stop: Started too close to home
 
@@ -993,18 +947,11 @@ actions:
   - alias: Notify driver of itinerary start
     action: "{{ notify_service }}"
     data:
-      title: "{{ title }}"
-      message: "{{ message }}"
+      <<: *notification_data
       data:
-        car_ui: true
         notification_icon: mdi:map-check
-        channel: Itinerary status
         importance: high
-        push:
-          sound:
-            name: "default"
-            critical: 1
-        tag: itinerary-status
+        timeout: ""
   - alias: If travel time refresh rate set to "Continuously"
     if:
       - condition: template
@@ -1058,19 +1005,9 @@ actions:
                 - alias: Notify driver about itinerary cancellation
                   action: "{{ notify_service }}"
                   data:
-                    title: "{{ title }}"
-                    message: "{{ message }}"
+                    <<: *notification_data
                     data:
-                      car_ui: true
-                      notification_icon: mdi:alert-circle
-                      channel: Itinerary status
                       importance: high
-                      push:
-                        sound:
-                          name: "default"
-                          critical: 1
-                      tag: itinerary-status
-                      timeout: 300
             - stop: Forbidden zone
         - alias: Repeat while driver in activation zone and still driving
           # This allows to update to a precise ETA even if a traffic jam appears near your gate
@@ -1078,15 +1015,7 @@ actions:
           repeat:
             while:
               - condition: template
-                value_template: |-
-                  {% if state_attr(person, 'gps_accuracy') is none %}
-                    {% set accuracy = 100 %}
-                  {% else %}
-                    {% set accuracy = state_attr(person, 'gps_accuracy') %}
-                  {% endif %}
-                  {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
-
-                  {{ gate_distance < activation_zone }}
+                value_template: *activation_zone_in_condition
               - condition: template
                 value_template: "{{ is_state(driving_sensor, 'on') }}"
             sequence:
@@ -1167,19 +1096,9 @@ actions:
                               - alias: Notify driver about itinerary cancellation
                                 action: "{{ notify_service }}"
                                 data:
-                                  title: "{{ title }}"
-                                  message: "{{ message }}"
+                                  <<: *notification_data
                                   data:
-                                    car_ui: true
-                                    notification_icon: mdi:alert-circle
-                                    channel: Itinerary status
                                     importance: high
-                                    push:
-                                      sound:
-                                        name: "default"
-                                        critical: 1
-                                    tag: itinerary-status
-                                    timeout: 300
                               - stop: Timed out
                           - alias: Stop if the user is in a forbidden zone
                             conditions:
@@ -1197,15 +1116,7 @@ actions:
                   - alias: Stop if user not in activation zone
                     conditions:
                       - condition: template
-                        value_template: |-
-                          {% if state_attr(person, 'gps_accuracy') is none %}
-                            {% set accuracy = 100 %}
-                          {% else %}
-                            {% set accuracy = state_attr(person, 'gps_accuracy') %}
-                          {% endif %}
-                          {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
-
-                          {{ gate_distance > activation_zone }}
+                        value_template: *activation_zone_out_trigger # out_trigger is used as it is the same as not(in_condition)
                     sequence:
                       - alias: Stop itinerary as driver was not in activation zone when gate tried to open
                         action: input_text.set_value
@@ -1221,19 +1132,9 @@ actions:
                       - alias: Notify driver about itinerary cancellation
                         action: "{{ notify_service }}"
                         data:
-                          title: "{{ title }}"
-                          message: "{{ message }}"
+                          <<: *notification_data
                           data:
-                            car_ui: true
-                            notification_icon: mdi:alert-circle
-                            channel: Itinerary status
                             importance: high
-                            push:
-                              sound:
-                                name: "default"
-                                critical: 1
-                            tag: itinerary-status
-                            timeout: 300
                       - stop: Not in activation zone
                   - alias: Stop if the user is in a forbidden zone
                     conditions:
@@ -1248,23 +1149,8 @@ actions:
                   value: on_approach
                 target:
                   entity_id: "{{ itinerary_sensor }}"
-              - alias: If one of the gates is closing/closed
-                if:
-                  - condition: template
-                    value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
-                then:
-                  - alias: Open each gate because driver is arriving
-                    repeat:
-                      for_each: !input gate
-                      sequence:
-                        - action: |-
-                            {% if states[repeat.item].domain == 'switch' %}
-                              switch.turn_on
-                            {% elif states[repeat.item].domain == 'cover' %}
-                              cover.open_cover
-                            {% endif %}
-                          target:
-                            entity_id: "{{ repeat.item }}"
+              - alias: Open gates if one is closing/closed
+                sequence: *open_gates_if_closed
               - alias: If auto-closing is not fully disabled
                 if:
                   - condition: template
@@ -1280,15 +1166,7 @@ actions:
                         value_template: "{{ is_state(driving_sensor, 'off') }}"
                       - trigger: template
                         id: activation_zone_left
-                        value_template: |-
-                          {% if state_attr(person, 'gps_accuracy') is none %}
-                            {% set accuracy = 100 %}
-                          {% else %}
-                            {% set accuracy = state_attr(person, 'gps_accuracy') %}
-                          {% endif %}
-                          {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
-
-                          {{ gate_distance > activation_zone }}
+                        value_template: *activation_zone_out_trigger
                       - trigger: template
                         id: forbidden_zone
                         value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
@@ -1307,10 +1185,7 @@ actions:
                     then:
                       - alias: Remove itinerary started notification
                         action: "{{ notify_service }}"
-                        data:
-                          message: clear_notification
-                          data:
-                            tag: itinerary-status
+                        data: *clear_notification
                     else:
                       - alias: If someone is currently approaching or leaving
                         if:
@@ -1318,17 +1193,7 @@ actions:
                             value_template: "{{ itinerary_sensors | select('is_state', ['on_approach', 'leaving']) | list != [] }}"
                         then:
                           - alias: Get names of awaited persons
-                            variables:
-                              awaited_persons: |-
-                                {% set data = namespace(awaited_persons=[]) %}
-
-                                {% for sensor_idx in range(itinerary_sensors | length) %}
-                                  {% if sensor_idx != idx and is_state(itinerary_sensors[sensor_idx], ['on_approach', 'leaving']) %}
-                                    {% set data.awaited_persons = data.awaited_persons + [state_attr(persons[sensor_idx], 'friendly_name')] %}
-                                  {% endif %}
-                                {% endfor %}
-
-                                {{ data.awaited_persons | join(', ') }}
+                            variables: *get_awaited
                           - alias: Get notification translation
                             variables:
                               title_id: "awaiting"
@@ -1337,18 +1202,11 @@ actions:
                           - alias: Notify driver that gate will wait for next person
                             action: "{{ notify_service }}"
                             data:
-                              title: "{{ title }}"
-                              message: "{{ message }}"
+                              <<: *notification_data
                               data:
-                                car_ui: true
                                 notification_icon: mdi:sleep
-                                channel: Itinerary status
                                 importance: high
-                                push:
-                                  sound:
-                                    name: "default"
-                                    critical: 1
-                                tag: itinerary-status
+                                timeout: ""
                           - alias: Wait for gate closed
                             wait_for_trigger:
                               - trigger: template
@@ -1368,19 +1226,9 @@ actions:
                                   - alias: Notify driver of itinerary cancelation as he took too long
                                     action: "{{ notify_service }}"
                                     data:
-                                      title: "{{ title }}"
-                                      message: "{{ message }}"
+                                      <<: *notification_data
                                       data:
-                                        car_ui: true
-                                        notification_icon: mdi:alert-circle
-                                        channel: Gate alerts
                                         importance: high
-                                        push:
-                                          sound:
-                                            name: "default"
-                                            critical: 1
-                                        tag: itinerary-status
-                                        timeout: 300
                               - alias: If driver exited gate activation zone
                                 conditions:
                                   - condition: template
@@ -1394,19 +1242,9 @@ actions:
                                   - alias: Notify driver of itinerary cancelation as he exited the zone
                                     action: "{{ notify_service }}"
                                     data:
-                                      title: "{{ title }}"
-                                      message: "{{ message }}"
+                                      <<: *notification_data
                                       data:
-                                        car_ui: true
-                                        notification_icon: mdi:alert-circle
-                                        channel: Gate alerts
                                         importance: high
-                                        push:
-                                          sound:
-                                            name: "default"
-                                            critical: 1
-                                        tag: itinerary-status
-                                        timeout: 300
                               - alias: If driver entered forbidden zone
                                 conditions:
                                   - condition: template
@@ -1428,10 +1266,7 @@ actions:
                                             entity_id: "{{ repeat.item }}"
                                   - alias: Remove itinerary started notification
                                     action: "{{ notify_service }}"
-                                    data:
-                                      message: clear_notification
-                                      data:
-                                        tag: itinerary-status
+                                    data: *clear_notification
                                   - delay:
                                       minutes: !input auto_close_arrival_delay
                               - alias: If driver left vehicle
@@ -1447,19 +1282,9 @@ actions:
                                   - alias: Notify driver of itinerary cancelation as he left vehicle
                                     action: "{{ notify_service }}"
                                     data:
-                                      title: "{{ title }}"
-                                      message: "{{ message }}"
+                                      <<: *notification_data
                                       data:
-                                        car_ui: true
-                                        notification_icon: mdi:alert-circle
-                                        channel: Gate alerts
                                         importance: high
-                                        push:
-                                          sound:
-                                            name: "default"
-                                            critical: 1
-                                        tag: itinerary-status
-                                        timeout: 300
                             # If driver arrived but doesn't have automatic gate enabled
                             default:
                               - alias: Unlock all locks
@@ -1471,30 +1296,14 @@ actions:
                                         entity_id: "{{ repeat.item }}"
                               - alias: Remove itinerary started notification
                                 action: "{{ notify_service }}"
-                                data:
-                                  message: clear_notification
-                                  data:
-                                    tag: itinerary-status
+                                data: *clear_notification
                               - alias: Stop whole script as successful
                                 stop: Successful
-                          - alias: Close all gates
-                            repeat:
-                              for_each: !input gate
-                              sequence:
-                                - action: |-
-                                    {% if states[repeat.item].domain == 'switch' %}
-                                      switch.turn_off
-                                    {% elif states[repeat.item].domain == 'cover' %}
-                                      cover.close_cover
-                                    {% endif %}
-                                  target:
-                                    entity_id: "{{ repeat.item }}"
+                              - alias: Close all gates
+                                repeat: *close_gates
                   - alias: Remove itinerary started notification
                     action: "{{ notify_service }}"
-                    data:
-                      message: clear_notification
-                      data:
-                        tag: itinerary-status
+                    data: *clear_notification
                   - alias: Stop whole script as successful
                     stop: Successful
                 else:
@@ -1510,10 +1319,7 @@ actions:
                       value: none
                   - alias: Remove itinerary started notification
                     action: "{{ notify_service }}"
-                    data:
-                      message: clear_notification
-                      data:
-                        tag: itinerary-status
+                    data: *clear_notification
                   - alias: Stop whole script as it ran successfully
                     stop: Successful
   - alias: If both loop were broken, remove current itinerary as driver left vehicle or timed out
@@ -1536,19 +1342,9 @@ actions:
       - alias: Notify driver that travel time integration did not respond
         action: "{{ notify_service }}"
         data:
-          title: "{{ title }}"
-          message: "{{ message }}"
+          <<: *notification_data
           data:
-            car_ui: true
-            notification_icon: mdi:alert-circle
-            channel: Itinerary status
             importance: high
-            push:
-              sound:
-                name: "default"
-                critical: 1
-            tag: itinerary-status
-            timeout: 300
     else:
       - alias: Get notification translation
         variables:
@@ -1558,19 +1354,9 @@ actions:
       - alias: Send itinerary canceled notification to driver as he left vehicle
         action: "{{ notify_service }}"
         data:
-          title: "{{ title }}"
-          message: "{{ message }}"
+          <<: *notification_data
           data:
-            car_ui: true
-            notification_icon: mdi:alert-circle
-            channel: Itinerary status
             importance: high
-            push:
-              sound:
-                name: "default"
-                critical: 1
-            tag: itinerary-status
-            timeout: 300
 # Run in parralel to let the automation start with multiple users driving simultaneously
 mode: parallel
 max: 10
