@@ -1112,30 +1112,10 @@ actions:
               # This allows the loop to refresh the ETA with a new position or stop the script if the vehicle was left
               - condition: template
                 value_template: "{{ opening_time <= as_timestamp(now()) }}"
+              - alias: Return to the previous loop if the user has left the the activation zone
+                condition: template
+                value_template: *activation_zone_in_condition
               - choose:
-                  - alias: Stop if user not in activation zone
-                    conditions:
-                      - condition: template
-                        value_template: *activation_zone_out_trigger # out_trigger is used as it is the same as not(in_condition)
-                    sequence:
-                      - alias: Stop itinerary as driver was not in activation zone when gate tried to open
-                        action: input_text.set_value
-                        target:
-                          entity_id: "{{ itinerary_sensor }}"
-                        data:
-                          value: none
-                      - alias: Get notification translation
-                        variables:
-                          title_id: "itinerary_canceled"
-                          message_id: "vehicle_away"
-                          <<: *get_translation
-                      - alias: Notify driver about itinerary cancellation
-                        action: "{{ notify_service }}"
-                        data:
-                          <<: *notification_data
-                          data:
-                            importance: high
-                      - stop: Not in activation zone
                   - alias: Stop if the user is in a forbidden zone
                     conditions:
                       - condition: template
