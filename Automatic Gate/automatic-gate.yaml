@@ -1107,42 +1107,19 @@ actions:
                             sequence:
                               - sequence: *forbidden_zone
                               - stop: Forbidden zone
-
-              # Restart the second repeat loop if the wait_for_trigger was triggered by a position or vehicle sensor update
-              # This allows the loop to refresh the ETA with a new position or stop the script if the vehicle was left
-              - condition: template
+              - alias: Return to the previous loop if the wait_for_trigger was triggered by a position or vehicle sensor update
+                condition: template
                 value_template: "{{ opening_time <= as_timestamp(now()) }}"
-              - choose:
-                  - alias: Stop if user not in activation zone
-                    conditions:
-                      - condition: template
-                        value_template: *activation_zone_out_trigger # out_trigger is used as it is the same as not(in_condition)
-                    sequence:
-                      - alias: Stop itinerary as driver was not in activation zone when gate tried to open
-                        action: input_text.set_value
-                        target:
-                          entity_id: "{{ itinerary_sensor }}"
-                        data:
-                          value: none
-                      - alias: Get notification translation
-                        variables:
-                          title_id: "itinerary_canceled"
-                          message_id: "vehicle_away"
-                          <<: *get_translation
-                      - alias: Notify driver about itinerary cancellation
-                        action: "{{ notify_service }}"
-                        data:
-                          <<: *notification_data
-                          data:
-                            importance: high
-                      - stop: Not in activation zone
-                  - alias: Stop if the user is in a forbidden zone
-                    conditions:
-                      - condition: template
-                        value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
-                    sequence:
-                      - sequence: *forbidden_zone
-                      - stop: Forbidden zone
+              - alias: Return to the previous loop if the user has left the the activation zone
+                condition: template
+                value_template: *activation_zone_in_condition
+              - alias: Stop if the user is in a forbidden zone
+                if:
+                  - condition: template
+                    value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
+                then:
+                  - sequence: *forbidden_zone
+                  - stop: Forbidden zone
               - alias: Set driver itinerary text variable to "on_approach", because driver is near gate and will arrive soon
                 action: input_text.set_value
                 data:
