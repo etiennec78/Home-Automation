@@ -396,6 +396,7 @@ variables:
           Please enable the blueprint manually once the issue has been fixed
         forbidden_zone: "You entered a forbidden zone"
         invalid_travel_time_sensor: "Your travel time sensor does not exist !"
+        unsupported_tt_integration: "Your travel time integration is not supported !"
     fr:
       title:
         itinerary_update: "Itinéraire ℹ️"
@@ -418,6 +419,7 @@ variables:
           Réactivez l'automatisation manuellement une fois le problème corrigé
         forbidden_zone: "Vous êtes entré dans une zone interdite"
         invalid_travel_time_sensor: "Votre capteur de temps de trajet n'existe pas !"
+        unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
 
 triggers:
   - alias: Trigger when user connects to vehicle
@@ -1045,7 +1047,7 @@ actions:
                   - condition: template
                     value_template: "{{ states(travel_time_sensor) != 'unknown' }}"
                 then:
-                  - alias: Convert travel time to seconds and set opening time
+                  - alias: Convert travel time to seconds
                     variables:
                       travel_time_duration: |-
                         {% if (state_attr(travel_time_sensor, 'duration') != none) %}
@@ -1057,6 +1059,26 @@ actions:
                         {% else %}
                           unknown
                         {% endif %}
+                  - alias: Stop if travel time integration is not supported
+                    if:
+                      - condition: template
+                        value_template: "{{ travel_time_duration == 'unknown' }}"
+                    then:
+                      - alias: Get notification translation
+                        variables:
+                          title_id: "itinerary_canceled"
+                          message_id: "unsupported_tt_integration"
+                          <<: *get_translation
+                      - alias: Notify driver about itinerary cancellation
+                        action: "{{ notify_service }}"
+                        data:
+                          <<: *notification_data
+                          data:
+                            importance: high
+                      - stop: Travel time integration not supported
+                        error: true
+                  - alias: Set the opening time
+                    variables:
                       opening_time: |-
                         {{ states[travel_time_sensor].last_updated | as_timestamp
                             + travel_time_duration
