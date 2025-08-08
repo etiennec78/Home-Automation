@@ -954,11 +954,11 @@ actions:
         notification_icon: mdi:map-check
         importance: high
         timeout: ""
-  - alias: If travel time refresh rate set to "Continuously"
+  - alias: Update travel time sensor if travel time refresh rate set to "Continuously"
     if:
       - condition: template
         value_template:  "{{ travel_time_rate == 'Continuously' }}"
-    then:
+    then: &update_travel_time
       - alias: Stop if travel time sensor does not exist
         if:
           - condition: template
@@ -977,7 +977,7 @@ actions:
                 importance: high
           - stop: Travel time sensor does not exist
             error: true
-      - alias: Update travel time once to display ETA on dashboard
+      - alias: Update travel time
         action: homeassistant.update_entity
         target:
           entity_id: "{{ travel_time_sensor }}"
@@ -987,16 +987,12 @@ actions:
         - condition: template
           value_template: "{{ is_state(driving_sensor, 'on') }}"
       sequence:
-        - alias: If travel time expired and refresh rate set to "Continuously"
+        - alias: Update travel time if expired and refresh rate set to "Continuously"
           if:
             - condition: template
               value_template:  "{{ travel_time_rate == 'Continuously' and
                 states[travel_time_sensor].last_updated + timedelta(minutes=continuously_refresh_interval) < now() }}"
-          then:
-            - alias: Refresh travel time
-              action: homeassistant.update_entity
-              target:
-                entity_id: "{{ travel_time_sensor }}"
+          then: *update_travel_time
         - alias: Wait for new driver position or vehicle left
           wait_for_trigger:
             - trigger: event
@@ -1039,10 +1035,8 @@ actions:
               - condition: template
                 value_template: "{{ is_state(driving_sensor, 'on') }}"
             sequence:
-              - alias: Update travel time if new position
-                action: homeassistant.update_entity
-                target:
-                  entity_id: "{{ travel_time_sensor }}"
+              - alias: Update travel time
+                sequence: *update_travel_time
               - alias: Wait for travel time integration to refresh
                 condition: template
                 value_template: |-
