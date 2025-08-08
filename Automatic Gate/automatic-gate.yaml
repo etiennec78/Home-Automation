@@ -395,6 +395,7 @@ variables:
           The blueprint has been triggered {consecutive_errors} times in a row
           Please enable the blueprint manually once the issue has been fixed
         forbidden_zone: "You entered a forbidden zone"
+        invalid_travel_time_sensor: "Your travel time sensor does not exist !"
     fr:
       title:
         itinerary_update: "Itinéraire ℹ️"
@@ -416,6 +417,7 @@ variables:
           L'automation s'est déclenchée {consecutive_errors} fois d'affilée
           Réactivez l'automatisation manuellement une fois le problème corrigé
         forbidden_zone: "Vous êtes entré dans une zone interdite"
+        invalid_travel_time_sensor: "Votre capteur de temps de trajet n'existe pas !"
 
 triggers:
   - alias: Trigger when user connects to vehicle
@@ -957,6 +959,24 @@ actions:
       - condition: template
         value_template:  "{{ travel_time_rate == 'Continuously' }}"
     then:
+      - alias: Stop if travel time sensor does not exist
+        if:
+          - condition: template
+            value_template: "{{ states[travel_time_sensor] is none }}"
+        then:
+          - alias: Get notification translation
+            variables:
+              title_id: "itinerary_canceled"
+              message_id: "invalid_travel_time_sensor"
+              <<: *get_translation
+          - alias: Notify driver about itinerary cancellation
+            action: "{{ notify_service }}"
+            data:
+              <<: *notification_data
+              data:
+                importance: high
+          - stop: Travel time sensor does not exist
+            error: true
       - alias: Update travel time once to display ETA on dashboard
         action: homeassistant.update_entity
         target:
