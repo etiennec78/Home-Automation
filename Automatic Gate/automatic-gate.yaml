@@ -954,33 +954,6 @@ actions:
         notification_icon: mdi:map-check
         importance: high
         timeout: ""
-  - alias: Update travel time sensor if travel time refresh rate set to "Continuously"
-    if:
-      - condition: template
-        value_template:  "{{ travel_time_rate == 'Continuously' }}"
-    then: &update_travel_time
-      - alias: Stop if travel time sensor does not exist
-        if:
-          - condition: template
-            value_template: "{{ states[travel_time_sensor] is none }}"
-        then:
-          - alias: Get notification translation
-            variables:
-              title_id: "itinerary_canceled"
-              message_id: "invalid_travel_time_sensor"
-              <<: *get_translation
-          - alias: Notify driver about itinerary cancellation
-            action: "{{ notify_service }}"
-            data:
-              <<: *notification_data
-              data:
-                importance: high
-          - stop: Travel time sensor does not exist
-            error: true
-      - alias: Update travel time
-        action: homeassistant.update_entity
-        target:
-          entity_id: "{{ travel_time_sensor }}"
   - alias: Repeat while driver still driving
     repeat:
       while:
@@ -995,7 +968,29 @@ actions:
             - condition: template
               value_template:  "{{ travel_time_rate == 'Continuously' and
                 states[travel_time_sensor].last_updated + timedelta(minutes=continuously_refresh_interval) < now() }}"
-          then: *update_travel_time
+          then: &update_travel_time
+            - alias: Stop if travel time sensor does not exist
+              if:
+                - condition: template
+                  value_template: "{{ states[travel_time_sensor] is none }}"
+              then:
+                - alias: Get notification translation
+                  variables:
+                    title_id: "itinerary_canceled"
+                    message_id: "invalid_travel_time_sensor"
+                    <<: *get_translation
+                - alias: Notify driver about itinerary cancellation
+                  action: "{{ notify_service }}"
+                  data:
+                    <<: *notification_data
+                    data:
+                      importance: high
+                - stop: Travel time sensor does not exist
+                  error: true
+            - alias: Update travel time
+              action: homeassistant.update_entity
+              target:
+                entity_id: "{{ travel_time_sensor }}"
         - alias: Wait for new driver position or vehicle left
           wait_for_trigger:
             - trigger: event
