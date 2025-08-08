@@ -935,9 +935,6 @@ actions:
   # START ITINERARY #
   ###################
 
-  - alias: Initlalize opening time variable
-    variables:
-      opening_time: "{{ none }}"
   - alias: Set driver itinerary to "arriving"
     action: input_text.set_value
     target:
@@ -990,6 +987,9 @@ actions:
         - condition: template
           value_template: "{{ is_state(driving_sensor, 'on') }}"
       sequence:
+        - alias: Reset opening time variable
+          variables:
+            opening_time: "{{ none }}"
         - alias: Update travel time if expired and refresh rate set to "Continuously"
           if:
             - condition: template
