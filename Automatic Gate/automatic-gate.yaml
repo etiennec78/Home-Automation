@@ -41,7 +41,7 @@ blueprint:
     * Discord : etiennec78
     [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/etiennec78)
   homeassistant:
-    min_version: 2024.10.0
+    min_version: 2025.4.0
   input:
     essential_sensors:
       name: Essential sensors
@@ -987,6 +987,9 @@ actions:
         - condition: template
           value_template: "{{ is_state(driving_sensor, 'on') }}"
       sequence:
+        - alias: Reset opening time variable
+          variables:
+            opening_time: "{{ none }}"
         - alias: Update travel time if expired and refresh rate set to "Continuously"
           if:
             - condition: template
@@ -1042,24 +1045,36 @@ actions:
                 value_template: |-
                     {{ states[travel_time_sensor].last_updated > now() - timedelta(seconds=5)
                           and states[travel_time_sensor].last_changed > now() - timedelta(minutes=5) }}
-              - alias: Convert travel time to seconds and set opening time
+              - alias: If the travel time sensor is not unknown
+                if:
+                  - condition: template
+                    value_template: "{{ states(travel_time_sensor) != 'unknown' }}"
+                then:
+                  - alias: Convert travel time to seconds and set opening time
+                    variables:
+                      travel_time_duration: |-
+                        {% if (state_attr(travel_time_sensor, 'duration') != none) %}
+                          {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
+                        {% elif (state_attr(travel_time_sensor, 'unit_of_measurement') == "min") %}
+                          {{ states(travel_time_sensor) | float * 60 }}
+                        {% elif (state_attr(travel_time_sensor, 'unit_of_measurement') == "s") %}
+                          {{ states(travel_time_sensor) | float }}
+                        {% else %}
+                          unknown
+                        {% endif %}
+                      opening_time: |-
+                        {{ states[travel_time_sensor].last_updated | as_timestamp
+                            + travel_time_duration
+                            - lead_time }}
+              - alias: Set a timer for the gate opening (or max int value if travel time sensor is unknown and no previous eta was stored)
                 variables:
-                  travel_time_duration: |-
-                    {% if (state_attr(travel_time_sensor, 'duration') != none) %}
-                      {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
-                    {% elif (state_attr(travel_time_sensor, 'unit_of_measurement') == "min") %}
-                      {{ states(travel_time_sensor) | float * 60 }}
-                    {% elif (state_attr(travel_time_sensor, 'unit_of_measurement') == "s") %}
-                      {{ states(travel_time_sensor) | float }}
+                  seconds_before_opening: |-
+                    {% if opening_time is none %}
+                      2147483647
                     {% else %}
-                      unknown
+                      {{ opening_time - now() | as_timestamp }}"
                     {% endif %}
-                  opening_time: |-
-                    {{ states[travel_time_sensor].last_updated | as_timestamp
-                        + travel_time_duration
-                        - lead_time }}
-                  seconds_before_opening: "{{ opening_time - now() | as_timestamp }}"
-              - alias: If ETA in the future
+              - alias: If ETA in the future or no opening time could be set
                 if:
                   - condition: template
                     value_template: "{{ seconds_before_opening > 1 }}"
@@ -1093,6 +1108,7 @@ actions:
                                 value_template: |-
                                   {{
                                     wait.remaining == 0
+                                    and opening_time is not none
                                     and opening_time > now() | as_timestamp
                                   }}
                             sequence:
@@ -1121,12 +1137,6 @@ actions:
                             sequence:
                               - sequence: *forbidden_zone
                               - stop: Forbidden zone
-              - alias: Return to the previous loop if the wait_for_trigger was triggered by a position or vehicle sensor update
-                condition: template
-                value_template: "{{ opening_time <= as_timestamp(now()) }}"
-              - alias: Return to the previous loop if the user has left the the activation zone
-                condition: template
-                value_template: *activation_zone_in_condition
               - alias: Stop if the user is in a forbidden zone
                 if:
                   - condition: template
@@ -1134,6 +1144,15 @@ actions:
                 then:
                   - sequence: *forbidden_zone
                   - stop: Forbidden zone
+              - alias: Return to the previous loop if the travel time sensor is unknown and no previous eta was stored
+                condition: template
+                value_template: "{{ opening_time is not none }}"
+              - alias: Return to the previous loop if the wait_for_trigger was triggered by a position or vehicle sensor update
+                condition: template
+                value_template: "{{ opening_time <= as_timestamp(now()) }}"
+              - alias: Return to the previous loop if the user has left the the activation zone
+                condition: template
+                value_template: *activation_zone_in_condition
               - alias: Set driver itinerary text variable to "on_approach", because driver is near gate and will arrive soon
                 action: input_text.set_value
                 data:
