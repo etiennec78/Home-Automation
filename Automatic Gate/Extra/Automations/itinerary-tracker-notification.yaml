@@ -388,7 +388,7 @@ actions:
 
                   {# End of cooldown #}
                   {% if next_refresh > now() | as_timestamp %}
-                    {% set values = values | union([next_refresh - now() | as_timestamp]) }}
+                    {% set values = values | union([next_refresh - now() | as_timestamp]) %}
                   {% endif %}
 
                   {# Nearly arrived TTS #}
@@ -397,7 +397,7 @@ actions:
                     and not nearly_arrived_sent
                     and remaining > nearly_arrived_time*60
                   %}
-                    {% set values = values | union([remaining - nearly_arrived_time*60]) }}
+                    {% set values = values | union([remaining - nearly_arrived_time*60]) %}
                   {% endif %}
 
                   {{ min(values) }}
