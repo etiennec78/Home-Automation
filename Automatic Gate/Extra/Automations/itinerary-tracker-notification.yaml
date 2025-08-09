@@ -491,35 +491,6 @@ actions:
                         timeout: "{{ remaining | int }}"
                         chronometer: true
                         when: "{{ arrival_timestamp | int }}"
-            - alias: If new travel time needs to trigger nearly arrived TTS
-              if:
-                - condition: template
-                  value_template: |-
-                    {{ nearly_arrived_tts
-                      and not nearly_arrived_sent
-                      and remaining <= nearly_arrived_time*60
-                      and speaker_tts_devices != []
-                      and speaker_tts_service != ''
-                      and persons | select('is_state', 'home') | list != []
-                    }}
-              then:
-                - alias: Get TTS translation
-                  variables:
-                    message_id: "nearly_arrived"
-                    <<: *get_translation
-                - alias: Play TTS on each device
-                  repeat:
-                    for_each: "{{ speaker_tts_devices }}"
-                    sequence:
-                      - action: tts.speak
-                        data:
-                          cache: true
-                          media_player_entity_id: "{{ repeat.item }}"
-                          message: "{{ message }}"
-                        target: "{{ speaker_tts_service }}"
-                - alias: Mark nearly arrived TTS as already sent
-                  variables:
-                    nearly_arrived_sent: true
             - variables:
                 cooldown: !input notif_refresh_rate_ftn
                 next_refresh: "{{ now() | as_timestamp + cooldown }}"
