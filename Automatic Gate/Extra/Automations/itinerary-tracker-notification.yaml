@@ -284,6 +284,7 @@ actions:
       next_refresh: 0
       remaining: 0
       nearly_arrived_sent: false
+      last_arrival_sent: "{{ none }}"
 
   - alias: Only continue if driver not home
     condition: template
@@ -467,6 +468,12 @@ actions:
                 remaining_minutes: "{{ (remaining/60) | round }}"
                 arrival_timestamp: "{{ as_timestamp(now()) + remaining }}"
                 arrival: "{{ arrival_timestamp | timestamp_custom('%H:%M') }}"
+            - alias: Do not send notification if the time of arrival did not change
+              condition: template
+              value_template: "{{ last_arrival_sent != arrival_timestamp | round }}"
+            - alias: Save the current time of arrival
+              variable:
+                last_arrival_sent: "{{ arrival_timestamp | round }}"
             - alias: Get notification translation
               variables:
                 message_id: "itinerary_ongoing"
