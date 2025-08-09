@@ -384,16 +384,23 @@ actions:
               timeout:
                 # Wait for the end of the cooldown, or for the nearly arrived TTS, or indefinitely
                 seconds: |-
+                  {% set values = [43200] %}
+
+                  {# End of cooldown #}
                   {% if next_refresh > now() | as_timestamp %}
-                    {{ next_refresh - now() | as_timestamp }}
-                  {% elif nearly_arrived_tts
+                    {% set values = values | union([next_refresh - now() | as_timestamp]) }}
+                  {% endif %}
+
+                  {# Nearly arrived TTS #}
+                  {%
+                    if nearly_arrived_tts
                     and not nearly_arrived_sent
                     and remaining > nearly_arrived_time*60
                   %}
-                    {{ remaining - nearly_arrived_time*60 }}
-                  {% else %}
-                    43200
+                    {% set values = values | union([remaining - nearly_arrived_time*60]) }}
                   {% endif %}
+
+                  {{ min(values) }}
             - alias: Stop sending notifications to user who has dismissed them
               if:
                 condition: template
