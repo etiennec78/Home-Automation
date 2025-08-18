@@ -1089,7 +1089,7 @@ actions:
                     {% if opening_time is none %}
                       2147483647
                     {% else %}
-                      {{ opening_time - now() | as_timestamp }}"
+                      {{ opening_time - now() | as_timestamp }}
                     {% endif %}
               - alias: If ETA in the future or no opening time could be set
                 if:
