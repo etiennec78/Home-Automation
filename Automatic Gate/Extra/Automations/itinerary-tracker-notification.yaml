@@ -470,10 +470,15 @@ actions:
                 arrival: "{{ arrival_timestamp | timestamp_custom('%H:%M') }}"
             - alias: Do not send notification if the time of arrival did not change
               condition: template
-              value_template: "{{ last_arrival_sent != arrival_timestamp | round }}"
+              value_template: |-
+                {% if remaining < 120 %}
+                  {{ last_arrival_sent | int != arrival_timestamp | int }}
+                {% else %}
+                  {{ int(last_arrival_sent / 60) != int(arrival_timestamp / 60) }}
+                {% endif %}
             - alias: Save the current time of arrival
               variable:
-                last_arrival_sent: "{{ arrival_timestamp | round }}"
+                last_arrival_sent: "{{ arrival_timestamp }}"
             - alias: Get notification translation
               variables:
                 message_id: "itinerary_ongoing"
