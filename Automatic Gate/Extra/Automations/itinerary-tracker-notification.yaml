@@ -231,12 +231,14 @@ variables:
         itinerary_ongoing: "{driver_name} will arrive arround {arrival}"
         nearly_arrived: "{driver_name} will arrive in {remaining_minutes} minutes"
         driver_arrived: "{driver_name} just arrived home"
+        unsupported_tt_integration: "Your travel time integration is not supported !"
     fr:
       message:
         itinerary_started: "{driver_name} vient de monter dans sa voiture"
         itinerary_ongoing: "{driver_name} arrivera vers {arrival}"
         nearly_arrived: "{driver_name} arrivera dans {remaining_minutes} minutes"
         driver_arrived: "{driver_name} vient d'arriver à la maison"
+        unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
 
 triggers:
   - trigger: state
@@ -469,6 +471,27 @@ actions:
                     {% else %}
                       {{ none }}
                     {% endif %}
+            - alias: Stop if travel time integration is not supported
+              if:
+                - condition: template
+                  value_template: "{{ remaining is none }}"
+              then:
+                - alias: Get notification translation
+                  variables:
+                    message_id: "unsupported_tt_integration"
+                    <<: *get_translation
+                - alias: Notify driver about unsupported integration
+                  action: "{{ notify_service }}"
+                  data:
+                    notification_icon: mdi:alert-circle
+                    tag: itinerary-tracker
+                    channel: Itinerary status
+                    data:
+                      importance: high
+                - stop: Travel time integration not supported
+                  error: true
+            - alias: Convert ETA to needed types
+              variables:
                 remaining_minutes: "{{ (remaining/60) | round }}"
                 arrival_timestamp: "{{ as_timestamp(now()) + remaining }}"
                 arrival: "{{ arrival_timestamp | timestamp_custom('%H:%M') }}"
