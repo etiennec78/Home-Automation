@@ -284,7 +284,7 @@ actions:
       next_refresh: 0
       remaining: 0
       nearly_arrived_sent: false
-      last_arrival_sent: "{{ none }}"
+      last_arrival_timestamp: "{{ none }}"
 
   - alias: Only continue if driver not home
     condition: template
@@ -480,20 +480,20 @@ actions:
                   {# Refresh notification if eta differs by at least 5s #}
                   {{
                     (
-                      last_arrival_sent | int
+                      last_arrival_timestamp | int
                       - arrival_timestamp | int
                     ) | abs < 5
                   }}
                 {% else %}
                   {# Refresh notification if eta differs by at least 1min #}
                   {{
-                    (last_arrival_sent / 60) | int
+                    (last_arrival_timestamp / 60) | int
                     != (arrival_timestamp / 60) | int
                   }}
                 {% endif %}
             - alias: Save the current time of arrival
               variable:
-                last_arrival_sent: "{{ arrival_timestamp }}"
+                last_arrival_timestamp: "{{ arrival_timestamp }}"
             - alias: Get notification translation
               variables:
                 message_id: "itinerary_ongoing"
