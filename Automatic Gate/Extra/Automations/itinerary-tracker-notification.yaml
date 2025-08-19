@@ -453,6 +453,10 @@ actions:
             - alias: Only continue loop if notifications not on cooldown
               condition: template
               value_template: "{{ next_refresh <= now() | as_timestamp }}"
+            - alias: Calculate next refresh
+              variables:
+                cooldown: !input notif_refresh_rate_ftn
+                next_refresh: "{{ now() | as_timestamp + cooldown }}"
             - alias: Calculate ETA
               variables:
                 remaining: |-
@@ -471,10 +475,21 @@ actions:
             - alias: Do not send notification if the time of arrival did not change
               condition: template
               value_template: |-
-                {% if remaining < 120 %}
-                  {{ last_arrival_sent | int != arrival_timestamp | int }}
+                {# If the next notification will be sent near the arrival #}
+                {% arrival_timestamp - next_refresh < 120 %}
+                  {# Refresh notification if eta differs by at least 5s #}
+                  {{
+                    (
+                      last_arrival_sent | int
+                      - arrival_timestamp | int
+                    ) | abs < 5
+                  }}
                 {% else %}
-                  {{ int(last_arrival_sent / 60) != int(arrival_timestamp / 60) }}
+                  {# Refresh notification if eta differs by at least 1min #}
+                  {{
+                    (last_arrival_sent / 60) | int
+                    != (arrival_timestamp / 60) | int
+                  }}
                 {% endif %}
             - alias: Save the current time of arrival
               variable:
@@ -503,9 +518,6 @@ actions:
                         timeout: "{{ remaining | int }}"
                         chronometer: true
                         when: "{{ arrival_timestamp | int }}"
-            - variables:
-                cooldown: !input notif_refresh_rate_ftn
-                next_refresh: "{{ now() | as_timestamp + cooldown }}"
     else:
       - alias: Wait for user to leave vehicle
         wait_for_trigger:
