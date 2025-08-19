@@ -284,6 +284,7 @@ actions:
       next_refresh: 0
       remaining: 0
       nearly_arrived_sent: false
+      last_arrival_timestamp: "{{ none }}"
 
   - alias: Only continue if driver not home
     condition: template
@@ -452,6 +453,10 @@ actions:
             - alias: Only continue loop if notifications not on cooldown
               condition: template
               value_template: "{{ next_refresh <= now() | as_timestamp }}"
+            - alias: Calculate next refresh
+              variables:
+                cooldown: !input notif_refresh_rate_ftn
+                next_refresh: "{{ now() | as_timestamp + cooldown }}"
             - alias: Calculate ETA
               variables:
                 remaining: |-
@@ -467,6 +472,28 @@ actions:
                 remaining_minutes: "{{ (remaining/60) | round }}"
                 arrival_timestamp: "{{ as_timestamp(now()) + remaining }}"
                 arrival: "{{ arrival_timestamp | timestamp_custom('%H:%M') }}"
+            - alias: Do not send notification if the time of arrival did not change
+              condition: template
+              value_template: |-
+                {# If the next notification will be sent near the arrival #}
+                {% if arrival_timestamp - next_refresh < 120 %}
+                  {# Refresh notification if eta differs by at least 5s #}
+                  {{
+                    (
+                      last_arrival_timestamp | int
+                      - arrival_timestamp | int
+                    ) | abs < 5
+                  }}
+                {% else %}
+                  {# Refresh notification if eta differs by at least 1min #}
+                  {{
+                    (last_arrival_timestamp / 60) | int
+                    != (arrival_timestamp / 60) | int
+                  }}
+                {% endif %}
+            - alias: Save the current time of arrival
+              variables:
+                last_arrival_timestamp: "{{ arrival_timestamp }}"
             - alias: Get notification translation
               variables:
                 message_id: "itinerary_ongoing"
@@ -491,9 +518,6 @@ actions:
                         timeout: "{{ remaining | int }}"
                         chronometer: true
                         when: "{{ arrival_timestamp | int }}"
-            - variables:
-                cooldown: !input notif_refresh_rate_ftn
-                next_refresh: "{{ now() | as_timestamp + cooldown }}"
     else:
       - alias: Wait for user to leave vehicle
         wait_for_trigger:
