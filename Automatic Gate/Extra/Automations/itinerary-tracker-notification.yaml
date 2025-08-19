@@ -476,7 +476,7 @@ actions:
               condition: template
               value_template: |-
                 {# If the next notification will be sent near the arrival #}
-                {% arrival_timestamp - next_refresh < 120 %}
+                {% if arrival_timestamp - next_refresh < 120 %}
                   {# Refresh notification if eta differs by at least 5s #}
                   {{
                     (
@@ -492,7 +492,7 @@ actions:
                   }}
                 {% endif %}
             - alias: Save the current time of arrival
-              variable:
+              variables:
                 last_arrival_timestamp: "{{ arrival_timestamp }}"
             - alias: Get notification translation
               variables:
