@@ -179,23 +179,65 @@ blueprint:
               min: 300
               max: 5000
               unit_of_measurement: meters
-        automatic_closing:
-          name: 🔒 Automatic closing behavior
+        departure_opening_behavior:
+          name: 🛫🔓 Departure opening behavior
           description: |-
-            Gate automatic **closing** behavior
+            Automatic gate **opening** behavior on **departure**
 
-              - **Automatically close** your gate after you reach your destination (or leave if ble sensors are set)
-              - **Only close for safety mechanism**, in case you don't want your gate to close automatically but want to keep safety features
-              - **Never close** at all, in case your gate doesn't support closing. This will disable almost all safety features
-          default: "on"
+              - **Fully automatic** : Your gate will automatically open
+              - **Disabled** : Your gate will stay closed
+          default: "auto"
           selector:
             select:
               options:
-                - label: Automatically close
-                  value: "on"
-                - label: Only close for safety mechanism
-                  value: "only-safety"
-                - label: Never close
+                - label: Fully automatic
+                  value: "auto"
+                - label: Disabled
+                  value: "off"
+        departure_closing_behavior:
+          name: 🛫🔒 Departure closing behavior
+          description: |-
+            Automatic gate **closing** behavior on **arrival**
+
+              - **Fully automatic** : Your gate will automatically close
+              - **Disabled** : Your gate won't close automatically
+          default: "auto"
+          selector:
+            select:
+              options:
+                - label: Fully automatic
+                  value: "auto"
+                - label: Disabled
+                  value: "off"
+        arrival_opening_behavior:
+          name: 🛬🔓 Arrival opening behavior
+          description: |-
+            Gate automatic **opening** behavior on **arrival**
+
+              - **Fully automatic** : Your gate will automatically open
+              - **Disabled** : Your gate will stay closed
+          default: "auto"
+          selector:
+            select:
+              options:
+                - label: Fully automatic
+                  value: "auto"
+                - label: Disabled
+                  value: "off"
+        arrival_closing_behavior:
+          name: 🛬🔒 Arrival closing behavior
+          description: |-
+            Gate automatic **closing** behavior on **arrival**
+
+              - **Fully automatic** : Your gate will automatically close
+              - **Disabled** : Your gate won't close automatically
+          default: "auto"
+          selector:
+            select:
+              options:
+                - label: Fully automatic
+                  value: "auto"
+                - label: Disabled
                   value: "off"
         safety_delay:
           name: 🔒 Auto-close safety delay
@@ -368,7 +410,10 @@ variables:
   ble_entities: !input ble_entities
   ble_scanner_switch: !input ble_scanner_switch
   ble_transmitter_entities: !input ble_transmitter_entities
-  automatic_closing: !input automatic_closing
+  arrival_opening_behavior: !input arrival_opening_behavior
+  arrival_closing_behavior: !input arrival_closing_behavior
+  departure_opening_behavior: !input departure_opening_behavior
+  departure_closing_behavior: !input departure_closing_behavior
   only_open_near_wifi: !input only_open_near_wifi
   only_open_near_iBeacon: !input only_open_near_iBeacon
   wifi_devices: !input wifi_devices
@@ -585,79 +630,90 @@ actions:
       # OPEN GATE ON EXIT #
       #####################
 
-      - alias: If driver has iBeacon entity set for auto-closing
+      - alias: If ble is needed to open/close the gate automatically
         if:
-        - condition: template
-          value_template: "{{ (ble_entities | length) - 1 >= idx }}"
+          - condition: template
+            value_template: |-
+              {{
+                departure_opening_behavior != 'off' and only_open_near_iBeacon
+                or departure_closing_behavior != 'off'
+              }}
         then:
-          - alias: Save iBeacon states
-            variables:
-              old_ibeacon_transmitter_states: |-
-                {% if (ble_transmitter_entities | length) - 1 >= idx %}
-                  {{ {
-                    'state': states(ble_transmitter_entities[idx])
-                      if states(ble_transmitter_entities[idx]) == 'Stopped' else none,
-                    'transmit_power': (state_attr(ble_transmitter_entities[idx], 'Transmitting power') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
-                      if state_attr(ble_transmitter_entities[idx], 'Transmitting power') != 'high' else none,
-                    'advertise_mode': (state_attr(ble_transmitter_entities[idx], 'Advertise mode') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
-                      if state_attr(ble_transmitter_entities[idx], 'Advertise mode') != 'lowLatency' else none
-                  } }}
-                {% else %}
-                  {{ none }}
-                {% endif %}
-          - alias: If driver has a saved iBeacon transmitter state
+          - alias: If driver has iBeacon entity set for auto-closing
             if:
               - condition: template
-                value_template: "{{ old_ibeacon_transmitter_states != none }}"
+                value_template: "{{ (ble_entities | length) - 1 >= idx }}"
             then:
-              - alias: Change iBeacon state if needed
+              - alias: Save iBeacon states
+                variables:
+                  old_ibeacon_transmitter_states: |-
+                    {% if (ble_transmitter_entities | length) - 1 >= idx %}
+                      {{ {
+                        'state': states(ble_transmitter_entities[idx])
+                          if states(ble_transmitter_entities[idx]) == 'Stopped' else none,
+                        'transmit_power': (state_attr(ble_transmitter_entities[idx], 'Transmitting power') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
+                          if state_attr(ble_transmitter_entities[idx], 'Transmitting power') != 'high' else none,
+                        'advertise_mode': (state_attr(ble_transmitter_entities[idx], 'Advertise mode') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
+                          if state_attr(ble_transmitter_entities[idx], 'Advertise mode') != 'lowLatency' else none
+                      } }}
+                    {% else %}
+                      {{ none }}
+                    {% endif %}
+              - alias: If driver has a saved iBeacon transmitter state
                 if:
                   - condition: template
-                    value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
+                    value_template: "{{ old_ibeacon_transmitter_states != none }}"
                 then:
-                  - action: "{{ notify_service }}"
-                    data:
-                      message: command_ble_transmitter
-                      data:
-                        command: turn_on
-              - alias: Change iBeacon transmitting power if needed
+                  - alias: Change iBeacon state if needed
+                    if:
+                      - condition: template
+                        value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
+                    then:
+                      - action: "{{ notify_service }}"
+                        data:
+                          message: command_ble_transmitter
+                          data:
+                            command: turn_on
+                  - alias: Change iBeacon transmitting power if needed
+                    if:
+                      - condition: template
+                        value_template: "{{ old_ibeacon_transmitter_states['transmit_power'] != none }}"
+                    then:
+                      - action: "{{ notify_service }}"
+                        data:
+                          message: command_ble_transmitter
+                          data:
+                            command: ble_set_transmit_power
+                            ble_transmit: ble_transmit_high
+                  - alias: Change iBeacon advertise mode if needed
+                    if:
+                      - condition: template
+                        value_template: "{{ old_ibeacon_transmitter_states['advertise_mode'] != none }}"
+                    then:
+                      - action: "{{ notify_service }}"
+                        data:
+                          message: command_ble_transmitter
+                          data:
+                            command: ble_set_advertise_mode
+                            ble_advertise: ble_advertise_low_latency
+              - alias: Activate iBeacon scanner if switch set
                 if:
-                  - condition: template
-                    value_template: "{{ old_ibeacon_transmitter_states['transmit_power'] != none }}"
+                - condition: template
+                  value_template: "{{ ble_scanner_switch != '' and is_state(ble_scanner_switch, 'off') }}"
                 then:
-                  - action: "{{ notify_service }}"
-                    data:
-                      message: command_ble_transmitter
-                      data:
-                        command: ble_set_transmit_power
-                        ble_transmit: ble_transmit_high
-              - alias: Change iBeacon advertise mode if needed
-                if:
-                  - condition: template
-                    value_template: "{{ old_ibeacon_transmitter_states['advertise_mode'] != none }}"
-                then:
-                  - action: "{{ notify_service }}"
-                    data:
-                      message: command_ble_transmitter
-                      data:
-                        command: ble_set_advertise_mode
-                        ble_advertise: ble_advertise_low_latency
-          - alias: Activate iBeacon scanner if switch set
-            if:
-            - condition: template
-              value_template: "{{ ble_scanner_switch != '' and is_state(ble_scanner_switch, 'off') }}"
-            then:
-              - action: switch.turn_on
-                target:
-                  entity_id: "{{ ble_scanner_switch }}"
+                  - action: switch.turn_on
+                    target:
+                      entity_id: "{{ ble_scanner_switch }}"
       - alias: If driver chose to wait for iBeacon or WiFi before opening to ensure that vehicle is not parked outside
         if:
-        - condition: template
-          value_template: |-
-            {{
-                only_open_near_wifi and (wifi_devices | length) - 1 >= idx
-                or only_open_near_iBeacon and (ble_entities | length) - 1 >= idx
-            }}
+          - condition: template
+            value_template: |-
+              {{
+                departure_opening_behavior != 'off' and (
+                  only_open_near_wifi and (wifi_devices | length) - 1 >= idx
+                  or only_open_near_iBeacon and (ble_entities | length) - 1 >= idx
+                )
+              }}
         then:
           - alias: Wait for iBeacon or WiFi to report home
             wait_template: "{{ not is_state(ble_entities[idx], 'unknown') or is_state(wifi_devices[idx], 'home') }}"
@@ -747,29 +803,34 @@ actions:
           entity_id: "{{ itinerary_sensor }}"
         data:
           value: leaving
-      - alias: Open gates if one is closing/closed
-        sequence: &open_gates_if_closed
-          - alias: If one of the gates is closing/closed
-            if:
-              - condition: template
-                value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
-            then:
-              - alias: Open each gate because driver is leaving
-                repeat:
-                  for_each: !input gate
-                  sequence:
-                    - action: |-
-                        {% if states[repeat.item].domain == 'switch' %}
-                          switch.turn_on
-                        {% elif states[repeat.item].domain == 'cover' %}
-                          cover.open_cover
-                        {% endif %}
-                      target:
-                        entity_id: "{{ repeat.item }}"
-      - alias: If auto-closing is enabled
+      - alias: If departure opening is enabled
         if:
           - condition: template
-            value_template: "{{ automatic_closing == 'on' }}"
+            value_template: "{{ departure_opening_behavior != 'off' }}"
+        then:
+          - alias: Open gates if one is closing/closed
+            sequence: &open_gates_if_closed
+              - alias: If one of the gates is closing/closed
+                if:
+                  - condition: template
+                    value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
+                then:
+                  - alias: Open each gate because driver is leaving
+                    repeat:
+                      for_each: !input gate
+                      sequence:
+                        - action: |-
+                            {% if states[repeat.item].domain == 'switch' %}
+                              switch.turn_on
+                            {% elif states[repeat.item].domain == 'cover' %}
+                              cover.open_cover
+                            {% endif %}
+                          target:
+                            entity_id: "{{ repeat.item }}"
+      - alias: If departure closing is enabled
+        if:
+          - condition: template
+            value_template: "{{ departure_closing_behavior != 'off' }}"
         then:
           - alias: Wait for gate closed manually, iBeacon out of reach for 20s, vehicle left, driver left, for at most auto-close delay
             wait_for_trigger:
@@ -1198,12 +1259,17 @@ actions:
                   value: on_approach
                 target:
                   entity_id: "{{ itinerary_sensor }}"
-              - alias: Open gates if one is closing/closed
-                sequence: *open_gates_if_closed
-              - alias: If auto-closing is not fully disabled
+              - alias: If arrival opening is enabled
                 if:
                   - condition: template
-                    value_template: "{{ automatic_closing != 'off' }}"
+                    value_template: "{{ arrival_opening_behavior != 'off' }}"
+                then:
+                  - alias: Open gates if one is closing/closed
+                    sequence: *open_gates_if_closed
+              - alias: If arrival closing is enabled
+                if:
+                  - condition: template
+                    value_template: "{{ arrival_closing_behavior != 'off' }}"
                 then:
                   - alias: Wait for gate closed manually, or vehicle left, or driver left, or forbidden zone, for at most auto-close delay
                     wait_for_trigger:
@@ -1305,12 +1371,14 @@ actions:
                                   - condition: template
                                     value_template: "{{ wait.trigger.id == 'forbidden_zone' }}"
                                 sequence: *forbidden_zone
-                              - alias: If driver arrived, stopped vehicle, and auto-closing is enabled
+                              - alias: If driver arrived and stopped his vehicle
                                 conditions:
                                   - condition: template
-                                    value_template: "{{ wait.trigger.id == 'vehicle_left' and
-                                                        is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id]) and
-                                                        automatic_closing == 'on' }}"
+                                    value_template: |-
+                                      {{
+                                        wait.trigger.id == 'vehicle_left'
+                                        and is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id])
+                                      }}
                                 sequence:
                                   - alias: Unlock all locks
                                     repeat:
@@ -1342,20 +1410,6 @@ actions:
                                       data:
                                         <<: *notification_data
                                         importance: high
-                            # If driver arrived but doesn't have automatic gate enabled
-                            default:
-                              - alias: Unlock all locks
-                                repeat:
-                                  for_each: !input locks
-                                  sequence:
-                                    - action: lock.unlock
-                                      target:
-                                        entity_id: "{{ repeat.item }}"
-                              - alias: Remove itinerary started notification
-                                action: "{{ notify_service }}"
-                                data: *clear_notification
-                              - alias: Stop whole script as successful
-                                stop: Successful
                           - alias: Close all gates
                             repeat: *close_gates
                   - alias: Remove itinerary started notification
