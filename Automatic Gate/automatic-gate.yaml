@@ -533,10 +533,10 @@ actions:
                     }}
               - alias: Notify driver that the blueprint is being triggered frequently
                 action: "{{ notify_service }}"
-                data: &notification_data
+                data:
                   title: "{{ title }}"
                   message: "{{ message }}"
-                  data:
+                  data: &notification_data
                     car_ui: true
                     notification_icon: mdi:alert-circle
                     channel: Itinerary status
@@ -559,7 +559,10 @@ actions:
                   <<: *get_translation
               - alias: Notify driver that the blueprint is disabling itself
                 action: "{{ notify_service }}"
-                data: *notification_data
+                data:
+                  title: "{{ title }}"
+                  message: "{{ message }}"
+                  data: *notification_data
               - alias: Notify all users on the dashboard that the blueprint has disabled itself
                 action: persistent_notification.create
                 data:
@@ -673,8 +676,10 @@ actions:
               - alias: Notify driver of itinerary cancelation as he was not home
                 action: "{{ notify_service }}"
                 data:
-                  <<: *notification_data
+                  title: "{{ title }}"
+                  message: "{{ message }}"
                   data:
+                    <<: *notification_data
                     importance: high
               - alias: Mark error in driver itinerary sensor
                 action: input_text.set_value
@@ -816,8 +821,10 @@ actions:
                   - alias: Notify driver of itinerary cancelation as he didn't leave in time
                     action: "{{ notify_service }}"
                     data:
-                      <<: *notification_data
+                      title: "{{ title }}"
+                      message: "{{ message }}"
                       data:
+                        <<: *notification_data
                         importance: high
               - alias: Close all gates
                 repeat: &close_gates
@@ -859,8 +866,10 @@ actions:
               - alias: Notify driver that gate will wait for next person
                 action: "{{ notify_service }}"
                 data:
-                  <<: *notification_data
+                  title: "{{ title }}"
+                  message: "{{ message }}"
                   data:
+                    <<: *notification_data
                     notification_icon: mdi:sleep
                     importance: high
                     timeout: ""
@@ -951,8 +960,10 @@ actions:
   - alias: Notify driver of itinerary start
     action: "{{ notify_service }}"
     data:
-      <<: *notification_data
+      title: "{{ title }}"
+      message: "{{ message }}"
       data:
+        <<: *notification_data
         notification_icon: mdi:map-check
         importance: high
         timeout: ""
@@ -984,8 +995,10 @@ actions:
                 - alias: Notify driver about itinerary cancellation
                   action: "{{ notify_service }}"
                   data:
-                    <<: *notification_data
+                    title: "{{ title }}"
+                    message: "{{ message }}"
                     data:
+                      <<: *notification_data
                       importance: high
                 - stop: Travel time sensor does not exist
                   error: true
@@ -1024,8 +1037,10 @@ actions:
                 - alias: Notify driver about itinerary cancellation
                   action: "{{ notify_service }}"
                   data:
-                    <<: *notification_data
+                    title: "{{ title }}"
+                    message: "{{ message }}"
                     data:
+                      <<: *notification_data
                       importance: high
             - stop: Forbidden zone
         - alias: Repeat while driver in activation zone and still driving
@@ -1075,8 +1090,10 @@ actions:
                       - alias: Notify driver about itinerary cancellation
                         action: "{{ notify_service }}"
                         data:
-                          <<: *notification_data
+                          title: "{{ title }}"
+                          message: "{{ message }}"
                           data:
+                            <<: *notification_data
                             importance: high
                       - stop: Travel time integration not supported
                         error: true
@@ -1146,8 +1163,10 @@ actions:
                               - alias: Notify driver about itinerary cancellation
                                 action: "{{ notify_service }}"
                                 data:
-                                  <<: *notification_data
+                                  title: "{{ title }}"
+                                  message: "{{ message }}"
                                   data:
+                                    <<: *notification_data
                                     importance: high
                               - stop: Timed out
                           - alias: Stop if the user is in a forbidden zone
@@ -1232,8 +1251,10 @@ actions:
                           - alias: Notify driver that gate will wait for next person
                             action: "{{ notify_service }}"
                             data:
-                              <<: *notification_data
+                              title: "{{ title }}"
+                              message: "{{ message }}"
                               data:
+                                <<: *notification_data
                                 notification_icon: mdi:sleep
                                 importance: high
                                 timeout: ""
@@ -1256,8 +1277,10 @@ actions:
                                   - alias: Notify driver of itinerary cancelation as he took too long
                                     action: "{{ notify_service }}"
                                     data:
-                                      <<: *notification_data
+                                      title: "{{ title }}"
+                                      message: "{{ message }}"
                                       data:
+                                        <<: *notification_data
                                         importance: high
                               - alias: If driver exited gate activation zone
                                 conditions:
@@ -1272,8 +1295,10 @@ actions:
                                   - alias: Notify driver of itinerary cancelation as he exited the zone
                                     action: "{{ notify_service }}"
                                     data:
-                                      <<: *notification_data
+                                      title: "{{ title }}"
+                                      message: "{{ message }}"
                                       data:
+                                        <<: *notification_data
                                         importance: high
                               - alias: If driver entered forbidden zone
                                 conditions:
@@ -1312,8 +1337,10 @@ actions:
                                   - alias: Notify driver of itinerary cancelation as he left vehicle
                                     action: "{{ notify_service }}"
                                     data:
-                                      <<: *notification_data
+                                      title: "{{ title }}"
+                                      message: "{{ message }}"
                                       data:
+                                        <<: *notification_data
                                         importance: high
                             # If driver arrived but doesn't have automatic gate enabled
                             default:
@@ -1372,8 +1399,10 @@ actions:
       - alias: Notify driver that travel time integration did not respond
         action: "{{ notify_service }}"
         data:
-          <<: *notification_data
+          title: "{{ title }}"
+          message: "{{ message }}"
           data:
+            <<: *notification_data
             importance: high
     else:
       - alias: Get notification translation
@@ -1384,8 +1413,10 @@ actions:
       - alias: Send itinerary canceled notification to driver as he left vehicle
         action: "{{ notify_service }}"
         data:
-          <<: *notification_data
+          title: "{{ title }}"
+          message: "{{ message }}"
           data:
+            <<: *notification_data
             importance: high
 # Run in parralel to let the automation start with multiple users driving simultaneously
 mode: parallel
