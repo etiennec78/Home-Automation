@@ -1329,87 +1329,55 @@ actions:
                               - trigger: template
                                 value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
                         else:
-                          - choose:
-                              - alias: If timeout reached
-                                conditions:
-                                  - condition: template
-                                    value_template: "{{ wait.remaining == 0 }}"
-                                sequence:
-                                  - alias: Get notification translation
-                                    variables:
-                                      title_id: "itinerary_canceled"
-                                      message_id: "did_not_arrive"
-                                      <<: *get_translation
-                                  - alias: Notify driver of itinerary cancelation as he took too long
-                                    action: "{{ notify_service }}"
-                                    data:
-                                      title: "{{ title }}"
-                                      message: "{{ message }}"
-                                      data:
-                                        <<: *notification_data
-                                        importance: high
-                              - alias: If driver exited gate activation zone
-                                conditions:
-                                  - condition: template
-                                    value_template: "{{ wait.trigger.id == 'activation_zone_left' }}"
-                                sequence:
-                                  - alias: Get notification translation
-                                    variables:
-                                      title_id: "itinerary_canceled"
-                                      message_id: "vehicle_away"
-                                      <<: *get_translation
-                                  - alias: Notify driver of itinerary cancelation as he exited the zone
-                                    action: "{{ notify_service }}"
-                                    data:
-                                      title: "{{ title }}"
-                                      message: "{{ message }}"
-                                      data:
-                                        <<: *notification_data
-                                        importance: high
-                              - alias: If driver entered forbidden zone
-                                conditions:
-                                  - condition: template
-                                    value_template: "{{ wait.trigger.id == 'forbidden_zone' }}"
-                                sequence: *forbidden_zone
-                              - alias: If driver arrived and stopped his vehicle
-                                conditions:
-                                  - condition: template
-                                    value_template: |-
-                                      {{
-                                        wait.trigger.id == 'vehicle_left'
-                                        and is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id])
-                                      }}
-                                sequence:
-                                  - alias: Unlock all locks
-                                    repeat:
-                                      for_each: !input locks
-                                      sequence:
-                                        - action: lock.unlock
-                                          target:
-                                            entity_id: "{{ repeat.item }}"
-                                  - alias: Remove itinerary started notification
-                                    action: "{{ notify_service }}"
-                                    data: *clear_notification
-                                  - delay:
-                                      minutes: !input auto_close_arrival_delay
-                              - alias: If driver left vehicle
-                                conditions:
-                                  - condition: template
-                                    value_template: "{{ wait.trigger.id == 'vehicle_left' }}"
-                                sequence:
-                                  - alias: Get notification translation
-                                    variables:
-                                      title_id: "itinerary_canceled"
-                                      message_id: "vehicle_left"
-                                      <<: *get_translation
-                                  - alias: Notify driver of itinerary cancelation as he left vehicle
-                                    action: "{{ notify_service }}"
-                                    data:
-                                      title: "{{ title }}"
-                                      message: "{{ message }}"
-                                      data:
-                                        <<: *notification_data
-                                        importance: high
+                          - alias: Get notification translation
+                            variables:
+                              message_id: |-
+                                {% if wait.remaining == 0 %}
+                                  did_not_arrive
+                                {% elif wait.trigger.id == 'activation_zone_left' %}
+                                  vehicle_away
+                                {% elif wait.trigger.id == 'forbidden_zone' %}
+                                  forbidden_zone
+                                {%
+                                  elif wait.trigger.id == 'vehicle_left'
+                                  and not(
+                                    is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id])
+                                  )
+                                %}
+                                  vehicle_left
+                                {% else %}
+                                  {{ none }}
+                                {% endif %}
+                          - alias: If the itinerary needs to be canceled
+                            if:
+                              - condition: template
+                                value_template: "{{ message_id is not none }}"
+                            then:
+                              - alias: Get notification translation
+                                variables:
+                                  title_id: "itinerary_canceled"
+                                  <<: *get_translation
+                              - alias: Notify driver of itinerary cancelation
+                                action: "{{ notify_service }}"
+                                data:
+                                  title: "{{ title }}"
+                                  message: "{{ message }}"
+                                  data:
+                                    <<: *notification_data
+                                    importance: high
+                            else:
+                              - alias: Unlock all locks
+                                repeat:
+                                  for_each: !input locks
+                                  sequence:
+                                    - action: lock.unlock
+                                      target:
+                                        entity_id: "{{ repeat.item }}"
+                              - alias: Remove itinerary started notification
+                                action: "{{ notify_service }}"
+                                data: *clear_notification
+                              - delay:
+                                  minutes: !input auto_close_arrival_delay
                           - alias: Close all gates
                             repeat: *close_gates
                   - alias: Remove itinerary started notification
