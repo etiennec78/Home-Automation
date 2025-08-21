@@ -878,7 +878,7 @@ actions:
                     variables:
                       message_id: "did_not_leave"
                   - alias: Create error
-                    sequence: &create_error
+                    sequence: *create_error
                   - alias: Notify driver of itinerary cancelation as he didn't leave in time
                     action: "{{ notify_service }}"
                     data:
@@ -1018,7 +1018,7 @@ actions:
             variables:
               message_id: "too_close"
           - alias: Create error
-            sequence: &create_error
+            sequence: *create_error
           - stop: Started too close to home
 
   ###################
@@ -1070,7 +1070,7 @@ actions:
                   variables:
                     message_id: "invalid_travel_time_sensor"
                 - alias: Create error
-                  sequence: &create_error
+                  sequence: *create_error
                 - stop: Travel time sensor does not exist
                   error: true
             - alias: Avoid spamming travel time API
@@ -1098,7 +1098,7 @@ actions:
                   variables:
                     message_id: "forbidden_zone"
                 - alias: Create error
-                  sequence: &create_error
+                  sequence: *create_error
                 - stop: Forbidden zone
         - alias: Repeat while driver in activation zone and still driving
           # This allows to update to a precise ETA even if a traffic jam appears near your gate
@@ -1143,7 +1143,7 @@ actions:
                         variables:
                           message_id: "unsupported_tt_integration"
                       - alias: Create error
-                        sequence: &create_error
+                        sequence: *create_error
                       - stop: Travel time integration not supported
                         error: true
                   - alias: Set the opening time
@@ -1202,7 +1202,7 @@ actions:
                                 variables:
                                   message_id: "timed_out"
                               - alias: Create error
-                                sequence: &create_error
+                                sequence: *create_error
                               - stop: Timed out
                           - alias: Stop if the user is in a forbidden zone
                             conditions:
@@ -1330,7 +1330,7 @@ actions:
                                 value_template: "{{ message_id is not none }}"
                             then:
                               - alias: Create error
-                                sequence: &create_error
+                                sequence: *create_error
                             else:
                               - alias: Stop itinerary
                                 action: input_text.set_value
@@ -1383,7 +1383,7 @@ actions:
         variables:
           message_id: "travel_time_did_not_respond"
       - alias: Create error
-        sequence: &create_error
+        sequence: *create_error
       - stop: Travel time did not respond
         error: true
     else:
@@ -1391,7 +1391,7 @@ actions:
         variables:
           message_id: "vehicle_left"
       - alias: Create error
-        sequence: &create_error
+        sequence: *create_error
 # Run in parralel to let the automation start with multiple users driving simultaneously
 mode: parallel
 max: 10
