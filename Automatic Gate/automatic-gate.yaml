@@ -1368,6 +1368,8 @@ actions:
           message_id: "travel_time_did_not_respond"
       - alias: Create error
         sequence: &create_error
+      - stop: Travel time did not respond
+        error: true
     else:
       - alias: Set error id
         variables:
