@@ -406,7 +406,12 @@ variables:
   activation_zone: !input activation_zone
   language: !input language
   custom_translations: !input custom_translations
-  custom_translations_json: "{{ custom_translations | from_json }}"
+  default_custom_translations: |-
+    {
+      "title": {},
+      "message": {}
+    }
+  custom_translations_json: "{{ custom_translations | from_json(default_custom_translations) }}"
   ble_entities: !input ble_entities
   ble_scanner_switch: !input ble_scanner_switch
   ble_transmitter_entities: !input ble_transmitter_entities
