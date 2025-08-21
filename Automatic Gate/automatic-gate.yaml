@@ -406,7 +406,12 @@ variables:
   activation_zone: !input activation_zone
   language: !input language
   custom_translations: !input custom_translations
-  custom_translations_json: "{{ custom_translations | from_json }}"
+  default_custom_translations: |-
+    {
+      "title": {},
+      "message": {}
+    }
+  custom_translations_json: "{{ custom_translations | from_json(none) }}"
   ble_entities: !input ble_entities
   ble_scanner_switch: !input ble_scanner_switch
   ble_transmitter_entities: !input ble_transmitter_entities
@@ -425,6 +430,7 @@ variables:
         itinerary_canceled: "Itinerary canceled ❌"
         awaiting: "Gate awaiting {awaited_persons} 💤"
         disabled: "Automatic Gate disabled 🚫"
+        invalid_config: "Invalid configuration 🛠️"
       message:
         itinerary_started: "Your itinerary has been started"
         awaiting: "The gate will close once all users have entered/exited"
@@ -443,12 +449,14 @@ variables:
         invalid_travel_time_sensor: "Your travel time sensor does not exist !"
         unsupported_tt_integration: "Your travel time integration is not supported !"
         too_close: "You have started driving too close to the gate zone"
+        invalid_translations: "Your custom translations are not valid !"
     fr:
       title:
         itinerary_update: "Itinéraire ℹ️"
         itinerary_canceled: "Itinéraire annulé ❌"
         awaiting: "Portail en attente de {awaited_persons} 💤"
         disabled: "Automatic Gate désactivé 🚫"
+        invalid_config: "Configuration invalide 🛠️"
       message:
         itinerary_started: "L'itinéraire a démarré"
         awaiting: "Le portail se refermera une fois tous les conducteurs entrés/sortis"
@@ -467,6 +475,7 @@ variables:
         invalid_travel_time_sensor: "Votre capteur de temps de trajet n'existe pas !"
         unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
         too_close: "Vous avez démarré trop près de la zone du portail"
+        invalid_translations: "Vos traductions personnalisées ne sont pas valides !"
 
 triggers:
   - alias: Trigger when user connects to vehicle
@@ -478,6 +487,76 @@ triggers:
 conditions: []
 
 actions:
+  - if:
+      - condition: template
+        value_template: "{{ custom_translations_json is none }}"
+    then:
+      - variables:
+          custom_translations_json: "{{ default_custom_translations }}"
+      - alias: Get notification translation
+        variables: &get_translation
+          title_id: "invalid_config"
+          message_id: "invalid_translations"
+          title_string: |-
+            {# Custom translation #}
+            {%
+              if 'title' in custom_translations_json
+              and title_id in custom_translations_json['title']
+            %}
+              {{ custom_translations_json['title'][title_id] }}
+
+            {# Selected language #}
+            {% elif title_id in strings[language]['title'] %}
+              {{ strings[language]['title'][title_id] }}
+
+            {# Fallback to english #}
+            {% else %}
+              {{ strings['en']['title'][title_id] }}
+            {% endif %}
+          title: |-
+            {{
+              title_string.format(
+                awaited_persons=awaited_persons
+              )
+            }}
+          message_string: |-
+            {# Custom translation #}
+            {%
+              if 'message' in custom_translations_json
+              and message_id in custom_translations_json['message']
+            %}
+              {{ custom_translations_json['message'][message_id] }}
+
+            {# Selected language #}
+            {% elif message_id in strings[language]['message'] %}
+              {{ strings[language]['message'][message_id] }}
+
+            {# Fallback to english #}
+            {% else %}
+              {{ strings['en']['message'][message_id] }}
+            {% endif %}
+          message: |-
+            {{
+              message_string.format(
+                safety_delay=safety_delay,
+                timeout_delay=timeout_delay,
+                consecutive_errors=consecutive_errors
+              )
+            }}
+      - alias: Notify driver that his config is invalid
+        action: "{{ notify_service }}"
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
+          data:
+            notification_icon: mdi:hammer-wrench
+            channel: Automatic Gate config
+            tag: invalid-config
+      - alias: Notify all users on the dashboard that the config is invalid
+        action: persistent_notification.create
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
   - alias: Store list index of driver, extract driver sensors
     variables:
       idx: "{{ driving_sensors.index(trigger.entity_id) }}"
@@ -529,55 +608,10 @@ actions:
                 value_template: "{{ consecutive_errors == 1 }}"
             sequence:
               - alias: Get notification translation
-                variables: &get_translation
+                variables:
                   title_id: "itinerary_canceled"
                   message_id: "triggered_frequently"
-                  title_string: |-
-                    {# Custom translation #}
-                    {%
-                      if 'title' in custom_translations_json
-                      and title_id in custom_translations_json['title']
-                    %}
-                      {{ custom_translations_json['title'][title_id] }}
-
-                    {# Selected language #}
-                    {% elif title_id in strings[language]['title'] %}
-                      {{ strings[language]['title'][title_id] }}
-
-                    {# Fallback to english #}
-                    {% else %}
-                      {{ strings['en']['title'][title_id] }}
-                    {% endif %}
-                  title: |-
-                    {{
-                      title_string.format(
-                        awaited_persons=awaited_persons
-                      )
-                    }}
-                  message_string: |-
-                    {# Custom translation #}
-                    {%
-                      if 'message' in custom_translations_json
-                      and message_id in custom_translations_json['message']
-                    %}
-                      {{ custom_translations_json['message'][message_id] }}
-
-                    {# Selected language #}
-                    {% elif message_id in strings[language]['message'] %}
-                      {{ strings[language]['message'][message_id] }}
-
-                    {# Fallback to english #}
-                    {% else %}
-                      {{ strings['en']['message'][message_id] }}
-                    {% endif %}
-                  message: |-
-                    {{
-                      message_string.format(
-                        safety_delay=safety_delay,
-                        timeout_delay=timeout_delay,
-                        consecutive_errors=consecutive_errors
-                      )
-                    }}
+                  <<: *get_translation
               - alias: Notify driver that the blueprint is being triggered frequently
                 action: "{{ notify_service }}"
                 data:
