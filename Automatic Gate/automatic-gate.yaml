@@ -896,6 +896,12 @@ actions:
                   {{ gate_distance > activation_zone }}
             timeout:
               minutes: !input safety_delay
+          - alias: Remove current itinerary
+            action: input_text.set_value
+            target:
+              entity_id: "{{ itinerary_sensor }}"
+            data:
+              value: none
           - alias: Restore iBeacon states
             sequence: *restore_ibeacons
           - alias: If no one else leaving or approaching
@@ -921,13 +927,6 @@ actions:
                       data:
                         <<: *notification_data
                         importance: high
-                else:
-                  - alias: Remove current itinerary
-                    action: input_text.set_value
-                    target:
-                      entity_id: "{{ itinerary_sensor }}"
-                    data:
-                      value: none
               - alias: Close all gates
                 repeat: &close_gates
                   for_each: !input gate
@@ -948,12 +947,6 @@ actions:
                       target:
                         entity_id: "{{ repeat.item }}"
             else:
-              - alias: Remove current itinerary
-                action: input_text.set_value
-                target:
-                  entity_id: "{{ itinerary_sensor }}"
-                data:
-                  value: none
               - alias: Get names of awaited persons
                 variables: &get_awaited
                   awaited_persons: |-
@@ -1291,17 +1284,17 @@ actions:
                         value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
                     timeout:
                       minutes: !input safety_delay
+                  - alias: Remove current itinerary
+                    action: input_text.set_value
+                    target:
+                      entity_id: "{{ itinerary_sensor }}"
+                    data:
+                      value: none
                   - alias: If gate closed manually
                     if:
                       - condition: template
                         value_template: "{{ wait.trigger.id == 'manual' }}"
                     then:
-                      - alias: Stop itinerary
-                        action: input_text.set_value
-                        target:
-                          entity_id: "{{ itinerary_sensor }}"
-                        data:
-                          value: none
                       - alias: Remove itinerary started notification
                         action: "{{ notify_service }}"
                         data: *clear_notification
@@ -1311,12 +1304,6 @@ actions:
                           - condition: template
                             value_template: "{{ itinerary_sensors | select('is_state', ['on_approach', 'leaving']) | list != [] }}"
                         then:
-                          - alias: Stop itinerary
-                            action: input_text.set_value
-                            target:
-                              entity_id: "{{ itinerary_sensor }}"
-                            data:
-                              value: none
                           - alias: Get names of awaited persons
                             variables: *get_awaited
                           - alias: Get notification translation
@@ -1366,12 +1353,6 @@ actions:
                               - alias: Create error
                                 sequence: *create_error
                             else:
-                              - alias: Stop itinerary
-                                action: input_text.set_value
-                                target:
-                                  entity_id: "{{ itinerary_sensor }}"
-                                data:
-                                  value: none
                               - alias: Unlock all locks
                                 repeat:
                                   for_each: !input locks
@@ -1407,6 +1388,12 @@ actions:
                     data: *clear_notification
                   - alias: Stop whole script as it ran successfully
                     stop: Successful
+  - alias: Remove current itinerary
+    action: input_text.set_value
+    data:
+      value: none
+    target:
+      entity_id: "{{ itinerary_sensor }}"
   - alias: If vehicle left in gate zone and travel time was not updated
     if:
       condition: template
