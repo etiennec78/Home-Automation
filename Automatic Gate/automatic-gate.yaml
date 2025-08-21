@@ -1092,7 +1092,7 @@ actions:
                     message_id: "forbidden_zone"
                 - alias: Create error
                   sequence: &create_error
-            - stop: Forbidden zone
+                - stop: Forbidden zone
         - alias: Repeat while driver in activation zone and still driving
           # This allows to update to a precise ETA even if a traffic jam appears near your gate
           # It will return to the previous loop if the driver has entered the radius but passed by
@@ -1201,16 +1201,12 @@ actions:
                             conditions:
                               - condition: template
                                 value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
-                            sequence:
-                              - sequence: *forbidden_zone
-                              - stop: Forbidden zone
+                            sequence: *forbidden_zone
               - alias: Stop if the user is in a forbidden zone
                 if:
                   - condition: template
                     value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
-                then:
-                  - sequence: *forbidden_zone
-                  - stop: Forbidden zone
+                then: *forbidden_zone
               - alias: Return to the previous loop if the travel time sensor is unknown and no previous eta was stored
                 condition: template
                 value_template: "{{ opening_time is not none }}"
