@@ -442,6 +442,7 @@ variables:
         forbidden_zone: "You entered a forbidden zone"
         invalid_travel_time_sensor: "Your travel time sensor does not exist !"
         unsupported_tt_integration: "Your travel time integration is not supported !"
+        too_close: "You have started driving too close to the gate zone"
     fr:
       title:
         itinerary_update: "Itinéraire ℹ️"
@@ -465,6 +466,7 @@ variables:
         forbidden_zone: "Vous êtes entré dans une zone interdite"
         invalid_travel_time_sensor: "Votre capteur de temps de trajet n'existe pas !"
         unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
+        too_close: "Vous avez démarré trop près de la zone du portail"
 
 triggers:
   - alias: Trigger when user connects to vehicle
@@ -724,25 +726,29 @@ actions:
             - condition: template
               value_template: "{{ wait.remaining == 0 }}"
             then:
-              - alias: Get notification translation
+              - alias: Set error id
                 variables:
-                  title_id: "itinerary_canceled"
                   message_id: "not_home"
-                  <<: *get_translation
-              - alias: Notify driver of itinerary cancelation as he was not home
-                action: "{{ notify_service }}"
-                data:
-                  title: "{{ title }}"
-                  message: "{{ message }}"
-                  data:
-                    <<: *notification_data
-                    importance: high
-              - alias: Mark error in driver itinerary sensor
-                action: input_text.set_value
-                target:
-                  entity_id: "{{ itinerary_sensor }}"
-                data:
-                  value: "error: not_home"
+              - alias: Create error
+                sequence: &create_error
+                  - alias: Get notification translation
+                    variables:
+                      title_id: "itinerary_canceled"
+                      <<: *get_translation
+                  - alias: Notify driver of itinerary cancelation
+                    action: "{{ notify_service }}"
+                    data:
+                      title: "{{ title }}"
+                      message: "{{ message }}"
+                      data:
+                        <<: *notification_data
+                        importance: high
+                  - alias: Mark error in driver itinerary sensor
+                    action: input_text.set_value
+                    target:
+                      entity_id: "{{ itinerary_sensor }}"
+                    data:
+                      value: "error: {{ message_id }}"
               - alias: Restore iBeacon states
                 sequence: &restore_ibeacons
                   - alias: If driver has an iBeacon entity set for auto-closing
@@ -856,12 +862,6 @@ actions:
                   {{ gate_distance > activation_zone }}
             timeout:
               minutes: !input safety_delay
-          - alias: Remove current itinerary as driver left or took too long
-            action: input_text.set_value
-            target:
-              entity_id: "{{ itinerary_sensor }}"
-            data:
-              value: none
           - alias: Restore iBeacon states
             sequence: *restore_ibeacons
           - alias: If no one else leaving or approaching
@@ -874,11 +874,11 @@ actions:
                   - condition: template
                     value_template: "{{ wait.remaining == 0 }}"
                 then:
-                  - alias: Get notification translation
+                  - alias: Set error id
                     variables:
-                      title_id: "itinerary_canceled"
                       message_id: "did_not_leave"
-                      <<: *get_translation
+                  - alias: Create error
+                    sequence: *create_error
                   - alias: Notify driver of itinerary cancelation as he didn't leave in time
                     action: "{{ notify_service }}"
                     data:
@@ -887,6 +887,13 @@ actions:
                       data:
                         <<: *notification_data
                         importance: high
+                else:
+                  - alias: Remove current itinerary
+                    action: input_text.set_value
+                    target:
+                      entity_id: "{{ itinerary_sensor }}"
+                    data:
+                      value: none
               - alias: Close all gates
                 repeat: &close_gates
                   for_each: !input gate
@@ -907,6 +914,12 @@ actions:
                       target:
                         entity_id: "{{ repeat.item }}"
             else:
+              - alias: Remove current itinerary
+                action: input_text.set_value
+                target:
+                  entity_id: "{{ itinerary_sensor }}"
+                data:
+                  value: none
               - alias: Get names of awaited persons
                 variables: &get_awaited
                   awaited_persons: |-
@@ -1001,6 +1014,11 @@ actions:
           - condition: template
             value_template: *activation_zone_in_condition
         then:
+          - alias: Set error id
+            variables:
+              message_id: "too_close"
+          - alias: Create error
+            sequence: *create_error
           - stop: Started too close to home
 
   ###################
@@ -1048,19 +1066,11 @@ actions:
                 - condition: template
                   value_template: "{{ states[travel_time_sensor] is none }}"
               then:
-                - alias: Get notification translation
+                - alias: Set error id
                   variables:
-                    title_id: "itinerary_canceled"
                     message_id: "invalid_travel_time_sensor"
-                    <<: *get_translation
-                - alias: Notify driver about itinerary cancellation
-                  action: "{{ notify_service }}"
-                  data:
-                    title: "{{ title }}"
-                    message: "{{ message }}"
-                    data:
-                      <<: *notification_data
-                      importance: high
+                - alias: Create error
+                  sequence: *create_error
                 - stop: Travel time sensor does not exist
                   error: true
             - alias: Avoid spamming travel time API
@@ -1084,26 +1094,12 @@ actions:
               value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
           then:
             - sequence: &forbidden_zone
-                - alias: Mark error in driver itinerary sensor
-                  action: input_text.set_value
-                  target:
-                    entity_id: "{{ itinerary_sensor }}"
-                  data:
-                    value: "error: forbidden_zone"
-                - alias: Get notification translation
+                - alias: Set error id
                   variables:
-                    title_id: "itinerary_canceled"
                     message_id: "forbidden_zone"
-                    <<: *get_translation
-                - alias: Notify driver about itinerary cancellation
-                  action: "{{ notify_service }}"
-                  data:
-                    title: "{{ title }}"
-                    message: "{{ message }}"
-                    data:
-                      <<: *notification_data
-                      importance: high
-            - stop: Forbidden zone
+                - alias: Create error
+                  sequence: *create_error
+                - stop: Forbidden zone
         - alias: Repeat while driver in activation zone and still driving
           # This allows to update to a precise ETA even if a traffic jam appears near your gate
           # It will return to the previous loop if the driver has entered the radius but passed by
@@ -1143,19 +1139,11 @@ actions:
                       - condition: template
                         value_template: "{{ travel_time_duration == 'unknown' }}"
                     then:
-                      - alias: Get notification translation
+                      - alias: Set error id
                         variables:
-                          title_id: "itinerary_canceled"
                           message_id: "unsupported_tt_integration"
-                          <<: *get_translation
-                      - alias: Notify driver about itinerary cancellation
-                        action: "{{ notify_service }}"
-                        data:
-                          title: "{{ title }}"
-                          message: "{{ message }}"
-                          data:
-                            <<: *notification_data
-                            importance: high
+                      - alias: Create error
+                        sequence: *create_error
                       - stop: Travel time integration not supported
                         error: true
                   - alias: Set the opening time
@@ -1210,40 +1198,22 @@ actions:
                                     and opening_time > now() | as_timestamp
                                   }}
                             sequence:
-                              - alias: Remove current itinerary as driver timed out
-                                action: input_text.set_value
-                                target:
-                                  entity_id: "{{ itinerary_sensor }}"
-                                data:
-                                  value: none
-                              - alias: Get notification translation
+                              - alias: Set error id
                                 variables:
-                                  title_id: "itinerary_canceled"
                                   message_id: "timed_out"
-                                  <<: *get_translation
-                              - alias: Notify driver about itinerary cancellation
-                                action: "{{ notify_service }}"
-                                data:
-                                  title: "{{ title }}"
-                                  message: "{{ message }}"
-                                  data:
-                                    <<: *notification_data
-                                    importance: high
+                              - alias: Create error
+                                sequence: *create_error
                               - stop: Timed out
                           - alias: Stop if the user is in a forbidden zone
                             conditions:
                               - condition: template
                                 value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
-                            sequence:
-                              - sequence: *forbidden_zone
-                              - stop: Forbidden zone
+                            sequence: *forbidden_zone
               - alias: Stop if the user is in a forbidden zone
                 if:
                   - condition: template
                     value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
-                then:
-                  - sequence: *forbidden_zone
-                  - stop: Forbidden zone
+                then: *forbidden_zone
               - alias: Return to the previous loop if the travel time sensor is unknown and no previous eta was stored
                 condition: template
                 value_template: "{{ opening_time is not none }}"
@@ -1287,17 +1257,17 @@ actions:
                         value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
                     timeout:
                       minutes: !input safety_delay
-                  - alias: Stop itinerary as driver arrived or took too long
-                    action: input_text.set_value
-                    target:
-                      entity_id: "{{ itinerary_sensor }}"
-                    data:
-                      value: none
                   - alias: If gate closed manually
                     if:
                       - condition: template
                         value_template: "{{ wait.trigger.id == 'manual' }}"
                     then:
+                      - alias: Stop itinerary
+                        action: input_text.set_value
+                        target:
+                          entity_id: "{{ itinerary_sensor }}"
+                        data:
+                          value: none
                       - alias: Remove itinerary started notification
                         action: "{{ notify_service }}"
                         data: *clear_notification
@@ -1307,6 +1277,12 @@ actions:
                           - condition: template
                             value_template: "{{ itinerary_sensors | select('is_state', ['on_approach', 'leaving']) | list != [] }}"
                         then:
+                          - alias: Stop itinerary
+                            action: input_text.set_value
+                            target:
+                              entity_id: "{{ itinerary_sensor }}"
+                            data:
+                              value: none
                           - alias: Get names of awaited persons
                             variables: *get_awaited
                           - alias: Get notification translation
@@ -1329,87 +1305,51 @@ actions:
                               - trigger: template
                                 value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
                         else:
-                          - choose:
-                              - alias: If timeout reached
-                                conditions:
-                                  - condition: template
-                                    value_template: "{{ wait.remaining == 0 }}"
-                                sequence:
-                                  - alias: Get notification translation
-                                    variables:
-                                      title_id: "itinerary_canceled"
-                                      message_id: "did_not_arrive"
-                                      <<: *get_translation
-                                  - alias: Notify driver of itinerary cancelation as he took too long
-                                    action: "{{ notify_service }}"
-                                    data:
-                                      title: "{{ title }}"
-                                      message: "{{ message }}"
-                                      data:
-                                        <<: *notification_data
-                                        importance: high
-                              - alias: If driver exited gate activation zone
-                                conditions:
-                                  - condition: template
-                                    value_template: "{{ wait.trigger.id == 'activation_zone_left' }}"
-                                sequence:
-                                  - alias: Get notification translation
-                                    variables:
-                                      title_id: "itinerary_canceled"
-                                      message_id: "vehicle_away"
-                                      <<: *get_translation
-                                  - alias: Notify driver of itinerary cancelation as he exited the zone
-                                    action: "{{ notify_service }}"
-                                    data:
-                                      title: "{{ title }}"
-                                      message: "{{ message }}"
-                                      data:
-                                        <<: *notification_data
-                                        importance: high
-                              - alias: If driver entered forbidden zone
-                                conditions:
-                                  - condition: template
-                                    value_template: "{{ wait.trigger.id == 'forbidden_zone' }}"
-                                sequence: *forbidden_zone
-                              - alias: If driver arrived and stopped his vehicle
-                                conditions:
-                                  - condition: template
-                                    value_template: |-
-                                      {{
-                                        wait.trigger.id == 'vehicle_left'
-                                        and is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id])
-                                      }}
-                                sequence:
-                                  - alias: Unlock all locks
-                                    repeat:
-                                      for_each: !input locks
-                                      sequence:
-                                        - action: lock.unlock
-                                          target:
-                                            entity_id: "{{ repeat.item }}"
-                                  - alias: Remove itinerary started notification
-                                    action: "{{ notify_service }}"
-                                    data: *clear_notification
-                                  - delay:
-                                      minutes: !input auto_close_arrival_delay
-                              - alias: If driver left vehicle
-                                conditions:
-                                  - condition: template
-                                    value_template: "{{ wait.trigger.id == 'vehicle_left' }}"
-                                sequence:
-                                  - alias: Get notification translation
-                                    variables:
-                                      title_id: "itinerary_canceled"
-                                      message_id: "vehicle_left"
-                                      <<: *get_translation
-                                  - alias: Notify driver of itinerary cancelation as he left vehicle
-                                    action: "{{ notify_service }}"
-                                    data:
-                                      title: "{{ title }}"
-                                      message: "{{ message }}"
-                                      data:
-                                        <<: *notification_data
-                                        importance: high
+                          - alias: Set error id
+                            variables:
+                              message_id: |-
+                                {% if wait.remaining == 0 %}
+                                  did_not_arrive
+                                {% elif wait.trigger.id == 'activation_zone_left' %}
+                                  vehicle_away
+                                {% elif wait.trigger.id == 'forbidden_zone' %}
+                                  forbidden_zone
+                                {%
+                                  elif wait.trigger.id == 'vehicle_left'
+                                  and not(
+                                    is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id])
+                                  )
+                                %}
+                                  vehicle_left
+                                {% else %}
+                                  {{ none }}
+                                {% endif %}
+                          - alias: If the itinerary needs to be canceled
+                            if:
+                              - condition: template
+                                value_template: "{{ message_id is not none }}"
+                            then:
+                              - alias: Create error
+                                sequence: *create_error
+                            else:
+                              - alias: Stop itinerary
+                                action: input_text.set_value
+                                target:
+                                  entity_id: "{{ itinerary_sensor }}"
+                                data:
+                                  value: none
+                              - alias: Unlock all locks
+                                repeat:
+                                  for_each: !input locks
+                                  sequence:
+                                    - action: lock.unlock
+                                      target:
+                                        entity_id: "{{ repeat.item }}"
+                              - alias: Remove itinerary started notification
+                                action: "{{ notify_service }}"
+                                data: *clear_notification
+                              - delay:
+                                  minutes: !input auto_close_arrival_delay
                           - alias: Close all gates
                             repeat: *close_gates
                   - alias: Remove itinerary started notification
@@ -1433,45 +1373,25 @@ actions:
                     data: *clear_notification
                   - alias: Stop whole script as it ran successfully
                     stop: Successful
-  - alias: If both loop were broken, remove current itinerary as driver left vehicle or timed out
-    action: input_text.set_value
-    data:
-      value: none
-    target:
-      entity_id: "{{ itinerary_sensor }}"
   - alias: If vehicle left in gate zone and travel time was not updated
     if:
       condition: template
       value_template: "{{ is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id])
         and states[travel_time_sensor].last_updated < now() - timedelta(minutes=5) }}"
     then:
-      - alias: Get notification translation
+      - alias: Set error id
         variables:
-          title_id: "itinerary_canceled"
           message_id: "travel_time_did_not_respond"
-          <<: *get_translation
-      - alias: Notify driver that travel time integration did not respond
-        action: "{{ notify_service }}"
-        data:
-          title: "{{ title }}"
-          message: "{{ message }}"
-          data:
-            <<: *notification_data
-            importance: high
+      - alias: Create error
+        sequence: *create_error
+      - stop: Travel time did not respond
+        error: true
     else:
-      - alias: Get notification translation
+      - alias: Set error id
         variables:
-          title_id: "itinerary_canceled"
           message_id: "vehicle_left"
-          <<: *get_translation
-      - alias: Send itinerary canceled notification to driver as he left vehicle
-        action: "{{ notify_service }}"
-        data:
-          title: "{{ title }}"
-          message: "{{ message }}"
-          data:
-            <<: *notification_data
-            importance: high
+      - alias: Create error
+        sequence: *create_error
 # Run in parralel to let the automation start with multiple users driving simultaneously
 mode: parallel
 max: 10
