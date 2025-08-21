@@ -442,6 +442,7 @@ variables:
         forbidden_zone: "You entered a forbidden zone"
         invalid_travel_time_sensor: "Your travel time sensor does not exist !"
         unsupported_tt_integration: "Your travel time integration is not supported !"
+        too_close: "You have started driving too close to the gate zone"
     fr:
       title:
         itinerary_update: "Itinéraire ℹ️"
@@ -465,6 +466,7 @@ variables:
         forbidden_zone: "Vous êtes entré dans une zone interdite"
         invalid_travel_time_sensor: "Votre capteur de temps de trajet n'existe pas !"
         unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
+        too_close: "Vous avez démarré trop près de la zone du portail"
 
 triggers:
   - alias: Trigger when user connects to vehicle
@@ -1005,6 +1007,11 @@ actions:
           - condition: template
             value_template: *activation_zone_in_condition
         then:
+          - alias: Set error id
+            variables:
+              message_id: "too_close"
+          - alias: Create error
+            sequence: &create_error
           - stop: Started too close to home
 
   ###################
