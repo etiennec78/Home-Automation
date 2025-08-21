@@ -552,6 +552,11 @@ actions:
             notification_icon: mdi:hammer-wrench
             channel: Automatic Gate config
             tag: invalid-config
+      - alias: Notify all users on the dashboard that the config is invalid
+        action: persistent_notification.create
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
   - alias: Store list index of driver, extract driver sensors
     variables:
       idx: "{{ driving_sensors.index(trigger.entity_id) }}"
