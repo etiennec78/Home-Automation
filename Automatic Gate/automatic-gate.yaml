@@ -879,6 +879,12 @@ actions:
                       title_id: "itinerary_canceled"
                       message_id: "did_not_leave"
                       <<: *get_translation
+                  - alias: Mark error in driver itinerary sensor
+                    action: input_text.set_value
+                    target:
+                      entity_id: "{{ itinerary_sensor }}"
+                    data:
+                      value: "error: did_not_leave"
                   - alias: Notify driver of itinerary cancelation as he didn't leave in time
                     action: "{{ notify_service }}"
                     data:
@@ -1053,6 +1059,12 @@ actions:
                     title_id: "itinerary_canceled"
                     message_id: "invalid_travel_time_sensor"
                     <<: *get_translation
+                - alias: Mark error in driver itinerary sensor
+                  action: input_text.set_value
+                  target:
+                    entity_id: "{{ itinerary_sensor }}"
+                  data:
+                    value: "error: invalid_travel_time_sensor"
                 - alias: Notify driver about itinerary cancellation
                   action: "{{ notify_service }}"
                   data:
@@ -1148,6 +1160,12 @@ actions:
                           title_id: "itinerary_canceled"
                           message_id: "unsupported_tt_integration"
                           <<: *get_translation
+                      - alias: Mark error in driver itinerary sensor
+                        action: input_text.set_value
+                        target:
+                          entity_id: "{{ itinerary_sensor }}"
+                        data:
+                          value: "error: unsupported_tt_integration"
                       - alias: Notify driver about itinerary cancellation
                         action: "{{ notify_service }}"
                         data:
@@ -1210,17 +1228,17 @@ actions:
                                     and opening_time > now() | as_timestamp
                                   }}
                             sequence:
-                              - alias: Remove current itinerary as driver timed out
-                                action: input_text.set_value
-                                target:
-                                  entity_id: "{{ itinerary_sensor }}"
-                                data:
-                                  value: none
                               - alias: Get notification translation
                                 variables:
                                   title_id: "itinerary_canceled"
                                   message_id: "timed_out"
                                   <<: *get_translation
+                              - alias: Mark error in driver itinerary sensor
+                                action: input_text.set_value
+                                target:
+                                  entity_id: "{{ itinerary_sensor }}"
+                                data:
+                                  value: "error: {{ itinerary_canceled }}"
                               - alias: Notify driver about itinerary cancellation
                                 action: "{{ notify_service }}"
                                 data:
@@ -1353,6 +1371,12 @@ actions:
                               - condition: template
                                 value_template: "{{ message_id is not none }}"
                             then:
+                              - alias: Mark error in driver itinerary sensor
+                                action: input_text.set_value
+                                target:
+                                  entity_id: "{{ itinerary_sensor }}"
+                                data:
+                                  value: "error: {{ message_id }}"
                               - alias: Get notification translation
                                 variables:
                                   title_id: "itinerary_canceled"
@@ -1418,6 +1442,12 @@ actions:
           title_id: "itinerary_canceled"
           message_id: "travel_time_did_not_respond"
           <<: *get_translation
+      - alias: Mark error in driver itinerary sensor
+        action: input_text.set_value
+        target:
+          entity_id: "{{ itinerary_sensor }}"
+        data:
+          value: "error: travel_time_did_not_respond"
       - alias: Notify driver that travel time integration did not respond
         action: "{{ notify_service }}"
         data:
@@ -1432,6 +1462,12 @@ actions:
           title_id: "itinerary_canceled"
           message_id: "vehicle_left"
           <<: *get_translation
+      - alias: Mark error in driver itinerary sensor
+        action: input_text.set_value
+        target:
+          entity_id: "{{ itinerary_sensor }}"
+        data:
+          value: "error: vehicle_left"
       - alias: Send itinerary canceled notification to driver as he left vehicle
         action: "{{ notify_service }}"
         data:
