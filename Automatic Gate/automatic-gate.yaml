@@ -687,89 +687,78 @@ actions:
       # OPEN GATE ON EXIT #
       #####################
 
-      - alias: If ble is needed to open/close the gate automatically
+      - alias: If driver has iBeacon entity set for auto-closing
         if:
           - condition: template
-            value_template: |-
-              {{
-                departure_opening_behavior != 'off' and only_open_near_iBeacon
-                or departure_closing_behavior != 'off'
-              }}
+            value_template: "{{ (ble_entities | length) - 1 >= idx }}"
         then:
-          - alias: If driver has iBeacon entity set for auto-closing
+          - alias: Save iBeacon states
+            variables:
+              old_ibeacon_transmitter_states: |-
+                {% if (ble_transmitter_entities | length) - 1 >= idx %}
+                  {{ {
+                    'state': states(ble_transmitter_entities[idx])
+                      if states(ble_transmitter_entities[idx]) == 'Stopped' else none,
+                    'transmit_power': (state_attr(ble_transmitter_entities[idx], 'Transmitting power') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
+                      if state_attr(ble_transmitter_entities[idx], 'Transmitting power') != 'high' else none,
+                    'advertise_mode': (state_attr(ble_transmitter_entities[idx], 'Advertise mode') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
+                      if state_attr(ble_transmitter_entities[idx], 'Advertise mode') != 'lowLatency' else none
+                  } }}
+                {% else %}
+                  {{ none }}
+                {% endif %}
+          - alias: If driver has a saved iBeacon transmitter state
             if:
               - condition: template
-                value_template: "{{ (ble_entities | length) - 1 >= idx }}"
+                value_template: "{{ old_ibeacon_transmitter_states != none }}"
             then:
-              - alias: Save iBeacon states
-                variables:
-                  old_ibeacon_transmitter_states: |-
-                    {% if (ble_transmitter_entities | length) - 1 >= idx %}
-                      {{ {
-                        'state': states(ble_transmitter_entities[idx])
-                          if states(ble_transmitter_entities[idx]) == 'Stopped' else none,
-                        'transmit_power': (state_attr(ble_transmitter_entities[idx], 'Transmitting power') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
-                          if state_attr(ble_transmitter_entities[idx], 'Transmitting power') != 'high' else none,
-                        'advertise_mode': (state_attr(ble_transmitter_entities[idx], 'Advertise mode') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
-                          if state_attr(ble_transmitter_entities[idx], 'Advertise mode') != 'lowLatency' else none
-                      } }}
-                    {% else %}
-                      {{ none }}
-                    {% endif %}
-              - alias: If driver has a saved iBeacon transmitter state
+              - alias: Change iBeacon state if needed
                 if:
                   - condition: template
-                    value_template: "{{ old_ibeacon_transmitter_states != none }}"
+                    value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
                 then:
-                  - alias: Change iBeacon state if needed
-                    if:
-                      - condition: template
-                        value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
-                    then:
-                      - action: "{{ notify_service }}"
-                        data:
-                          message: command_ble_transmitter
-                          data:
-                            command: turn_on
-                  - alias: Change iBeacon transmitting power if needed
-                    if:
-                      - condition: template
-                        value_template: "{{ old_ibeacon_transmitter_states['transmit_power'] != none }}"
-                    then:
-                      - action: "{{ notify_service }}"
-                        data:
-                          message: command_ble_transmitter
-                          data:
-                            command: ble_set_transmit_power
-                            ble_transmit: ble_transmit_high
-                  - alias: Change iBeacon advertise mode if needed
-                    if:
-                      - condition: template
-                        value_template: "{{ old_ibeacon_transmitter_states['advertise_mode'] != none }}"
-                    then:
-                      - action: "{{ notify_service }}"
-                        data:
-                          message: command_ble_transmitter
-                          data:
-                            command: ble_set_advertise_mode
-                            ble_advertise: ble_advertise_low_latency
-              - alias: Activate iBeacon scanner if switch set
+                  - action: "{{ notify_service }}"
+                    data:
+                      message: command_ble_transmitter
+                      data:
+                        command: turn_on
+              - alias: Change iBeacon transmitting power if needed
                 if:
-                - condition: template
-                  value_template: "{{ ble_scanner_switch != '' and is_state(ble_scanner_switch, 'off') }}"
+                  - condition: template
+                    value_template: "{{ old_ibeacon_transmitter_states['transmit_power'] != none }}"
                 then:
-                  - action: switch.turn_on
-                    target:
-                      entity_id: "{{ ble_scanner_switch }}"
+                  - action: "{{ notify_service }}"
+                    data:
+                      message: command_ble_transmitter
+                      data:
+                        command: ble_set_transmit_power
+                        ble_transmit: ble_transmit_high
+              - alias: Change iBeacon advertise mode if needed
+                if:
+                  - condition: template
+                    value_template: "{{ old_ibeacon_transmitter_states['advertise_mode'] != none }}"
+                then:
+                  - action: "{{ notify_service }}"
+                    data:
+                      message: command_ble_transmitter
+                      data:
+                        command: ble_set_advertise_mode
+                        ble_advertise: ble_advertise_low_latency
+          - alias: Activate iBeacon scanner if switch set
+            if:
+            - condition: template
+              value_template: "{{ ble_scanner_switch != '' and is_state(ble_scanner_switch, 'off') }}"
+            then:
+              - action: switch.turn_on
+                target:
+                  entity_id: "{{ ble_scanner_switch }}"
       - alias: If driver chose to wait for iBeacon or WiFi before opening to ensure that vehicle is not parked outside
         if:
           - condition: template
             value_template: |-
               {{
-                departure_opening_behavior != 'off' and (
-                  only_open_near_wifi and (wifi_devices | length) - 1 >= idx
-                  or only_open_near_iBeacon and (ble_entities | length) - 1 >= idx
-                )
+                only_open_near_wifi and (wifi_devices | length) - 1 >= idx
+                or only_open_near_iBeacon and (ble_entities | length) - 1 >= idx
               }}
         then:
           - alias: Wait for iBeacon or WiFi to report home
@@ -864,242 +853,239 @@ actions:
           entity_id: "{{ itinerary_sensor }}"
         data:
           value: leaving
+      - alias: If departure opening is set to notification request
+        if:
+          - condition: template
+            value_template: "{{ departure_opening_behavior == 'notif' }}"
+        then:
+          - alias: Get notification translation
+            variables:
+              message_id: "itinerary_started"
+              title_id: "open_gate"
+              <<: *get_translation
+          - alias: Get button translation
+            variables: &get_button_translation
+              button_id: "open"
+              button: |-
+                {# Custom translation #}
+                {%
+                  if 'button' in custom_translations_json
+                  and button_id in custom_translations_json['button']
+                %}
+                  {{ custom_translations_json['button'][button_id] }}
+
+                {# Selected language #}
+                {% elif button_id in strings[language]['button'] %}
+                  {{ strings[language]['button'][button_id] }}
+
+                {# Fallback to english #}
+                {% else %}
+                  {{ strings['en']['button'][button_id] }}
+                {% endif %}
+          - alias: Ask the user if he wants to open the gate
+            action: "{{ notify_service }}"
+            data:
+              title: "{{ title }}"
+              message: "{{ message }}"
+              data:
+                notification_icon: mdi:lock-question
+                sticky: true
+                persistent: true
+                timeout: ""
+                actions:
+                  - action: "{{ opening_order_id }}"
+                    title: "{{ button }}"
+          - alias: Wait for events before opening the gate or canceling the itinerary
+            wait_for_trigger:
+              - alias: Manual opening
+                trigger: template
+                id: manual
+                value_template: "{{ gate | select('is_state', ['on', 'open', 'opening']) | list != [] }}"
+              - alias: Vehicle left
+                trigger: template
+                id: vehicle_left
+                value_template: "{{ is_state(driving_sensor, 'off') }}"
+              - alias: Activation zone left
+                trigger: template
+                id: gate_zone_left
+                value_template: &activation_zone_out_trigger |-
+                  {% if state_attr(person, 'gps_accuracy') is none %}
+                    {% set accuracy = 100 %}
+                  {% else %}
+                    {% set accuracy = state_attr(person, 'gps_accuracy') %}
+                  {% endif %}
+                  {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
+
+                  {{ gate_distance > activation_zone }}
+              - alias: Opening button pressed
+                trigger: event
+                id: opening_order
+                event_type: mobile_app_notification_action
+                event_data:
+                  action: "{{ opening_order_id }}"
+          - alias: If the user left his vehicle or the zone
+            if:
+              - condition: template
+                value_template: "{{ wait.trigger.id in ['vehicle_left', 'gate_zone_left'] }}"
+            then:
+              - alias: Set error id
+                variables:
+                  message_id: "{{ wait.trigger.id }}"
+              - alias: Create error
+                sequence: *create_error
+              - stop: Opening canceled
       - alias: If departure opening is enabled
         if:
           - condition: template
             value_template: "{{ departure_opening_behavior != 'off' }}"
-        then:
-          - alias: If departure opening is set to notification request
+        then: &open_gates_if_closed
+          - alias: If one of the gates is closing/closed
             if:
               - condition: template
-                value_template: "{{ departure_opening_behavior == 'notif' }}"
+                value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
             then:
-              - alias: Get notification translation
-                variables:
-                  message_id: "itinerary_started"
-                  title_id: "open_gate"
-                  <<: *get_translation
-              - alias: Get button translation
-                variables: &get_button_translation
-                  button_id: "open"
-                  button: |-
-                    {# Custom translation #}
-                    {%
-                      if 'button' in custom_translations_json
-                      and button_id in custom_translations_json['button']
-                    %}
-                      {{ custom_translations_json['button'][button_id] }}
-
-                    {# Selected language #}
-                    {% elif button_id in strings[language]['button'] %}
-                      {{ strings[language]['button'][button_id] }}
-
-                    {# Fallback to english #}
-                    {% else %}
-                      {{ strings['en']['button'][button_id] }}
-                    {% endif %}
-              - alias: Ask the user if he wants to open the gate
-                action: "{{ notify_service }}"
-                data:
-                  title: "{{ title }}"
-                  message: "{{ message }}"
-                  data:
-                    notification_icon: mdi:lock-question
-                    sticky: true
-                    persistent: true
-                    timeout: ""
-                    actions:
-                      - action: "{{ opening_order_id }}"
-                        title: "{{ button }}"
-              - alias: Wait for events before opening the gate or canceling the itinerary
-                wait_for_trigger:
-                  - alias: Manual opening
-                    trigger: template
-                    id: manual
-                    value_template: "{{ gate | select('is_state', ['on', 'open', 'opening']) | list != [] }}"
-                  - alias: Vehicle left
-                    trigger: template
-                    id: vehicle_left
-                    value_template: "{{ is_state(driving_sensor, 'off') }}"
-                  - alias: Activation zone left
-                    trigger: template
-                    id: gate_zone_left
-                    value_template: &activation_zone_out_trigger |-
-                      {% if state_attr(person, 'gps_accuracy') is none %}
-                        {% set accuracy = 100 %}
-                      {% else %}
-                        {% set accuracy = state_attr(person, 'gps_accuracy') %}
-                      {% endif %}
-                      {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
-
-                      {{ gate_distance > activation_zone }}
-                  - alias: Opening button pressed
-                    trigger: event
-                    id: opening_order
-                    event_type: mobile_app_notification_action
-                    event_data:
-                      action: "{{ opening_order_id }}"
-              - alias: If the user left his vehicle or the zone
-                if:
-                  - condition: template
-                    value_template: "{{ wait.trigger.id in ['vehicle_left', 'gate_zone_left'] }}"
-                then:
-                  - alias: Set error id
-                    variables:
-                      message_id: "{{ wait.trigger.id }}"
-                  - alias: Create error
-                    sequence: *create_error
-                  - stop: Opening canceled
-          - alias: Open gates if one is closing/closed
-            sequence: &open_gates_if_closed
-              - alias: If one of the gates is closing/closed
-                if:
-                  - condition: template
-                    value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
-                then:
-                  - alias: Open each gate because driver is leaving
-                    repeat:
-                      for_each: !input gate
-                      sequence:
-                        - action: |-
-                            {% if states[repeat.item].domain == 'switch' %}
-                              switch.turn_on
-                            {% elif states[repeat.item].domain == 'cover' %}
-                              cover.open_cover
-                            {% endif %}
-                          target:
-                            entity_id: "{{ repeat.item }}"
-      - alias: If departure closing is enabled
-        if:
-          - condition: template
-            value_template: "{{ departure_closing_behavior != 'off' }}"
-        then:
-          - alias: Set a variable to break the loop
-            variables:
-              continue: "{{ departure_closing_behavior != 'auto' }}"
-          - alias: Wait for events at least once, then while the continue variable is true
-            repeat:
-            until: "{{ continue }}"
-            sequence:
-              - alias: Wait for events before closing the gate
-                wait_for_trigger:
-                  - alias: Manual closing
-                    trigger: template
-                    id: manual
-                    value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
-                  - alias: iBeacon out of reach
-                    trigger: template
-                    id: ble
-                    value_template: "{{ (ble_entities | length) - 1 >= idx and is_state(ble_entities[idx], 'unknown') }}"
-                  - alias: Vehicle left
-                    trigger: template
-                    id: vehicle_left
-                    value_template: "{{ is_state(driving_sensor, 'off') }}"
-                  - alias: Activation zone left
-                    trigger: template
-                    id: gate_zone_left
-                    value_template: *activation_zone_out_trigger
-                  - alias: Closing button pressed
-                    trigger: event
-                    id: closing_order
-                    event_type: mobile_app_notification_action
-                    event_data:
-                      action: "{{ closing_order_id }}"
-                timeout:
-                  minutes: !input safety_delay
-              - alias: If the trigger needs to open the gate
-                if:
-                  - condition: template
-                    value_template: "{{ wait.trigger.id in ['manual', 'closing_order'] }}"
-                then:
-                  - alias: Break the loop next time
-                    variables:
-                      continue: false
-              - alias: If this is the first loop
-                if:
-                  - condition: template
-                    value_template: "{{ repeat.first }}"
-                then:
-                  - alias: Restore iBeacon states
-                    sequence: *restore_ibeacons
-                  - choose:
-                      - alias: If an opening notification needs to be sent
-                        conditions:
-                          - condition: template
-                            value_template: "{{ continue }}"
-                        sequence:
-                          - alias: Set message id
-                            variables:
-                              message_id: |-
-                                {% if wait.trigger.id == 'ble' %}
-                                  ble_out_of_range
-                                {% elif wait.trigger.id == 'vehicle_left' %}
-                                  vehicle_left
-                                {% elif wait.trigger.id == 'gate_zone_left' %}
-                                  gate_zone_left
-                                {% elif wait.remaining == 0 %}
-                                  did_not_leave
-                                {% endif %}
-                          - alias: Get notification translation
-                            variables:
-                              title_id: "close_gate"
-                              <<: *get_translation
-                          - alias: Get button translation
-                            variables:
-                              button_id: "close"
-                              <<: *get_button_translation
-                          - alias: Ask the user if he wants to close the gate
-                            action: "{{ notify_service }}"
-                            data:
-                              title: "{{ title }}"
-                              message: "{{ message }}"
-                              data:
-                                <<: *notification_data
-                                notification_icon: mdi:lock-question
-                                sticky: true
-                                persistent: true
-                                timeout: ""
-                                actions:
-                                  - action: "{{ closing_order_id }}"
-                                    title: "{{ button }}"
-          - alias: If timeout reached
+              - alias: Open each gate because driver is leaving
+                repeat:
+                  for_each: !input gate
+                  sequence:
+                    - action: |-
+                        {% if states[repeat.item].domain == 'switch' %}
+                          switch.turn_on
+                        {% elif states[repeat.item].domain == 'cover' %}
+                          cover.open_cover
+                        {% endif %}
+                      target:
+                        entity_id: "{{ repeat.item }}"
+      - alias: Set a variable to break the loop
+        variables:
+          continue: "{{ departure_closing_behavior == 'notify' }}"
+      - alias: Wait for events at least once, then while the gate opening has not been triggered
+        repeat:
+        until: "{{ continue }}"
+        sequence:
+          - alias: Wait for events before closing the gate
+            wait_for_trigger:
+              - alias: Manual closing
+                trigger: template
+                id: manual
+                value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
+              - alias: iBeacon out of reach
+                trigger: template
+                id: ble
+                value_template: "{{ (ble_entities | length) - 1 >= idx and is_state(ble_entities[idx], 'unknown') }}"
+              - alias: Vehicle left
+                trigger: template
+                id: vehicle_left
+                value_template: "{{ is_state(driving_sensor, 'off') }}"
+              - alias: Activation zone left
+                trigger: template
+                id: gate_zone_left
+                value_template: *activation_zone_out_trigger
+              - alias: Closing button pressed
+                trigger: event
+                id: closing_order
+                event_type: mobile_app_notification_action
+                event_data:
+                  action: "{{ closing_order_id }}"
+            timeout:
+              minutes: !input safety_delay
+          - alias: If the trigger needs to open the gate
             if:
               - condition: template
-                value_template: "{{ wait.remaining == 0 }}"
+                value_template: "{{ wait.trigger.id in ['manual', 'closing_order'] }}"
             then:
-              - alias: Set error id
+              - alias: Break the loop next time
                 variables:
-                  message_id: "did_not_leave"
-              - alias: If user has not been notified about the error
+                  continue: false
+          - alias: If this is the first loop
+            if:
+              - condition: template
+                value_template: "{{ repeat.first }}"
+            then:
+              - alias: Restore iBeacon states
+                sequence: *restore_ibeacons
+              - alias: If an opening notification needs to be sent
                 if:
                   - condition: template
-                    value_template: "{{ departure_closing_behavior == 'auto' }}"
+                    value_template: "{{ continue }}"
                 then:
+                  - alias: Set message id
+                    variables:
+                      message_id: |-
+                        {% if wait.trigger.id == 'ble' %}
+                          ble_out_of_range
+                        {% elif wait.trigger.id == 'vehicle_left' %}
+                          vehicle_left
+                        {% elif wait.trigger.id == 'gate_zone_left' %}
+                          gate_zone_left
+                        {% elif wait.remaining == 0 %}
+                          did_not_leave
+                        {% endif %}
                   - alias: Get notification translation
                     variables:
-                      title_id: "itinerary_canceled"
+                      title_id: "close_gate"
                       <<: *get_translation
-                  - alias: Notify driver of itinerary cancelation
+                  - alias: Get button translation
+                    variables:
+                      button_id: "close"
+                      <<: *get_button_translation
+                  - alias: Ask the user if he wants to close the gate
                     action: "{{ notify_service }}"
                     data:
                       title: "{{ title }}"
                       message: "{{ message }}"
                       data:
                         <<: *notification_data
-                        importance: high
-              - alias: Mark error in driver itinerary sensor
-                action: input_text.set_value
-                target:
-                  entity_id: "{{ itinerary_sensor }}"
+                        notification_icon: mdi:lock-question
+                        sticky: true
+                        persistent: true
+                        timeout: ""
+                        actions:
+                          - action: "{{ closing_order_id }}"
+                            title: "{{ button }}"
+      - alias: If timeout reached
+        if:
+          - condition: template
+            value_template: "{{ wait.remaining == 0 }}"
+        then:
+          - alias: Set error id
+            variables:
+              message_id: "did_not_leave"
+          - alias: If user has not been notified about the error
+            if:
+              - condition: template
+                value_template: "{{ departure_closing_behavior in ['auto', 'off'] }}"
+            then:
+              - alias: Get notification translation
+                variables:
+                  title_id: "itinerary_canceled"
+                  <<: *get_translation
+              - alias: Notify driver of itinerary cancelation
+                action: "{{ notify_service }}"
                 data:
-                  value: "error: {{ message_id }}"
-            else:
-              - alias: Remove current itinerary
-                action: input_text.set_value
-                target:
-                  entity_id: "{{ itinerary_sensor }}"
-                data:
-                  value: none
+                  title: "{{ title }}"
+                  message: "{{ message }}"
+                  data:
+                    <<: *notification_data
+                    importance: high
+          - alias: Mark error in driver itinerary sensor
+            action: input_text.set_value
+            target:
+              entity_id: "{{ itinerary_sensor }}"
+            data:
+              value: "error: {{ message_id }}"
+        else:
+          - alias: Remove current itinerary
+            action: input_text.set_value
+            target:
+              entity_id: "{{ itinerary_sensor }}"
+            data:
+              value: none
+      - alias: If departure closing is enabled
+        if:
+          - condition: template
+            value_template: "{{ departure_closing_behavior != 'off' }}"
+        then:
           - alias: If no one else leaving or approaching
             if:
               - condition: template
@@ -1162,20 +1148,6 @@ actions:
                   message: clear_notification
                   data:
                     tag: itinerary-status
-        else:
-          - alias: Wait for driver to leave
-            wait_for_trigger:
-              - trigger: template
-                id: gate_zone_left
-                value_template: "{{ not is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id]) }}"
-          - alias: Remove current itinerary
-            action: input_text.set_value
-            target:
-              entity_id: "{{ itinerary_sensor }}"
-            data:
-              value: none
-          - alias: Restore iBeacon states
-            sequence: *restore_ibeacons
       - alias: Wait for driver to travel 250m away from activation zone, then return, to start itinerary
         repeat:
           count: 2
@@ -1438,9 +1410,7 @@ actions:
                 if:
                   - condition: template
                     value_template: "{{ arrival_opening_behavior != 'off' }}"
-                then:
-                  - alias: Open gates if one is closing/closed
-                    sequence: *open_gates_if_closed
+                then: *open_gates_if_closed
               - alias: If arrival closing is enabled
                 if:
                   - condition: template
