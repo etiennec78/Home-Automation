@@ -448,7 +448,7 @@ variables:
         soon_arrived: "You will arrive soon"
         ble_out_of_range: "Your iBeacon is out of range"
         awaiting: "The gate will close once all users have entered/exited"
-        vehicle_left: "You have left your vehicle"
+        vehicle_stopped: "You have left your vehicle"
         did_not_leave: "The vehicle did not leave in less than {safety_delay} minutes"
         did_not_arrive: "The vehicle did not arrive in less than {safety_delay} minutes"
         timed_out: "Your position has not been updated in {timeout_delay} minutes"
@@ -481,7 +481,7 @@ variables:
         soon_arrived: "Vous arrivez bientôt"
         ble_out_of_range: "Votre iBeacon est hors de portée"
         awaiting: "Le portail se refermera une fois tous les conducteurs entrés/sortis"
-        vehicle_left: "Le véhicule a été arrêté"
+        vehicle_stopped: "Le véhicule a été arrêté"
         did_not_leave: "Le véhicule n'est pas sorti en moins de {safety_delay} minutes"
         did_not_arrive: "Le véhicule n'est pas arrivé en moins de {safety_delay} minutes"
         timed_out: "Votre position n'a pas été mise à jour ces {timeout_delay} dernières minutes"
@@ -917,7 +917,7 @@ actions:
                     value_template: "{{ gate | select('is_state', ['on', 'open', 'opening']) | list != [] }}"
                   - alias: Vehicle left
                     trigger: template
-                    id: vehicle_left
+                    id: vehicle_stopped
                     value_template: "{{ is_state(driving_sensor, 'off') }}"
                   - alias: Activation zone left
                     trigger: template
@@ -944,7 +944,7 @@ actions:
               - alias: If an error needs to be raised
                 if:
                   - condition: template
-                    value_template: "{{ wait.trigger.id in ['vehicle_left', 'vehicle_away', 'forbidden_zone'] }}"
+                    value_template: "{{ wait.trigger.id in ['vehicle_stopped', 'vehicle_away', 'forbidden_zone'] }}"
                 then:
                   - alias: Set error id
                     variables:
@@ -995,11 +995,11 @@ actions:
                       value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
                     - alias: iBeacon out of reach
                       trigger: template
-                      id: ble
+                      id: ble_out_of_range
                       value_template: "{{ (ble_entities | length) - 1 >= idx and is_state(ble_entities[idx], 'unknown') }}"
                     - alias: Vehicle left
                       trigger: template
-                      id: vehicle_left
+                      id: vehicle_stopped
                       value_template: "{{ is_state(driving_sensor, 'off') }}"
                     - alias: Activation zone left
                       trigger: template
@@ -1040,18 +1040,12 @@ actions:
                     - alias: Set error id
                       variables:
                         message_id: |-
-                          {% if wait.trigger.id == 'ble' %}
-                            ble_out_of_range
-                          {% elif wait.trigger.id == 'vehicle_left' %}
-                            vehicle_left
-                          {% elif wait.trigger.id == 'vehicle_away' %}
-                            vehicle_away
-                          {% elif wait.trigger.id == 'forbidden_zone' %}
-                            forbidden_zone
-                          {% elif wait.remaining == 0 %}
+                          {% if wait.remaining == 0 %}
                             {{ took_too_long_message }}
-                          {% else %}
+                          {% elif wait.trigger.id in ['manual', 'closing_order'] %}
                             {{ none }}
+                          {% else %}
+                            {{ wait.trigger.id }}
                           {% endif %}
                     - alias: If a closing notification needs to be sent
                       if:
@@ -1190,10 +1184,9 @@ actions:
           sequence:
             - wait_for_trigger:
                 - trigger: template
-                  id: vehicle_left
+                  id: vehicle_stopped
                   value_template: "{{ is_state(driving_sensor, 'off') }}"
                 - trigger: template
-                  id: left_gate_zone
                   value_template: |-
                     {% if state_attr(person, 'gps_accuracy') is none %}
                       {% set accuracy = 100 %}
@@ -1204,7 +1197,6 @@ actions:
 
                     {{ gate_distance > activation_zone + 250 }}
                 - trigger: template
-                  id: returned_to_gate_zone
                   value_template: |-
                     {% if state_attr(person, 'gps_accuracy') is none %}
                       {% set accuracy = 100 %}
@@ -1217,7 +1209,7 @@ actions:
             - alias: Don't continue if driver stopped vehicle
               if:
                 - condition: template
-                  value_template: "{{ wait.trigger.id == 'vehicle_left' }}"
+                  value_template: "{{ wait.trigger.id == 'vehicle_stopped' }}"
               then:
                 - stop: Arrived to destination
 
@@ -1466,7 +1458,7 @@ actions:
     else:
       - alias: Set error id
         variables:
-          message_id: "vehicle_left"
+          message_id: "vehicle_stopped"
       - alias: Create error
         sequence: *create_error
 # Run in parralel to let the automation start with multiple users driving simultaneously
