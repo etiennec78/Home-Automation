@@ -479,6 +479,7 @@ variables:
       message:
         itinerary_started: "L'itinéraire a démarré"
         soon_arrived: "Vous arrivez bientôt"
+        ble_out_of_range: "Votre iBeacon est hors de portée"
         awaiting: "Le portail se refermera une fois tous les conducteurs entrés/sortis"
         vehicle_left: "Le véhicule a été arrêté"
         did_not_leave: "Le véhicule n'est pas sorti en moins de {safety_delay} minutes"
