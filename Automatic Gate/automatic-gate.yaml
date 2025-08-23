@@ -221,6 +221,7 @@ blueprint:
             Gate automatic **opening** behavior on **arrival**
 
               - **Fully automatic** : Your gate will automatically open
+              - **Notification request** : An actionable notification will be sent to open your gate
               - **Disabled** : Your gate will stay closed
           default: "auto"
           selector:
@@ -228,6 +229,8 @@ blueprint:
               options:
                 - label: Fully automatic
                   value: "auto"
+                - label: Notification request
+                  value: "notif"
                 - label: Disabled
                   value: "off"
         arrival_closing_behavior:
@@ -236,6 +239,7 @@ blueprint:
             Gate automatic **closing** behavior on **arrival**
 
               - **Fully automatic** : Your gate will automatically close
+              - **Notification request** : An actionable notification will be sent to close your gate
               - **Disabled** : Your gate won't close automatically
           default: "auto"
           selector:
@@ -243,6 +247,8 @@ blueprint:
               options:
                 - label: Fully automatic
                   value: "auto"
+                - label: Notification request
+                  value: "notif"
                 - label: Disabled
                   value: "off"
         safety_delay:
@@ -443,6 +449,7 @@ variables:
         invalid_config: "Invalid configuration 🛠️"
       message:
         itinerary_started: "Your itinerary has been started"
+        soon_arrived: "You will arrive soon"
         ble_out_of_range: "Your iBeacon is out of range"
         awaiting: "The gate will close once all users have entered/exited"
         vehicle_left: "You have left your vehicle"
@@ -475,6 +482,7 @@ variables:
         invalid_config: "Configuration invalide 🛠️"
       message:
         itinerary_started: "L'itinéraire a démarré"
+        soon_arrived: "Vous arrivez bientôt"
         awaiting: "Le portail se refermera une fois tous les conducteurs entrés/sortis"
         vehicle_left: "Le véhicule a été arrêté"
         did_not_leave: "Le véhicule n'est pas sorti en moins de {safety_delay} minutes"
@@ -1004,7 +1012,7 @@ actions:
             then:
               - alias: Restore iBeacon states
                 sequence: *restore_ibeacons
-              - alias: If an opening notification needs to be sent
+              - alias: If a closing notification needs to be sent
                 if:
                   - condition: template
                     value_template: "{{ continue }}"
@@ -1282,9 +1290,11 @@ actions:
           # It will return to the previous loop if the driver has entered the radius but passed by
           repeat:
             while:
-              - condition: template
+              - alias: Still in the activation zone
+                condition: template
                 value_template: *activation_zone_in_condition
-              - condition: template
+              - alias: Still driving
+                condition: template
                 value_template: "{{ is_state(driving_sensor, 'on') }}"
             sequence:
               - alias: Update travel time
@@ -1365,7 +1375,7 @@ actions:
                         timeout:
                           seconds: "{{ min(timeout_delay*60, seconds_before_opening) }}"
                       - choose:
-                          - alias: "If timeout ran out of time (not because of eta reached)"
+                          - alias: If timeout ran out of time (not because of eta reached)
                             conditions:
                               - condition: template
                                 value_template: |-
@@ -1386,11 +1396,6 @@ actions:
                               - condition: template
                                 value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
                             sequence: *forbidden_zone
-              - alias: Stop if the user is in a forbidden zone
-                if:
-                  - condition: template
-                    value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
-                then: *forbidden_zone
               - alias: Return to the previous loop if the travel time sensor is unknown and no previous eta was stored
                 condition: template
                 value_template: "{{ opening_time is not none }}"
@@ -1406,17 +1411,84 @@ actions:
                   value: on_approach
                 target:
                   entity_id: "{{ itinerary_sensor }}"
+              - alias: If arrival opening is set to notification request
+                if:
+                  - condition: template
+                    value_template: "{{ arrival_opening_behavior == 'notif' }}"
+                then:
+                  - alias: Get notification translation
+                    variables:
+                      message_id: "soon_arrived"
+                      title_id: "open_gate"
+                      <<: *get_translation
+                  - alias: Get button translation
+                    variables:
+                      button_id: "open"
+                      <<: *get_button_translation
+                  - alias: Ask the user if he wants to open the gate
+                    action: "{{ notify_service }}"
+                    data:
+                      title: "{{ title }}"
+                      message: "{{ message }}"
+                      data:
+                        notification_icon: mdi:lock-question
+                        sticky: true
+                        persistent: true
+                        timeout: ""
+                        actions:
+                          - action: "{{ opening_order_id }}"
+                            title: "{{ button }}"
+                  - alias: Wait for events before opening the gate or canceling the itinerary
+                    wait_for_trigger:
+                      - alias: Manual opening
+                        trigger: template
+                        id: manual
+                        value_template: "{{ gate | select('is_state', ['on', 'open', 'opening']) | list != [] }}"
+                      - alias: Vehicle left
+                        trigger: template
+                        id: vehicle_left
+                        value_template: "{{ is_state(driving_sensor, 'off') }}"
+                      - alias: Activation zone left
+                        trigger: template
+                        id: gate_zone_left
+                        value_template: *activation_zone_out_trigger
+                      - alias: Forbidden zone entered
+                        trigger: template
+                        id: forbidden_zone
+                        value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
+                      - alias: Opening button pressed
+                        trigger: event
+                        id: opening_order
+                        event_type: mobile_app_notification_action
+                        event_data:
+                          action: "{{ opening_order_id }}"
+                  - alias: If an error needs to be raised
+                    if:
+                      - condition: template
+                        value_template: "{{ wait.trigger.id in ['vehicle_left', 'gate_zone_left', 'forbidden_zone'] }}"
+                    then:
+                      - alias: Set error id
+                        variables:
+                          message_id: "{{ wait.trigger.id }}"
+                      - alias: Create error
+                        sequence: *create_error
+                      - stop: Opening canceled
+              - alias: Remove itinerary started / gate opening notification
+                action: "{{ notify_service }}"
+                data: *clear_notification
               - alias: If arrival opening is enabled
                 if:
                   - condition: template
                     value_template: "{{ arrival_opening_behavior != 'off' }}"
                 then: *open_gates_if_closed
-              - alias: If arrival closing is enabled
-                if:
-                  - condition: template
-                    value_template: "{{ arrival_closing_behavior != 'off' }}"
-                then:
-                  - alias: Wait for gate closed manually, or vehicle left, or driver left, or forbidden zone, for at most auto-close delay
+              - alias: Set a variable to break the loop
+                variables:
+                  continue: "{{ arrival_closing_behavior == 'notify' }}"
+              - alias: Wait for events at least once, then while the gate closing has not been triggered
+                repeat:
+                until: "{{ continue }}"
+                sequence:
+                  - alias: Wait for events before closing the gate
                     wait_for_trigger:
                       - trigger: template
                         id: manual
@@ -1430,23 +1502,88 @@ actions:
                       - trigger: template
                         id: forbidden_zone
                         value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
+                      - alias: Closing button pressed
+                        trigger: event
+                        id: closing_order
+                        event_type: mobile_app_notification_action
+                        event_data:
+                          action: "{{ closing_order_id }}"
                     timeout:
                       minutes: !input safety_delay
-                  - alias: Remove current itinerary
-                    action: input_text.set_value
-                    target:
-                      entity_id: "{{ itinerary_sensor }}"
-                    data:
-                      value: none
-                  - alias: If gate closed manually
+                  - alias: If the trigger needs to close the gate
                     if:
                       - condition: template
-                        value_template: "{{ wait.trigger.id == 'manual' }}"
+                        value_template: "{{ wait.trigger.id in ['manual', 'closing_order'] }}"
                     then:
-                      - alias: Remove itinerary started notification
-                        action: "{{ notify_service }}"
-                        data: *clear_notification
-                    else:
+                      - alias: Break the loop next time
+                        variables:
+                          continue: false
+                  - alias: If this is the first loop
+                    if:
+                      - condition: template
+                        value_template: "{{ repeat.first }}"
+                    then:
+                      - alias: Set error id
+                        variables:
+                          message_id: |-
+                            {% if wait.trigger.id == 'vehicle_left' %}
+                              vehicle_left
+                            {% elif wait.trigger.id == 'gate_zone_left' %}
+                              gate_zone_left
+                            {% elif wait.trigger.id == 'forbidden_zone' %}
+                              forbidden_zone
+                            {% elif wait.remaining == 0 %}
+                              did_not_arrive
+                            {% else %}
+                              {{ none }}
+                            {% endif %}
+                      - choose:
+                          - alias: If a closing notification needs to be sent
+                            conditions:
+                              - condition: template
+                                value_template: "{{ continue }}"
+                            sequence:
+                              - alias: Get notification translation
+                                variables:
+                                  title_id: "close_gate"
+                                  <<: *get_translation
+                              - alias: Get button translation
+                                variables:
+                                  button_id: "close"
+                                  <<: *get_button_translation
+                              - alias: Ask the user if he wants to close the gate
+                            action: "{{ notify_service }}"
+                            data:
+                              title: "{{ title }}"
+                              message: "{{ message }}"
+                              data:
+                                <<: *notification_data
+                                notification_icon: mdi:lock-question
+                                sticky: true
+                                persistent: true
+                                timeout: ""
+                                actions:
+                                  - action: "{{ closing_order_id }}"
+                                    title: "{{ button }}"
+              - alias: Remove itinerary started / gate closing notification
+                action: "{{ notify_service }}"
+                data: *clear_notification
+              - alias: Remove current itinerary
+                action: input_text.set_value
+                target:
+                  entity_id: "{{ itinerary_sensor }}"
+                data:
+                  value: none
+              - alias: If gate not closed manually
+                if:
+                  - condition: template
+                    value_template: "{{ wait.trigger.id != 'manual' }}"
+                then:
+                  - alias: If arrival closing is enabled
+                    if:
+                      - condition: template
+                        value_template: "{{ arrival_closing_behavior != 'off' }}"
+                    then:
                       - alias: If someone is currently approaching or leaving
                         if:
                           - condition: template
@@ -1473,30 +1610,14 @@ actions:
                             wait_for_trigger:
                               - trigger: template
                                 value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
+                          - alias: Remove awaiting notification
+                            action: "{{ notify_service }}"
+                            data: *clear_notification
                         else:
-                          - alias: Set error id
-                            variables:
-                              message_id: |-
-                                {% if wait.remaining == 0 %}
-                                  did_not_arrive
-                                {% elif wait.trigger.id == 'activation_zone_left' %}
-                                  vehicle_away
-                                {% elif wait.trigger.id == 'forbidden_zone' %}
-                                  forbidden_zone
-                                {%
-                                  elif wait.trigger.id == 'vehicle_left'
-                                  and not(
-                                    is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id])
-                                  )
-                                %}
-                                  vehicle_left
-                                {% else %}
-                                  {{ none }}
-                                {% endif %}
-                          - alias: If the itinerary needs to be canceled
+                          - alias: If an error needs to be raised
                             if:
                               - condition: template
-                                value_template: "{{ message_id is not none }}"
+                                value_template: "{{ arrival_closing_behavior in ['auto', 'off'] and message_id is not none }}"
                             then:
                               - alias: Create error
                                 sequence: *create_error
@@ -1508,40 +1629,12 @@ actions:
                                     - action: lock.unlock
                                       target:
                                         entity_id: "{{ repeat.item }}"
-                              - alias: Remove itinerary started notification
-                                action: "{{ notify_service }}"
-                                data: *clear_notification
                               - delay:
                                   minutes: !input auto_close_arrival_delay
                           - alias: Close all gates
                             repeat: *close_gates
-                  - alias: Remove itinerary started notification
-                    action: "{{ notify_service }}"
-                    data: *clear_notification
-                  - alias: Stop whole script as successful
-                    stop: Successful
-                else:
-                  - alias: Wait for driver to stop vehicle
-                    wait_for_trigger:
-                    - trigger: template
-                      value_template: "{{ is_state(driving_sensor, 'off') }}"
-                  - alias: Remove current itinerary
-                    action: input_text.set_value
-                    target:
-                      entity_id: "{{ itinerary_sensor }}"
-                    data:
-                      value: none
-                  - alias: Remove itinerary started notification
-                    action: "{{ notify_service }}"
-                    data: *clear_notification
-                  - alias: Stop whole script as it ran successfully
-                    stop: Successful
-  - alias: Remove current itinerary
-    action: input_text.set_value
-    data:
-      value: none
-    target:
-      entity_id: "{{ itinerary_sensor }}"
+              - alias: Stop whole script as successful
+                stop: Successful
   - alias: If vehicle left in gate zone and travel time was not updated
     if:
       condition: template
