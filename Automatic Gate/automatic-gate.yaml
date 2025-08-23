@@ -969,88 +969,88 @@ actions:
           continue: "{{ departure_closing_behavior == 'notify' }}"
       - alias: Wait for events at least once, then while the gate opening has not been triggered
         repeat:
-        until: "{{ continue }}"
-        sequence:
-          - alias: Wait for events before closing the gate
-            wait_for_trigger:
-              - alias: Manual closing
-                trigger: template
-                id: manual
-                value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
-              - alias: iBeacon out of reach
-                trigger: template
-                id: ble
-                value_template: "{{ (ble_entities | length) - 1 >= idx and is_state(ble_entities[idx], 'unknown') }}"
-              - alias: Vehicle left
-                trigger: template
-                id: vehicle_left
-                value_template: "{{ is_state(driving_sensor, 'off') }}"
-              - alias: Activation zone left
-                trigger: template
-                id: gate_zone_left
-                value_template: *activation_zone_out_trigger
-              - alias: Closing button pressed
-                trigger: event
-                id: closing_order
-                event_type: mobile_app_notification_action
-                event_data:
-                  action: "{{ closing_order_id }}"
-            timeout:
-              minutes: !input safety_delay
-          - alias: If the trigger needs to open the gate
-            if:
-              - condition: template
-                value_template: "{{ wait.trigger.id in ['manual', 'closing_order'] }}"
-            then:
-              - alias: Break the loop next time
-                variables:
-                  continue: false
-          - alias: If this is the first loop
-            if:
-              - condition: template
-                value_template: "{{ repeat.first }}"
-            then:
-              - alias: Restore iBeacon states
-                sequence: *restore_ibeacons
-              - alias: If a closing notification needs to be sent
-                if:
-                  - condition: template
-                    value_template: "{{ continue }}"
-                then:
-                  - alias: Set message id
-                    variables:
-                      message_id: |-
-                        {% if wait.trigger.id == 'ble' %}
-                          ble_out_of_range
-                        {% elif wait.trigger.id == 'vehicle_left' %}
-                          vehicle_left
-                        {% elif wait.trigger.id == 'gate_zone_left' %}
-                          gate_zone_left
-                        {% elif wait.remaining == 0 %}
-                          did_not_leave
-                        {% endif %}
-                  - alias: Get notification translation
-                    variables:
-                      title_id: "close_gate"
-                      <<: *get_translation
-                  - alias: Get button translation
-                    variables:
-                      button_id: "close"
-                      <<: *get_button_translation
-                  - alias: Ask the user if he wants to close the gate
-                    action: "{{ notify_service }}"
-                    data:
-                      title: "{{ title }}"
-                      message: "{{ message }}"
+          until: "{{ continue }}"
+          sequence:
+            - alias: Wait for events before closing the gate
+              wait_for_trigger:
+                - alias: Manual closing
+                  trigger: template
+                  id: manual
+                  value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
+                - alias: iBeacon out of reach
+                  trigger: template
+                  id: ble
+                  value_template: "{{ (ble_entities | length) - 1 >= idx and is_state(ble_entities[idx], 'unknown') }}"
+                - alias: Vehicle left
+                  trigger: template
+                  id: vehicle_left
+                  value_template: "{{ is_state(driving_sensor, 'off') }}"
+                - alias: Activation zone left
+                  trigger: template
+                  id: gate_zone_left
+                  value_template: *activation_zone_out_trigger
+                - alias: Closing button pressed
+                  trigger: event
+                  id: closing_order
+                  event_type: mobile_app_notification_action
+                  event_data:
+                    action: "{{ closing_order_id }}"
+              timeout:
+                minutes: !input safety_delay
+            - alias: If the trigger needs to open the gate
+              if:
+                - condition: template
+                  value_template: "{{ wait.trigger.id in ['manual', 'closing_order'] }}"
+              then:
+                - alias: Break the loop next time
+                  variables:
+                    continue: false
+            - alias: If this is the first loop
+              if:
+                - condition: template
+                  value_template: "{{ repeat.first }}"
+              then:
+                - alias: Restore iBeacon states
+                  sequence: *restore_ibeacons
+                - alias: If a closing notification needs to be sent
+                  if:
+                    - condition: template
+                      value_template: "{{ continue }}"
+                  then:
+                    - alias: Set message id
+                      variables:
+                        message_id: |-
+                          {% if wait.trigger.id == 'ble' %}
+                            ble_out_of_range
+                          {% elif wait.trigger.id == 'vehicle_left' %}
+                            vehicle_left
+                          {% elif wait.trigger.id == 'gate_zone_left' %}
+                            gate_zone_left
+                          {% elif wait.remaining == 0 %}
+                            did_not_leave
+                          {% endif %}
+                    - alias: Get notification translation
+                      variables:
+                        title_id: "close_gate"
+                        <<: *get_translation
+                    - alias: Get button translation
+                      variables:
+                        button_id: "close"
+                        <<: *get_button_translation
+                    - alias: Ask the user if he wants to close the gate
+                      action: "{{ notify_service }}"
                       data:
-                        <<: *notification_data
-                        notification_icon: mdi:lock-question
-                        sticky: true
-                        persistent: true
-                        timeout: ""
-                        actions:
-                          - action: "{{ closing_order_id }}"
-                            title: "{{ button }}"
+                        title: "{{ title }}"
+                        message: "{{ message }}"
+                        data:
+                          <<: *notification_data
+                          notification_icon: mdi:lock-question
+                          sticky: true
+                          persistent: true
+                          timeout: ""
+                          actions:
+                            - action: "{{ closing_order_id }}"
+                              title: "{{ button }}"
       - alias: If timeout reached
         if:
           - condition: template
@@ -1486,85 +1486,85 @@ actions:
                   continue: "{{ arrival_closing_behavior == 'notify' }}"
               - alias: Wait for events at least once, then while the gate closing has not been triggered
                 repeat:
-                until: "{{ continue }}"
-                sequence:
-                  - alias: Wait for events before closing the gate
-                    wait_for_trigger:
-                      - trigger: template
-                        id: manual
-                        value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
-                      - trigger: template
-                        id: vehicle_left
-                        value_template: "{{ is_state(driving_sensor, 'off') }}"
-                      - trigger: template
-                        id: activation_zone_left
-                        value_template: *activation_zone_out_trigger
-                      - trigger: template
-                        id: forbidden_zone
-                        value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
-                      - alias: Closing button pressed
-                        trigger: event
-                        id: closing_order
-                        event_type: mobile_app_notification_action
-                        event_data:
-                          action: "{{ closing_order_id }}"
-                    timeout:
-                      minutes: !input safety_delay
-                  - alias: If the trigger needs to close the gate
-                    if:
-                      - condition: template
-                        value_template: "{{ wait.trigger.id in ['manual', 'closing_order'] }}"
-                    then:
-                      - alias: Break the loop next time
-                        variables:
-                          continue: false
-                  - alias: If this is the first loop
-                    if:
-                      - condition: template
-                        value_template: "{{ repeat.first }}"
-                    then:
-                      - alias: Set error id
-                        variables:
-                          message_id: |-
-                            {% if wait.trigger.id == 'vehicle_left' %}
-                              vehicle_left
-                            {% elif wait.trigger.id == 'gate_zone_left' %}
-                              gate_zone_left
-                            {% elif wait.trigger.id == 'forbidden_zone' %}
-                              forbidden_zone
-                            {% elif wait.remaining == 0 %}
-                              did_not_arrive
-                            {% else %}
-                              {{ none }}
-                            {% endif %}
-                      - choose:
-                          - alias: If a closing notification needs to be sent
-                            conditions:
-                              - condition: template
-                                value_template: "{{ continue }}"
-                            sequence:
-                              - alias: Get notification translation
-                                variables:
-                                  title_id: "close_gate"
-                                  <<: *get_translation
-                              - alias: Get button translation
-                                variables:
-                                  button_id: "close"
-                                  <<: *get_button_translation
-                              - alias: Ask the user if he wants to close the gate
-                            action: "{{ notify_service }}"
-                            data:
-                              title: "{{ title }}"
-                              message: "{{ message }}"
-                              data:
-                                <<: *notification_data
-                                notification_icon: mdi:lock-question
-                                sticky: true
-                                persistent: true
-                                timeout: ""
-                                actions:
-                                  - action: "{{ closing_order_id }}"
-                                    title: "{{ button }}"
+                  until: "{{ continue }}"
+                  sequence:
+                    - alias: Wait for events before closing the gate
+                      wait_for_trigger:
+                        - trigger: template
+                          id: manual
+                          value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
+                        - trigger: template
+                          id: vehicle_left
+                          value_template: "{{ is_state(driving_sensor, 'off') }}"
+                        - trigger: template
+                          id: activation_zone_left
+                          value_template: *activation_zone_out_trigger
+                        - trigger: template
+                          id: forbidden_zone
+                          value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
+                        - alias: Closing button pressed
+                          trigger: event
+                          id: closing_order
+                          event_type: mobile_app_notification_action
+                          event_data:
+                            action: "{{ closing_order_id }}"
+                      timeout:
+                        minutes: !input safety_delay
+                    - alias: If the trigger needs to close the gate
+                      if:
+                        - condition: template
+                          value_template: "{{ wait.trigger.id in ['manual', 'closing_order'] }}"
+                      then:
+                        - alias: Break the loop next time
+                          variables:
+                            continue: false
+                    - alias: If this is the first loop
+                      if:
+                        - condition: template
+                          value_template: "{{ repeat.first }}"
+                      then:
+                        - alias: Set error id
+                          variables:
+                            message_id: |-
+                              {% if wait.trigger.id == 'vehicle_left' %}
+                                vehicle_left
+                              {% elif wait.trigger.id == 'gate_zone_left' %}
+                                gate_zone_left
+                              {% elif wait.trigger.id == 'forbidden_zone' %}
+                                forbidden_zone
+                              {% elif wait.remaining == 0 %}
+                                did_not_arrive
+                              {% else %}
+                                {{ none }}
+                              {% endif %}
+                        - choose:
+                            - alias: If a closing notification needs to be sent
+                              conditions:
+                                - condition: template
+                                  value_template: "{{ continue }}"
+                              sequence:
+                                - alias: Get notification translation
+                                  variables:
+                                    title_id: "close_gate"
+                                    <<: *get_translation
+                                - alias: Get button translation
+                                  variables:
+                                    button_id: "close"
+                                    <<: *get_button_translation
+                                - alias: Ask the user if he wants to close the gate
+                                  action: "{{ notify_service }}"
+                                  data:
+                                    title: "{{ title }}"
+                                    message: "{{ message }}"
+                                    data:
+                                      <<: *notification_data
+                                      notification_icon: mdi:lock-question
+                                      sticky: true
+                                      persistent: true
+                                      timeout: ""
+                                      actions:
+                                        - action: "{{ closing_order_id }}"
+                                          title: "{{ button }}"
               - alias: Remove itinerary started / gate closing notification
                 action: "{{ notify_service }}"
                 data: *clear_notification
