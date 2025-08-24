@@ -460,6 +460,8 @@ variables:
         disabled_triggered_frequently: |-
           The blueprint has been triggered {consecutive_errors} times in a row
           Please enable the blueprint manually once the issue has been fixed
+        disabled_updated_frequently: |-
+          The automation spammed the travel time API with requests too quickly
         forbidden_zone: "You entered a forbidden zone"
         invalid_travel_time_sensor: "Your travel time sensor does not exist !"
         unsupported_tt_integration: "Your travel time integration is not supported !"
@@ -493,6 +495,8 @@ variables:
         disabled_triggered_frequently: |-
           L'automation s'est déclenchée {consecutive_errors} fois d'affilée
           Réactivez l'automatisation manuellement une fois le problème corrigé
+        disabled_updated_frequently: |-
+          L'automatisation a saturé l'API de temps de trajet avec des requêtes trop rapides
         forbidden_zone: "Vous êtes entré dans une zone interdite"
         invalid_travel_time_sensor: "Votre capteur de temps de trajet n'existe pas !"
         unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
@@ -1308,6 +1312,22 @@ actions:
                         entity_id: "{{ itinerary_sensor }}"
                       data:
                         value: "error: updated_frequently"
+                    - alias: Get notification translation
+                      variables:
+                        title_id: "disabled"
+                        message_id: "disabled_updated_frequently"
+                        <<: *get_translation
+                    - alias: Notify driver that the blueprint is disabling itself
+                      action: "{{ notify_service }}"
+                      data:
+                        title: "{{ title }}"
+                        message: "{{ message }}"
+                        data: *notification_data
+                    - alias: Notify all users on the dashboard that the blueprint has disabled itself
+                      action: persistent_notification.create
+                      data:
+                        title: "{{ title }}"
+                        message: "{{ message }}"
                     - alias: Disable the blueprint
                       action: automation.turn_off
                       target:
