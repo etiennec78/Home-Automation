@@ -982,10 +982,10 @@ actions:
                             entity_id: "{{ repeat.item }}"
           - alias: Set a variable to break the following loop
             variables:
-              continue: "{{ closing_behavior == 'notif' }}"
+              break: "{{ closing_behavior != 'notif' }}"
           - alias: Wait for events at least once, then while the gate closing has not been triggered
             repeat:
-              until: "{{ continue }}"
+              until: "{{ break }}"
               sequence:
                 - alias: Wait for events before closing the gate
                   wait_for_trigger:
@@ -1024,7 +1024,7 @@ actions:
                   then:
                     - alias: Break the loop next time
                       variables:
-                        continue: false
+                        break: true
                 - alias: If this is the first loop
                   if:
                     - condition: template
@@ -1050,7 +1050,7 @@ actions:
                     - alias: If a closing notification needs to be sent
                       if:
                         - condition: template
-                          value_template: "{{ continue }}"
+                          value_template: "{{ not break }}"
                       then:
                         - alias: Get notification translation
                           variables:
