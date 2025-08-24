@@ -463,6 +463,7 @@ variables:
           Please enable the blueprint manually once the issue has been fixed
         disabled_updated_frequently: |-
           The automation spammed the travel time API with requests too quickly
+          Please report this issue on GitHub !
         forbidden_zone: "You entered a forbidden zone"
         invalid_travel_time_sensor: "Your travel time sensor does not exist !"
         unsupported_tt_integration: "Your travel time integration is not supported !"
@@ -498,6 +499,7 @@ variables:
           Réactivez l'automatisation manuellement une fois le problème corrigé
         disabled_updated_frequently: |-
           L'automatisation a saturé l'API de temps de trajet avec des requêtes trop rapides
+          Signalez ce problème sur GitHub svp !
         forbidden_zone: "Vous êtes entré dans une zone interdite"
         invalid_travel_time_sensor: "Votre capteur de temps de trajet n'existe pas !"
         unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
