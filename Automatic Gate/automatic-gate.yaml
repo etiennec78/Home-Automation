@@ -433,6 +433,8 @@ variables:
   only_open_near_iBeacon: !input only_open_near_iBeacon
   wifi_devices: !input wifi_devices
   forbidden_zones: !input forbidden_zones
+  quick_tt_updates: 0
+  last_quick_tt_update: "{{ none }}"
   strings:
     en:
       title:
@@ -459,6 +461,9 @@ variables:
         disabled_triggered_frequently: |-
           The blueprint has been triggered {consecutive_errors} times in a row
           Please enable the blueprint manually once the issue has been fixed
+        disabled_updated_frequently: |-
+          The automation spammed the travel time API with requests too quickly
+          Please report this issue on GitHub !
         forbidden_zone: "You entered a forbidden zone"
         invalid_travel_time_sensor: "Your travel time sensor does not exist !"
         unsupported_tt_integration: "Your travel time integration is not supported !"
@@ -492,6 +497,9 @@ variables:
         disabled_triggered_frequently: |-
           L'automation s'est déclenchée {consecutive_errors} fois d'affilée
           Réactivez l'automatisation manuellement une fois le problème corrigé
+        disabled_updated_frequently: |-
+          L'automatisation a saturé l'API de temps de trajet avec des requêtes trop rapides
+          Signalez ce problème sur GitHub svp !
         forbidden_zone: "Vous êtes entré dans une zone interdite"
         invalid_travel_time_sensor: "Votre capteur de temps de trajet n'existe pas !"
         unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
@@ -659,28 +667,30 @@ actions:
               - condition: template
                 value_template: "{{ consecutive_errors == 3 }}"
             sequence:
-              - alias: Get notification translation
+              - alias: Set error id
                 variables:
-                  title_id: "disabled"
                   message_id: "disabled_triggered_frequently"
-                  <<: *get_translation
-              - alias: Notify driver that the blueprint is disabling itself
-                action: "{{ notify_service }}"
-                data:
-                  title: "{{ title }}"
-                  message: "{{ message }}"
-                  data: *notification_data
-              - alias: Notify all users on the dashboard that the blueprint has disabled itself
-                action: persistent_notification.create
-                data:
-                  title: "{{ title }}"
-                  message: "{{ message }}"
               - alias: Disable the blueprint
-                action: automation.turn_off
-                target:
-                  entity_id: "{{ this.entity_id }}"
-                data:
-                  stop_actions: true
+                sequence: &disable_blueprint
+                  - alias: Get notification translation
+                    variables:
+                      title_id: "disabled"
+                      <<: *get_translation
+                  - alias: Notify driver that the blueprint is disabling itself
+                    action: "{{ notify_service }}"
+                    data:
+                      title: "{{ title }}"
+                      message: "{{ message }}"
+                      data: *notification_data
+                  - alias: Notify all users on the dashboard that the blueprint has disabled itself
+                    action: persistent_notification.create
+                    data:
+                      title: "{{ title }}"
+                      message: "{{ message }}"
+                  - alias: Disable the blueprint
+                    action: automation.turn_off
+                    target:
+                      entity_id: "{{ this.entity_id }}"
       - stop: Blueprint triggered too frequently
         error: true
   - alias: If driver at gate location
@@ -1272,26 +1282,72 @@ actions:
             - condition: template
               value_template:  "{{ travel_time_rate == 'Continuously' and
                 states[travel_time_sensor].last_updated + timedelta(minutes=continuously_refresh_interval) < now() }}"
-          then: &update_travel_time
-            - alias: Stop if travel time sensor does not exist
-              if:
-                - condition: template
-                  value_template: "{{ states[travel_time_sensor] is none }}"
-              then:
-                - alias: Set error id
-                  variables:
-                    message_id: "invalid_travel_time_sensor"
-                - alias: Create error
-                  sequence: *create_error
-                - stop: Travel time sensor does not exist
-                  error: true
-            - alias: Avoid spamming travel time API
-              condition: template
-              value_template: "{{ now() - states[travel_time_sensor].last_updated > timedelta(seconds=3) }}"
-            - alias: Update travel time
-              action: homeassistant.update_entity
-              target:
-                entity_id: "{{ travel_time_sensor }}"
+          then:
+            - alias: Set variables for the following sequence
+              variables:
+                quick_update_trigger: "{{ continuously_refresh_interval * 60 - 30 }}"
+                reset_after: "{{ continuously_refresh_interval * 120 }}"
+            - sequence: &update_travel_time
+                - alias: Stop if travel time sensor does not exist
+                  if:
+                    - condition: template
+                      value_template: "{{ states[travel_time_sensor] is none }}"
+                  then:
+                    - alias: Set error id
+                      variables:
+                        message_id: "invalid_travel_time_sensor"
+                    - alias: Create error
+                      sequence: *create_error
+                    - stop: Travel time sensor does not exist
+                      error: true
+                - alias: Only update the travel time if it has not already been updated recently
+                  if:
+                    - condition: template
+                      value_template: "{{ now() - states[travel_time_sensor].last_updated > timedelta(seconds=quick_update_trigger) }}"
+                  then:
+                    - alias: Update travel time
+                      action: homeassistant.update_entity
+                      target:
+                        entity_id: "{{ travel_time_sensor }}"
+                  else:
+                    - alias: If the last quick update was a long time ago
+                      if:
+                        - condition: template
+                          value_template: |-
+                            {{
+                              last_quick_tt_update is not none
+                              and last_quick_tt_update + timedelta(seconds=reset_after) > now()
+                            }}
+                      then:
+                        - alias: Note that the travel time sensor tried to update too quickly
+                          variables:
+                            quick_tt_updates: "{{ quick_tt_updates + 1 }}"
+                      else:
+                        - alias: Reset the quick travel time updates counter
+                          variables:
+                            quick_tt_updates: 1
+                    - alias: Reset the last quick update variable
+                      variables:
+                        last_quick_tt_update: "{{ now() }}"
+                    - alias: If 20 travel time updates were too quick
+                      if:
+                        - condition: template
+                          value_template: "{{ quick_tt_updates > 20 }}"
+                      then:
+                        - alias: Mark error in driver itinerary sensor
+                          action: input_text.set_value
+                          target:
+                            entity_id: "{{ itinerary_sensor }}"
+                          data:
+                            value: "error: updated_frequently"
+                        - alias: Set error id
+                          variables:
+                            message_id: "disabled_updated_frequently"
+                            <<: *get_translation
+                        - alias: Disable the blueprint
+                          sequence: *disable_blueprint
+                        - stop: Travel time refreshing too quickly
+                          error: true
         - alias: Wait for new driver position or vehicle left
           wait_for_trigger:
             - trigger: event
@@ -1324,6 +1380,10 @@ actions:
                 condition: template
                 value_template: "{{ is_state(driving_sensor, 'on') }}"
             sequence:
+              - alias: Set variables for the following sequence
+                variables:
+                  quick_update_trigger: 1
+                  reset_after: 20
               - alias: Update travel time
                 sequence: *update_travel_time
               - alias: Wait for travel time integration to refresh
