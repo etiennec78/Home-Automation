@@ -434,6 +434,7 @@ variables:
   wifi_devices: !input wifi_devices
   forbidden_zones: !input forbidden_zones
   quick_tt_updates: 0
+  last_quick_tt_update: "{{ none }}"
   strings:
     en:
       title:
@@ -1298,9 +1299,25 @@ actions:
                   target:
                     entity_id: "{{ travel_time_sensor }}"
               else:
-                - alias: Note that the travel time sensor tried to update too quickly
+                - alias: If the last quick update was less than 5 minutes ago
+                  if:
+                    - condition: template
+                      value_template: |-
+                        {{
+                          last_quick_tt_update is not none
+                          and last_quick_tt_update + timedelta(minutes=5) > now()
+                        }}
+                  then:
+                    - alias: Note that the travel time sensor tried to update too quickly
+                      variables:
+                        quick_tt_updates: "{{ quick_tt_updates + 1 }}"
+                  else:
+                    - alias: Reset the quick travel time updates counter
+                      variables:
+                        quick_tt_updates: 1
+                - alias: Reset the last quick update variable
                   variables:
-                    quick_tt_updates: "{{ quick_tt_updates + 1 }}"
+                    last_quick_tt_update: "{{ now() }}"
                 - alias: If 100 travel time updates were too quick
                   if:
                     - condition: template
