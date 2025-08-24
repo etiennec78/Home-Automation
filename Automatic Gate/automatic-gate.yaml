@@ -1285,13 +1285,15 @@ actions:
                   sequence: *create_error
                 - stop: Travel time sensor does not exist
                   error: true
-            - alias: Avoid spamming travel time API
-              condition: template
-              value_template: "{{ now() - states[travel_time_sensor].last_updated > timedelta(seconds=3) }}"
-            - alias: Update travel time
-              action: homeassistant.update_entity
-              target:
-                entity_id: "{{ travel_time_sensor }}"
+            - alias: Only update the travel time if it has not already been updated recently
+              if:
+                - condition: template
+                  value_template: "{{ now() - states[travel_time_sensor].last_updated > timedelta(seconds=3) }}"
+              then:
+                - alias: Update travel time
+                  action: homeassistant.update_entity
+                  target:
+                    entity_id: "{{ travel_time_sensor }}"
         - alias: Wait for new driver position or vehicle left
           wait_for_trigger:
             - trigger: event
