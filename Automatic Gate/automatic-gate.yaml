@@ -665,26 +665,30 @@ actions:
               - condition: template
                 value_template: "{{ consecutive_errors == 3 }}"
             sequence:
-              - alias: Get notification translation
+              - alias: Set error id
                 variables:
-                  title_id: "disabled"
                   message_id: "disabled_triggered_frequently"
-                  <<: *get_translation
-              - alias: Notify driver that the blueprint is disabling itself
-                action: "{{ notify_service }}"
-                data:
-                  title: "{{ title }}"
-                  message: "{{ message }}"
-                  data: *notification_data
-              - alias: Notify all users on the dashboard that the blueprint has disabled itself
-                action: persistent_notification.create
-                data:
-                  title: "{{ title }}"
-                  message: "{{ message }}"
               - alias: Disable the blueprint
-                action: automation.turn_off
-                target:
-                  entity_id: "{{ this.entity_id }}"
+                sequence: &disable_blueprint
+                  - alias: Get notification translation
+                    variables:
+                      title_id: "disabled"
+                      <<: *get_translation
+                  - alias: Notify driver that the blueprint is disabling itself
+                    action: "{{ notify_service }}"
+                    data:
+                      title: "{{ title }}"
+                      message: "{{ message }}"
+                      data: *notification_data
+                  - alias: Notify all users on the dashboard that the blueprint has disabled itself
+                    action: persistent_notification.create
+                    data:
+                      title: "{{ title }}"
+                      message: "{{ message }}"
+                  - alias: Disable the blueprint
+                    action: automation.turn_off
+                    target:
+                      entity_id: "{{ this.entity_id }}"
       - stop: Blueprint triggered too frequently
         error: true
   - alias: If driver at gate location
@@ -1334,26 +1338,12 @@ actions:
                             entity_id: "{{ itinerary_sensor }}"
                           data:
                             value: "error: updated_frequently"
-                        - alias: Get notification translation
+                        - alias: Set error id
                           variables:
-                            title_id: "disabled"
                             message_id: "disabled_updated_frequently"
                             <<: *get_translation
-                        - alias: Notify driver that the blueprint is disabling itself
-                          action: "{{ notify_service }}"
-                          data:
-                            title: "{{ title }}"
-                            message: "{{ message }}"
-                            data: *notification_data
-                        - alias: Notify all users on the dashboard that the blueprint has disabled itself
-                          action: persistent_notification.create
-                          data:
-                            title: "{{ title }}"
-                            message: "{{ message }}"
                         - alias: Disable the blueprint
-                          action: automation.turn_off
-                          target:
-                            entity_id: "{{ this.entity_id }}"
+                          sequence: *disable_blueprint
                         - stop: Travel time refreshing too quickly
                           error: true
         - alias: Wait for new driver position or vehicle left
