@@ -612,9 +612,9 @@ actions:
         variables:
           consecutive_errors: |-
             {% set sensor_value = states(itinerary_sensor) %}
-            {% if sensor_value[:19] == 'error: frequently: ' %}
-              {% if sensor_value[19:] | is_number %}
-                {{ sensor_value[19:] | int + 1 }}
+            {% if sensor_value[:29] == 'error: triggered_frequently: ' %}
+              {% if sensor_value[29:] | is_number %}
+                {{ sensor_value[29:] | int + 1 }}
               {% else %}
                 1
               {% endif %}
@@ -626,7 +626,7 @@ actions:
         target:
           entity_id: "{{ itinerary_sensor }}"
         data:
-          value: "error: frequently: {{ consecutive_errors }}"
+          value: "error: triggered_frequently: {{ consecutive_errors }}"
       - choose:
           - alias: If this is the first time the error occurs in a row
             conditions:
