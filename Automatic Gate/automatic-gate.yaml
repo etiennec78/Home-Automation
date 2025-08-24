@@ -224,6 +224,7 @@ blueprint:
             Gate automatic **opening** behavior on **arrival**
 
               - **Fully automatic** : Your gate will automatically open
+              - **Cancelable timer** : A notification of a cancelable timer will be sent before opening your gate
               - **Notification request** : An actionable notification will be sent to open your gate
               - **Disabled** : Your gate will stay closed
           default: "auto"
@@ -232,6 +233,8 @@ blueprint:
               options:
                 - label: Fully automatic
                   value: "auto"
+                - label: Cancelable timer
+                  value: "timer"
                 - label: Notification request
                   value: "notif"
                 - label: Disabled
@@ -1492,9 +1495,12 @@ actions:
                   - alias: Set the opening time
                     variables:
                       opening_time: |-
-                        {{ states[travel_time_sensor].last_updated | as_timestamp
+                        {{
+                          states[travel_time_sensor].last_updated | as_timestamp
                             + travel_time_duration
-                            - lead_time }}
+                            - lead_time
+                            - 10 if opening_behavior == 'timer' else 0
+                        }}
               - alias: Set a timer for the gate opening (or max int value if travel time sensor is unknown and no previous eta was stored)
                 variables:
                   seconds_before_opening: |-
@@ -1574,6 +1580,14 @@ actions:
                   closing_behavior: !input arrival_closing_behavior
                   opening_message: "soon_arrived"
                   took_too_long_message: "did_not_arrive"
+                  timer: |-
+                    {{
+                      round(
+                        states[travel_time_sensor].last_updated | as_timestamp
+                        + travel_time_duration
+                        - lead_time
+                      )
+                    }}
               - alias: Open and close gate by following behaviors set by the user
                 sequence: *open_close_behavior
               - alias: Stop whole script as successful
