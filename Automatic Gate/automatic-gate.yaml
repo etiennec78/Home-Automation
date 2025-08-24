@@ -1110,15 +1110,22 @@ actions:
                       - alias: Get names of awaited persons
                         variables:
                           awaited_persons: |-
-                            {% set data = namespace(awaited_persons=[]) %}
+                            {% set awaited_persons = [] %}
 
                             {% for sensor_idx in range(itinerary_sensors | length) %}
-                              {% if sensor_idx != idx and is_state(itinerary_sensors[sensor_idx], ['on_approach', 'leaving']) %}
-                                {% set data.awaited_persons = data.awaited_persons + [state_attr(persons[sensor_idx], 'friendly_name')] %}
+                              {%
+                                if sensor_idx != idx
+                                and is_state(itinerary_sensors[sensor_idx], ['on_approach', 'leaving'])
+                              %}
+                                {%
+                                  set awaited_persons = awaited_persons | union(
+                                    [state_attr(persons[sensor_idx], 'friendly_name')]
+                                  )
+                                %}
                               {% endif %}
                             {% endfor %}
 
-                            {{ data.awaited_persons | join(', ') }}
+                            {{ awaited_persons | join(', ') }}
                       - alias: Get notification translation
                         variables:
                           title_id: "awaiting"
