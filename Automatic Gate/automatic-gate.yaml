@@ -858,7 +858,7 @@ actions:
           entity_id: "{{ itinerary_sensor }}"
         data:
           value: leaving
-      - alias: Set departure variables for the following sequence bloc
+      - alias: Set departure variables for the following sequence block
         variables:
           itinerary_mode: "departure"
           opening_behavior: !input departure_opening_behavior
@@ -980,7 +980,7 @@ actions:
                             {% endif %}
                           target:
                             entity_id: "{{ repeat.item }}"
-          - alias: Set a variable to break the loop
+          - alias: Set a variable to break the following loop
             variables:
               continue: "{{ closing_behavior == 'notif' }}"
           - alias: Wait for events at least once, then while the gate closing has not been triggered
@@ -1431,7 +1431,7 @@ actions:
                   value: on_approach
                 target:
                   entity_id: "{{ itinerary_sensor }}"
-              - alias: Set arrival variables for the following sequence bloc
+              - alias: Set arrival variables for the following sequence block
                 variables:
                   itinerary_mode: "arrival"
                   opening_behavior: !input arrival_opening_behavior
