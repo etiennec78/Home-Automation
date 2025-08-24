@@ -433,6 +433,7 @@ variables:
   only_open_near_iBeacon: !input only_open_near_iBeacon
   wifi_devices: !input wifi_devices
   forbidden_zones: !input forbidden_zones
+  quick_tt_updates: 0
   strings:
     en:
       title:
@@ -679,8 +680,6 @@ actions:
                 action: automation.turn_off
                 target:
                   entity_id: "{{ this.entity_id }}"
-                data:
-                  stop_actions: true
       - stop: Blueprint triggered too frequently
         error: true
   - alias: If driver at gate location
@@ -1294,6 +1293,27 @@ actions:
                   action: homeassistant.update_entity
                   target:
                     entity_id: "{{ travel_time_sensor }}"
+              else:
+                - alias: Note that the travel time sensor tried to update too quickly
+                  variables:
+                    quick_tt_updates: "{{ quick_tt_updates + 1 }}"
+                - alias: If 100 travel time updates were too quick
+                  if:
+                    - condition: template
+                      value_template: "{{ quick_tt_updates > 100 }}"
+                  then:
+                    - alias: Mark error in driver itinerary sensor
+                      action: input_text.set_value
+                      target:
+                        entity_id: "{{ itinerary_sensor }}"
+                      data:
+                        value: "error: updated_frequently"
+                    - alias: Disable the blueprint
+                      action: automation.turn_off
+                      target:
+                        entity_id: "{{ this.entity_id }}"
+                    - stop: Travel time refreshing too quickly
+                      error: true
         - alias: Wait for new driver position or vehicle left
           wait_for_trigger:
             - trigger: event
