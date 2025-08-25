@@ -330,6 +330,12 @@ blueprint:
           selector:
             text:
               multiline: true
+        phone_tts:
+          name: 📳 Phone TTS
+          description: Read notifications **aloud** on **Android** phones
+          default: false
+          selector:
+            boolean:
 
     optional_sensors:
       name: Optional sensors
@@ -607,6 +613,15 @@ actions:
             notification_icon: mdi:hammer-wrench
             channel: Automatic Gate config
             tag: invalid-config
+      - alias: Notify over TTS
+        action: "{{ notify_service }}"
+        data:
+          message: TTS
+          data:
+            tts_text: "{{ title[-2] ~ message }}"
+            channel: Itinerary status
+            importance: high
+        enabled: !input phone_tts
       - alias: Notify all users on the dashboard that the config is invalid
         action: persistent_notification.create
         data:
@@ -686,6 +701,15 @@ actions:
                         critical: 1
                     tag: itinerary-status
                     timeout: 300
+              - alias: Notify over TTS
+                action: "{{ notify_service }}"
+                data:
+                  message: TTS
+                  data:
+                    tts_text: "{{ title[-2] ~ message }}"
+                    channel: Itinerary status
+                    importance: high
+                enabled: !input phone_tts
           - alias: If this is the third time the error occurs in a row
             conditions:
               - condition: template
@@ -706,6 +730,15 @@ actions:
                       title: "{{ title }}"
                       message: "{{ message }}"
                       data: *notification_data
+                  - alias: Notify over TTS
+                    action: "{{ notify_service }}"
+                    data:
+                      message: TTS
+                      data:
+                        tts_text: "{{ title[-2] ~ message }}"
+                        channel: Itinerary status
+                        importance: high
+                    enabled: !input phone_tts
                   - alias: Notify all users on the dashboard that the blueprint has disabled itself
                     action: persistent_notification.create
                     data:
@@ -826,6 +859,15 @@ actions:
                       data:
                         <<: *notification_data
                         importance: high
+                  - alias: Notify over TTS
+                    action: "{{ notify_service }}"
+                    data:
+                      message: TTS
+                      data:
+                        tts_text: "{{ title[-2] ~ message }}"
+                        channel: Itinerary status
+                        importance: high
+                    enabled: !input phone_tts
                   - alias: Mark error in driver itinerary sensor
                     action: input_text.set_value
                     target:
@@ -994,6 +1036,15 @@ actions:
                                 title: "{{ buttons[0] }}"
                               - action: "{{ opening_order_id }}"
                                 title: "{{ buttons[1] }}"
+              - alias: Notify over TTS
+                action: "{{ notify_service }}"
+                data:
+                  message: TTS
+                  data:
+                    tts_text: "{{ title[-2] ~ message }}"
+                    channel: Itinerary status
+                    importance: high
+                enabled: !input phone_tts
               - alias: Wait for events before opening the gate or canceling the itinerary
                 wait_for_trigger:
                   - alias: Manual opening
@@ -1253,6 +1304,15 @@ actions:
                                           title: "{{ buttons[0] }}"
                                         - action: "{{ canceling_order_id }}"
                                           title: "{{ buttons[1] }}"
+                        - alias: Notify over TTS
+                          action: "{{ notify_service }}"
+                          data:
+                            message: TTS
+                            data:
+                              tts_text: "{{ title[-2] ~ message }}"
+                              channel: Itinerary status
+                              importance: high
+                          enabled: !input phone_tts
                   else:
                     - alias: If the itinerary needs to be canceled
                       if:
@@ -1332,6 +1392,15 @@ actions:
                             notification_icon: mdi:sleep
                             importance: high
                             timeout: ""
+                      - alias: Notify over TTS
+                        action: "{{ notify_service }}"
+                        data:
+                          message: TTS
+                          data:
+                            tts_text: "{{ title[-2] ~ message }}"
+                            channel: Itinerary status
+                            importance: high
+                        enabled: !input phone_tts
                       - alias: Wait for gate closed
                         wait_for_trigger:
                           - trigger: template
@@ -1447,6 +1516,15 @@ actions:
         notification_icon: mdi:map-check
         importance: high
         timeout: ""
+  - alias: Notify over TTS
+    action: "{{ notify_service }}"
+    data:
+      message: TTS
+      data:
+        tts_text: "{{ title[-2] ~ message }}"
+        channel: Itinerary status
+        importance: high
+    enabled: !input phone_tts
   - alias: Repeat while driver still driving
     repeat:
       while:
