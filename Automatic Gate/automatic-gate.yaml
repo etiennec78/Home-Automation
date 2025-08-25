@@ -1563,13 +1563,22 @@ actions:
                 variables:
                   quick_update_trigger: 1
                   reset_after: 20
-              - alias: Update travel time
-                sequence: *update_travel_time
-              - alias: Wait for travel time integration to refresh
-                condition: template
-                value_template: |-
-                    {{ states[travel_time_sensor].last_updated > now() - timedelta(seconds=5)
-                          and states[travel_time_sensor].last_changed > now() - timedelta(minutes=5) }}
+              - alias: If the travel time needs to be updated
+                if:
+                  - condition: template
+                    value_template: |-
+                      {{
+                        repeat.first
+                        or wait.travel_time_rate != 'Once when near home'
+                      }}
+                then:
+                  - alias: Update travel time
+                    sequence: *update_travel_time
+                  - alias: Wait for travel time integration to refresh
+                    condition: template
+                    value_template: |-
+                        {{ states[travel_time_sensor].last_updated > now() - timedelta(seconds=5)
+                              and states[travel_time_sensor].last_changed > now() - timedelta(minutes=5) }}
               - alias: If the travel time sensor is not unknown
                 if:
                   - condition: template
@@ -1621,50 +1630,43 @@ actions:
                   - condition: template
                     value_template: "{{ seconds_before_opening > 1 }}"
                 then:
-                  - alias: If travel time refresh rate set to "Once when near home"
-                    if:
-                      - condition: template
-                        value_template: "{{ travel_time_rate == 'Once when near home' }}"
-                    then:
-                      - alias: Wait for ETA or vehicle left
-                        wait_for_trigger:
-                          - trigger: template
-                            value_template: "{{ is_state(driving_sensor, 'off') }}"
-                        timeout:
-                          seconds: "{{ seconds_before_opening }}"
-                    else:
-                      - alias: Wait for ETA, new position, vehicle left, and cancel if deviced timed out
-                        wait_for_trigger:
-                          - trigger: event
-                            event_type: state_changed
-                            event_data:
-                              entity_id: "{{ person }}"
-                          - trigger: template
-                            value_template: "{{ is_state(driving_sensor, 'off') }}"
-                        timeout:
-                          seconds: "{{ min(timeout_delay*60, seconds_before_opening) }}"
-                      - choose:
-                          - alias: If timeout ran out of time (not because of eta reached)
-                            conditions:
-                              - condition: template
-                                value_template: |-
-                                  {{
-                                    wait.remaining == 0
-                                    and opening_time is not none
-                                    and opening_time > now() | as_timestamp
-                                  }}
-                            sequence:
-                              - alias: Set error id
-                                variables:
-                                  message_id: "timed_out"
-                              - alias: Create error
-                                sequence: *create_error
-                              - stop: Timed out
-                          - alias: Stop if the user is in a forbidden zone
-                            conditions:
-                              - condition: template
-                                value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
-                            sequence: *forbidden_zone
+                  - alias: Wait for ETA, new position, vehicle left, and cancel if deviced timed out
+                    wait_for_trigger:
+                      - trigger: event
+                        event_type: state_changed
+                        event_data:
+                          entity_id: "{{ person }}"
+                      - trigger: template
+                        value_template: "{{ is_state(driving_sensor, 'off') }}"
+                    timeout:
+                      seconds: |-
+                        {% if travel_time_rate == 'Once when near home' %}
+                          {{ seconds_before_opening }}
+                        {% else %}
+                          {{ min(timeout_delay*60, seconds_before_opening) }}
+                        {% endif %}
+                  - choose:
+                      - alias: If timeout ran out of time (not because of eta reached)
+                        conditions:
+                          - condition: template
+                            value_template: |-
+                              {{
+                                wait.remaining == 0
+                                and opening_time is not none
+                                and opening_time > now() | as_timestamp
+                              }}
+                        sequence:
+                          - alias: Set error id
+                            variables:
+                              message_id: "timed_out"
+                          - alias: Create error
+                            sequence: *create_error
+                          - stop: Timed out
+                      - alias: Stop if the user is in a forbidden zone
+                        conditions:
+                          - condition: template
+                            value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
+                        sequence: *forbidden_zone
               - alias: Return to the previous loop if the travel time sensor is unknown and no previous eta was stored
                 condition: template
                 value_template: "{{ opening_time is not none }}"
