@@ -206,6 +206,7 @@ blueprint:
             Automatic gate **closing** behavior on **arrival**
 
               - **Fully automatic** : Your gate will automatically close
+              - **Cancelable timer** : A notification of a cancelable timer will be sent before opening your gate
               - **Notification request** : An actionable notification will be sent to close your gate
               - **Disabled** : Your gate won't close automatically
           default: "notif"
@@ -214,6 +215,8 @@ blueprint:
               options:
                 - label: Fully automatic
                   value: "auto"
+                - label: Cancelable timer
+                  value: "timer"
                 - label: Notification request
                   value: "notif"
                 - label: Disabled
@@ -245,6 +248,7 @@ blueprint:
             Gate automatic **closing** behavior on **arrival**
 
               - **Fully automatic** : Your gate will automatically close
+              - **Cancelable timer** : A notification of a cancelable timer will be sent before opening your gate
               - **Notification request** : An actionable notification will be sent to close your gate
               - **Disabled** : Your gate won't close automatically
           default: "auto"
@@ -253,6 +257,8 @@ blueprint:
               options:
                 - label: Fully automatic
                   value: "auto"
+                - label: Cancelable timer
+                  value: "timer"
                 - label: Notification request
                   value: "notif"
                 - label: Disabled
@@ -1064,7 +1070,7 @@ actions:
                             entity_id: "{{ repeat.item }}"
           - alias: Set a variable to break the following loop
             variables:
-              break: "{{ closing_behavior != 'notif' }}"
+              break: "{{ closing_behavior in ['auto', 'off'] }}"
           - alias: Wait for events at least once, then while the gate closing has not been triggered
             repeat:
               until: "{{ break }}"
@@ -1097,12 +1103,31 @@ actions:
                       event_type: mobile_app_notification_action
                       event_data:
                         action: "{{ closing_order_id }}"
+                    - alias: Canceling button pressed
+                      trigger: event
+                      id: canceling_order
+                      event_type: mobile_app_notification_action
+                      event_data:
+                        action: "{{ canceling_order_id }}"
                   timeout:
-                    minutes: !input safety_delay
+                    seconds: |-
+                      {% if repeat.first %}
+                        {% if closing_behavior == 'timer' %}
+                          {{ timer }}
+                        {% else %}
+                          {{ safety_delay * 60 }}
+                        {% endif %}
+                      {% else %}
+                        2147483647
+                      {% endif %}
                 - alias: If the trigger needs to close the gate
                   if:
                     - condition: template
-                      value_template: "{{ wait.trigger.id in ['manual', 'closing_order'] }}"
+                      value_template: |-
+                        {{
+                          wait.trigger.id in ['manual', 'closing_order']
+                          or wait.remaining == 0 and closing_behavior == 'timer'
+                        }}
                   then:
                     - alias: Break the loop next time
                       variables:
@@ -1123,7 +1148,11 @@ actions:
                       variables:
                         message_id: |-
                           {% if wait.remaining == 0 %}
-                            {{ took_too_long_message }}
+                            {% if closing_behavior == 'timer' %}
+                              {{ none }}
+                            {% else %}
+                              {{ took_too_long_message }}
+                            {% endif %}
                           {% elif wait.trigger.id in ['manual', 'closing_order'] %}
                             {{ none }}
                           {% else %}
@@ -1134,35 +1163,80 @@ actions:
                         - condition: template
                           value_template: "{{ not break }}"
                       then:
-                        - alias: Get notification translation
+                        - choose:
+                            - alias: If closing behavior is set to cancelable timer
+                              conditions:
+                                - condition: template
+                                  value_template: "{{ closing_behavior == 'timer' }}"
+                              sequence:
+                                - alias: Get notification translation
+                                  variables:
+                                    title_id: "timer_closing"
+                                    <<: *get_translation
+                                - alias: Get button translation
+                                  variables:
+                                    button_id: "cancel"
+                                    <<: *get_button_translation
+                                - alias: Ask the user if he wants to close the gate
+                                  action: "{{ notify_service }}"
+                                  data:
+                                    title: "{{ title }}"
+                                    message: "{{ message }}"
+                                    data:
+                                      <<: *notification_data
+                                      notification_icon: mdi:lock-question
+                                      sticky: true
+                                      persistent: true
+                                      timeout: "{{ timer }}"
+                                      actions:
+                                        - action: "{{ canceling_order_id }}"
+                                          title: "{{ button }}"
+                            - alias: If closing behavior is set to notification request
+                              conditions:
+                                - condition: template
+                                  value_template: "{{ closing_behavior == 'notif' }}"
+                              sequence:
+                                - alias: Get notification translation
+                                  variables:
+                                    title_id: "close_gate"
+                                    <<: *get_translation
+                                - alias: Get button translation
+                                  variables:
+                                    button_id: "close"
+                                    <<: *get_button_translation
+                                - alias: Ask the user if he wants to close the gate
+                                  action: "{{ notify_service }}"
+                                  data:
+                                    title: "{{ title }}"
+                                    message: "{{ message }}"
+                                    data:
+                                      <<: *notification_data
+                                      notification_icon: mdi:lock-question
+                                      sticky: true
+                                      persistent: true
+                                      timeout: ""
+                                      actions:
+                                        - action: "{{ closing_order_id }}"
+                                          title: "{{ button }}"
+                  else:
+                    - alias: If the itinerary needs to be canceled
+                      if:
+                        - condition: template
+                          value_template: "{{ wait.trigger.id == 'canceling_order' }}"
+                      then:
+                        - alias: Set error id
                           variables:
-                            title_id: "close_gate"
-                            <<: *get_translation
-                        - alias: Get button translation
-                          variables:
-                            button_id: "close"
-                            <<: *get_button_translation
-                        - alias: Ask the user if he wants to close the gate
-                          action: "{{ notify_service }}"
-                          data:
-                            title: "{{ title }}"
-                            message: "{{ message }}"
-                            data:
-                              <<: *notification_data
-                              notification_icon: mdi:lock-question
-                              sticky: true
-                              persistent: true
-                              timeout: ""
-                              actions:
-                                - action: "{{ closing_order_id }}"
-                                  title: "{{ button }}"
+                            message_id: "canceling_order"
+                        - alias: Create error
+                          sequence: *create_error
+                        - stop: Closing canceled
           - alias: If itinerary started or departure gate closing notification was sent
             if:
               - condition: template
                 value_template: |-
                   {{
                     itinerary_mode == 'arrival'
-                    or closing_behavior == 'notif'
+                    or closing_behavior in ['timer', 'notif']
                   }}
             then:
               - alias: Remove closing notification
