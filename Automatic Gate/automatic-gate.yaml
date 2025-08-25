@@ -700,7 +700,7 @@ actions:
                     car_ui: true
                     notification_icon: mdi:alert-circle
                     channel: Itinerary status
-                    importance: max
+                    importance: high
                     push:
                       sound:
                         name: "default"
@@ -862,9 +862,7 @@ actions:
                     data:
                       title: "{{ title }}"
                       message: "{{ message }}"
-                      data:
-                        <<: *notification_data
-                        importance: high
+                      data: *notification_data
                   - alias: Notify over TTS
                     action: "{{ notify_service }}"
                     data:
@@ -1396,7 +1394,6 @@ actions:
                           data:
                             <<: *notification_data
                             notification_icon: mdi:sleep
-                            importance: high
                             timeout: ""
                       - alias: Notify over TTS
                         action: "{{ notify_service }}"
@@ -1520,7 +1517,6 @@ actions:
       data:
         <<: *notification_data
         notification_icon: mdi:map-check
-        importance: high
         timeout: ""
   - alias: Notify over TTS
     action: "{{ notify_service }}"
