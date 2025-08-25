@@ -263,6 +263,15 @@ blueprint:
                   value: "notif"
                 - label: Disabled
                   value: "off"
+        timer:
+          name: ⏱️ Cancelable timer time
+          description: The time before the gate automatically opens/closes in "cancelable timer" mode without your input
+          default: 5
+          selector:
+            number:
+              min: 1
+              max: 20
+              unit_of_measurement: seconds
         safety_delay:
           name: 🔒 Auto-close safety delay
           description: The time the gate will wait before **automatically closing** if your gate is open but you still haven't left or arrived
@@ -447,7 +456,6 @@ variables:
   forbidden_zones: !input forbidden_zones
   quick_tt_updates: 0
   last_quick_tt_update: "{{ none }}"
-  timer: 5
   strings:
     en:
       title:
