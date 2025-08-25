@@ -292,17 +292,6 @@ blueprint:
               min: 0.5
               max: 30
               unit_of_measurement: minutes
-        auto_close_arrival_delay:
-          name: 📬 Auto-close delay after arrival
-          description: |-
-            The time the gate will wait before **automatically closing** after you arrive home and you have left your car
-            *Note : Can be useful if you plan to collect mail or put away groceries after arriving*
-          default: 0
-          selector:
-            number:
-              min: 0
-              max: 30
-              unit_of_measurement: minutes
         forbidden_zones:
           name: ⛔ Forbidden zones
           description: If you enter any of these zones while driving home, your itinerary will be canceled
@@ -1336,13 +1325,6 @@ actions:
                                     lock.{{ prefix }}lock
                                   target:
                                     entity_id: "{{ repeat.item }}"
-                          - alias: If the user was arriving
-                            if:
-                              - condition: template
-                                value_template: "{{ itinerary_mode == 'arrival' }}"
-                            then:
-                              - delay:
-                                  minutes: !input auto_close_arrival_delay
                       - alias: Close all gates
                         repeat: &close_gates
                           for_each: !input gate
