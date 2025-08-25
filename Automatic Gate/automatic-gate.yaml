@@ -457,6 +457,7 @@ variables:
         awaiting: "Gate awaiting {awaited_persons} 💤"
         disabled: "Automatic Gate disabled 🚫"
         invalid_config: "Invalid configuration 🛠️"
+        fallback: "Unknown title. Please open a Github issue 🚨"
       message:
         itinerary_started: "Your itinerary has been started"
         soon_arrived: "You will arrive soon"
@@ -483,10 +484,14 @@ variables:
         unsupported_tt_integration: "Your travel time integration is not supported !"
         too_close: "You have started driving too close to the gate zone"
         invalid_translations: "Your custom translations are not valid !"
+        fallback: |-
+          Unknown notification
+          Please report this issue on Github !
       button:
         open: "Open"
         close: "Close"
         cancel: "Cancel"
+        fallback: "Unknown button"
     fr:
       title:
         itinerary_update: "Itinéraire ℹ️"
@@ -498,6 +503,7 @@ variables:
         awaiting: "Portail en attente de {awaited_persons} 💤"
         disabled: "Automatic Gate désactivé 🚫"
         invalid_config: "Configuration invalide 🛠️"
+        fallback: "Titre inconnu. Ouvrez une issue Github svp 🚨"
       message:
         itinerary_started: "L'itinéraire a démarré"
         soon_arrived: "Vous arrivez bientôt"
@@ -524,10 +530,14 @@ variables:
         unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
         too_close: "Vous avez démarré trop près de la zone du portail"
         invalid_translations: "Vos traductions personnalisées ne sont pas valides !"
+        fallback: |-
+          Notification inconnue
+          Signalez ce problème sur GitHub svp !
       button:
         open: "Ouvrir"
         close: "Fermer"
         cancel: "Annuler"
+        fallback: "Bouton inconnu"
 
 triggers:
   - alias: Trigger when user connects to vehicle
