@@ -460,6 +460,7 @@ variables:
       message:
         itinerary_started: "Your itinerary has been started"
         soon_arrived: "You will arrive soon"
+        arrived: "You have arrived"
         ble_out_of_range: "Your iBeacon is out of range"
         awaiting: "The gate will close once all users have entered/exited"
         vehicle_stopped: "You have left your vehicle"
@@ -500,6 +501,7 @@ variables:
       message:
         itinerary_started: "L'itinéraire a démarré"
         soon_arrived: "Vous arrivez bientôt"
+        arrived: "Vous êtes arrivé"
         ble_out_of_range: "Votre iBeacon est hors de portée"
         awaiting: "Le portail se refermera une fois tous les conducteurs entrés/sortis"
         vehicle_stopped: "Le véhicule a été arrêté"
@@ -1144,7 +1146,7 @@ actions:
                       then:
                         - alias: Restore iBeacon states
                           sequence: *restore_ibeacons
-                    - alias: Set error id
+                    - alias: Set message id
                       variables:
                         message_id: |-
                           {% if wait.remaining == 0 %}
@@ -1155,6 +1157,11 @@ actions:
                             {% endif %}
                           {% elif wait.trigger.id in ['manual', 'closing_order'] %}
                             {{ none }}
+                          {%
+                            elif wait.trigger.id == 'vehicle_stopped'
+                            and itinerary_mode == 'arrival'
+                          %}
+                            arrived
                           {% else %}
                             {{ wait.trigger.id }}
                           {% endif %}
@@ -1311,7 +1318,12 @@ actions:
                       - alias: If an error needs to be raised
                         if:
                           - condition: template
-                            value_template: "{{ closing_behavior in ['auto', 'off'] and message_id is not none }}"
+                            value_template: |-
+                              {{
+                                closing_behavior in ['auto', 'off']
+                                and message_id is not none
+                                and message_id != 'arrived'
+                              }}
                         then:
                           - alias: Create error
                             sequence: *create_error
