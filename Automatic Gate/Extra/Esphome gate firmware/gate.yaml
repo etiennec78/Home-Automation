@@ -46,17 +46,17 @@ sensor:
     name: !secret ibeacon_user0_name
     ibeacon_uuid: !secret ibeacon_user0_uuid
     filters:
-      - timeout: 25s
+      - timeout: !secret ibeacon_timeout
   - platform: ble_rssi
     name: !secret ibeacon_user1_name
     ibeacon_uuid: !secret ibeacon_user1_uuid
     filters:
-      - timeout: 25s
+      - timeout: !secret ibeacon_timeout
   - platform: ble_rssi
     name: !secret ibeacon_user2_name
     ibeacon_uuid: !secret ibeacon_user2_uuid
     filters:
-      - timeout: 25s
+      - timeout: !secret ibeacon_timeout
 
 text_sensor:
   - platform: template
