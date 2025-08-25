@@ -441,6 +441,7 @@ variables:
   forbidden_zones: !input forbidden_zones
   quick_tt_updates: 0
   last_quick_tt_update: "{{ none }}"
+  timer: 5
   strings:
     en:
       title:
@@ -891,7 +892,6 @@ actions:
           closing_behavior: !input departure_closing_behavior
           opening_message: "itinerary_started"
           took_too_long_message: "did_not_leave"
-          timer: 10
       - alias: Open and close gate by following behaviors set by the user
         sequence: &open_close_behavior
           - alias: If opening behavior is set to cancelable timer or notification request
@@ -1499,7 +1499,7 @@ actions:
                           states[travel_time_sensor].last_updated | as_timestamp
                             + travel_time_duration
                             - lead_time
-                            - 10 if opening_behavior == 'timer' else 0
+                            - timer if opening_behavior == 'timer' else 0
                         }}
               - alias: Set a timer for the gate opening (or max int value if travel time sensor is unknown and no previous eta was stored)
                 variables:
@@ -1580,14 +1580,6 @@ actions:
                   closing_behavior: !input arrival_closing_behavior
                   opening_message: "soon_arrived"
                   took_too_long_message: "did_not_arrive"
-                  timer: |-
-                    {{
-                      round(
-                        states[travel_time_sensor].last_updated | as_timestamp
-                        + travel_time_duration
-                        - lead_time
-                      )
-                    }}
               - alias: Open and close gate by following behaviors set by the user
                 sequence: *open_close_behavior
               - alias: Stop whole script as successful
