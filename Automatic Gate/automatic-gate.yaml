@@ -545,10 +545,12 @@ actions:
     then:
       - variables:
           custom_translations_json: "{{ default_custom_translations }}"
-      - alias: Get notification translation
-        variables: &get_translation
+      - alias: Set title and message ids
+        variables:
           title_id: "invalid_config"
           message_id: "invalid_translations"
+      - alias: Get notification translation
+        variables: &get_translation
           title_string: |-
             {# Custom translation #}
             {%
