@@ -916,24 +916,33 @@ actions:
                           title_id: "open_gate"
                           <<: *get_translation
                       - alias: Get button translation
-                        variables: &get_button_translation
-                          button_id: "open"
-                          button: |-
-                            {# Custom translation #}
-                            {%
-                              if 'button' in custom_translations_json
-                              and button_id in custom_translations_json['button']
-                            %}
-                              {{ custom_translations_json['button'][button_id] }}
+                        variables: &get_button_translations
+                          button_ids:
+                            - "open"
+                            - "cancel"
+                          buttons: |-
+                            {% set buttons = [] %}
+                            {% for button_id in button_ids %}
+                              {# Custom translation #}
+                              {%
+                                if 'button' in custom_translations_json
+                                and button_id in custom_translations_json['button']
+                              %}
+                                {% set translation = custom_translations_json['button'][button_id] %}
 
-                            {# Selected language #}
-                            {% elif button_id in strings[language]['button'] %}
-                              {{ strings[language]['button'][button_id] }}
+                              {# Selected language #}
+                              {% elif button_id in strings[language]['button'] %}
+                                {% set translation = strings[language]['button'][button_id] %}
 
-                            {# Fallback to english #}
-                            {% else %}
-                              {{ strings['en']['button'][button_id] }}
-                            {% endif %}
+                              {# Fallback to english #}
+                              {% else %}
+                                {% set translation = strings['en']['button'][button_id] %}
+                              {% endif %}
+
+                              {% set buttons = buttons | union(translation) %}
+
+                            {% endfor %}
+                            {{ buttons }}
                       - alias: Ask the user if he wants to open the gate
                         action: "{{ notify_service }}"
                         data:
@@ -946,7 +955,9 @@ actions:
                             timeout: ""
                             actions:
                               - action: "{{ opening_order_id }}"
-                                title: "{{ button }}"
+                                title: "{{ buttons[0] }}"
+                              - action: "{{ canceling_order_id }}"
+                                title: "{{ buttons[1] }}"
                   - alias: If opening behavior is set to notification request
                     conditions:
                       - condition: template
@@ -959,8 +970,10 @@ actions:
                           <<: *get_translation
                       - alias: Get button translation
                         variables:
-                          button_id: "cancel"
-                          <<: *get_button_translation
+                          button_ids:
+                            - "cancel"
+                            - "open"
+                          <<: *get_button_translations
                       - alias: Send the cancelable timer notification to the user
                         action: "{{ notify_service }}"
                         data:
@@ -976,7 +989,9 @@ actions:
                             when_relative: true
                             actions:
                               - action: "{{ canceling_order_id }}"
-                                title: "{{ button }}"
+                                title: "{{ buttons[0] }}"
+                              - action: "{{ opening_order_id }}"
+                                title: "{{ buttons[1] }}"
               - alias: Wait for events before opening the gate or canceling the itinerary
                 wait_for_trigger:
                   - alias: Manual opening
@@ -1182,8 +1197,10 @@ actions:
                                     <<: *get_translation
                                 - alias: Get button translation
                                   variables:
-                                    button_id: "cancel"
-                                    <<: *get_button_translation
+                                    button_ids:
+                                      - "cancel"
+                                      - "close"
+                                    <<: *get_button_translations
                                 - alias: Ask the user if he wants to close the gate
                                   action: "{{ notify_service }}"
                                   data:
@@ -1200,7 +1217,9 @@ actions:
                                       when_relative: true
                                       actions:
                                         - action: "{{ canceling_order_id }}"
-                                          title: "{{ button }}"
+                                          title: "{{ buttons[0] }}"
+                                        - action: "{{ closing_order_id }}"
+                                          title: "{{ buttons[1] }}"
                             - alias: If closing behavior is set to notification request
                               conditions:
                                 - condition: template
@@ -1212,8 +1231,10 @@ actions:
                                     <<: *get_translation
                                 - alias: Get button translation
                                   variables:
-                                    button_id: "close"
-                                    <<: *get_button_translation
+                                    button_ids:
+                                      - "close"
+                                      - "cancel"
+                                    <<: *get_button_translations
                                 - alias: Ask the user if he wants to close the gate
                                   action: "{{ notify_service }}"
                                   data:
@@ -1227,7 +1248,9 @@ actions:
                                       timeout: ""
                                       actions:
                                         - action: "{{ closing_order_id }}"
-                                          title: "{{ button }}"
+                                          title: "{{ buttons[0] }}"
+                                        - action: "{{ canceling_order_id }}"
+                                          title: "{{ buttons[1] }}"
                   else:
                     - alias: If the itinerary needs to be canceled
                       if:
