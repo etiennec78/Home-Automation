@@ -336,6 +336,12 @@ blueprint:
           default: false
           selector:
             boolean:
+        tts_text:
+          name: 💬 TTS text
+          description: The **content** of the TTS
+          default: "{{ title[-2] ~ message }}"
+          selector:
+            template:
 
     optional_sensors:
       name: Optional sensors
@@ -618,7 +624,7 @@ actions:
         data:
           message: TTS
           data:
-            tts_text: "{{ title[-2] ~ message }}"
+            tts_text: !input tts_text
             channel: Itinerary status
             importance: high
         enabled: !input phone_tts
@@ -706,7 +712,7 @@ actions:
                 data:
                   message: TTS
                   data:
-                    tts_text: "{{ title[-2] ~ message }}"
+                    tts_text: !input tts_text
                     channel: Itinerary status
                     importance: high
                 enabled: !input phone_tts
@@ -735,7 +741,7 @@ actions:
                     data:
                       message: TTS
                       data:
-                        tts_text: "{{ title[-2] ~ message }}"
+                        tts_text: !input tts_text
                         channel: Itinerary status
                         importance: high
                     enabled: !input phone_tts
@@ -864,7 +870,7 @@ actions:
                     data:
                       message: TTS
                       data:
-                        tts_text: "{{ title[-2] ~ message }}"
+                        tts_text: !input tts_text
                         channel: Itinerary status
                         importance: high
                     enabled: !input phone_tts
@@ -1041,7 +1047,7 @@ actions:
                 data:
                   message: TTS
                   data:
-                    tts_text: "{{ title[-2] ~ message }}"
+                    tts_text: !input tts_text
                     channel: Itinerary status
                     importance: high
                 enabled: !input phone_tts
@@ -1309,7 +1315,7 @@ actions:
                           data:
                             message: TTS
                             data:
-                              tts_text: "{{ title[-2] ~ message }}"
+                              tts_text: !input tts_text
                               channel: Itinerary status
                               importance: high
                           enabled: !input phone_tts
@@ -1397,7 +1403,7 @@ actions:
                         data:
                           message: TTS
                           data:
-                            tts_text: "{{ title[-2] ~ message }}"
+                            tts_text: !input tts_text
                             channel: Itinerary status
                             importance: high
                         enabled: !input phone_tts
@@ -1521,7 +1527,7 @@ actions:
     data:
       message: TTS
       data:
-        tts_text: "{{ title[-2] ~ message }}"
+        tts_text: !input tts_text
         channel: Itinerary status
         importance: high
     enabled: !input phone_tts
