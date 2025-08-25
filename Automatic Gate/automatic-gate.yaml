@@ -972,6 +972,9 @@ actions:
                             sticky: true
                             persistent: true
                             timeout: "{{ timer }}"
+                            chronometer: true
+                            when: "{{ timer }}"
+                            when_relative: true
                             actions:
                               - action: "{{ canceling_order_id }}"
                                 title: "{{ button }}"
@@ -1188,6 +1191,9 @@ actions:
                                       sticky: true
                                       persistent: true
                                       timeout: "{{ timer }}"
+                                      chronometer: true
+                                      when: "{{ timer }}"
+                                      when_relative: true
                                       actions:
                                         - action: "{{ canceling_order_id }}"
                                           title: "{{ button }}"
