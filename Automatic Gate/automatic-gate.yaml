@@ -688,11 +688,12 @@ actions:
               - condition: template
                 value_template: "{{ consecutive_errors == 1 }}"
             sequence:
-              - alias: Get notification translation
+              - alias: Set notification ids
                 variables:
                   title_id: "itinerary_canceled"
                   message_id: "triggered_frequently"
-                  <<: *get_translation
+              - alias: Get notification translation
+                variables: *get_translation
               - alias: Notify driver that the blueprint is being triggered frequently
                 action: "{{ notify_service }}"
                 data:
@@ -720,10 +721,11 @@ actions:
                   message_id: "disabled_triggered_frequently"
               - alias: Disable the blueprint
                 sequence: &disable_blueprint
-                  - alias: Get notification translation
+                  - alias: Get title id
                     variables:
                       title_id: "disabled"
-                      <<: *get_translation
+                  - alias: Get notification translation
+                    variables: *get_translation
                   - alias: Notify driver that the blueprint is disabling itself
                     action: "{{ notify_service }}"
                     data:
@@ -839,10 +841,11 @@ actions:
                   message_id: "not_home"
               - alias: Create error
                 sequence: &create_error
-                  - alias: Get notification translation
+                  - alias: Set title id
                     variables:
                       title_id: "itinerary_canceled"
-                      <<: *get_translation
+                  - alias: Get notification translation
+                    variables: *get_translation
                   - alias: Notify driver of itinerary cancelation
                     action: "{{ notify_service }}"
                     data:
@@ -936,11 +939,12 @@ actions:
                       - condition: template
                         value_template: "{{ opening_behavior == 'timer' }}"
                     sequence:
-                      - alias: Get notification translation
+                      - alias: Set notification ids
                         variables:
                           message_id: "{{ opening_message }}"
                           title_id: "open_gate"
-                          <<: *get_translation
+                      - alias: Get notification translation
+                        variables: *get_translation
                       - alias: Get button translation
                         variables: &get_button_translations
                           button_ids:
@@ -989,11 +993,12 @@ actions:
                       - condition: template
                         value_template: "{{ opening_behavior == 'notif' }}"
                     sequence:
-                      - alias: Get notification translation
+                      - alias: Set notification ids
                         variables:
                           message_id: "{{ opening_message }}"
                           title_id: "timer_opening"
-                          <<: *get_translation
+                      - alias: Get notification translation
+                        variables: *get_translation
                       - alias: Get button translation
                         variables:
                           button_ids:
@@ -1218,10 +1223,11 @@ actions:
                                 - condition: template
                                   value_template: "{{ closing_behavior == 'timer' }}"
                               sequence:
-                                - alias: Get notification translation
+                                - alias: Get title id
                                   variables:
                                     title_id: "timer_closing"
-                                    <<: *get_translation
+                                - alias: Get notification translation
+                                  variables: *get_translation
                                 - alias: Get button translation
                                   variables:
                                     button_ids:
@@ -1252,10 +1258,11 @@ actions:
                                 - condition: template
                                   value_template: "{{ closing_behavior == 'notif' }}"
                               sequence:
-                                - alias: Get notification translation
+                                - alias: Set title id
                                   variables:
                                     title_id: "close_gate"
-                                    <<: *get_translation
+                                - alias: Get notification translation
+                                  variables: *get_translation
                                 - alias: Get button translation
                                   variables:
                                     button_ids:
@@ -1343,11 +1350,12 @@ actions:
                             {% endfor %}
 
                             {{ awaited_persons | join(', ') }}
-                      - alias: Get notification translation
+                      - alias: Set notification ids
                         variables:
                           title_id: "awaiting"
                           message_id: "awaiting"
-                          <<: *get_translation
+                      - alias: Get notification translation
+                        variables: *get_translation
                       - alias: Notify driver that gate will wait for next person
                         action: "{{ notify_service }}"
                         data:
@@ -1458,11 +1466,12 @@ actions:
       entity_id: "{{ itinerary_sensor }}"
     data:
       value: arriving
-  - alias: Get notification translation
+  - alias: Set notification ids
     variables:
       title_id: "itinerary_update"
       message_id: "itinerary_started"
-      <<: *get_translation
+  - alias: Get notification translation
+    variables: *get_translation
   - alias: Notify driver of itinerary start
     action: "{{ notify_service }}"
     data:
@@ -1548,7 +1557,8 @@ actions:
                         - alias: Set error id
                           variables:
                             message_id: "disabled_updated_frequently"
-                            <<: *get_translation
+                        - alias: Get notification translation
+                          variables: *get_translation
                         - alias: Disable the blueprint
                           sequence: *disable_blueprint
                         - stop: Travel time refreshing too quickly
