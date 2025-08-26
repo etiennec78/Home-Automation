@@ -152,13 +152,16 @@ blueprint:
             **"Continuously"** can use more Waze/Maps credits, but can be useful to display a precise ETA on your dashboard when far from your destination
             **"While near home"** allows to monitor if you drive near your gate without entering to abort the itinerary, or if there are traffic jams near home to open later (recommended)
             **"Only once"** uses the less amount of credits, but could trigger if you come near your gate without entering (not recommended)
-          default: While near home
+          default: "near-home"
           selector:
             select:
               options:
-                - Continuously
-                - While near home
-                - Once when near home
+                - label: Continuously
+                  value: "continuous"
+                - label: While near home
+                  value: "near-home"
+                - label: Once when near home
+                  value: "once"
         continuously_refresh_interval:
           name: ⏳ Continuously refresh interval
           description: Your travel time **refresh interval** while away. Only active with a refresh rate set to **"Continuously"**
@@ -1482,7 +1485,7 @@ actions:
         - alias: Update travel time if expired and refresh rate set to "Continuously"
           if:
             - condition: template
-              value_template:  "{{ travel_time_rate == 'Continuously' and
+              value_template:  "{{ travel_time_rate == 'continuous' and
                 states[travel_time_sensor].last_updated + timedelta(minutes=continuously_refresh_interval) < now() }}"
           then:
             - alias: Set variables for the following sequence
@@ -1592,7 +1595,7 @@ actions:
                     value_template: |-
                       {{
                         repeat.first
-                        or wait.travel_time_rate != 'Once when near home'
+                        or wait.travel_time_rate != 'once'
                       }}
                 then:
                   - alias: Update travel time
@@ -1663,7 +1666,7 @@ actions:
                         value_template: "{{ is_state(driving_sensor, 'off') }}"
                     timeout:
                       seconds: |-
-                        {% if travel_time_rate == 'Once when near home' %}
+                        {% if travel_time_rate == 'once' %}
                           {{ seconds_before_opening }}
                         {% else %}
                           {{ min(timeout_delay*60, seconds_before_opening) }}
