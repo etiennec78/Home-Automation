@@ -439,6 +439,7 @@ variables:
   travel_time_rate: !input travel_time_rate
   continuously_refresh_interval: !input continuously_refresh_interval
   activation_zone: !input activation_zone
+  timer: !input timer
   language: !input language
   custom_translations: !input custom_translations
   default_custom_translations: |-
@@ -463,8 +464,8 @@ variables:
         itinerary_update: "Itinerary ℹ️"
         open_gate: "Open gate ? 🔓"
         close_gate: "Close gate ? 🔒"
-        timer_opening: "Gate opening in {timer}s 🔓"
-        timer_closing: "Gate closing in {timer}s 🔒"
+        timer_opening: "Gate opening in {{timer}}s 🔓"
+        timer_closing: "Gate closing in {{timer}}s 🔒"
         itinerary_canceled: "Itinerary canceled ❌"
         awaiting: "Gate awaiting {awaited_persons} 💤"
         disabled: "Automatic Gate disabled 🚫"
@@ -477,9 +478,9 @@ variables:
         awaiting: "The gate will close once all users have entered/exited"
         vehicle_stopped: "You have left your vehicle"
         canceling_order: "You have pressed the cancel button"
-        did_not_leave: "The vehicle did not leave in less than {safety_delay} minutes"
-        did_not_arrive: "The vehicle did not arrive in less than {safety_delay} minutes"
-        timed_out: "Your position has not been updated in {timeout_delay} minutes"
+        did_not_leave: "The vehicle did not leave in less than {{safety_delay}} minutes"
+        did_not_arrive: "The vehicle did not arrive in less than {{safety_delay}} minutes"
+        timed_out: "Your position has not been updated in {{timeout_delay}} minutes"
         vehicle_away: "The vehicle is not in the activation zone"
         travel_time_did_not_respond: "Your travel time integration did not respond during your itinerary"
         not_home: "You were not detected at home"
@@ -504,8 +505,8 @@ variables:
         itinerary_update: "Itinéraire ℹ️"
         open_gate: "Ouvrir portail ? 🔓"
         close_gate: "Fermer portail ? 🔒"
-        timer_opening: "Ouverture portail dans {timer}s 🔓"
-        timer_closing: "Fermeture portail dans {timer}s 🔒"
+        timer_opening: "Ouverture portail dans {{timer}}s 🔓"
+        timer_closing: "Fermeture portail dans {{timer}}s 🔒"
         itinerary_canceled: "Itinéraire annulé ❌"
         awaiting: "Portail en attente de {awaited_persons} 💤"
         disabled: "Automatic Gate désactivé 🚫"
@@ -518,9 +519,9 @@ variables:
         awaiting: "Le portail se refermera une fois tous les conducteurs entrés/sortis"
         vehicle_stopped: "Le véhicule a été arrêté"
         canceling_order: "Vous avez appuyé sur le bouton annuler"
-        did_not_leave: "Le véhicule n'est pas sorti en moins de {safety_delay} minutes"
-        did_not_arrive: "Le véhicule n'est pas arrivé en moins de {safety_delay} minutes"
-        timed_out: "Votre position n'a pas été mise à jour ces {timeout_delay} dernières minutes"
+        did_not_leave: "Le véhicule n'est pas sorti en moins de {{safety_delay}} minutes"
+        did_not_arrive: "Le véhicule n'est pas arrivé en moins de {{safety_delay}} minutes"
+        timed_out: "Votre position n'a pas été mise à jour ces {{timeout_delay}} dernières minutes"
         vehicle_away: "Le véhicule n'est pas dans la zone d'ouverture"
         travel_time_did_not_respond: "Votre intégration de temps de trajet n'a pas renvoyé de valeur"
         not_home: "Le véhicule n'est pas à la maison"
@@ -582,8 +583,7 @@ actions:
           title: |-
             {{
               title_string.format(
-                awaited_persons=awaited_persons,
-                timer=timer
+                awaited_persons=awaited_persons
               )
             }}
           message_string: |-
@@ -605,8 +605,6 @@ actions:
           message: |-
             {{
               message_string.format(
-                safety_delay=safety_delay,
-                timeout_delay=timeout_delay,
                 consecutive_errors=consecutive_errors
               )
             }}
