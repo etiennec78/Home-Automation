@@ -1610,11 +1610,6 @@ actions:
                 then:
                   - alias: Update travel time
                     sequence: *update_travel_time
-                  - alias: Wait for travel time integration to refresh
-                    condition: template
-                    value_template: |-
-                        {{ states[travel_time_sensor].last_updated > now() - timedelta(seconds=5)
-                              and states[travel_time_sensor].last_changed > now() - timedelta(minutes=5) }}
               - alias: If the travel time sensor is not unknown
                 if:
                   - condition: template
@@ -1732,8 +1727,11 @@ actions:
   - alias: If vehicle left in gate zone and travel time was not updated
     if:
       condition: template
-      value_template: "{{ is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id])
-        and states[travel_time_sensor].last_updated < now() - timedelta(minutes=5) }}"
+      value_template: |-
+        {{
+          is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id])
+          and opening_time is none
+        }}
     then:
       - alias: Set error id
         variables:
