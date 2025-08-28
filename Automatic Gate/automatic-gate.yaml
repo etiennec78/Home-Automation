@@ -620,6 +620,7 @@ actions:
             notification_icon: mdi:hammer-wrench
             channel: Automatic Gate config
             tag: invalid-config
+            ttl: 0
       - sequence: &tts
           - alias: Notify over TTS
             action: "{{ notify_service }}"
@@ -629,6 +630,7 @@ actions:
                 tts_text: !input tts_text
                 channel: Itinerary status
                 importance: high
+                ttl: 0
             enabled: !input phone_tts
       - alias: Notify all users on the dashboard that the config is invalid
         action: persistent_notification.create
@@ -704,6 +706,7 @@ actions:
                     notification_icon: mdi:alert-circle
                     channel: Itinerary status
                     importance: high
+                    ttl: 0
                     push:
                       sound:
                         name: "default"
