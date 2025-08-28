@@ -415,6 +415,15 @@ blueprint:
           default: false
           selector:
             boolean:
+        only_open_near_timeout:
+          name: ⌛ 'Only open while' timeout
+          description: The time the gate will wait for you to connect to WiFi/iBeacon before canceling the departure
+          default: 10
+          selector:
+            number:
+              min: 0
+              max: 1800
+              unit_of_measurement: seconds
         locks:
           name: 🔐 Locks
           description: |-
@@ -834,7 +843,7 @@ actions:
           - alias: Wait for iBeacon or WiFi to report home
             wait_template: "{{ not is_state(ble_entities[idx], 'unknown') or is_state(wifi_devices[idx], 'home') }}"
             continue_on_timeout: true
-            timeout: 10
+            timeout: !input only_open_near_timeout
           - alias: If timeout reached
             if:
             - condition: template
