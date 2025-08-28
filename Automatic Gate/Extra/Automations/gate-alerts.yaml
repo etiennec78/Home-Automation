@@ -366,7 +366,8 @@ actions:
                 data:
                   notification_icon: mdi:gate-alert
                   channel: Gate alerts
-                  importance: max
+                  importance: high
+                  ttl: 0
                   sticky: true
                   persistent: true
                   tag: "{{ notification_tag }}"
@@ -415,7 +416,7 @@ actions:
                   car_ui: "{{ car_visible }}"
                   notification_icon: mdi:gate-alert
                   channel: Gate alerts
-                  importance: max
+                  importance: high
                   ttl: 0
                   sticky: true
                   persistent: "{{ notification_type == 'open' }}"
@@ -450,7 +451,7 @@ actions:
                     data:
                       tts_text: "{{ message }}"
                       channel: Gate alerts
-                      importance: max
+                      importance: high
                       ttl: 0
 
       - alias: Play TTS on each speaker
