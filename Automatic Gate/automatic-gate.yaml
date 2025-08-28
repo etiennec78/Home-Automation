@@ -473,7 +473,7 @@ variables:
   strings:
     en:
       title:
-        itinerary_update: "Itinerary ℹ️"
+        itinerary_started: "Itinerary started 🏁"
         open_gate: "Open gate ? 🔓"
         close_gate: "Close gate ? 🔒"
         timer_opening: "Gate opening in {{timer}}s 🔓"
@@ -514,7 +514,7 @@ variables:
         cancel: "Cancel"
     fr:
       title:
-        itinerary_update: "Itinéraire ℹ️"
+        itinerary_started: "Itinéraire démarré 🏁"
         open_gate: "Ouvrir portail ? 🔓"
         close_gate: "Fermer portail ? 🔒"
         timer_opening: "Ouverture portail dans {{timer}}s 🔓"
@@ -1493,7 +1493,7 @@ actions:
       value: arriving
   - alias: Set notification ids
     variables:
-      title_id: "itinerary_update"
+      title_id: "itinerary_started"
       message_id: "itinerary_started"
   - alias: Get notification translation
     variables: *get_translation
