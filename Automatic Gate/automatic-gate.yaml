@@ -473,7 +473,7 @@ variables:
   strings:
     en:
       title:
-        itinerary_update: "Itinerary ℹ️"
+        itinerary_started: "Itinerary started 🏁"
         open_gate: "Open gate ? 🔓"
         close_gate: "Close gate ? 🔒"
         timer_opening: "Gate opening in {{timer}}s 🔓"
@@ -483,7 +483,8 @@ variables:
         disabled: "Automatic Gate disabled 🚫"
         invalid_config: "Invalid configuration 🛠️"
       message:
-        itinerary_started: "Your itinerary has been started"
+        leaving_home: "You are leaving home"
+        vehicle_started: "You have started your vehicle"
         soon_arrived: "You will arrive soon"
         arrived: "You have arrived"
         ble_out_of_range: "Your iBeacon is out of range"
@@ -514,7 +515,7 @@ variables:
         cancel: "Cancel"
     fr:
       title:
-        itinerary_update: "Itinéraire ℹ️"
+        itinerary_started: "Itinéraire démarré 🏁"
         open_gate: "Ouvrir portail ? 🔓"
         close_gate: "Fermer portail ? 🔒"
         timer_opening: "Ouverture portail dans {{timer}}s 🔓"
@@ -524,7 +525,8 @@ variables:
         disabled: "Automatic Gate désactivé 🚫"
         invalid_config: "Configuration invalide 🛠️"
       message:
-        itinerary_started: "L'itinéraire a démarré"
+        leaving_home: "Vous sortez de la maison"
+        vehicle_started: "Vous avez démarré votre véhicule"
         soon_arrived: "Vous arrivez bientôt"
         arrived: "Vous êtes arrivé"
         ble_out_of_range: "Votre iBeacon est hors de portée"
@@ -949,7 +951,7 @@ actions:
           itinerary_mode: "departure"
           opening_behavior: !input departure_opening_behavior
           closing_behavior: !input departure_closing_behavior
-          opening_message: "itinerary_started"
+          opening_message: "leaving_home"
           took_too_long_message: "did_not_leave"
       - alias: Open and close gate by following behaviors set by the user
         sequence: &open_close_behavior
@@ -1493,8 +1495,8 @@ actions:
       value: arriving
   - alias: Set notification ids
     variables:
-      title_id: "itinerary_update"
-      message_id: "itinerary_started"
+      title_id: "itinerary_started"
+      message_id: "vehicle_started"
   - alias: Get notification translation
     variables: *get_translation
   - alias: Notify driver of itinerary start
