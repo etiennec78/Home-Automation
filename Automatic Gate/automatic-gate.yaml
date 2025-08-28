@@ -706,6 +706,12 @@ actions:
                   message_id: "triggered_frequently"
               - alias: Get notification translation
                 variables: *get_translation
+              - alias: Log error
+                action: system_log.write
+                data:
+                  level: error
+                  message: "{{ message }}"
+                  logger: blueprints.etiennec78.automatic_gate
               - alias: Notify driver that the blueprint is being triggered frequently
                 action: "{{ notify_service }}"
                 data:
@@ -739,6 +745,12 @@ actions:
                       title_id: "disabled"
                   - alias: Get notification translation
                     variables: *get_translation
+                  - alias: Log error
+                    action: system_log.write
+                    data:
+                      level: error
+                      message: "{{ message }}"
+                      logger: blueprints.etiennec78.automatic_gate
                   - alias: Notify driver that the blueprint is disabling itself
                     action: "{{ notify_service }}"
                     data:
@@ -1525,6 +1537,12 @@ actions:
                         message_id: "invalid_travel_time_sensor"
                     - alias: Create error
                       sequence: *create_error
+                    - alias: Log error
+                      action: system_log.write
+                      data:
+                        level: error
+                        message: "{{ message }}"
+                        logger: blueprints.etiennec78.automatic_gate
                     - stop: Travel time sensor does not exist
                       error: true
                 - alias: Only update the travel time if it has not already been updated recently
@@ -1574,6 +1592,12 @@ actions:
                           variables: *get_translation
                         - alias: Disable the blueprint
                           sequence: *disable_blueprint
+                        - alias: Log error
+                          action: system_log.write
+                          data:
+                            level: error
+                            message: "{{ message }}"
+                            logger: blueprints.etiennec78.automatic_gate
                         - stop: Travel time refreshing too quickly
                           error: true
         - alias: Wait for new driver position or vehicle left
@@ -1650,6 +1674,12 @@ actions:
                           message_id: "unsupported_tt_integration"
                       - alias: Create error
                         sequence: *create_error
+                      - alias: Log error
+                        action: system_log.write
+                        data:
+                          level: error
+                          message: "{{ message }}"
+                          logger: blueprints.etiennec78.automatic_gate
                       - stop: Travel time integration not supported
                         error: true
                   - alias: Set the opening time
@@ -1751,6 +1781,12 @@ actions:
           message_id: "travel_time_did_not_respond"
       - alias: Create error
         sequence: *create_error
+      - alias: Log error
+        action: system_log.write
+        data:
+          level: error
+          message: "{{ message }}"
+          logger: blueprints.etiennec78.automatic_gate
       - stop: Travel time did not respond
         error: true
     else:
