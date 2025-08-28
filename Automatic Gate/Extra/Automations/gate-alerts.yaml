@@ -367,6 +367,7 @@ actions:
                   notification_icon: mdi:gate-alert
                   channel: Gate alerts
                   importance: max
+                  ttl: 0
                   sticky: true
                   persistent: true
                   tag: "{{ notification_tag }}"
