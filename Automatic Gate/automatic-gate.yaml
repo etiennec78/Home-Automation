@@ -631,6 +631,7 @@ actions:
                 channel: Itinerary status
                 importance: high
                 ttl: 0
+                media_stream: "alarm_stream"
             enabled: !input phone_tts
       - alias: Notify all users on the dashboard that the config is invalid
         action: persistent_notification.create

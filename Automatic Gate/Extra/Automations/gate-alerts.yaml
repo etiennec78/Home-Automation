@@ -453,6 +453,7 @@ actions:
                       channel: Gate alerts
                       importance: high
                       ttl: 0
+                      media_stream: "alarm_stream"
 
       - alias: Play TTS on each speaker
         repeat:
