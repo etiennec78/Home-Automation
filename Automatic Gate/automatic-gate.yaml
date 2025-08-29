@@ -418,7 +418,7 @@ blueprint:
                 - label: iBeacon
                   value: ble
         only_open_near_timeout:
-          name: ⌛ 'Only open while connected' timeout
+          name: ⌛ 'Only open while connected to' timeout
           description: The time the gate will wait for you to connect to WiFi/iBeacon before canceling the departure
           default: 10
           selector:
@@ -426,12 +426,16 @@ blueprint:
               min: 0
               max: 1800
               unit_of_measurement: seconds
-        close_with_ble:
-          name: 📡 Close on departure when iBeacon is out of range
+        close_when_disconnected_from:
+          name: 📡 Close on departure when disconnected from
           description: Close the gate if driver's iBeacon is out of range
-          default: false
+          default: []
           selector:
-            boolean:
+            select:
+              multiple: true
+              options:
+                - label: iBeacon
+                  value: ble
         locks:
           name: 🔐 Locks
           description: |-
@@ -473,6 +477,7 @@ variables:
   ble_scanner_switch: !input ble_scanner_switch
   ble_transmitter_entities: !input ble_transmitter_entities
   only_open_near: !input only_open_near
+  close_when_disconnected_from: !input close_when_disconnected_from
   wifi_devices: !input wifi_devices
   forbidden_zones: !input forbidden_zones
   quick_tt_updates: 0
@@ -1168,7 +1173,7 @@ actions:
                       trigger: template
                       id: ble_out_of_range
                       value_template: "{{ (ble_entities | length) - 1 >= idx and is_state(ble_entities[idx], 'unknown') }}"
-                      enabled: !input close_with_ble
+                      enabled: "{{ 'ble' in close_when_disconnected_from }}"
                     - alias: Vehicle left
                       trigger: template
                       id: vehicle_stopped
