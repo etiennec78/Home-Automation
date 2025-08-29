@@ -216,7 +216,7 @@ blueprint:
               - **Cancelable timer** : A notification of a cancelable timer will be sent before opening your gate
               - **Notification request** : An actionable notification will be sent to close your gate
               - **Disabled** : Your gate won't close automatically
-          default: "notif"
+          default: "timer"
           selector:
             select:
               options:
