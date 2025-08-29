@@ -491,6 +491,7 @@ variables:
   forbidden_zones: !input forbidden_zones
   quick_tt_updates: 0
   last_quick_tt_update: "{{ none }}"
+  failed_updates: 0
   strings:
     en:
       title:
@@ -1678,7 +1679,9 @@ actions:
                     value_template: |-
                       {{
                         travel_time_rate in ['continuous', 'near-home']
-                        or repeat.first and travel_time_rate == 'once'
+                        or opening_time is none
+                          and travel_time_rate == 'once'
+                          and failed_updates < 20
                       }}
                 then:
                   - alias: Update travel time
@@ -1727,6 +1730,10 @@ actions:
                             - lead_time
                             - timer if opening_behavior == 'timer' else 0
                         }}
+                else:
+                  - alias: Add 1 to the failed updates counter
+                    variables:
+                      failed_updates: "{{ failed_updates + 1 }}"
               - alias: Set a timer for the gate opening (or max int value if travel time sensor is unknown and no previous eta was stored)
                 variables:
                   seconds_before_opening: |-
