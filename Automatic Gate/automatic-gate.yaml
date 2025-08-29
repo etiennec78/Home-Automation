@@ -1656,7 +1656,7 @@ actions:
               - alias: If the travel time sensor is not unknown or unavailable
                 if:
                   - condition: template
-                    value_template: "{{ states(travel_time_sensor) in ['unknown', 'unavailable'] }}"
+                    value_template: "{{ states(travel_time_sensor) not in ['unknown', 'unavailable'] }}"
                 then:
                   - alias: Convert travel time to seconds
                     variables:
