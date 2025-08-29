@@ -148,10 +148,12 @@ blueprint:
               - **Continuously** during the whole itinerary (custom refresh interval while away)
               - Only while the vehicle is **near home**
               - Only **once** when the vehicle gets near home
+              - Listen to **external** sensor updates
 
             **"Continuously"** can use more Waze/Maps credits, but can be useful to display a precise ETA on your dashboard when far from your destination
             **"While near home"** allows to monitor if you drive near your gate without entering to abort the itinerary, or if there are traffic jams near home to open later (recommended)
             **"Only once"** uses the less amount of credits, but could trigger if you come near your gate without entering (not recommended)
+            **"Listen for updates"** is made for vehicles providing their own travel time sensor. Do not use with an external travel time provider (e.g: Waze, Maps, Here)
           default: "near-home"
           selector:
             select:
@@ -162,6 +164,8 @@ blueprint:
                   value: "near-home"
                 - label: Once when near home
                   value: "once"
+                - label: Listen for updates
+                  value: "listen"
         continuously_refresh_interval:
           name: ⏳ Continuously refresh interval
           description: Your travel time **refresh interval** while away. Only active with a refresh rate set to **"Continuously"**
@@ -1643,8 +1647,8 @@ actions:
                   - condition: template
                     value_template: |-
                       {{
-                        repeat.first
-                        or wait.travel_time_rate != 'once'
+                        travel_time_rate in ['continuous', 'near-home']
+                        or repeat.first and travel_time_rate == 'once'
                       }}
                 then:
                   - alias: Update travel time
@@ -1706,12 +1710,17 @@ actions:
                   - condition: template
                     value_template: "{{ seconds_before_opening > 1 }}"
                 then:
-                  - alias: Wait for ETA, new position, vehicle left, and cancel if deviced timed out
+                  - alias: Wait for ETA, travel time, new position, vehicle left, and cancel if deviced timed out
                     wait_for_trigger:
                       - trigger: event
                         event_type: state_changed
                         event_data:
                           entity_id: "{{ person }}"
+                      - trigger: event
+                        event_type: state_changed
+                        event_data:
+                          entity_id: "{{ travel_time_sensor }}"
+                        enabled: "{{ travel_time_rate == 'listen' }}"
                       - trigger: template
                         value_template: "{{ is_state(driving_sensor, 'off') }}"
                     timeout:
