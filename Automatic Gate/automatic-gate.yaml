@@ -402,7 +402,7 @@ blueprint:
               filter:
                 domain: switch
         only_open_near:
-          name: 🏠 Only open **on departure** near
+          name: 🏠 Only open on departure while connected to
           description: |-
             Should your gate only open if you are connected to WiFi/iBeacon while leaving ?
             *Notes :*
@@ -418,7 +418,7 @@ blueprint:
                 - label: iBeacon
                   value: ble
         only_open_near_timeout:
-          name: ⌛ 'Only open near' timeout
+          name: ⌛ 'Only open while connected' timeout
           description: The time the gate will wait for you to connect to WiFi/iBeacon before canceling the departure
           default: 10
           selector:
@@ -427,7 +427,7 @@ blueprint:
               max: 1800
               unit_of_measurement: seconds
         close_with_ble:
-          name: 📡 Close **on departure** when iBeacon is out of range
+          name: 📡 Close on departure when iBeacon is out of range
           description: Close the gate if driver's iBeacon is out of range
           default: false
           selector:
