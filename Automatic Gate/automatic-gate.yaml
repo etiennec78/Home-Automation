@@ -414,7 +414,7 @@ blueprint:
             *Notes :*
             *Useful for preventing your gate from opening if you are parked in front of your house*
             *WiFi can be slow to report new states*
-          default: true
+          default: false
           selector:
             boolean:
         only_open_near_iBeacon:
