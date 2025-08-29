@@ -346,7 +346,7 @@ blueprint:
         tts_text:
           name: 💬 TTS text
           description: The **content** of the TTS
-          default: "{{ title[-2] ~ message }}"
+          default: "{{ title[:-2] ~ message }}"
           selector:
             template:
 
