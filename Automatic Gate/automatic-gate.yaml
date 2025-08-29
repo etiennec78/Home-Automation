@@ -228,6 +228,15 @@ blueprint:
                   value: "notif"
                 - label: Disabled
                   value: "off"
+        suggest_closing_after:
+          name: 🔒 Suggest closing after
+          description: The time the gate will wait before **suggesting to close** on departure if you are using a **notification request** but don't have a sensor to detect your absence
+          default: 120
+          selector:
+            number:
+              min: 1
+              max: 600
+              unit_of_measurement: seconds
         arrival_opening_behavior:
           name: 🛬🔓 Arrival opening behavior
           description: |-
@@ -499,6 +508,7 @@ variables:
         vehicle_started: "You have started your vehicle"
         soon_arrived: "You will arrive soon"
         arrived: "You have arrived"
+        closing_suggestion: "{{suggest_closing_after}} seconds have passed"
         ble_out_of_range: "Your iBeacon is out of range"
         awaiting: "The gate will close once all users have entered/exited"
         vehicle_stopped: "You have left your vehicle"
@@ -541,6 +551,7 @@ variables:
         vehicle_started: "Vous avez démarré votre véhicule"
         soon_arrived: "Vous arrivez bientôt"
         arrived: "Vous êtes arrivé"
+        closing_suggestion: "{{suggest_closing_after}} secondes se sont écoulées"
         ble_out_of_range: "Votre iBeacon est hors de portée"
         awaiting: "Le portail se refermera une fois tous les conducteurs entrés/sortis"
         vehicle_stopped: "Le véhicule a été arrêté"
@@ -1156,9 +1167,15 @@ actions:
                             {% endif %}
                           target:
                             entity_id: "{{ repeat.item }}"
-          - alias: Set a variable to break the following loop
+          - alias: Set variables for the following repeat sequence
             variables:
               break: "{{ closing_behavior in ['auto', 'off'] }}"
+              suggest_closing: |-
+                {{
+                  closing_behavior == 'notif'
+                  and itinerary_mode == 'departure'
+                  and 'ble' not in close_when_disconnected_from
+                }}
           - alias: Wait for events at least once, then while the gate closing has not been triggered
             repeat:
               until: "{{ break }}"
@@ -1203,6 +1220,8 @@ actions:
                       {% if repeat.first %}
                         {% if closing_behavior == 'timer' %}
                           {{ timer }}
+                        {% elif suggest_closing %}
+                          {{ suggest_closing_after }}
                         {% else %}
                           {{ safety_delay * 60 }}
                         {% endif %}
@@ -1239,6 +1258,8 @@ actions:
                           {% if wait.remaining == 0 %}
                             {% if closing_behavior == 'timer' %}
                               {{ none }}
+                            {% elif suggest_closing %}
+                              closing_suggestion
                             {% else %}
                               {{ took_too_long_message }}
                             {% endif %}
