@@ -401,12 +401,6 @@ blueprint:
             entity:
               filter:
                 domain: switch
-        close_with_ble:
-          name: 📡 Close **on departure** when iBeacon is out of range
-          description: Close the gate if driver's iBeacon is out of range
-          default: false
-          selector:
-            boolean:
         only_open_near:
           name: 🏠 Only open **on departure** near
           description: |-
@@ -432,6 +426,12 @@ blueprint:
               min: 0
               max: 1800
               unit_of_measurement: seconds
+        close_with_ble:
+          name: 📡 Close **on departure** when iBeacon is out of range
+          description: Close the gate if driver's iBeacon is out of range
+          default: false
+          selector:
+            boolean:
         locks:
           name: 🔐 Locks
           description: |-
