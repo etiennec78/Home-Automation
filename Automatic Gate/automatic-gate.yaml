@@ -43,8 +43,8 @@ blueprint:
   homeassistant:
     min_version: 2025.4.0
   input:
-    essential_sensors:
-      name: Essential sensors
+    essential_inputs:
+      name: Essential inputs
       icon: "mdi:gate"
       collapsed: true
       input:
@@ -135,11 +135,22 @@ blueprint:
               filter:
                 domain: input_text
 
-    automation_settings:
-      name: Automation settings
-      icon: mdi:cog
+    travel_time_settings:
+      name: Travel time settings
+      icon: mdi:timer
       collapsed: true
       input:
+        activation_zone:
+          name: 🔒 Gate activation zone
+          description: |-
+            At which **distance** from the gate should the automation start estimating when to **open your gate** ?
+            Note: It will automatically **close** if you **leave** this zone
+          default: 500
+          selector:
+            number:
+              min: 300
+              max: 5000
+              unit_of_measurement: meters
         travel_time_rate:
           name: 🔄 Travel time refresh rate
           description: |-
@@ -175,17 +186,12 @@ blueprint:
               min: 1
               max: 60
               unit_of_measurement: minutes
-        activation_zone:
-          name: 🔒 Gate activation zone
-          description: |-
-            At which **distance** from the gate should the automation start estimating when to **open your gate** ?
-            Note: It will automatically **close** if you **leave** this zone
-          default: 500
-          selector:
-            number:
-              min: 300
-              max: 5000
-              unit_of_measurement: meters
+
+    gate_behavior:
+      name: Gate behavior
+      icon: mdi:brain
+      collapsed: true
+      input:
         departure_opening_behavior:
           name: 🛫🔓 Departure opening behavior
           description: |-
@@ -288,6 +294,12 @@ blueprint:
               min: 1
               max: 20
               unit_of_measurement: seconds
+
+    security_features:
+      name: Security features
+      icon: mdi:security
+      collapsed: true
+      input:
         safety_delay:
           name: 🔒 Auto-close safety delay
           description: The time the gate will wait before **automatically closing** if your gate is open but you still haven't left or arrived
@@ -359,9 +371,9 @@ blueprint:
           selector:
             template:
 
-    optional_sensors:
-      name: Optional sensors
-      icon: mdi:dots-horizontal-circle-outline
+    presence_sensors:
+      name: Presence sensors
+      icon: mdi:leak
       collapsed: true
       input:
         wifi_devices:
@@ -445,6 +457,12 @@ blueprint:
               options:
                 - label: iBeacon
                   value: ble
+
+    locks:
+      name: Door locks
+      icon: mdi:door-closed-lock
+      collapsed: true
+      input:
         locks:
           name: 🔐 Locks
           description: |-
