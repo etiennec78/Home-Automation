@@ -194,12 +194,12 @@ variables:
         error: Gate error ⚠
         offline: Gate offline 🌐
       message:
-        open: Gate is opening
-        still_open: Gate is still open
-        left_open: Gate has been left open for {{notification_delay}} minutes
-        close: Gate is closing
-        error: "Gate has encountered an error: {error}"
-        offline: Gate has been offline for {{notification_delay}} minutes
+        open: The gate is opening
+        still_open: The gate is open
+        left_open: The gate has been left open for {{notification_delay}} minutes
+        close: The gate is closing
+        error: "The gate has encountered an error: {error}"
+        offline: The gate has been offline for {{notification_delay}} minutes
       button:
         close: Close
     fr:
@@ -212,7 +212,7 @@ variables:
         offline: Portail hors ligne 🌐
       message:
         open: Ouverture du portail en cours
-        still_open: Portail toujours ouvert
+        still_open: Le portail est ouvert
         left_open: Le portail est ouvert depuis {{notification_delay}} minutes
         close: Fermeture du portail en cours
         error: "Le portail a rencontré une erreur: {error}"
