@@ -259,7 +259,7 @@ actions:
     variables:
       idx: "{{ driving_sensors.index(trigger.entity_id) }}"
       notify_services: |-
-        {% set devices_list = [] %}
+        {% set data = namespace(devices_list=[]) %}
 
           {% for notify_idx in range(notify_devices | length) %}
             {% if notify_idx != idx %}
@@ -279,12 +279,12 @@ actions:
                   and notify_idx < driving_sensors | length
                   and is_state(driving_sensors[notify_idx], 'on')
               %}
-                {% set devices_list = devices_list | union([notify_devices[notify_idx]]) %}
+                {% set data.devices_list = data.devices_list + [notify_devices[notify_idx]] %}
               {% endif %}
             {% endif %}
           {% endfor %}
 
-        {{ devices_list | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}
+        {{ data.devices_list | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}
 
       driving_sensor: "{{ driving_sensors[idx] }}"
       driver: "{{ persons[idx] }}"
