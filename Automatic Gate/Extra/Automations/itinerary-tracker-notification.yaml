@@ -189,6 +189,12 @@ blueprint:
           selector:
             text:
               multiline: true
+        persistent_notification:
+          name: 🔔 Persistent notification
+          description: Show notifications in Home Assistant **[dashboard](https://www.home-assistant.io/integrations/persistent_notification)**
+          default: false
+          selector:
+            boolean:
         notif_refresh_rate_ftn:
           name: 🔁 Notification refresh rate function
           description: |-
@@ -283,6 +289,8 @@ actions:
       driving_sensor: "{{ driving_sensors[idx] }}"
       driver: "{{ persons[idx] }}"
       driver_name: "{{ state_attr(driver, 'friendly_name') }}"
+      persistent_id: "{{ 'persistent_' ~ this.context.id }}"
+      persistent_active: !input persistent_notification
       next_refresh: 0
       remaining: 0
       nearly_arrived_sent: false
@@ -335,6 +343,12 @@ actions:
               url: !input on_tap_link
               clickAction: !input on_tap_link
               alert_once: true
+  - alias: Send an itinerary started persistent notification
+    action: persistent_notification.create
+    data:
+      message: "{{ message }}"
+      notification_id: "{{ persistent_id }}"
+    enabled: !input persistent_notification
   - alias: If drive_start_tts enabled, someone home, tts devices and service are set
     if:
       - condition: template
@@ -384,6 +398,11 @@ actions:
                   event_type: mobile_app_notification_cleared
                   event_data:
                     tag: itinerary-tracker
+                - trigger: persistent_notification
+                  id: persistent_cleared
+                  notification_id: "{{ persistent_id }}"
+                  update_type: removed
+                  enabled: "{{ persistent_active }}"
               timeout:
                 # Wait for the end of the cooldown, or for the nearly arrived TTS, or indefinitely
                 seconds: |-
@@ -404,19 +423,33 @@ actions:
                   {% endif %}
 
                   {{ min(values) }}
-            - alias: Stop sending notifications to user who has dismissed them
+            - alias: If triggered by a notification cleared
               if:
                 condition: template
-                value_template: "{{ wait.trigger.id == 'notification_cleared' }}"
+                value_template: "{{ wait.trigger.id in ['notification_cleared', 'persistent_cleared'] }}"
               then:
-                - alias: Remove the notification service
-                  variables:
-                    notify_services: |-
-                      {{ notify_services | difference([wait.trigger.event.data.confirmation]) }}
+                - choose:
+                    - alias: If triggered by a mobile notification cleared
+                      conditions:
+                        - condition: template
+                          value_template: "{{ wait.trigger.id == 'notification_cleared' }}"
+                      sequence:
+                        - alias: Remove the notification service
+                          variables:
+                            notify_services: |-
+                              {{ notify_services | difference([wait.trigger.event.data.confirmation]) }}
+                    - alias: If triggered by a persistent notification cleared
+                      conditions:
+                        - condition: template
+                          value_template: "{{ wait.trigger.id == 'persistent_cleared' }}"
+                      sequence:
+                        alias: Disable persistent notifications
+                        variables:
+                          persistent_active: false
                 - alias: Stop if there are no more notification services
                   if:
                     - condition: template
-                      value_template: "{{ notify_services | length == 0 }}"
+                      value_template: "{{ notify_services | length == 0 and not persistent_active }}"
                   then:
                     - stop: No notification services remaining
             - alias: If travel time remaining needs to trigger nearly arrived TTS
@@ -541,6 +574,16 @@ actions:
                         timeout: "{{ remaining | int }}"
                         chronometer: true
                         when: "{{ arrival_timestamp | int }}"
+            - alias: If persistent notifications are still active
+              if:
+                - condition: template
+                  value_template: "{{ persistent_active }}"
+              then:
+                - alias: Update the persistent notification
+                  action: persistent_notification.create
+                  data:
+                    message: "{{ message }}"
+                    notification_id: "{{ persistent_id }}"
     else:
       - alias: Wait for user to leave vehicle
         wait_for_trigger:
@@ -570,6 +613,16 @@ actions:
                   url: !input on_tap_link
                   clickAction: !input on_tap_link
                   timeout: 300
+      - alias: If persistent notifications are still active
+        if:
+          - condition: template
+            value_template: "{{ persistent_active }}"
+        then:
+          - alias: Update the persistent notification
+            action: persistent_notification.create
+            data:
+              message: "{{ message }}"
+              notification_id: "{{ persistent_id }}"
       - alias: If driver_arrived_tts enabled, someone is home, TTS devices and service are set
         if:
           - condition: template
