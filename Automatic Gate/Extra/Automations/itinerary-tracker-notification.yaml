@@ -289,6 +289,7 @@ actions:
       driving_sensor: "{{ driving_sensors[idx] }}"
       driver: "{{ persons[idx] }}"
       driver_name: "{{ state_attr(driver, 'friendly_name') }}"
+      notification_tag: "{{ 'itinerary-tracker-' ~ this.context.id }}"
       persistent_id: "{{ 'persistent_' ~ this.context.id }}"
       persistent_active: !input persistent_notification
       next_refresh: 0
@@ -335,7 +336,7 @@ actions:
             message: "{{ message }}"
             data:
               notification_icon: mdi:car
-              tag: itinerary-tracker
+              tag: "{{ notification_tag }}"
               channel: Itinerary status
               sticky: true
               # Hack to retrieve notification service when dismissed
@@ -397,7 +398,7 @@ actions:
                   id: notification_cleared
                   event_type: mobile_app_notification_cleared
                   event_data:
-                    tag: itinerary-tracker
+                    tag: "{{ notification_tag }}"
                 - trigger: persistent_notification
                   id: persistent_cleared
                   notification_id: "{{ persistent_id }}"
@@ -517,7 +518,7 @@ actions:
                   action: "{{ notify_service }}"
                   data:
                     notification_icon: mdi:alert-circle
-                    tag: itinerary-tracker
+                    tag: "{{ notification_tag }}"
                     channel: Itinerary status
                     data:
                       importance: high
@@ -563,7 +564,7 @@ actions:
                       message: "{{ message }}"
                       data:
                         notification_icon: mdi:map-marker-account
-                        tag: itinerary-tracker
+                        tag: "{{ notification_tag }}"
                         channel: Itinerary status
                         sticky: true
                         # Hack to retrieve notification service when dismissed
@@ -608,7 +609,7 @@ actions:
                 message: "{{ message }}"
                 data:
                   notification_icon: mdi:home-map-marker
-                  tag: itinerary-tracker
+                  tag: "{{ notification_tag }}"
                   channel: Itinerary status
                   url: !input on_tap_link
                   clickAction: !input on_tap_link
@@ -652,5 +653,5 @@ actions:
               data:
                 message: clear_notification
                 data:
-                  tag: itinerary-tracker
+                  tag: "{{ notification_tag }}"
 mode: parallel
