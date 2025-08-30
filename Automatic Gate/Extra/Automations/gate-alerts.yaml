@@ -34,7 +34,7 @@ blueprint:
     min_version: 2024.10.0
   input:
     common_settings:
-      name: Common Settings
+      name: Essential inputs
       icon: "mdi:cog"
       input:
         gate:
@@ -89,56 +89,10 @@ blueprint:
               multiple: true
               filter:
                 integration: mobile_app
-        car_visible:
-          name: 🚗 Visible in Android Auto/CarPlay
-          description: Show notifications on your **car's dashboard**
-          default: true
-          selector:
-            boolean:
-        speaker_tts_devices:
-          name: 🔊 TTS speakers
-          description: |-
-            **Speakers** for **text-to-speech** announcements
-            *Note: Optional*
-          default: []
-          selector:
-            entity:
-              multiple: true
-              domain: media_player
-        speaker_tts_service:
-          name: 🎙️ TTS service
-          description: |-
-            **TTS service** you want to use for your speakers
-            *Note: Optional*
-          default: []
-          selector:
-            target:
-              entity:
-                domain: tts
-        persistent_notification:
-          name: 🔔 Persistent notification
-          description: Show notifications in Home Assistant **[dashboard](https://www.home-assistant.io/integrations/persistent_notification)**
-          default: false
-          selector:
-            boolean:
-        phone_tts:
-          name: 📳 Phone TTS
-          description: Read notifications **aloud** on selected **Android** phones
-          default: false
-          selector:
-            boolean:
-        extra_actions:
-          name: ➕ Extra Actions
-          description: |-
-            Additional **actions** to execute when **triggered**
-            *Note: Optional*
-          default: []
-          selector:
-            action:
 
-    language_settings:
-      name: Language Settings
-      icon: "mdi:translate"
+    notification_settings:
+      name: Notification settings
+      icon: mdi:bell
       collapsed: true
       input:
         language:
@@ -163,6 +117,64 @@ blueprint:
           selector:
             text:
               multiline: true
+        car_visible:
+          name: 🚗 Visible in Android Auto/CarPlay
+          description: Show notifications on your **car's dashboard**
+          default: true
+          selector:
+            boolean:
+        persistent_notification:
+          name: 🔔 Persistent notification
+          description: Show notifications in Home Assistant **[dashboard](https://www.home-assistant.io/integrations/persistent_notification)**
+          default: false
+          selector:
+            boolean:
+        phone_tts:
+          name: 📳 Phone TTS
+          description: Read notifications **aloud** on selected **Android** phones
+          default: false
+          selector:
+            boolean:
+
+    speakers:
+      name: Speakers
+      icon: mdi:speaker-multiple
+      collapsed: true
+      input:
+        speaker_tts_devices:
+          name: 🔊 TTS speakers
+          description: |-
+            **Speakers** for **text-to-speech** announcements
+            *Note: Optional*
+          default: []
+          selector:
+            entity:
+              multiple: true
+              domain: media_player
+        speaker_tts_service:
+          name: 🎙️ TTS service
+          description: |-
+            **TTS service** you want to use for your speakers
+            *Note: Optional*
+          default: []
+          selector:
+            target:
+              entity:
+                domain: tts
+
+    extra_actions:
+      name: Extra actions
+      icon: mdi:plus-circle
+      collapsed: true
+      input:
+        extra_actions:
+          name: ➕ Extra Actions
+          description: |-
+            Additional **actions** to execute when **triggered**
+            *Note: Optional*
+          default: []
+          selector:
+            action:
 
 variables:
   gate: !input gate
