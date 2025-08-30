@@ -76,58 +76,6 @@ blueprint:
               filter:
                 domain: sensor
                 device_class: duration
-    speakers:
-      name: Speakers
-      icon: mdi:speaker-multiple
-      collapsed: true
-      input:
-        speaker_tts_devices:
-          name: 🔊 TTS speakers
-          description: |-
-            The **home speakers** your want to play TTS on
-            *Note : Optional*
-          default: []
-          selector:
-            entity:
-              multiple: true
-              domain: media_player
-        speaker_tts_service:
-          name: 🎙️ TTS service
-          description: |-
-            The **TTS service** you want to use for your speakers
-            *Note : Optional*
-          default: ""
-          selector:
-            target:
-              entity:
-                domain: tts
-        drive_start_tts:
-          name: 🚀 Drive start TTS
-          description: Notify over TTS when someone starts driving
-          default: True
-          selector:
-            boolean:
-        nearly_arrived_tts:
-          name: 🛬 Nearly arrived TTS
-          description: Notify over TTS when the driver has nearly arrived
-          default: True
-          selector:
-            boolean:
-        driver_arrived_tts:
-          name: 🏁 Arrived TTS
-          description: Notify over TTS when the driver has arrived
-          default: True
-          selector:
-            boolean:
-        nearly_arrived_time:
-          name: ⏱️ Nearly arrived time trigger
-          description: The remaining time at which the automation will send a nearly arrived TTS
-          default: 3
-          selector:
-            number:
-              min: 0
-              max: 60
-              unit_of_measurement: minutes
 
     persons_to_notify:
       name: Persons to notify
@@ -189,12 +137,6 @@ blueprint:
           selector:
             text:
               multiline: true
-        persistent_notification:
-          name: 🔔 Persistent notification
-          description: Show notifications in Home Assistant **[dashboard](https://www.home-assistant.io/integrations/persistent_notification)**
-          default: false
-          selector:
-            boolean:
         notif_refresh_rate_ftn:
           name: 🔁 Notification refresh rate function
           description: |-
@@ -211,6 +153,65 @@ blueprint:
           default: "/lovelace/vehicle-tracker-map"
           selector:
             text:
+        persistent_notification:
+          name: 🔔 Persistent notification
+          description: Show notifications in Home Assistant **[dashboard](https://www.home-assistant.io/integrations/persistent_notification)**
+          default: false
+          selector:
+            boolean:
+
+    speakers:
+      name: Speakers
+      icon: mdi:speaker-multiple
+      collapsed: true
+      input:
+        speaker_tts_devices:
+          name: 🔊 TTS speakers
+          description: |-
+            The **home speakers** your want to play TTS on
+            *Note : Optional*
+          default: []
+          selector:
+            entity:
+              multiple: true
+              domain: media_player
+        speaker_tts_service:
+          name: 🎙️ TTS service
+          description: |-
+            The **TTS service** you want to use for your speakers
+            *Note : Optional*
+          default: ""
+          selector:
+            target:
+              entity:
+                domain: tts
+        drive_start_tts:
+          name: 🚀 Drive start TTS
+          description: Notify over TTS when someone starts driving
+          default: True
+          selector:
+            boolean:
+        nearly_arrived_tts:
+          name: 🛬 Nearly arrived TTS
+          description: Notify over TTS when the driver has nearly arrived
+          default: True
+          selector:
+            boolean:
+        driver_arrived_tts:
+          name: 🏁 Arrived TTS
+          description: Notify over TTS when the driver has arrived
+          default: True
+          selector:
+            boolean:
+        nearly_arrived_time:
+          name: ⏱️ Nearly arrived time trigger
+          description: The remaining time at which the automation will send a nearly arrived TTS
+          default: 3
+          selector:
+            number:
+              min: 0
+              max: 60
+              unit_of_measurement: minutes
 
 variables:
   persons: !input persons
