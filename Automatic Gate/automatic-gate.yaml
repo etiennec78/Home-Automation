@@ -456,6 +456,14 @@ blueprint:
               multiple: true
               filter:
                 domain: lock
+        dont_lock_if_people_remaining:
+          name: 🏠 Do not lock if there are still people home
+          description: |-
+            Avoid locking locks if some person entities are still in the gate zone besides yourself
+            Note : if you drive away with multiple people, they might still be detected home and prevent locking
+          default: false
+          selector:
+            boolean:
 
 variables:
   gate: !input gate
@@ -490,6 +498,7 @@ variables:
   close_when_disconnected_from: !input close_when_disconnected_from
   wifi_devices: !input wifi_devices
   forbidden_zones: !input forbidden_zones
+  dont_lock_if_people_remaining: !input dont_lock_if_people_remaining
   quick_tt_updates: 0
   last_quick_tt_update: "{{ none }}"
   failed_updates: 0
@@ -1460,15 +1469,29 @@ actions:
                           - alias: Create error
                             sequence: *create_error
                         else:
-                          - alias: Unlock or lock all locks
-                            repeat:
-                              for_each: !input locks
-                              sequence:
-                                - action: |-
-                                    {% set prefix = '' if itinerary_mode == 'departure' else 'un' %}
-                                    lock.{{ prefix }}lock
-                                  target:
-                                    entity_id: "{{ repeat.item }}"
+                          - alias: Set prefix
+                            variables:
+                              prefix: "{{ itinerary_mode == 'departure' | iif('', 'un') }}"
+                          - alias: Do not lock if dont_lock_if_people_remaining is true and someone else is home
+                            if:
+                              - condition: template
+                                value_template: |-
+                                  {{
+                                    prefix == 'un'
+                                    or not dont_lock_if_people_remaining
+                                    or not expand(gate_location)
+                                      | map(attribute='entity_id')
+                                      | list
+                                      | difference([person])
+                                  }}
+                            then:
+                              - alias: Unlock or lock all locks
+                                repeat:
+                                  for_each: !input locks
+                                  sequence:
+                                    - action: "lock.{{ prefix }}lock"
+                                      target:
+                                        entity_id: "{{ repeat.item }}"
                       - alias: Close all gates
                         repeat: &close_gates
                           for_each: !input gate
