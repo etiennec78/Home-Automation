@@ -1022,7 +1022,7 @@ actions:
                             - "open"
                             - "cancel"
                           buttons: |-
-                            {% set buttons = [] %}
+                            {% set data = namespace(buttons=[]) %}
                             {% for button_id in button_ids %}
                               {# Custom translation #}
                               {%
@@ -1040,10 +1040,10 @@ actions:
                                 {% set translation = strings['en']['button'][button_id] %}
                               {% endif %}
 
-                              {% set buttons = buttons | union(translation) %}
+                              {% set data.buttons = data.buttons + [translation] %}
 
                             {% endfor %}
-                            {{ buttons }}
+                            {{ data.buttons }}
                       - alias: Ask the user if he wants to open the gate
                         action: "{{ notify_service }}"
                         data:
@@ -1416,7 +1416,7 @@ actions:
                       - alias: Get names of awaited persons
                         variables:
                           awaited_persons: |-
-                            {% set awaited_persons = [] %}
+                            {% set data = namespace(awaited_persons=[]) %}
 
                             {% for sensor_idx in range(itinerary_sensors | length) %}
                               {%
@@ -1424,14 +1424,14 @@ actions:
                                 and is_state(itinerary_sensors[sensor_idx], ['on_approach', 'leaving'])
                               %}
                                 {%
-                                  set awaited_persons = awaited_persons | union(
-                                    [state_attr(persons[sensor_idx], 'friendly_name')]
-                                  )
+                                  set data.awaited_persons = data.awaited_persons + [
+                                    state_attr(persons[sensor_idx], 'friendly_name')
+                                  ]
                                 %}
                               {% endif %}
                             {% endfor %}
 
-                            {{ awaited_persons | join(', ') }}
+                            {{ data.awaited_persons | join(', ') }}
                       - alias: Set notification ids
                         variables:
                           title_id: "awaiting"
