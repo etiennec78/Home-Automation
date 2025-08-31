@@ -35,18 +35,24 @@ sections:
 
           Time remaining :
           {% if not is_state(travel_time_sensor, ['unknown', 'unavailable']) %}
-            {% if state_attr(travel_time_sensor, 'unit_of_measurement') == 'min' %}
+            {% if state_attr(travel_time_sensor, 'unit_of_measurement') in ['min', 's'] %}
+              {% set value = states(travel_time_sensor) | float %}
+              {% if state_attr(travel_time_sensor, 'unit_of_measurement') == 'min' %}
+                {% set value = value * 60 %}
+              {% endif %}
+
               {{
                 (
                   (
                     states[travel_time_sensor].last_updated | as_timestamp
                     - now() | as_timestamp
-                    + states(travel_time_sensor) | float * 60
+                    + value
                   ) / 60
                 ) | round(0)
               }}min
+
             {% else %}
-              Unknown
+              Unsupported sensor
             {% endif %}
           {% else %}
             Unknown
@@ -58,15 +64,21 @@ sections:
 
           Arrival :
           {% if not is_state(travel_time_sensor, ['unknown', 'unavailable']) %}
-            {% if state_attr(travel_time_sensor, 'unit_of_measurement') == 'min' %}
+            {% if state_attr(travel_time_sensor, 'unit_of_measurement') in ['min', 's'] %}
+              {% set value = states(travel_time_sensor) | float %}
+              {% if state_attr(travel_time_sensor, 'unit_of_measurement') == 'min' %}
+                {% set value = value * 60 %}
+              {% endif %}
+
               {{
                 (
                   states[travel_time_sensor].last_updated | as_timestamp
-                  + states(travel_time_sensor) | float * 60
+                  + value
                 ) | timestamp_custom('%H:%M')
               }}
+
             {% else %}
-              Unknown
+              Unsupported sensor
             {% endif %}
           {% else %}
             Unknown
