@@ -41,15 +41,22 @@ sections:
                 {% set value = value * 60 %}
               {% endif %}
 
-              {{
-                (
-                  (
-                    states[travel_time_sensor].last_updated | as_timestamp
-                    - now() | as_timestamp
-                    + value
-                  ) / 60
-                ) | round(0)
-              }}min
+              {% set remaining = (
+                  states[travel_time_sensor].last_updated | as_timestamp
+                  - now() | as_timestamp
+                  + value
+                )
+              %}
+
+              {% if remaining >= 60 %}
+                {{ (remaining / 60) | round(0) }}min
+              {% elif remaining > 0 %}
+                {{ remaining | round(0) }}s
+              {% elif remaining > 120 %}
+                Soon
+              {% else %}
+                Time passed
+              {% endif %}
 
             {% else %}
               Unsupported sensor
