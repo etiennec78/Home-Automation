@@ -1780,7 +1780,7 @@ actions:
                           states[travel_time_sensor].last_updated | as_timestamp
                             + travel_time_duration
                             - lead_time
-                            - timer if opening_behavior == 'timer' else 0
+                            - (timer if opening_behavior == 'timer' else 0)
                         }}
                 else:
                   - alias: Add 1 to the failed updates counter
