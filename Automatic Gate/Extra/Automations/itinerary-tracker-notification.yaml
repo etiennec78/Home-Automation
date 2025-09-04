@@ -455,45 +455,34 @@ actions:
                   {% endif %}
 
                   {{ min(values) }}
-            - alias: If triggered by a notification cleared
-              if:
-                condition: template
-                value_template: "{{ wait.trigger.id in ['notification_cleared', 'persistent_cleared'] }}"
-              then:
-                - choose:
-                    - alias: If triggered by a mobile notification cleared
-                      conditions:
-                        - condition: template
-                          value_template: "{{ wait.trigger.id == 'notification_cleared' }}"
-                      sequence:
-                        - alias: Remove the notification service
-                          variables:
-                            active_notify_services: |-
-                              {{ active_notify_services | difference([wait.trigger.event.data.confirmation]) }}
-                            dismissed_idx: |-
-                              {{
-                                dismissed_idx | union(
-                                  [
-                                    notify_services.index(
-                                      wait.trigger.event.data.confirmation
-                                    )
-                                  ]
-                                )
-                              }}
-                    - alias: If triggered by a persistent notification cleared
-                      conditions:
-                        - condition: template
-                          value_template: "{{ wait.trigger.id == 'persistent_cleared' }}"
-                      sequence:
-                        alias: Disable persistent notifications
-                        variables:
-                          persistent_active: false
-                - alias: Stop if there are no more notification services
-                  if:
+            - choose:
+                - alias: If triggered by a mobile notification cleared
+                  conditions:
                     - condition: template
-                      value_template: "{{ active_notify_services | length == 0 and not persistent_active }}"
-                  then:
-                    - stop: No notification services remaining
+                      value_template: "{{ wait.trigger.id == 'notification_cleared' }}"
+                  sequence:
+                    - alias: Remove the notification service
+                      variables:
+                        active_notify_services: |-
+                          {{ active_notify_services | difference([wait.trigger.event.data.confirmation]) }}
+                        dismissed_idx: |-
+                          {{
+                            dismissed_idx | union(
+                              [
+                                notify_services.index(
+                                  wait.trigger.event.data.confirmation
+                                )
+                              ]
+                            )
+                          }}
+                - alias: If triggered by a persistent notification cleared
+                  conditions:
+                    - condition: template
+                      value_template: "{{ wait.trigger.id == 'persistent_cleared' }}"
+                  sequence:
+                    alias: Disable persistent notifications
+                    variables:
+                      persistent_active: false
             - alias: If triggered by a notify condition change
               if:
                 - condition: template
