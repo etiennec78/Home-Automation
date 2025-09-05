@@ -58,6 +58,16 @@ blueprint:
                 domain:
                   - switch
                   - cover
+        gate_alternate:
+          name: ⛩️ Alternative Gate
+          description: The **switch** or **cover** which controls your **[gate](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gate-%EF%B8%8F)** in case the primary sensor is unavailable
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain:
+                  - switch
+                  - cover
         gate_location:
           name: 📍 Gate location
           description: The zone where your gate is located, to detect whether you are leaving or arriving
@@ -1206,6 +1216,24 @@ actions:
                             {% endif %}
                           target:
                             entity_id: "{{ repeat.item }}"
+                else:
+                  - alias: If one of the gates is unavailable
+                    if:
+                      - condition: template
+                        value_template: "{{ gate | select('is_state', ['unavailable', 'unknown']) | list != [] }}"
+                    then:
+                      - alias: Open each gate alternate because driver is leaving
+                        repeat:
+                          for_each: !input gate_alternate
+                          sequence:
+                            - action: |-
+                                {% if states[repeat.item].domain == 'switch' %}
+                                  switch.turn_on
+                                {% elif states[repeat.item].domain == 'cover' %}
+                                  cover.open_cover
+                                {% endif %}
+                              target:
+                                entity_id: "{{ repeat.item }}"
           - alias: Set variables for the following repeat sequence
             variables:
               break: "{{ closing_behavior in ['auto', 'off'] }}"
