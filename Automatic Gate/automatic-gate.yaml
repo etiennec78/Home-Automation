@@ -1088,8 +1088,10 @@ actions:
                             actions:
                               - action: "{{ opening_order_id }}"
                                 title: "{{ buttons[0] }}"
+                                icon: sfsymbols:lock.open
                               - action: "{{ canceling_order_id }}"
                                 title: "{{ buttons[1] }}"
+                                icon: sfsymbols:xmark
                   - alias: If opening behavior is set to notification request
                     conditions:
                       - condition: template
@@ -1123,8 +1125,10 @@ actions:
                             actions:
                               - action: "{{ canceling_order_id }}"
                                 title: "{{ buttons[0] }}"
+                                icon: sfsymbols:xmark
                               - action: "{{ opening_order_id }}"
                                 title: "{{ buttons[1] }}"
+                                icon: sfsymbols:lock.open
               - sequence: *tts
               - alias: Wait for events before opening the gate or canceling the itinerary
                 wait_for_trigger:
@@ -1364,8 +1368,10 @@ actions:
                                       actions:
                                         - action: "{{ canceling_order_id }}"
                                           title: "{{ buttons[0] }}"
+                                          icon: sfsymbols:xmark
                                         - action: "{{ closing_order_id }}"
                                           title: "{{ buttons[1] }}"
+                                          icon: sfsymbols:lock
                             - alias: If closing behavior is set to notification request
                               conditions:
                                 - condition: template
@@ -1396,8 +1402,10 @@ actions:
                                       actions:
                                         - action: "{{ closing_order_id }}"
                                           title: "{{ buttons[0] }}"
+                                          icon: sfsymbols:lock
                                         - action: "{{ canceling_order_id }}"
                                           title: "{{ buttons[1] }}"
+                                          icon: sfsymbols:xmark
                         - sequence: *tts
                   else:
                     - alias: If the itinerary needs to be canceled
