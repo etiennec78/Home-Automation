@@ -135,6 +135,19 @@ blueprint:
           default: false
           selector:
             boolean:
+        phone_tts_stream:
+          name: 📻 Phone TTS audio stream
+          description: The **audio stream** used for playing the phone TTS. Can be useful to **bypass Do Not Disturb**.
+          default: "notification_stream"
+          selector:
+            select:
+              options:
+                - label: Notification stream
+                  value: "notification_stream"
+                - label: Alarm stream
+                  value: "alarm_stream"
+                - label: Alarm stream (max volume)
+                  value: "alarm_stream_max"
 
     speakers:
       name: Speakers
@@ -465,7 +478,7 @@ actions:
                       channel: Gate alerts
                       importance: high
                       ttl: 0
-                      media_stream: "alarm_stream"
+                      media_stream: !input phone_tts_stream
 
       - alias: Play TTS on each speaker
         repeat:

@@ -370,6 +370,19 @@ blueprint:
           default: "{{ title[:-2] ~ message }}"
           selector:
             template:
+        phone_tts_stream:
+          name: 📻 Phone TTS audio stream
+          description: The **audio stream** used for playing the phone TTS. Can be useful to **bypass Do Not Disturb**.
+          default: "notification_stream"
+          selector:
+            select:
+              options:
+                - label: Notification stream
+                  value: "notification_stream"
+                - label: Alarm stream
+                  value: "alarm_stream"
+                - label: Alarm stream (max volume)
+                  value: "alarm_stream_max"
 
     presence_sensors:
       name: Presence sensors
@@ -694,7 +707,7 @@ actions:
                 channel: Itinerary status
                 importance: high
                 ttl: 0
-                media_stream: "alarm_stream"
+                media_stream: !input phone_tts_stream
             enabled: !input phone_tts
       - alias: Notify all users on the dashboard that the config is invalid
         action: persistent_notification.create
