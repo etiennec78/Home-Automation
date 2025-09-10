@@ -112,6 +112,8 @@ blueprint:
           description: |-
             Each **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#travel-time-sensors-%EF%B8%8F)** monitoring each user **time left before arrival**
             *⚠️ Please set a [custom polling interval](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)*
+            *Note: Optional if open when connected to iBeacon is true*
+          default: []
           selector:
             entity:
               multiple: true
@@ -457,6 +459,18 @@ blueprint:
               options:
                 - label: iBeacon
                   value: ble
+        open_when_connected_to:
+          name: 📡 Open on arrival when connected to
+          description: |-
+            Open the gate when driver's iBeacon is reachable
+            Enabling this will remove the need of a travel time sensor
+          default: []
+          selector:
+            select:
+              multiple: true
+              options:
+                - label: iBeacon
+                  value: ble
 
     locks:
       name: Door locks
@@ -706,7 +720,12 @@ actions:
       idx: "{{ driving_sensors.index(trigger.entity_id) }}"
       person: "{{ persons[idx] }}"
       driving_sensor: "{{ trigger.entity_id }}"
-      travel_time_sensor: "{{ travel_time_sensors[idx] }}"
+      travel_time_sensor: |-
+        {% if travel_time_sensors | length > idx %}
+          {{ travel_time_sensors[idx] }}
+        {% else %}
+          {{ none }}
+        {% endif %}
       notify_service: "{{ notify_services[idx] }}"
       itinerary_sensor: "{{ itinerary_sensors[idx] }}"
       opening_order_id: "{{ 'opening_order_' ~ this.context.id }}"
@@ -832,71 +851,72 @@ actions:
       # OPEN GATE ON EXIT #
       #####################
 
-      - alias: If driver has iBeacon entity set for auto-closing
-        if:
-          - condition: template
-            value_template: "{{ (ble_entities | length) - 1 >= idx }}"
-        then:
-          - alias: Save iBeacon states
-            variables:
-              old_ibeacon_transmitter_states: |-
-                {% if (ble_transmitter_entities | length) - 1 >= idx %}
-                  {{ {
-                    'state': states(ble_transmitter_entities[idx])
-                      if states(ble_transmitter_entities[idx]) == 'Stopped' else none,
-                    'transmit_power': (state_attr(ble_transmitter_entities[idx], 'Transmitting power') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
-                      if state_attr(ble_transmitter_entities[idx], 'Transmitting power') != 'high' else none,
-                    'advertise_mode': (state_attr(ble_transmitter_entities[idx], 'Advertise mode') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
-                      if state_attr(ble_transmitter_entities[idx], 'Advertise mode') != 'lowLatency' else none
-                  } }}
-                {% else %}
-                  {{ none }}
-                {% endif %}
-          - alias: If driver has a saved iBeacon transmitter state
+      - sequence: &start_ibeacons
+          - alias: If driver has iBeacon entity set for auto-closing
             if:
               - condition: template
-                value_template: "{{ old_ibeacon_transmitter_states != none }}"
+                value_template: "{{ (ble_entities | length) - 1 >= idx }}"
             then:
-              - alias: Change iBeacon state if needed
+              - alias: Save iBeacon states
+                variables:
+                  old_ibeacon_transmitter_states: |-
+                    {% if (ble_transmitter_entities | length) - 1 >= idx %}
+                      {{ {
+                        'state': states(ble_transmitter_entities[idx])
+                          if states(ble_transmitter_entities[idx]) == 'Stopped' else none,
+                        'transmit_power': (state_attr(ble_transmitter_entities[idx], 'Transmitting power') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
+                          if state_attr(ble_transmitter_entities[idx], 'Transmitting power') != 'high' else none,
+                        'advertise_mode': (state_attr(ble_transmitter_entities[idx], 'Advertise mode') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
+                          if state_attr(ble_transmitter_entities[idx], 'Advertise mode') != 'lowLatency' else none
+                      } }}
+                    {% else %}
+                      {{ none }}
+                    {% endif %}
+              - alias: If driver has a saved iBeacon transmitter state
                 if:
                   - condition: template
-                    value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
+                    value_template: "{{ old_ibeacon_transmitter_states != none }}"
                 then:
-                  - action: "{{ notify_service }}"
-                    data:
-                      message: command_ble_transmitter
-                      data:
-                        command: turn_on
-              - alias: Change iBeacon transmitting power if needed
+                  - alias: Change iBeacon state if needed
+                    if:
+                      - condition: template
+                        value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
+                    then:
+                      - action: "{{ notify_service }}"
+                        data:
+                          message: command_ble_transmitter
+                          data:
+                            command: turn_on
+                  - alias: Change iBeacon transmitting power if needed
+                    if:
+                      - condition: template
+                        value_template: "{{ old_ibeacon_transmitter_states['transmit_power'] != none }}"
+                    then:
+                      - action: "{{ notify_service }}"
+                        data:
+                          message: command_ble_transmitter
+                          data:
+                            command: ble_set_transmit_power
+                            ble_transmit: ble_transmit_high
+                  - alias: Change iBeacon advertise mode if needed
+                    if:
+                      - condition: template
+                        value_template: "{{ old_ibeacon_transmitter_states['advertise_mode'] != none }}"
+                    then:
+                      - action: "{{ notify_service }}"
+                        data:
+                          message: command_ble_transmitter
+                          data:
+                            command: ble_set_advertise_mode
+                            ble_advertise: ble_advertise_low_latency
+              - alias: Activate iBeacon scanner if switch set
                 if:
-                  - condition: template
-                    value_template: "{{ old_ibeacon_transmitter_states['transmit_power'] != none }}"
+                - condition: template
+                  value_template: "{{ ble_scanner_switch != '' and is_state(ble_scanner_switch, 'off') }}"
                 then:
-                  - action: "{{ notify_service }}"
-                    data:
-                      message: command_ble_transmitter
-                      data:
-                        command: ble_set_transmit_power
-                        ble_transmit: ble_transmit_high
-              - alias: Change iBeacon advertise mode if needed
-                if:
-                  - condition: template
-                    value_template: "{{ old_ibeacon_transmitter_states['advertise_mode'] != none }}"
-                then:
-                  - action: "{{ notify_service }}"
-                    data:
-                      message: command_ble_transmitter
-                      data:
-                        command: ble_set_advertise_mode
-                        ble_advertise: ble_advertise_low_latency
-          - alias: Activate iBeacon scanner if switch set
-            if:
-            - condition: template
-              value_template: "{{ ble_scanner_switch != '' and is_state(ble_scanner_switch, 'off') }}"
-            then:
-              - action: switch.turn_on
-                target:
-                  entity_id: "{{ ble_scanner_switch }}"
+                  - action: switch.turn_on
+                    target:
+                      entity_id: "{{ ble_scanner_switch }}"
       - alias: If driver chose to wait for iBeacon or WiFi before opening to ensure that vehicle is not parked outside
         if:
           - condition: template
@@ -1608,8 +1628,17 @@ actions:
         - alias: Update travel time if expired and refresh rate set to "Continuously"
           if:
             - condition: template
-              value_template:  "{{ travel_time_rate == 'continuous' and
-                states[travel_time_sensor].last_updated + timedelta(minutes=continuously_refresh_interval) < now() }}"
+              value_template: |-
+                {{
+                  travel_time_rate == 'continuous'
+                  and travel_time_sensor is not none
+                  and (
+                    (
+                      states[travel_time_sensor].last_updated +
+                      timedelta(minutes=continuously_refresh_interval)
+                    ) < now()
+                  )
+                }}
           then:
             - alias: Set variables for the following sequence
               variables:
@@ -1709,170 +1738,232 @@ actions:
                 - alias: Create error
                   sequence: *create_error
                 - stop: Forbidden zone
-        - alias: Repeat while driver in activation zone and still driving
-          # This allows to update to a precise ETA even if a traffic jam appears near your gate
-          # It will return to the previous loop if the driver has entered the radius but passed by
-          repeat:
-            while:
-              - alias: Still in the activation zone
-                condition: template
-                value_template: *activation_zone_in_condition
-              - alias: Still driving
-                condition: template
-                value_template: "{{ is_state(driving_sensor, 'on') }}"
-            sequence:
-              - alias: Set variables for the following sequence
-                variables:
-                  quick_update_trigger: 1
-                  reset_after: 20
-              - alias: If the travel time needs to be updated
-                if:
-                  - condition: template
-                    value_template: |-
-                      {{
-                        travel_time_rate in ['continuous', 'near-home']
-                        or opening_time is none
-                          and travel_time_rate == 'once'
-                          and failed_updates < 20
-                      }}
-                then:
-                  - alias: Update travel time
-                    sequence: *update_travel_time
-              - alias: If the travel time sensor is not unknown or unavailable
-                if:
-                  - condition: template
-                    value_template: "{{ states(travel_time_sensor) not in ['unknown', 'unavailable'] }}"
-                then:
-                  - alias: Convert travel time to seconds
-                    variables:
-                      travel_time_duration: |-
-                        {% if (state_attr(travel_time_sensor, 'duration') != none) %}
-                          {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
-                        {% elif (state_attr(travel_time_sensor, 'unit_of_measurement') == "min") %}
-                          {{ states(travel_time_sensor) | float * 60 }}
-                        {% elif (state_attr(travel_time_sensor, 'unit_of_measurement') == "s") %}
-                          {{ states(travel_time_sensor) | float }}
-                        {% else %}
-                          unknown
-                        {% endif %}
-                  - alias: Stop if travel time integration is not supported
+        - choose:
+            - conditions:
+                - condition: template
+                  value_template: "{{ 'ble' in open_when_connected_to }}"
+              sequence:
+                - repeat:
+                    while:
+                      - alias: Still in the activation zone
+                        condition: template
+                        value_template: *activation_zone_in_condition
+                      - alias: Still driving
+                        condition: template
+                        value_template: "{{ is_state(driving_sensor, 'on') }}"
+                    sequence:
+                      - alias: If this is the first loop
+                        if:
+                          - condition: template
+                            value_template: "{{ repeat.first }}"
+                        then: *start_ibeacons
+                      - alias: Wait for new position, vehicle left, or iBeacon reachable
+                        wait_for_trigger:
+                          - alias: New position
+                            id: position
+                            trigger: event
+                            event_type: state_changed
+                            event_data:
+                              entity_id: "{{ person }}"
+                          - alias: Vehicle stopped
+                            id: vehicle_stopped
+                            trigger: template
+                            value_template: "{{ is_state(driving_sensor, 'off') }}"
+                          - alias: iBeacon reachable
+                            trigger: template
+                            id: ble_in_reach
+                            value_template: "{{ states(ble_entities[idx]) | is_number }}"
+                      - alias: If the iBeacon won't need to stay on
+                        if:
+                          - condition: or
+                            conditions:
+                              - alias: Triggered by vehicle stopped or iBeacon reachable
+                                condition: template
+                                value_template: "{{ wait.trigger.id != 'position' }}"
+                              - alias: Not in the activation zone
+                                condition: not
+                                conditions:
+                                  - condition: template
+                                    value_template: *activation_zone_in_condition
+                              - alias: Is in a forbidden zone
+                                condition: template
+                                value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
+                        then:
+                          - sequence: *restore_ibeacons
+                          - alias: Stop if the user is in a forbidden zone
+                            if:
+                              - condition: template
+                                value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
+                            then: *forbidden_zone
+          default:
+            - alias: Repeat while driver in activation zone and still driving
+              # This allows to update to a precise ETA even if a traffic jam appears near your gate
+              # It will return to the previous loop if the driver has entered the radius but passed by
+              repeat:
+                while:
+                  - alias: Still in the activation zone
+                    condition: template
+                    value_template: *activation_zone_in_condition
+                  - alias: Still driving
+                    condition: template
+                    value_template: "{{ is_state(driving_sensor, 'on') }}"
+                sequence:
+                  - alias: If the travel time needs to be updated
                     if:
                       - condition: template
-                        value_template: "{{ travel_time_duration == 'unknown' }}"
+                        value_template: |-
+                          {{
+                            travel_time_rate in ['continuous', 'near-home']
+                            or opening_time is none
+                              and travel_time_rate == 'once'
+                              and failed_updates < 20
+                          }}
                     then:
-                      - alias: Set error id
+                      - alias: Set variables for the following sequence
                         variables:
-                          message_id: "unsupported_tt_integration"
-                      - alias: Create error
-                        sequence: *create_error
-                      - alias: Log error
-                        action: system_log.write
-                        data:
-                          level: error
-                          message: "{{ message }}"
-                          logger: blueprints.etiennec78.automatic_gate
-                      - stop: Travel time integration not supported
-                        error: true
-                  - alias: Set the opening time
-                    variables:
-                      opening_time: |-
-                        {{
-                          states[travel_time_sensor].last_updated | as_timestamp
-                            + travel_time_duration
-                            - lead_time
-                            - (timer if opening_behavior == 'timer' else 0)
-                        }}
-                else:
-                  - alias: Add 1 to the failed updates counter
-                    variables:
-                      failed_updates: "{{ failed_updates + 1 }}"
-              - alias: Set a timer for the gate opening (or max int value if travel time sensor is unknown and no previous eta was stored)
-                variables:
-                  seconds_before_opening: |-
-                    {% if opening_time is none %}
-                      2147483647
-                    {% else %}
-                      {{ opening_time - now() | as_timestamp }}
-                    {% endif %}
-              - alias: If ETA in the future or no opening time could be set
-                if:
-                  - condition: template
-                    value_template: "{{ seconds_before_opening > 1 }}"
-                then:
-                  - alias: Wait for ETA, travel time, new position, vehicle left, and cancel if deviced timed out
-                    wait_for_trigger:
-                      - trigger: event
-                        event_type: state_changed
-                        event_data:
-                          entity_id: "{{ person }}"
-                      - trigger: event
-                        event_type: state_changed
-                        event_data:
-                          entity_id: "{{ travel_time_sensor }}"
-                        enabled: "{{ travel_time_rate == 'listen' }}"
-                      - trigger: template
-                        value_template: "{{ is_state(driving_sensor, 'off') }}"
-                    timeout:
-                      seconds: |-
-                        {% if travel_time_rate == 'once' %}
-                          {{ seconds_before_opening }}
-                        {% else %}
-                          {{ min(timeout_delay*60, seconds_before_opening) }}
-                        {% endif %}
-                  - choose:
-                      - alias: If timeout ran out of time (not because of eta reached)
-                        conditions:
+                          quick_update_trigger: 1
+                          reset_after: 20
+                      - alias: Update travel time
+                        sequence: *update_travel_time
+                  - alias: If the travel time sensor is not unknown or unavailable
+                    if:
+                      - condition: template
+                        value_template: "{{ states(travel_time_sensor) not in ['unknown', 'unavailable'] }}"
+                    then:
+                      - alias: Convert travel time to seconds
+                        variables:
+                          travel_time_duration: |-
+                            {% if (state_attr(travel_time_sensor, 'duration') != none) %}
+                              {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
+                            {% elif (state_attr(travel_time_sensor, 'unit_of_measurement') == "min") %}
+                              {{ states(travel_time_sensor) | float * 60 }}
+                            {% elif (state_attr(travel_time_sensor, 'unit_of_measurement') == "s") %}
+                              {{ states(travel_time_sensor) | float }}
+                            {% else %}
+                              unknown
+                            {% endif %}
+                      - alias: Stop if travel time integration is not supported
+                        if:
                           - condition: template
-                            value_template: |-
-                              {{
-                                wait.remaining == 0
-                                and opening_time is not none
-                                and opening_time > now() | as_timestamp
-                              }}
-                        sequence:
+                            value_template: "{{ travel_time_duration == 'unknown' }}"
+                        then:
                           - alias: Set error id
                             variables:
-                              message_id: "timed_out"
+                              message_id: "unsupported_tt_integration"
                           - alias: Create error
                             sequence: *create_error
-                          - stop: Timed out
-                      - alias: Stop if the user is in a forbidden zone
-                        conditions:
-                          - condition: template
-                            value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
-                        sequence: *forbidden_zone
-              - alias: Return to the previous loop if the travel time sensor is unknown and no previous eta was stored
-                condition: template
-                value_template: "{{ opening_time is not none }}"
-              - alias: Return to the previous loop if the wait_for_trigger was triggered by a position or vehicle sensor update
-                condition: template
-                value_template: "{{ opening_time <= as_timestamp(now()) }}"
-              - alias: Return to the previous loop if the user has left the the activation zone
-                condition: template
-                value_template: *activation_zone_in_condition
-              - alias: Set driver itinerary text variable to "on_approach", because driver is near gate and will arrive soon
-                action: input_text.set_value
-                data:
-                  value: on_approach
-                target:
-                  entity_id: "{{ itinerary_sensor }}"
-              - alias: Set arrival variables for the following sequence block
-                variables:
-                  itinerary_mode: "arrival"
-                  opening_behavior: !input arrival_opening_behavior
-                  closing_behavior: !input arrival_closing_behavior
-                  opening_message: "soon_arrived"
-                  took_too_long_message: "did_not_arrive"
-              - alias: Open and close gate by following behaviors set by the user
-                sequence: *open_close_behavior
-              - alias: Stop whole script as successful
-                stop: Successful
+                          - alias: Log error
+                            action: system_log.write
+                            data:
+                              level: error
+                              message: "{{ message }}"
+                              logger: blueprints.etiennec78.automatic_gate
+                          - stop: Travel time integration not supported
+                            error: true
+                      - alias: Set the opening time
+                        variables:
+                          opening_time: |-
+                            {{
+                              states[travel_time_sensor].last_updated | as_timestamp
+                                + travel_time_duration
+                                - lead_time
+                                - (timer if opening_behavior == 'timer' else 0)
+                            }}
+                    else:
+                      - alias: Add 1 to the failed updates counter
+                        variables:
+                          failed_updates: "{{ failed_updates + 1 }}"
+                  - alias: Set a timer for the gate opening (or max int value if travel time sensor is unknown and no previous eta was stored)
+                    variables:
+                      seconds_before_opening: |-
+                        {% if opening_time is none %}
+                          2147483647
+                        {% else %}
+                          {{ opening_time - now() | as_timestamp }}
+                        {% endif %}
+                  - alias: If ETA in the future or no opening time could be set
+                    if:
+                      - condition: template
+                        value_template: "{{ seconds_before_opening > 1 }}"
+                    then:
+                      - alias: Wait for ETA, travel time, new position, vehicle left, and cancel if deviced timed out
+                        wait_for_trigger:
+                          - trigger: event
+                            event_type: state_changed
+                            event_data:
+                              entity_id: "{{ person }}"
+                          - trigger: event
+                            event_type: state_changed
+                            event_data:
+                              entity_id: "{{ travel_time_sensor }}"
+                            enabled: "{{ travel_time_rate == 'listen' }}"
+                          - trigger: template
+                            value_template: "{{ is_state(driving_sensor, 'off') }}"
+                        timeout:
+                          seconds: |-
+                            {% if travel_time_rate == 'once' %}
+                              {{ seconds_before_opening }}
+                            {% else %}
+                              {{ min(timeout_delay*60, seconds_before_opening) }}
+                            {% endif %}
+                      - choose:
+                          - alias: If timeout ran out of time (not because of eta reached)
+                            conditions:
+                              - condition: template
+                                value_template: |-
+                                  {{
+                                    wait.remaining == 0
+                                    and opening_time is not none
+                                    and opening_time > now() | as_timestamp
+                                  }}
+                            sequence:
+                              - alias: Set error id
+                                variables:
+                                  message_id: "timed_out"
+                              - alias: Create error
+                                sequence: *create_error
+                              - stop: Timed out
+                          - alias: Stop if the user is in a forbidden zone
+                            conditions:
+                              - condition: template
+                                value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
+                            sequence: *forbidden_zone
+        - alias: Return to the previous loop if the gate should not open yet
+          condition: template
+          value_template: |-
+            {{
+              'ble' in open_when_connected_to
+                and wait.trigger.id == 'ble_in_reach'
+              or opening_time is not none
+                and opening_time <= as_timestamp(now())
+            }}
+        - alias: Return to the previous loop if the user has left the the activation zone
+          condition: template
+          value_template: *activation_zone_in_condition
+        - alias: Set driver itinerary text variable to "on_approach", because driver is near gate and will arrive soon
+          action: input_text.set_value
+          data:
+            value: on_approach
+          target:
+            entity_id: "{{ itinerary_sensor }}"
+        - alias: Set arrival variables for the following sequence block
+          variables:
+            itinerary_mode: "arrival"
+            opening_behavior: !input arrival_opening_behavior
+            closing_behavior: !input arrival_closing_behavior
+            opening_message: "soon_arrived"
+            took_too_long_message: "did_not_arrive"
+        - alias: Open and close gate by following behaviors set by the user
+          sequence: *open_close_behavior
+        - alias: Stop whole script as successful
+          stop: Successful
   - alias: If vehicle left in gate zone and travel time was not updated
     if:
       condition: template
       value_template: |-
         {{
           is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id])
+          and travel_time_sensor is not none
           and opening_time is none
         }}
     then:
