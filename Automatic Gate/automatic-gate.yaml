@@ -574,9 +574,9 @@ variables:
         too_close: "You have started driving too close to the gate zone"
         invalid_translations: "Your custom translations are not valid !"
       button:
-        open: "Open"
-        close: "Close"
-        cancel: "Cancel"
+        open: "Open 🔓"
+        close: "Close 🔐"
+        cancel: "Cancel ❌"
     fr:
       title:
         itinerary_started: "Itinéraire démarré 🏁"
@@ -617,9 +617,9 @@ variables:
         too_close: "Vous avez démarré trop près de la zone du portail"
         invalid_translations: "Vos traductions personnalisées ne sont pas valides !"
       button:
-        open: "Ouvrir"
-        close: "Fermer"
-        cancel: "Annuler"
+        open: "Ouvrir 🔓"
+        close: "Fermer 🔐"
+        cancel: "Annuler ❌"
 
 triggers:
   - alias: Trigger when user connects to vehicle
