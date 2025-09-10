@@ -214,7 +214,7 @@ blueprint:
                 - label: Disabled
                   value: "off"
         departure_closing_behavior:
-          name: 🛫🔒 Departure closing behavior
+          name: 🛫🔐 Departure closing behavior
           description: |-
             Automatic gate **closing** behavior on **arrival**
 
@@ -235,7 +235,7 @@ blueprint:
                 - label: Disabled
                   value: "off"
         suggest_closing_after:
-          name: 🔒 Suggest closing after
+          name: 🔐 Suggest closing after
           description: The time the gate will wait before **suggesting to close** on departure if you are using a **notification request** but don't have a sensor to detect your absence
           default: 120
           selector:
@@ -265,7 +265,7 @@ blueprint:
                 - label: Disabled
                   value: "off"
         arrival_closing_behavior:
-          name: 🛬🔒 Arrival closing behavior
+          name: 🛬🔐 Arrival closing behavior
           description: |-
             Gate automatic **closing** behavior on **arrival**
 
@@ -301,7 +301,7 @@ blueprint:
       collapsed: true
       input:
         safety_delay:
-          name: 🔒 Auto-close safety delay
+          name: 🔐 Auto-close safety delay
           description: The time the gate will wait before **automatically closing** if your gate is open but you still haven't left or arrived
           default: 5
           selector:
@@ -538,9 +538,9 @@ variables:
       title:
         itinerary_started: "Itinerary started 🏁"
         open_gate: "Open gate ? 🔓"
-        close_gate: "Close gate ? 🔒"
+        close_gate: "Close gate ? 🔐"
         timer_opening: "Gate opening in {{timer}}s 🔓"
-        timer_closing: "Gate closing in {{timer}}s 🔒"
+        timer_closing: "Gate closing in {{timer}}s 🔐"
         itinerary_canceled: "Itinerary canceled ❌"
         awaiting: "Gate awaiting {awaited_persons} 💤"
         disabled: "Automatic Gate disabled 🚫"
@@ -581,9 +581,9 @@ variables:
       title:
         itinerary_started: "Itinéraire démarré 🏁"
         open_gate: "Ouvrir portail ? 🔓"
-        close_gate: "Fermer portail ? 🔒"
+        close_gate: "Fermer portail ? 🔐"
         timer_opening: "Ouverture portail dans {{timer}}s 🔓"
-        timer_closing: "Fermeture portail dans {{timer}}s 🔒"
+        timer_closing: "Fermeture portail dans {{timer}}s 🔐"
         itinerary_canceled: "Itinéraire annulé ❌"
         awaiting: "Portail en attente de {awaited_persons} 💤"
         disabled: "Automatic Gate désactivé 🚫"
