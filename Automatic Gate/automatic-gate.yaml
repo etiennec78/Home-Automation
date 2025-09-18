@@ -853,6 +853,7 @@ actions:
           - alias: Reset the quick triggers counter
             variables:
               update:
+                error: "{{ none }}"
                 quick_triggers: 0
               itinerary_value: "{{ dict(itinerary_value, **update) }}"
           - alias: Save the quick triggers counter
@@ -1075,6 +1076,7 @@ actions:
         variables:
           update:
             status: leaving
+            error: "{{ none }}"
           itinerary_value: "{{ dict(itinerary_value, **update) }}"
       - alias: Save the itinerary status
         action: input_text.set_value
@@ -1673,6 +1675,7 @@ actions:
     variables:
       update:
         status: arriving
+        error: "{{ none }}"
       itinerary_value: "{{ dict(itinerary_value, **update) }}"
   - alias: Save the itinerary status
     action: input_text.set_value
