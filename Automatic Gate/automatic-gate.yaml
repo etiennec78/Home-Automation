@@ -542,6 +542,7 @@ variables:
         open_gate: "Open gate ? 🔓"
         close_gate: "Close gate ? 🔐"
         timer_opening: "Gate opening in {{timer}}s 🔓"
+        gate_reopening: "Gate reopening 🔓"
         timer_closing: "Gate closing in {{timer}}s 🔐"
         itinerary_canceled: "Itinerary canceled ❌"
         awaiting: "Gate awaiting {awaited_persons} 💤"
@@ -732,7 +733,8 @@ actions:
           {
             "status": none,
             "error": none,
-            "quick_triggers": 0
+            "quick_triggers": 0,
+            "last_closed_stop": 0,
           }
         }}
       itinerary_value: |-
@@ -740,22 +742,10 @@ actions:
           states(itinerary_sensor)
           | from_json(default_itinerary_sensor_value)
         }}
-  - alias: Stop if blueprint is triggered frequently
+  - alias: If blueprint triggered less than 2 minutes ago
     if:
-      - alias: If blueprint triggered less than 2 minutes ago
-        condition: template
+      - condition: template
         value_template: "{{ states[itinerary_sensor].last_updated + timedelta(minutes=2) > now() }}"
-      - alias: If driver in activation zone
-        condition: template
-        value_template: &activation_zone_in_condition |-
-          {% if state_attr(person, 'gps_accuracy') is none %}
-            {% set accuracy = 100 %}
-          {% else %}
-            {% set accuracy = state_attr(person, 'gps_accuracy') %}
-          {% endif %}
-          {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
-
-          {{ gate_distance < activation_zone }}
     then:
       - alias: Update the quick triggers counter
         variables:
@@ -770,14 +760,37 @@ actions:
         data:
           value: "{{ itinerary_value | to_json }}"
       - choose:
-          - alias: If this is the first time the error occurs in a row
+          - alias: If the gate may be closing on the driver
             conditions:
-              - condition: template
-                value_template: "{{ itinerary_value.quick_triggers == 1 }}"
+              - alias: If blueprint recently auto-closed gate because of vehicle stopped
+                condition: template
+                value_template: |-
+                  {{
+                    itinerary_value.last_closed_stop
+                      | as_datetime
+                      + timedelta(seconds=lead_time)
+                      > now()
+                  }}
+              - alias: If one of the gates is closing/closed
+                if:
+                  - condition: template
+                    value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
             sequence:
+              - alias: Reopen each gate to avoid closing on the driver
+                repeat: &open_gates
+                  for_each: !input gate
+                  sequence:
+                    - action: |-
+                        {% if states[repeat.item].domain == 'switch' %}
+                          switch.turn_on
+                        {% elif states[repeat.item].domain == 'cover' %}
+                          cover.open_cover
+                        {% endif %}
+                      target:
+                        entity_id: "{{ repeat.item }}"
               - alias: Set notification ids
                 variables:
-                  title_id: "itinerary_canceled"
+                  title_id: "gate_reopening"
                   message_id: "triggered_frequently"
               - alias: Get notification translation
                 variables: *get_translation
@@ -787,7 +800,7 @@ actions:
                   level: error
                   message: "{{ message }}"
                   logger: blueprints.etiennec78.automatic_gate
-              - alias: Notify driver that the blueprint is being triggered frequently
+              - alias: Notify driver that the gate is reopening
                 action: "{{ notify_service }}"
                 data:
                   title: "{{ title }}"
@@ -805,10 +818,12 @@ actions:
                     tag: itinerary-status
                     timeout: 300
               - sequence: *tts
+              - stop: Blueprint triggered too frequently
+                error: true
           - alias: If this is the third time the error occurs in a row
             conditions:
               - condition: template
-                value_template: "{{ itinerary_value.quick_triggers == 3 }}"
+                value_template: "{{ itinerary_value.quick_triggers >= 3 }}"
             sequence:
               - alias: Set error id
                 variables:
@@ -842,8 +857,6 @@ actions:
                     action: automation.turn_off
                     target:
                       entity_id: "{{ this.entity_id }}"
-      - stop: Blueprint triggered too frequently
-        error: true
     else:
       - alias: If the quick triggers counter is not at 0
         if:
@@ -1275,17 +1288,7 @@ actions:
                     value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
                 then:
                   - alias: Open each gate because driver is leaving
-                    repeat:
-                      for_each: !input gate
-                      sequence:
-                        - action: |-
-                            {% if states[repeat.item].domain == 'switch' %}
-                              switch.turn_on
-                            {% elif states[repeat.item].domain == 'cover' %}
-                              cover.open_cover
-                            {% endif %}
-                          target:
-                            entity_id: "{{ repeat.item }}"
+                    repeat: *open_gates
           - alias: Set variables for the following repeat sequence
             variables:
               break: "{{ closing_behavior in ['auto', 'off'] }}"
@@ -1608,7 +1611,7 @@ actions:
                                       target:
                                         entity_id: "{{ repeat.item }}"
                       - alias: Close all gates
-                        repeat: &close_gates
+                        repeat:
                           for_each: !input gate
                           sequence:
                             - action: |-
@@ -1619,6 +1622,26 @@ actions:
                                 {% endif %}
                               target:
                                 entity_id: "{{ repeat.item }}"
+                      - alias: If closing behavior set to auto/timer and was triggered by vehicle stopped
+                        if:
+                          - condition: template
+                            value_template: |-
+                              {{
+                                closing_behavior in ['auto', 'timer']
+                                and wait.trigger.id == 'vehicle_stopped'
+                              }}
+                        then:
+                          - alias: Update the last closed because of vehicle stopped variable
+                            variables:
+                              update:
+                                last_closed_stop: "{{ now() | as_timestamp | int }}"
+                              itinerary_value: "{{ dict(itinerary_value, **update) }}"
+                          - alias: Save the last closed variable
+                            action: input_text.set_value
+                            target:
+                              entity_id: "{{ itinerary_sensor }}"
+                            data:
+                              value: "{{ itinerary_value | to_json }}"
       - alias: Wait for driver to travel 250m away from activation zone, then return, to start itinerary
         repeat:
           count: 2
@@ -1658,7 +1681,15 @@ actions:
       - alias: Stop if driver started driving in activation zone
         if:
           - condition: template
-            value_template: *activation_zone_in_condition
+            value_template: &activation_zone_in_condition |-
+              {% if state_attr(person, 'gps_accuracy') is none %}
+                {% set accuracy = 100 %}
+              {% else %}
+                {% set accuracy = state_attr(person, 'gps_accuracy') %}
+              {% endif %}
+              {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
+
+              {{ gate_distance < activation_zone }}
         then:
           - alias: Set error id
             variables:
@@ -1790,14 +1821,6 @@ actions:
                           variables: *get_translation
                         - alias: Disable the blueprint
                           sequence: *disable_blueprint
-                        - alias: Log error
-                          action: system_log.write
-                          data:
-                            level: error
-                            message: "{{ message }}"
-                            logger: blueprints.etiennec78.automatic_gate
-                        - stop: Travel time refreshing too quickly
-                          error: true
         - alias: Wait for new driver position or vehicle left
           wait_for_trigger:
             - trigger: event
