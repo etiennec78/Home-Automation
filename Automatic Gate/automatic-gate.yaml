@@ -772,9 +772,8 @@ actions:
                       > now()
                   }}
               - alias: If one of the gates is closing/closed
-                if:
-                  - condition: template
-                    value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
+                condition: template
+                value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
             sequence:
               - alias: Reopen each gate to avoid closing on the driver
                 repeat: &open_gates
