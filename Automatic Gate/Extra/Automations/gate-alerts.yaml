@@ -22,7 +22,7 @@ blueprint:
     * Speakers TTS support 🔊
     * Adjustable notifications 💬
     * Customizable extra actions ➕
-    * Close gate button in notifications 🔒
+    * Close gate button in notifications 🔐
 
     ## More Info ℹ️
     * Version: 2.0.0
@@ -215,7 +215,7 @@ variables:
         open: Gate opening 🔓
         still_open: Gate open 🔓
         left_open: Gate left open 🔓
-        close: Gate closing 🔒
+        close: Gate closing 🔐
         error: Gate error ⚠
         offline: Gate offline 🌐
       message:
@@ -232,7 +232,7 @@ variables:
         open: Ouverture portail 🔓
         still_open: Portail ouvert 🔓
         left_open: Portail laissé ouvert 🔓️
-        close: Fermeture portail 🔒
+        close: Fermeture portail 🔐
         error: Erreur portail ⚠
         offline: Portail hors ligne 🌐
       message:
