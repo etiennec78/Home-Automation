@@ -401,6 +401,7 @@ actions:
                   actions:
                     - action: "{{ closing_order_id }}"
                       title: "{{ button_text }}"
+                      icon: sfsymbols:lock
 
       - alias: Replace opening persistent notification if enabled
         if:
@@ -460,7 +461,15 @@ actions:
                   when: "{{ (utcnow() - timedelta(minutes=notification_delay)) | as_timestamp | int }}"
                   actions: |-
                     {% if notification_type == 'open' %}
-                      {{ [{'action': closing_order_id, 'title': button_text}] }}
+                      {{
+                        [
+                          {
+                            'action': closing_order_id,
+                            'title': button_text,
+                            'icon': 'sfsymbols:lock'
+                          }
+                        ]
+                      }}
                     {% else %}
                       {{ [] }}
                     {% endif %}
