@@ -1743,6 +1743,11 @@ actions:
                 - condition: template
                   value_template: "{{ 'ble' in open_when_connected_to }}"
               sequence:
+                - alias: Set an empty trigger id
+                  variables:
+                    wait:
+                      trigger:
+                        id: "{{ none }}"
                 - repeat:
                     while:
                       - alias: Still in the activation zone
@@ -1751,6 +1756,9 @@ actions:
                       - alias: Still driving
                         condition: template
                         value_template: "{{ is_state(driving_sensor, 'on') }}"
+                      - alias: Opening not triggered
+                        condition: template
+                        value_template: "{{ wait.trigger.id != 'ble_in_reach' }}"
                     sequence:
                       - alias: If this is the first loop
                         if:
@@ -1807,6 +1815,13 @@ actions:
                   - alias: Still driving
                     condition: template
                     value_template: "{{ is_state(driving_sensor, 'on') }}"
+                  - alias: Opening not triggered
+                    condition: template
+                    value_template: |-
+                      {{
+                        opening_time is none
+                        or opening_time > as_timestamp(now())
+                      }}
                 sequence:
                   - alias: If the travel time needs to be updated
                     if:
