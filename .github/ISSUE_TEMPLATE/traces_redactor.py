@@ -60,24 +60,21 @@ class Redactor:
                 index = len(self.redacted_ids)
                 self.redacted_ids.append(entity_id)
             return f"{domain}.<redacted_{index}>"
-        else:
-            return "<redacted>"
+        return "<redacted>"
 
     def get_replacement(self, key: str, value: str | list | dict) -> str | list | dict:
         if isinstance(value, list):
             return [self.get_replacement(key, item) for item in value]
-        elif isinstance(value, dict):
+        if isinstance(value, dict):
             return {
                 subkey: self.get_replacement(subkey, subvalue)
                 for subkey, subvalue in value.items()
             }
-        else:
-            if key in SENSITIVE_KEYS:
-                return "<redacted>"
-            elif key in SENSITIVE_IDS and isinstance(value, str):
-                return self.redact_id(value)
-            else:
-                return value
+        if key in SENSITIVE_KEYS:
+            return "<redacted>"
+        if key in SENSITIVE_IDS and isinstance(value, str):
+            return self.redact_id(value)
+        return value
 
     def get_trace(self, input_file: str) -> dict | None:
         try:
@@ -110,8 +107,8 @@ class Redactor:
 
 if __name__ == "__main__":
     if len(argv) > 1:
-        trace_file = argv[1]
+        TRACE_FILE = argv[1]
         redactor = Redactor()
-        redactor.redact_json_file(trace_file, "trace_redacted.json")
+        redactor.redact_json_file(TRACE_FILE, "trace_redacted.json")
     else:
         print("Error: Trace file was not passed as an argument")
