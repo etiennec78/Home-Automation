@@ -67,7 +67,10 @@ class Redactor:
         if isinstance(value, list):
             return [self.get_replacement(key, item) for item in value]
         elif isinstance(value, dict):
-            return self.redact(value)
+            return {
+                subkey: self.get_replacement(subkey, subvalue)
+                for subkey, subvalue in value.items()
+            }
         else:
             if key in SENSITIVE_KEYS:
                 return "<redacted>"
@@ -75,9 +78,6 @@ class Redactor:
                 return self.redact_id(value)
             else:
                 return value
-
-    def redact(self, obj: dict) -> dict:
-        return {key: self.get_replacement(key, value) for key, value in obj.items()}
 
     def get_trace(self, input_file: str) -> dict | None:
         try:
@@ -102,7 +102,9 @@ class Redactor:
 
     def redact_json_file(self, input_file: str, output_file: str) -> None:
         if data := self.get_trace(input_file):
-            redacted = self.redact(data)
+            redacted = {
+                key: self.get_replacement(key, value) for key, value in data.items()
+            }
             self.save_trace(redacted, output_file)
 
 
