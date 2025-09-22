@@ -208,6 +208,7 @@ class ArgumentsManager:
         file_location (str): Path to the input file.
         config (Config): Configuration settings for redaction.
     """
+
     argv: list[str]
     file_location: str = ""
     config: Config
