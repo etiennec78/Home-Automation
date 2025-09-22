@@ -105,10 +105,74 @@ class Redactor:
             self.save_trace(redacted, output_file)
 
 
+class ArgumentsManager:
+    argv: list[str]
+    file_name: str = ""
+
+    HELP_MESSAGE = (
+        "DESCRIPTION:\n"
+        "    This Python script masks confidential information\n"
+        "    before sending Home Assistant automation traces.\n"
+        "    It is designed for blueprints from:\n"
+        "    https://github.com/etiennec78/Home-Automation/\n"
+        "    Note: It may not hide all confidential information\n"
+        "    for third-party automations.\n\n"
+        "VERSION:\n"
+        "    2.0.0\n\n"
+        "OPTIONS:\n"
+        "    --help      Display this help message.\n\n"
+        "USAGE:\n"
+        "    python3 traces_redactor <input_file> [options]\n\n"
+        "EXAMPLE:\n"
+        "    python3 traces_redactor trace.json"
+    )
+
+    def __init__(self, arguments: list[str]) -> None:
+        self.argv = arguments
+        trace_index = self._check_args(arguments)
+        if trace_index >= 0:
+            self.file_name = arguments[trace_index]
+
+    def _show_help(self) -> None:
+        print(self.HELP_MESSAGE)
+
+    def _check_args(self, arguments: list[str]) -> int:
+        if len(arguments) < 2:
+            print(
+                "Error: Trace file was not passed as an argument.\n"
+                "Please see --help."
+            )
+            return -1
+
+        args = []
+        options = []
+        for argument in arguments[1:]:
+            if argument[:2] == "--":
+                options.append(argument[2:])
+            else:
+                args.append(argument)
+
+        if "help" in options:
+            self._show_help()
+            return -2
+
+        for option in options:
+            if option != "help":
+                print(f"Error: Unrecognized option: {option}")
+                return -1
+
+        if len(args) > 1:
+            print("Error: Too many arguments")
+            return -1
+
+        return arguments.index(args[0])
+
+    def get_file_name(self) -> str:
+        return self.file_name
+
+
 if __name__ == "__main__":
-    if len(argv) > 1:
-        TRACE_FILE = argv[1]
+    args_manager = ArgumentsManager(argv)
+    if file_name := args_manager.get_file_name():
         redactor = Redactor()
-        redactor.redact_json_file(TRACE_FILE, "trace_redacted.json")
-    else:
-        print("Error: Trace file was not passed as an argument")
+        redactor.redact_json_file(file_name, "trace_redacted.json")
