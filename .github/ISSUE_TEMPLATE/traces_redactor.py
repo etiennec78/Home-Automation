@@ -51,6 +51,8 @@ SENSITIVE_IDS = {
     "speaker_tts_devices",
 }
 
+SAVE_LOCATION = "trace_redacted.json"
+
 
 class Config:
     keep_ids = False
@@ -126,7 +128,7 @@ class Redactor:
 
 class ArgumentsManager:
     argv: list[str]
-    file_name: str = ""
+    file_location: str = ""
     config: Config
 
     HELP_MESSAGE = (
@@ -153,7 +155,7 @@ class ArgumentsManager:
         self.config = Config()
         trace_index = self._read_args(arguments)
         if trace_index >= 0:
-            self.file_name = arguments[trace_index]
+            self.file_location = arguments[trace_index]
 
     def _show_help(self) -> None:
         print(self.HELP_MESSAGE)
@@ -190,8 +192,8 @@ class ArgumentsManager:
 
         return arguments.index(args[0])
 
-    def get_file_name(self) -> str:
-        return self.file_name
+    def get_file_location(self) -> str:
+        return self.file_location
 
     def get_config(self) -> Config:
         return self.config
@@ -199,7 +201,10 @@ class ArgumentsManager:
 
 if __name__ == "__main__":
     args_manager = ArgumentsManager(argv)
-    if file_name := args_manager.get_file_name():
+    if file_location := args_manager.get_file_location():
         config = args_manager.get_config()
         redactor = Redactor(config)
-        redactor.redact_json_file(file_name, "trace_redacted.json")
+        redactor.redact_json_file(file_location, SAVE_LOCATION)
+        print(
+            f"The file '{file_location}' has been successfuly redacted and saved in '{SAVE_LOCATION}'."
+        )
