@@ -223,7 +223,7 @@ class ArgumentsManager:
         "VERSION:\n"
         "    2.0.0\n\n"
         "OPTIONS:\n"
-        "    --help      Display this help message.\n\n"
+        "    --help      Display this help message.\n"
         "    --keep-ids  Don't redact entity_ids.\n\n"
         "USAGE:\n"
         "    python3 traces_redactor <input_file> [options]\n\n"
