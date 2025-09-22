@@ -63,7 +63,7 @@ class Redactor:
         else:
             return "<redacted>"
 
-    def get_replacement(self, key: str, value: str | list | dict):
+    def get_replacement(self, key: str, value: str | list | dict) -> str | list | dict:
         if isinstance(value, list):
             return [self.get_replacement(key, item) for item in value]
         elif isinstance(value, dict):
