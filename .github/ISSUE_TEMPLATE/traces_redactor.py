@@ -2,19 +2,23 @@ from sys import argv
 import json
 
 SENSITIVE_KEYS = {
-    "latitude",
-    "longitude",
-    "friendly_name",
-    "description",
-    "service",
-    "id",
-    "source",
-    "context_source",
-    "message",
-    "context_message",
-    "trigger",
-    "driver_name",
-    "confirmation",
+    "default": {
+        "latitude",
+        "longitude",
+    },
+    "ids": {
+        "friendly_name",
+        "description",
+        "service",
+        "id",
+        "source",
+        "context_source",
+        "message",
+        "context_message",
+        "trigger",
+        "driver_name",
+        "confirmation",
+    },
 }
 
 SENSITIVE_IDS = {
@@ -48,8 +52,23 @@ SENSITIVE_IDS = {
 }
 
 
+class Config:
+    keep_ids = False
+
+
 class Redactor:
     redacted_ids = []
+    config: Config
+    sensitive_keys: list[str]
+
+    def __init__(self, config: Config):
+        self.config = config
+        self._set_sensitive_keys()
+
+    def _set_sensitive_keys(self) -> None:
+        self.sensitive_keys = list(SENSITIVE_KEYS["default"])
+        if not self.config.keep_ids:
+            self.sensitive_keys += SENSITIVE_KEYS["ids"]
 
     def redact_id(self, entity_id: str) -> str:
         if len(splitted := entity_id.split(".")) > 1:
@@ -70,9 +89,9 @@ class Redactor:
                 subkey: self.get_replacement(subkey, subvalue)
                 for subkey, subvalue in value.items()
             }
-        if key in SENSITIVE_KEYS:
+        if key in self.sensitive_keys:
             return "<redacted>"
-        if key in SENSITIVE_IDS and isinstance(value, str):
+        if key in SENSITIVE_IDS and isinstance(value, str) and not self.config.keep_ids:
             return self.redact_id(value)
         return value
 
@@ -108,6 +127,7 @@ class Redactor:
 class ArgumentsManager:
     argv: list[str]
     file_name: str = ""
+    config: Config
 
     HELP_MESSAGE = (
         "DESCRIPTION:\n"
@@ -121,6 +141,7 @@ class ArgumentsManager:
         "    2.0.0\n\n"
         "OPTIONS:\n"
         "    --help      Display this help message.\n\n"
+        "    --keep-ids  Don't redact entity_ids.\n\n"
         "USAGE:\n"
         "    python3 traces_redactor <input_file> [options]\n\n"
         "EXAMPLE:\n"
@@ -129,18 +150,18 @@ class ArgumentsManager:
 
     def __init__(self, arguments: list[str]) -> None:
         self.argv = arguments
-        trace_index = self._check_args(arguments)
+        self.config = Config()
+        trace_index = self._read_args(arguments)
         if trace_index >= 0:
             self.file_name = arguments[trace_index]
 
     def _show_help(self) -> None:
         print(self.HELP_MESSAGE)
 
-    def _check_args(self, arguments: list[str]) -> int:
+    def _read_args(self, arguments: list[str]) -> int:
         if len(arguments) < 2:
             print(
-                "Error: Trace file was not passed as an argument.\n"
-                "Please see --help."
+                "Error: Trace file was not passed as an argument.\nPlease see --help."
             )
             return -1
 
@@ -157,7 +178,9 @@ class ArgumentsManager:
             return -2
 
         for option in options:
-            if option != "help":
+            if option == "keep-ids":
+                self.config.keep_ids = True
+            elif option != "help":
                 print(f"Error: Unrecognized option: {option}")
                 return -1
 
@@ -170,9 +193,13 @@ class ArgumentsManager:
     def get_file_name(self) -> str:
         return self.file_name
 
+    def get_config(self) -> Config:
+        return self.config
+
 
 if __name__ == "__main__":
     args_manager = ArgumentsManager(argv)
     if file_name := args_manager.get_file_name():
-        redactor = Redactor()
+        config = args_manager.get_config()
+        redactor = Redactor(config)
         redactor.redact_json_file(file_name, "trace_redacted.json")
