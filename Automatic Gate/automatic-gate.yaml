@@ -1928,7 +1928,7 @@ actions:
               - alias: If ETA in the future or no opening time could be set
                 if:
                   - condition: template
-                    value_template: "{{ seconds_before_opening > 1 }}"
+                    value_template: "{{ seconds_before_opening > 0 }}"
                 then:
                   - alias: Wait for ETA, travel time, new position, vehicle left, and cancel if deviced timed out
                     wait_for_trigger:
