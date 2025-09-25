@@ -358,6 +358,12 @@ blueprint:
           selector:
             text:
               multiline: true
+        itinerary_started_notif:
+          name: 🏁 Itinerary started notification
+          description: Whether or not send a notification to inform the user that his itinerary has been started
+          default: true
+          selector:
+            boolean:
         phone_tts:
           name: 📳 Phone TTS
           description: Read notifications **aloud** on **Android** phones
@@ -1732,22 +1738,24 @@ actions:
       entity_id: "{{ itinerary_sensor }}"
     data:
       value: "{{ itinerary_value | to_json }}"
-  - alias: Set notification ids
-    variables:
-      title_id: "itinerary_started"
-      message_id: "vehicle_started"
-  - alias: Get notification translation
-    variables: *get_translation
-  - alias: Notify driver of itinerary start
-    action: "{{ notify_service }}"
-    data:
-      title: "{{ title }}"
-      message: "{{ message }}"
-      data:
-        <<: *notification_data
-        notification_icon: mdi:map-check
-        timeout: ""
-  - sequence: *tts
+  - sequence:
+      - alias: Set notification ids
+        variables:
+          title_id: "itinerary_started"
+          message_id: "vehicle_started"
+      - alias: Get notification translation
+        variables: *get_translation
+      - alias: Notify driver of itinerary start
+        action: "{{ notify_service }}"
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
+          data:
+            <<: *notification_data
+            notification_icon: mdi:map-check
+            timeout: ""
+      - sequence: *tts
+    enabled: !input itinerary_started_notif
   - alias: Repeat while driver still driving
     repeat:
       while:
