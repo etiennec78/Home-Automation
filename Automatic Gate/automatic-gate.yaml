@@ -1297,10 +1297,36 @@ actions:
                   and itinerary_mode == 'departure'
                   and 'ble' not in close_when_disconnected_from
                 }}
+          - alias: Save the time at which the gate started to wait for triggers before closing
+            variables:
+              wait_trigger_start: "{{ now() | as_timestamp }}"
           - alias: Wait for events at least once, then while the gate closing has not been triggered
             repeat:
               until: "{{ break }}"
               sequence:
+                - alias: Set the timeout
+                  variables:
+                    trigger_timeout: |-
+                      {% set timeout = 2147483647 %}
+                      {% if repeat.first %}
+                        {% if suggest_closing %}
+                          {% set timeout = suggest_closing_after %}
+                        {% else %}
+                          {% set timeout = safety_delay * 60 %}
+                        {% endif %}
+                      {% else %}
+                        {% if closing_behavior == 'timer' %}
+                          {% set timeout = timer %}
+                        {% endif %}
+                      {% endif %}
+                      {%
+                        set remaining_timeout = (
+                          timeout
+                          + wait_trigger_start
+                          - now() | as_timestamp
+                        )
+                      %}
+                      {{ remaining_timeout if remaining_timeout > 0 else 0 }}
                 - alias: Wait for events before closing the gate
                   wait_for_trigger:
                     - alias: Manual closing
@@ -1337,20 +1363,7 @@ actions:
                       event_data:
                         action: "{{ canceling_order_id }}"
                   timeout:
-                    seconds: |-
-                      {% if repeat.first %}
-                        {% if suggest_closing %}
-                          {{ suggest_closing_after }}
-                        {% else %}
-                          {{ safety_delay * 60 }}
-                        {% endif %}
-                      {% else %}
-                        {% if closing_behavior == 'timer' %}
-                          {{ timer }}
-                        {% else %}
-                          2147483647
-                        {% endif %}
-                      {% endif %}
+                    seconds: "{{ trigger_timeout }}"
                 - alias: If the trigger needs to close the gate
                   if:
                     - condition: template
