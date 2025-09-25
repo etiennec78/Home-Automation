@@ -1339,15 +1339,17 @@ actions:
                   timeout:
                     seconds: |-
                       {% if repeat.first %}
-                        {% if closing_behavior == 'timer' %}
-                          {{ timer }}
-                        {% elif suggest_closing %}
+                        {% if suggest_closing %}
                           {{ suggest_closing_after }}
                         {% else %}
                           {{ safety_delay * 60 }}
                         {% endif %}
                       {% else %}
-                        2147483647
+                        {% if closing_behavior == 'timer' %}
+                          {{ timer }}
+                        {% else %}
+                          2147483647
+                        {% endif %}
                       {% endif %}
                 - alias: If the trigger needs to close the gate
                   if:
