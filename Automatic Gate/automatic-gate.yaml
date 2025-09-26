@@ -360,7 +360,7 @@ blueprint:
               multiline: true
         itinerary_started_notif:
           name: 🏁 Itinerary started notification
-          description: Whether or not send a notification to inform the user that his itinerary has been started
+          description: Whether or not to send a notification informing the user that his itinerary has been started
           default: true
           selector:
             boolean:
