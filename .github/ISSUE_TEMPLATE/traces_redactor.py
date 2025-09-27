@@ -227,9 +227,9 @@ class ArgumentsManager:
         "    --help      Display this help message.\n"
         "    --keep-ids  Don't redact entity_ids.\n\n"
         "USAGE:\n"
-        "    python3 traces_redactor <input_file> [options]\n\n"
+        "    python3 traces_redactor.py <input_file> [options]\n\n"
         "EXAMPLE:\n"
-        "    python3 traces_redactor trace.json"
+        "    python3 traces_redactor.py trace.json"
     )
 
     def __init__(self, arguments: list[str]) -> None:
