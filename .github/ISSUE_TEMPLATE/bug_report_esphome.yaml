@@ -6,6 +6,21 @@ body:
   - type: markdown
     attributes:
       value: |
+        ## Firmware concerned 🎯
+  - type: dropdown
+    id: firmware
+    attributes:
+      label: Firmware
+      description: Which esphome firmware is concerned by this bug ?
+      options:
+        - Gate
+        - Philips LivingColors
+        - Velux shade
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
         ## Bug description 🪲
   - type: textarea
     validations:
@@ -14,21 +29,16 @@ body:
       label: Describe the bug
       description: |
         Provide a clear and concise description of what the problem is
-  - type: textarea
-    attributes:
-      label: Expected behavior
-      description: |
-        Provide a clear and concise description of what you expected to happen
   - type: markdown
     attributes:
       value: |
         ## Logs 📜
   - type: textarea
     attributes:
-      label: Blueprint traces
+      label: Esphome logs
       description: |
-        You can stream your logs by running `esphome logs file.yaml`.
-        Please attach them as a text file.
+        You can stream your logs by running `esphome logs <file>.yaml`.
+        Please attach them as a text file if they are relevant.
       placeholder: Drag and drop your logs file
   - type: markdown
     attributes:
@@ -39,9 +49,9 @@ body:
     validations:
       required: true
     attributes:
-      label: What version of ESPHome are you running ?
+      label: What version of ESPHome is your device running ?
       description: |
-        Can be found by running `esphome --version`
+        Can be found under "Device Info" by accessing your [ESPHome devices list](https://my.home-assistant.io/redirect/integration/?domain=esphome) and selecting the relevant device.
   - type: input
     id: ha-version
     validations:
