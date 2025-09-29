@@ -297,7 +297,8 @@ actions:
       next_refresh: 0
       remaining: 0
       nearly_arrived_sent: false
-      last_arrival_timestamp: "{{ none }}"
+      last_arrival_timestamp: 0
+
   - alias: Only continue if driver not home
     condition: template
     value_template: "{{ not is_state(driver, 'home') }}"
@@ -576,7 +577,7 @@ actions:
                     (
                       last_arrival_timestamp | int
                       - arrival_timestamp | int
-                    ) | abs < 5
+                    ) | abs > 5
                   }}
                 {% else %}
                   {# Refresh notification if eta differs by at least 1min #}
