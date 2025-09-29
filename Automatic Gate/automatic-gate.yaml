@@ -222,7 +222,7 @@ blueprint:
               - **Cancelable timer** : A notification of a cancelable timer will be sent before opening your gate
               - **Notification request** : An actionable notification will be sent to close your gate
               - **Disabled** : Your gate won't close automatically
-          default: "timer"
+          default: "notif"
           selector:
             select:
               options:
@@ -300,6 +300,12 @@ blueprint:
       icon: mdi:security
       collapsed: true
       input:
+        security_notif_override:
+          name: 🔁 Override notification request for safety feature
+          description: Change the closing behavior from "notification request" to "timer" if triggered by a safety feature
+          default: true
+          selector:
+            boolean:
         safety_delay:
           name: 🔐 Auto-close safety delay
           description: The time the gate will wait before **automatically closing** if your gate is open but you still haven't left or arrived
@@ -506,6 +512,7 @@ variables:
   gate: !input gate
   gate_location: !input gate_location
   lead_time: !input lead_time
+  security_notif_override: !input security_notif_override
   safety_delay: !input safety_delay
   timeout_delay: !input timeout_delay
   persons: !input persons
@@ -748,6 +755,16 @@ actions:
           states(itinerary_sensor)
           | from_json(default_itinerary_sensor_value)
         }}
+      timeouts:
+        closing_suggestion: !input suggest_closing_after
+        safety_delay: "{{ safety_delay * 60 }}"
+        timer: !input timer
+        default: 2147483647
+      timeout_messages:
+        closing_suggestion: "closing_suggestion"
+        safety_delay: "undefined"
+        timer: "{{ none }}"
+        default: "{{ none }}"
   - alias: If blueprint triggered less than 2 minutes ago
     if:
       - condition: template
@@ -1108,7 +1125,12 @@ actions:
           opening_behavior: !input departure_opening_behavior
           closing_behavior: !input departure_closing_behavior
           opening_message: "leaving_home"
-          took_too_long_message: "did_not_leave"
+          timeout_messages: |-
+            dict(
+              timeout_messages, **{
+                'safety_delay': 'did_not_leave'
+              }
+            )
       - alias: Open and close gate by following behaviors set by the user
         sequence: &open_close_behavior
           - alias: If opening behavior is set to cancelable timer or notification request
@@ -1303,32 +1325,46 @@ actions:
                   and itinerary_mode == 'departure'
                   and 'ble' not in close_when_disconnected_from
                 }}
-          - alias: Save the time at which the gate started to wait for triggers before closing
-            variables:
               wait_trigger_start: "{{ now() | as_timestamp }}"
+              notif_override_timestamp: "{{ none }}"
           - alias: Wait for events at least once, then while the gate closing has not been triggered
             repeat:
               until: "{{ break }}"
               sequence:
                 - alias: Set the timeout
                   variables:
-                    trigger_timeout: |-
-                      {% set timeout = 2147483647 %}
+                    timeout_type: |-
                       {% if repeat.first %}
                         {% if suggest_closing %}
-                          {% set timeout = suggest_closing_after %}
+                          closing_suggestion
                         {% else %}
-                          {% set timeout = safety_delay * 60 %}
+                          safety_delay
                         {% endif %}
                       {% else %}
                         {% if closing_behavior == 'timer' %}
-                          {% set timeout = timer %}
+                          timer
+                        {% else %}
+                          {% if security_notif_override %}
+                            safety_delay
+                          {% else %}
+                            default
+                          {% endif %}
                         {% endif %}
                       {% endif %}
+                    trigger_timeout: |-
+                      {%
+                        set start_time = (
+                          notif_override_timestamp if (
+                            notif_override_timestamp is not none
+                            and timeout_type == 'timer'
+                          )
+                          else wait_trigger_start
+                        )
+                      %}
                       {%
                         set remaining_timeout = (
-                          timeout
-                          + wait_trigger_start
+                          timeouts[timeout_type]
+                          + start_time
                           - now() | as_timestamp
                         )
                       %}
@@ -1377,15 +1413,37 @@ actions:
                         {{
                           wait.trigger.id in ['manual', 'closing_order']
                           or (
-                            not repeat.first
-                            and wait.remaining == 0
-                            and closing_behavior == 'timer'
+                            wait.remaining == 0
+                            and timeout_type == 'timer'
                           )
                         }}
                   then:
                     - alias: Break the loop next time
                       variables:
                         break: true
+                  else:
+                    - alias: If a safety feature needs to change the closing behavior from notif to timer
+                      if:
+                        - condition: template
+                          value_template: |-
+                            {{
+                              security_notif_override
+                              and closing_behavior == 'notif'
+                              and (
+                                wait.remaining == 0
+                                  and timeout_type == 'safety_delay'
+                                or wait.trigger.id in [
+                                  'vehicle_stopped',
+                                  'vehicle_away',
+                                  'forbidden_zone',
+                                ]
+                              )
+                            }}
+                      then:
+                        - alias: Change closing behavior to timer
+                          variables:
+                            closing_behavior: "timer"
+                            notif_override_timestamp: "{{ now() | as_timestamp }}"
                 - alias: If this is the first loop
                   if:
                     - condition: template
@@ -1402,13 +1460,7 @@ actions:
                       variables:
                         message_id: |-
                           {% if wait.remaining == 0 %}
-                            {% if closing_behavior == 'timer' %}
-                              {{ none }}
-                            {% elif suggest_closing %}
-                              closing_suggestion
-                            {% else %}
-                              {{ took_too_long_message }}
-                            {% endif %}
+                            {{ timeout_messages[timeout_type] }}
                           {% elif wait.trigger.id in ['manual', 'closing_order'] %}
                             {{ none }}
                           {%
@@ -2025,7 +2077,12 @@ actions:
                   opening_behavior: !input arrival_opening_behavior
                   closing_behavior: !input arrival_closing_behavior
                   opening_message: "soon_arrived"
-                  took_too_long_message: "did_not_arrive"
+                  timeout_messages: |-
+                    dict(
+                      timeout_messages, **{
+                        'safety_delay': 'did_not_arrive'
+                      }
+                    )
               - alias: Open and close gate by following behaviors set by the user
                 sequence: *open_close_behavior
               - alias: Stop whole script as successful
