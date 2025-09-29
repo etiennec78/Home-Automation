@@ -1319,9 +1319,8 @@ actions:
                   and itinerary_mode == 'departure'
                   and 'ble' not in close_when_disconnected_from
                 }}
-          - alias: Save the time at which the gate started to wait for triggers before closing
-            variables:
               wait_trigger_start: "{{ now() | as_timestamp }}"
+              notif_override_timestamp: "{{ none }}"
           - alias: Wait for events at least once, then while the gate closing has not been triggered
             repeat:
               until: "{{ break }}"
@@ -1348,9 +1347,18 @@ actions:
                       {% endif %}
                     trigger_timeout: |-
                       {%
+                        set start_time = (
+                          notif_override_timestamp if (
+                            notif_override_timestamp is not none
+                            and timeout_type == 'timer'
+                          )
+                          else wait_trigger_start
+                        )
+                      %}
+                      {%
                         set remaining_timeout = (
                           timeouts[timeout_type]
-                          + wait_trigger_start
+                          + start_time
                           - now() | as_timestamp
                         )
                       %}
@@ -1429,6 +1437,7 @@ actions:
                         - alias: Change closing behavior to timer
                           variables:
                             closing_behavior: "timer"
+                            notif_override_timestamp: "{{ now() | as_timestamp }}"
                 - alias: If this is the first loop
                   if:
                     - condition: template
