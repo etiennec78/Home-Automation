@@ -216,6 +216,7 @@ blueprint:
 variables:
   persons: !input persons
   notify_devices: !input notify_devices
+  notify_services: "{{ notify_devices | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}"
   driving_sensors: !input driving_sensors
   travel_time_sensors: !input travel_time_sensors
   notify_everyone: !input notify_everyone
@@ -259,11 +260,12 @@ actions:
   - alias: Store list index of driver, notification services, extract driver sensors, init variables
     variables:
       idx: "{{ driving_sensors.index(trigger.entity_id) }}"
-      notify_services: |-
-        {% set data = namespace(devices_list=[]) %}
+      dismissed_idx: []
+      active_notify_services: &get_active_services |-
+        {% set data = namespace(services_list=[]) %}
 
-          {% for notify_idx in range(notify_devices | length) %}
-            {% if notify_idx != idx %}
+          {% for notify_idx in range(notify_services | length) %}
+            {% if notify_idx != idx and notify_idx not in dismissed_idx %}
               {% if notify_everyone
                 or zones_to_notify
                   and notify_idx < persons | length
@@ -280,13 +282,12 @@ actions:
                   and notify_idx < driving_sensors | length
                   and is_state(driving_sensors[notify_idx], 'on')
               %}
-                {% set data.devices_list = data.devices_list + [notify_devices[notify_idx]] %}
+                {% set data.services_list = data.services_list + [notify_services[notify_idx]] %}
               {% endif %}
             {% endif %}
           {% endfor %}
 
-        {{ data.devices_list | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}
-
+        {{ data.services_list }}
       driving_sensor: "{{ driving_sensors[idx] }}"
       driver: "{{ persons[idx] }}"
       driver_name: "{{ state_attr(driver, 'friendly_name') }}"
@@ -330,7 +331,7 @@ actions:
         }}
   - alias: Notify each user except the driver about itinerary start
     repeat:
-      for_each: "{{ notify_services }}"
+      for_each: "{{ active_notify_services }}"
       sequence:
         - action: "{{ repeat.item }}"
           data:
@@ -405,6 +406,36 @@ actions:
                   notification_id: "{{ persistent_id }}"
                   update_type: removed
                   enabled: "{{ persistent_active }}"
+                - trigger: template
+                  id: conditions_changed
+                  value_template: |-
+                    {% set data = namespace(services_list=[]) %}
+
+                    {% for notify_idx in range(notify_services | length) %}
+                      {% if notify_idx != idx and notify_idx not in dismissed_idx %}
+                        {% if notify_everyone
+                          or zones_to_notify
+                            and notify_idx < persons | length
+                            and is_state(persons[notify_idx],
+                              zones_to_notify | map('state_attr', 'friendly_name') | list
+                              + zones_to_notify | map('replace', 'zone.', '') | list
+                            )
+
+                          or notify_persons_away
+                            and notify_idx < persons | length
+                            and is_state(persons[notify_idx], 'not_home')
+
+                          or notify_persons_driving
+                            and notify_idx < driving_sensors | length
+                            and is_state(driving_sensors[notify_idx], 'on')
+                        %}
+                          {% set data.services_list = data.services_list + [notify_services[notify_idx]] %}
+                        {% endif %}
+                      {% endif %}
+                    {% endfor %}
+
+                    {{ data.services_list != active_notify_services }}
+                  enabled: "{{ not notify_everyone }}"
               timeout:
                 # Wait for the end of the cooldown, or for the nearly arrived TTS, or indefinitely
                 seconds: |-
@@ -425,35 +456,41 @@ actions:
                   {% endif %}
 
                   {{ min(values) }}
-            - alias: If triggered by a notification cleared
-              if:
-                condition: template
-                value_template: "{{ wait.trigger.id in ['notification_cleared', 'persistent_cleared'] }}"
-              then:
-                - choose:
-                    - alias: If triggered by a mobile notification cleared
-                      conditions:
-                        - condition: template
-                          value_template: "{{ wait.trigger.id == 'notification_cleared' }}"
-                      sequence:
-                        - alias: Remove the notification service
-                          variables:
-                            notify_services: |-
-                              {{ notify_services | difference([wait.trigger.event.data.confirmation]) }}
-                    - alias: If triggered by a persistent notification cleared
-                      conditions:
-                        - condition: template
-                          value_template: "{{ wait.trigger.id == 'persistent_cleared' }}"
-                      sequence:
-                        alias: Disable persistent notifications
-                        variables:
-                          persistent_active: false
-                - alias: Stop if there are no more notification services
-                  if:
+            - choose:
+                - alias: If triggered by a mobile notification cleared
+                  conditions:
                     - condition: template
-                      value_template: "{{ notify_services | length == 0 and not persistent_active }}"
-                  then:
-                    - stop: No notification services remaining
+                      value_template: "{{ wait.trigger.id == 'notification_cleared' }}"
+                  sequence:
+                    - alias: Remove the notification service
+                      variables:
+                        active_notify_services: |-
+                          {{ active_notify_services | difference([wait.trigger.event.data.confirmation]) }}
+                        dismissed_idx: |-
+                          {{
+                            dismissed_idx | union(
+                              [
+                                notify_services.index(
+                                  wait.trigger.event.data.confirmation
+                                )
+                              ]
+                            )
+                          }}
+                - alias: If triggered by a persistent notification cleared
+                  conditions:
+                    - condition: template
+                      value_template: "{{ wait.trigger.id == 'persistent_cleared' }}"
+                  sequence:
+                    alias: Disable persistent notifications
+                    variables:
+                      persistent_active: false
+            - alias: If triggered by a notify condition change
+              if:
+                - condition: template
+                  value_template: "{{ wait.trigger.id == 'conditions_changed' }}"
+              then:
+                - variables:
+                    active_notify_services: *get_active_services
             - alias: If travel time remaining needs to trigger nearly arrived TTS
               if:
                 - condition: template
@@ -558,7 +595,7 @@ actions:
                 <<: *get_translation
             - alias: Send ETA notification to each user
               repeat:
-                for_each: "{{ notify_services }}"
+                for_each: "{{ active_notify_services }}"
                 sequence:
                   - action: "{{ repeat.item }}"
                     data:
@@ -603,7 +640,7 @@ actions:
           <<: *get_translation
       - alias: Send arrival notification to each user
         repeat:
-          for_each: "{{ notify_services }}"
+          for_each: "{{ active_notify_services }}"
           sequence:
             - action: "{{ repeat.item }}"
               data:
@@ -648,7 +685,7 @@ actions:
     else:
       - alias: Remove itinerary notification for each user
         repeat:
-          for_each: "{{ notify_services }}"
+          for_each: "{{ active_notify_services }}"
           sequence:
             - action: "{{ repeat.item }}"
               data:
