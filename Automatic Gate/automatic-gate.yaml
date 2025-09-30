@@ -1139,10 +1139,10 @@ actions:
                 value_template: "{{ opening_behavior in ['timer', 'notif'] }}"
             then:
               - choose:
-                  - alias: If opening behavior is set to cancelable timer
+                  - alias: If opening behavior is set to notification request
                     conditions:
                       - condition: template
-                        value_template: "{{ opening_behavior == 'timer' }}"
+                        value_template: "{{ opening_behavior == 'notif' }}"
                     sequence:
                       - alias: Set notification ids
                         variables:
@@ -1195,10 +1195,10 @@ actions:
                               - action: "{{ canceling_order_id }}"
                                 title: "{{ buttons[1] }}"
                                 icon: sfsymbols:xmark
-                  - alias: If opening behavior is set to notification request
+                  - alias: If opening behavior is set to cancelable timer
                     conditions:
                       - condition: template
-                        value_template: "{{ opening_behavior == 'notif' }}"
+                        value_template: "{{ opening_behavior == 'timer' }}"
                     sequence:
                       - alias: Set notification ids
                         variables:
