@@ -1184,6 +1184,7 @@ actions:
                           title: "{{ title }}"
                           message: "{{ message }}"
                           data:
+                            <<: *notification_data
                             notification_icon: mdi:lock-question
                             sticky: true
                             persistent: true
@@ -1218,6 +1219,7 @@ actions:
                           title: "{{ title }}"
                           message: "{{ message }}"
                           data:
+                            <<: *notification_data
                             notification_icon: mdi:timer-lock-open
                             sticky: true
                             persistent: true
