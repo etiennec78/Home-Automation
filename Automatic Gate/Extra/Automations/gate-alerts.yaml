@@ -22,7 +22,7 @@ blueprint:
     * Speakers TTS support 🔊
     * Adjustable notifications 💬
     * Customizable extra actions ➕
-    * Close gate button in notifications 🔒
+    * Close gate button in notifications 🔐
 
     ## More Info ℹ️
     * Version: 2.0.0
@@ -135,6 +135,19 @@ blueprint:
           default: false
           selector:
             boolean:
+        phone_tts_stream:
+          name: 📻 Phone TTS audio stream
+          description: The **audio stream** used for playing the phone TTS. Can be useful to **bypass Do Not Disturb**.
+          default: "notification_stream"
+          selector:
+            select:
+              options:
+                - label: Notification stream
+                  value: "notification_stream"
+                - label: Alarm stream
+                  value: "alarm_stream"
+                - label: Alarm stream (max volume)
+                  value: "alarm_stream_max"
 
     speakers:
       name: Speakers
@@ -202,7 +215,7 @@ variables:
         open: Gate opening 🔓
         still_open: Gate open 🔓
         left_open: Gate left open 🔓
-        close: Gate closing 🔒
+        close: Gate closing 🔐
         error: Gate error ⚠
         offline: Gate offline 🌐
       message:
@@ -213,13 +226,13 @@ variables:
         error: "The gate has encountered an error: {error}"
         offline: The gate has been offline for {{notification_delay}} minutes
       button:
-        close: Close
+        close: Close 🔐
     fr:
       title:
         open: Ouverture portail 🔓
         still_open: Portail ouvert 🔓
         left_open: Portail laissé ouvert 🔓️
-        close: Fermeture portail 🔒
+        close: Fermeture portail 🔐
         error: Erreur portail ⚠
         offline: Portail hors ligne 🌐
       message:
@@ -230,7 +243,7 @@ variables:
         error: "Le portail a rencontré une erreur: {error}"
         offline: Le portail est hors ligne depuis {{notification_delay}} minutes
       button:
-        close: Refermer
+        close: Refermer 🔐
 
 trigger_variables:
   notification_type: !input notification_type
@@ -388,6 +401,7 @@ actions:
                   actions:
                     - action: "{{ closing_order_id }}"
                       title: "{{ button_text }}"
+                      icon: sfsymbols:lock
 
       - alias: Replace opening persistent notification if enabled
         if:
@@ -447,7 +461,15 @@ actions:
                   when: "{{ (utcnow() - timedelta(minutes=notification_delay)) | as_timestamp | int }}"
                   actions: |-
                     {% if notification_type == 'open' %}
-                      {{ [{'action': closing_order_id, 'title': button_text}] }}
+                      {{
+                        [
+                          {
+                            'action': closing_order_id,
+                            'title': button_text,
+                            'icon': 'sfsymbols:lock'
+                          }
+                        ]
+                      }}
                     {% else %}
                       {{ [] }}
                     {% endif %}
@@ -465,7 +487,7 @@ actions:
                       channel: Gate alerts
                       importance: high
                       ttl: 0
-                      media_stream: "alarm_stream"
+                      media_stream: !input phone_tts_stream
 
       - alias: Play TTS on each speaker
         repeat:

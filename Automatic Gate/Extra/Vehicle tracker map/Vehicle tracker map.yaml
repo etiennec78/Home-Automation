@@ -92,7 +92,7 @@ sections:
           {% endif %}
         icon: mdi:map-clock
         entity: sensor.user0_travel_time_duration # EDIT
-        icon_color: blue
+        color: blue
         # Refresh travel time sensor on tap
         tap_action:
           action: call-service
@@ -103,7 +103,7 @@ sections:
           action: more-info
         double_tap_action:
           action: none
-        fill_container: false
+        features_position: bottom
         layout_options:
           grid_columns: 4
           grid_rows: 1
