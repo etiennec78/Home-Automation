@@ -21,13 +21,11 @@ sections:
 
       # EDIT: Duplicate this card as many times as you have drivers set in Automatic Gate
       - type: custom:mushroom-template-card
-        # Show the ETA only if someone is driving home
+        # Show the ETA only if someone is driving
         visibility:
-            - condition: state
-              entity: input_text.user0_itinerary # EDIT
-              state:
-                - arriving
-                - on_approach
+          - condition: state
+            entity: sensor.user0_driving_sensor # EDIT
+            state: on
         # Estimated time remaining
         primary: >-
           {# EDIT #}
