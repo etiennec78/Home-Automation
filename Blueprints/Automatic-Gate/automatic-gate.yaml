@@ -287,10 +287,19 @@ blueprint:
                   value: "notif"
                 - label: Disabled
                   value: "off"
-        timer:
-          name: ⏱️ Cancelable timer time
-          description: The time before the gate automatically opens/closes in "cancelable timer" mode without your input
+        timer_opening:
+          name: ⏱️🔓 Cancelable timer time for opening
+          description: The time before the gate automatically opens in "cancelable timer" mode without your input
           default: 5
+          selector:
+            number:
+              min: 1
+              max: 20
+              unit_of_measurement: seconds
+        timer_closing:
+          name: ⏱️🔐 Cancelable timer time for closing
+          description: The time before the gate automatically closes in "cancelable timer" mode without your input
+          default: 15
           selector:
             number:
               min: 1
@@ -539,7 +548,8 @@ variables:
   continuously_refresh_interval: !input continuously_refresh_interval
   activation_zone: !input activation_zone
   suggest_closing_after: !input suggest_closing_after
-  timer: !input timer
+  timer_opening: !input timer_opening
+  timer_closing: !input timer_closing
   language: !input language
   custom_translations: !input custom_translations
   default_custom_translations: |-
@@ -568,9 +578,9 @@ variables:
         itinerary_started: "Itinerary started 🏁"
         open_gate: "Open gate ? 🔓"
         close_gate: "Close gate ? 🔐"
-        timer_opening: "Gate opening in {{timer}}s 🔓"
+        timer_opening: "Gate opening in {{timer_opening}}s 🔓"
         gate_reopening: "Gate reopening 🔓"
-        timer_closing: "Gate closing in {{timer}}s 🔐"
+        timer_closing: "Gate closing in {{timer_closing}}s 🔐"
         itinerary_canceled: "Itinerary canceled ❌"
         awaiting: "Gate awaiting {awaited_persons} 💤"
         disabled: "Automatic Gate disabled 🚫"
@@ -612,8 +622,8 @@ variables:
         itinerary_started: "Itinéraire démarré 🏁"
         open_gate: "Ouvrir portail ? 🔓"
         close_gate: "Fermer portail ? 🔐"
-        timer_opening: "Ouverture portail dans {{timer}}s 🔓"
-        timer_closing: "Fermeture portail dans {{timer}}s 🔐"
+        timer_opening: "Ouverture portail dans {{timer_opening}}s 🔓"
+        timer_closing: "Fermeture portail dans {{timer_closing}}s 🔐"
         itinerary_canceled: "Itinéraire annulé ❌"
         awaiting: "Portail en attente de {awaited_persons} 💤"
         disabled: "Automatic Gate désactivé 🚫"
@@ -777,7 +787,7 @@ actions:
       timeouts:
         closing_suggestion: !input suggest_closing_after
         safety_delay: "{{ safety_delay * 60 }}"
-        timer: !input timer
+        timer: !input timer_closing
         default: 2147483647
       timeout_messages:
         closing_suggestion: "closing_suggestion"
@@ -1243,9 +1253,9 @@ actions:
                             notification_icon: mdi:timer-lock-open
                             sticky: true
                             persistent: true
-                            timeout: "{{ timer }}"
+                            timeout: "{{ timer_opening }}"
                             chronometer: true
-                            when: "{{ timer }}"
+                            when: "{{ timer_opening }}"
                             when_relative: true
                             actions:
                               - action: "{{ canceling_order_id }}"
@@ -1295,7 +1305,7 @@ actions:
                       action: "{{ canceling_order_id }}"
                 timeout: |-
                   {% if opening_behavior == 'timer' %}
-                    {{ timer }}
+                    {{ timer_opening }}
                   {% else %}
                     2147483647
                   {% endif %}
@@ -1364,7 +1374,7 @@ actions:
                         {% endif %}
                       {% else %}
                         {% if closing_behavior == 'timer' %}
-                          timer
+                          timer_closing
                         {% else %}
                           {% if security_notif_override %}
                             safety_delay
@@ -1525,9 +1535,9 @@ actions:
                                       notification_icon: mdi:lock-question
                                       sticky: true
                                       persistent: true
-                                      timeout: "{{ timer }}"
+                                      timeout: "{{ timer_closing }}"
                                       chronometer: true
-                                      when: "{{ timer }}"
+                                      when: "{{ timer_closing }}"
                                       when_relative: true
                                       actions:
                                         - action: "{{ canceling_order_id }}"
@@ -2094,7 +2104,7 @@ actions:
                               states[travel_time_sensor].last_updated | as_timestamp
                                 + travel_time_duration
                                 - lead_time
-                                - (timer if opening_behavior == 'timer' else 0)
+                                - (timer_opening if opening_behavior == 'timer' else 0)
                             }}
                     else:
                       - alias: Add 1 to the failed updates counter
