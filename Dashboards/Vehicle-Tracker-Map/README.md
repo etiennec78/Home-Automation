@@ -11,9 +11,9 @@ A small dashboard containing a map of the position history of a user and display
 3. Press the plus sign at the right of your dashboard tabs
 4. Press "..." at the top right of the window
 5. Press "Edit in YAML"
-6. Paste the [code](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/Extra/Vehicle%20tracker%20map/Vehicle%20tracker%20map.yaml)
+6. Paste the [code](vehicle-tracker-map.yaml)
 7. Adapt the person, travel time, and itinerary sensors
 
 ## Example 📌
 
-<img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Automatic%20Gate/Extra/Vehicle%20tracker%20map/example.png?raw=true" width="40%">
+<img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/Dashboards/Vehicle-Tracker-Map/example.png?raw=true" width="40%">
