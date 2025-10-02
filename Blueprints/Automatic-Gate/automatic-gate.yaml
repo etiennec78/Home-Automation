@@ -346,6 +346,12 @@ blueprint:
               multiple: true
               filter:
                 domain: zone
+        quick_triggers_reopen_gate:
+          name: 🚨 Reopen gate if driving sensor triggers too quickly
+          description: Reopen the gate if your driving sensor keeps turning on and off quickly, to avoid closing on your vehicle
+          default: true
+          selector:
+            boolean:
 
     notification_settings:
       name: Notification settings
@@ -827,49 +833,54 @@ actions:
                 condition: template
                 value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
             sequence:
-              - alias: Reopen each gate to avoid closing on the driver
-                repeat: &open_gates
-                  for_each: !input gate
-                  sequence:
-                    - action: |-
-                        {% if states[repeat.item].domain == 'switch' %}
-                          switch.turn_on
-                        {% elif states[repeat.item].domain == 'cover' %}
-                          cover.open_cover
-                        {% endif %}
-                      target:
-                        entity_id: "{{ repeat.item }}"
-              - alias: Set notification ids
-                variables:
-                  title_id: "gate_reopening"
-                  message_id: "triggered_frequently"
-              - alias: Get notification translation
-                variables: *get_translation
-              - alias: Log error
-                action: system_log.write
-                data:
-                  level: error
-                  message: "{{ message }}"
-                  logger: blueprints.etiennec78.automatic_gate
-              - alias: Notify driver that the gate is reopening
-                action: "{{ notify_service }}"
-                data:
-                  title: "{{ title }}"
-                  message: "{{ message }}"
-                  data: &notification_data
-                    car_ui: true
-                    notification_icon: mdi:alert-circle
-                    channel: Itinerary status
-                    importance: high
-                    ttl: 0
-                    push:
-                      sound:
-                        name: "default"
-                        critical: 1
-                    tag: itinerary-status
-                    timeout: 300
-              - sequence: *tts
-              - stop: Blueprint triggered too frequently
+              - alias: If the user wants his gate to reopen if the driving sensor quickly triggers
+                if:
+                  - condition: template
+                    value_template: !input quick_triggers_reopen_gate
+                then:
+                  - alias: Reopen each gate to avoid closing on the driver
+                    repeat: &open_gates
+                      for_each: !input gate
+                      sequence:
+                        - action: |-
+                            {% if states[repeat.item].domain == 'switch' %}
+                              switch.turn_on
+                            {% elif states[repeat.item].domain == 'cover' %}
+                              cover.open_cover
+                            {% endif %}
+                          target:
+                            entity_id: "{{ repeat.item }}"
+                  - alias: Set notification ids
+                    variables:
+                      title_id: "gate_reopening"
+                      message_id: "triggered_frequently"
+                  - alias: Get notification translation
+                    variables: *get_translation
+                  - alias: Log error
+                    action: system_log.write
+                    data:
+                      level: error
+                      message: "{{ message }}"
+                      logger: blueprints.etiennec78.automatic_gate
+                  - alias: Notify driver that the gate is reopening
+                    action: "{{ notify_service }}"
+                    data:
+                      title: "{{ title }}"
+                      message: "{{ message }}"
+                      data: &notification_data
+                        car_ui: true
+                        notification_icon: mdi:alert-circle
+                        channel: Itinerary status
+                        importance: high
+                        ttl: 0
+                        push:
+                          sound:
+                            name: "default"
+                            critical: 1
+                        tag: itinerary-status
+                        timeout: 300
+                  - sequence: *tts
+              - stop: Blueprint triggered too frequently after closing gate
                 error: true
           - alias: If this is the third time the error occurs in a row
             conditions:
