@@ -1,6 +1,6 @@
 blueprint:
   name: Gate alerts 🚨
-  source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/Extra/Automations/gate-alerts.yaml"
+  source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Blueprints/Gate-Alerts/gate-alerts.yaml"
   domain: automation
   author: etiennec78
   description: |-
@@ -26,8 +26,8 @@ blueprint:
 
     ## More Info ℹ️
     * Version: 2.0.0
-    * Set up sensors: [click here](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md)
-    * GitHub: [click here](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Esphome%20gate%20firmware)
+    * Set up sensors: [click here](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md)
+    * GitHub: [click here](https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/Gate-Alerts)
     * Discord: etiennec78
     [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/etiennec78)
   homeassistant:
@@ -81,7 +81,7 @@ blueprint:
         notify_devices:
           name: 💬 Notify devices
           description: |-
-            Mobile **[devices](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-services-)** to **notify**
+            Mobile **[devices](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#notify-services-)** to **notify**
             *Note: Optional*
           default: []
           selector:

@@ -18,18 +18,17 @@ To implement it in your home, you'll have to [install Home Assistant](https://ww
 
 |            Automation             | Description | Quick install |
 | :-------------------------------: | :---------: | :-----------: |
-|         Automatic Gate ⛩️         |  [Read More](Automatic%20Gate)  | [![Quickly import Automatic Gate blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FAutomatic+Gate%2Fautomatic-gate.yaml) |
-| Itinerary Tracker Notification 📍 |  [Read More](Automatic%20Gate/Extra/Automations)  | [![Quickly import itinerary tracker notification](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FAutomatic+Gate%2FExtra%2FAutomations%2Fitinerary-tracker-notification.yaml) |
-|  Gate left open notification 🔓   |  [Read More](Automatic%20Gate/Extra/Automations)  | [![Quickly import gate left open notification](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FAutomatic+Gate%2FExtra%2FAutomations%2Fgate-left-open-notification.yaml) |
-|   Gate offline notification 🌐    |  [Read More](Automatic%20Gate/Extra/Automations)  | [![Quickly import gate offline notification](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FAutomatic+Gate%2FExtra%2FAutomations%2Fgate-offline-notification.yaml) |
+|         Automatic Gate ⛩️         |  [Read More](Blueprints/Automatic-Gate)  | [![Quickly import Automatic Gate blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FBlueprints%2FAutomatic-Gate%2Fautomatic-gate.yaml) |
+| Itinerary Tracker Notification 📍 |  [Read More](Blueprints/Itinerary-Tracker-Notification)  | [![Quickly import itinerary tracker notification](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FBlueprints%2FItinerary-Tracker-Notification%2Fitinerary-tracker-notification.yaml) |
+| Gate Alerts 🚨 | [Read More](Blueprints/Gate-Alerts) | [![Quickly import Gate Alerts](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FBlueprints%2FGate-Alerts%2Fgate-alerts.yaml) |
 
 ## My smarthome related stuff 💡
 
 |        Automation        | Description |
 | :----------------------: | :---------: |
-| ESPHome Gate Firmware ⚙️ |  [Read More](Automatic%20Gate/Extra/Esphome%20gate%20firmware)  |
-|    Ble Car Device 🚗     |  [Read More](Automatic%20Gate/Extra/Ble%20car%20device)  |
-|  Vehicle Tracker Map 🗺️  |  [Read More](Automatic%20Gate/Extra/Vehicle%20tracker%20map)  |
+| ESPHome Gate Firmware ⚙️ |  [Read More](ESPHome-Firmwares/Gate)  |
+| ESP Bluetooth Dummie 🚗 |  [Read More](Extra/ESP-Bluetooth-Dummie)  |
+|  Vehicle Tracker Map 🗺️  |  [Read More](Dashboards/Vehicle-Tracker-Map)  |
 
 ## Consider supporting ? 🩷
 

@@ -1,6 +1,6 @@
 blueprint:
   name: Itinerary tracker notification
-  source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/Extra/Automations/itinerary-tracker-notification.yaml"
+  source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Blueprints/Itinerary-Tracker-Notification/itinerary-tracker-notification.yaml"
   domain: automation
   author: etiennec78
   description: |-
@@ -18,9 +18,9 @@ blueprint:
 
     ## More info ℹ️
     * Version : 1.1.0
-    * Set up sensors : [click here](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md)
+    * Set up sensors : [click here](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md)
     * Flowchart : [click here](https://miro.com/app/board/uXjVMpH4Tno=/)
-    * Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Automations)
+    * Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/Automatic-Gate)
     * Discord : etiennec78
     [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/etiennec78)
   homeassistant:
@@ -44,7 +44,7 @@ blueprint:
         notify_devices:
           name: 💬 Notify devices
           description: |-
-            Each [**device** to **notify**](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-services-)
+            Each [**device** to **notify**](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#notify-services-)
             *Note : Optional*
           default: []
           selector:
@@ -55,7 +55,7 @@ blueprint:
         driving_sensors:
           name: 🚗 Driving sensors
           description: |-
-            Each **[driving sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#driving-sensors-)** which should trigger the automation (same order)
+            Each **[driving sensor](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#driving-sensors-)** which should trigger the automation (same order)
             *Note : There can be less driving sensors than users to notify. Place users with driving sensors first.*
           selector:
             entity:
@@ -67,7 +67,7 @@ blueprint:
         travel_time_sensors:
           name: ✈️ Travel time sensors
           description: |-
-            Each **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#travel-time-sensors-%EF%B8%8F)** monitoring each user **time left before arrival** (same order)
+            Each **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#travel-time-sensors-%EF%B8%8F)** monitoring each user **time left before arrival** (same order)
             *Note: Optional if "Track travel time" is set to false*
           default: []
           selector:

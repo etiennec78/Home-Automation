@@ -54,4 +54,4 @@ Compatible with [KLI 310](https://amzn.to/4eJeVcS) and 860963 Velux remotes
 
 | Internals | Cover | Demo |
 | :---: | :---: | :---: |
-| ![Remote internals and esp32](https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Esphome%20Velux%20Shutter/internals.jpg?raw=true) | ![Remote cover](https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Esphome%20Velux%20Shutter/cover.jpg?raw=true) | ![Demo view](https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Esphome%20Velux%20Shutter/demo.jpg?raw=true) |
+| ![Remote internals and esp32](https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/Esphome-Firmwares/Velux-Shutter/internals.jpg?raw=true) | ![Remote cover](https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/Esphome-Firmwares/Velux-Shutter/cover.jpg?raw=true) | ![Demo view](https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/Esphome-Firmwares/Velux-Shutter/demo.jpg?raw=true) |

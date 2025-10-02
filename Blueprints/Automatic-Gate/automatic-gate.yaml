@@ -1,6 +1,6 @@
 blueprint:
   name: Automatic Gate
-  source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/automatic-gate.yaml"
+  source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Blueprints/Automatic-Gate/automatic-gate.yaml"
   domain: automation
   author: etiennec78
   description: |-
@@ -35,9 +35,9 @@ blueprint:
 
     ## More info ℹ️
     * Version : 1.1.0
-    * Set up sensors : [click here](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md)
+    * Set up sensors : [click here](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md)
     * Flowchart : [click here](https://miro.com/app/board/uXjVMpH4Tno=/)
-    * Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate)
+    * Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/Automatic-Gate)
     * Discord : etiennec78
     [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/etiennec78)
   homeassistant:
@@ -50,7 +50,7 @@ blueprint:
       input:
         gate:
           name: ⛩️ Gate
-          description: The **switch** or **cover** which controls your **[gate](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gate-%EF%B8%8F)**
+          description: The **switch** or **cover** which controls your **[gate](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#gate-%EF%B8%8F)**
           selector:
             entity:
               multiple: true
@@ -86,7 +86,7 @@ blueprint:
         persons:
           name: 👤 Tracked users
           description: |-
-            Each **user** which should be **[tracked](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gps-location-trackers-)** for **position updates**
+            Each **user** which should be **[tracked](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#gps-location-trackers-)** for **position updates**
             *Notes :*
             *⚠️ Use high precision while driving in your ETA zone or you could time out*
             *If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving, your gate could open thinking you are still there*
@@ -99,7 +99,7 @@ blueprint:
                   - person
         driving_sensors:
           name: 🚗 Driving sensors
-          description: Each **[driving sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#driving-sensors-)** which should trigger the automation
+          description: Each **[driving sensor](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#driving-sensors-)** which should trigger the automation
           selector:
             entity:
               multiple: true
@@ -110,7 +110,7 @@ blueprint:
         travel_time_sensors:
           name: ✈️ Travel time sensors
           description: |-
-            Each **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#travel-time-sensors-%EF%B8%8F)** monitoring each user **time left before arrival**
+            Each **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#travel-time-sensors-%EF%B8%8F)** monitoring each user **time left before arrival**
             *⚠️ Please set a [custom polling interval](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)*
             *Note: Optional if open when connected to iBeacon is true*
           default: []
@@ -122,7 +122,7 @@ blueprint:
                 device_class: duration
         notify_devices:
           name: 💬 Notify devices
-          description: Each [**device** to **notify**](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-services-)
+          description: Each [**device** to **notify**](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#notify-services-)
           selector:
             device:
               multiple: true
@@ -130,7 +130,7 @@ blueprint:
                 integration: mobile_app
         itinerary_sensors:
           name: 🗺️ Itinerary sensors
-          description: Each empty **[itinerary input text](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#itinerary-sensors-%EF%B8%8F)** helper to store each user **itinerary state**
+          description: Each empty **[itinerary input text](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#itinerary-sensors-%EF%B8%8F)** helper to store each user **itinerary state**
           selector:
             entity:
               multiple: true
@@ -417,7 +417,7 @@ blueprint:
         ble_entities:
           name: 🔎 iBeacon tracker entities
           description: |-
-            Each **[BLE rssi tracker entity](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-entities-)** to monitor your distance from the gate
+            Each **[BLE rssi tracker entity](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-entities-)** to monitor your distance from the gate
             *Note : Please place user sensors in the same order*
           default: []
           selector:
@@ -429,7 +429,7 @@ blueprint:
         ble_transmitter_entities:
           name: 📡 iBeacon transmitter entities
           description: |-
-            Each **[BLE transmitter entity](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-transmitter-)** to restore previous iBeacon transmitter power settings when iBeacon is not needed anymore
+            Each **[BLE transmitter entity](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-transmitter-)** to restore previous iBeacon transmitter power settings when iBeacon is not needed anymore
             *Notes : Let empty if you use iOS, or only use iBeacon for this automation*
           default: []
           selector:
@@ -442,7 +442,7 @@ blueprint:
         ble_scanner_switch:
           name: ⏯️ iBeacon scanner activator switch
           description: |-
-            The **[switch](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-scanner-switch-)** to automatically **start and stop iBeacon scanning** when needed
+            The **[switch](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-scanner-switch-)** to automatically **start and stop iBeacon scanning** when needed
             *Note : Leave empty if you want your iBeacon scanner to be always on*
           default: ""
           selector:
