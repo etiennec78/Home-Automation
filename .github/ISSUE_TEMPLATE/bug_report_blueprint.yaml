@@ -18,6 +18,12 @@ body:
         - Gate Alerts
     validations:
       required: true
+  - type: input
+    id: branch
+    attributes:
+      label: Which branch of the repositoy are you using ?
+    validations:
+      required: true
   - type: markdown
     attributes:
       value: |
