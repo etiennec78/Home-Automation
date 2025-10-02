@@ -75,12 +75,12 @@ sections:
                 {% set value = value * 60 %}
               {% endif %}
 
-              {{
-                (
-                  states[travel_time_sensor].last_updated | as_timestamp
-                  + value
-                ) | timestamp_custom('%H:%M')
-              }}
+              {% set eta = states[travel_time_sensor].last_updated | as_timestamp + value %}
+              {{ eta | timestamp_custom('%R') }}
+
+              {% set eta_date = eta | timestamp_custom('%D') %}
+              {% set now_date = now() | as_timestamp | timestamp_custom('%D') %}
+              {{ eta_date if eta_date != now_date }}
 
             {% else %}
               Unsupported sensor
