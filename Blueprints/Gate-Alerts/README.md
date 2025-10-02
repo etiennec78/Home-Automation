@@ -27,7 +27,7 @@ A blueprint that **notifies** selected users when the gate:
 
 ### Requirements 📝
 
-* A smart gate connected to Home Assisstant like my [ESPHome Gate Firmware](/Esphome-Firmwares/Gate)
+* A smart gate connected to Home Assisstant like my [ESPHome Gate Firmware](/ESPHome-Firmwares/Gate)
 
 ### Import the blueprint 🗺️
 
