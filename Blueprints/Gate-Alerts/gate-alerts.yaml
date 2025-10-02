@@ -39,13 +39,15 @@ blueprint:
       input:
         gate:
           name: ⛩️ Gate
-          description: Gate **switch** or **cover** entity
+          description: Your gate entity
           selector:
             entity:
               filter:
                 domain:
                   - switch
                   - cover
+                  - input_boolean
+                  - binary_sensor
         notification_type:
           name: 🔔 Notification type
           description: Type of **event** that should trigger notifications
@@ -460,7 +462,10 @@ actions:
                   chronometer: "{{ notification_delay != 0 }}"
                   when: "{{ (utcnow() - timedelta(minutes=notification_delay)) | as_timestamp | int }}"
                   actions: |-
-                    {% if notification_type == 'open' %}
+                    {%
+                      if notification_type == 'open'
+                      and states[gate].domain in ['cover', 'switch']
+                    %}
                       {{
                         [
                           {
