@@ -1,0 +1,21 @@
+# Itinerary tracker notification 📍
+
+### Description 📝
+
+A blueprint that **notifies** all selected users when another one is **driving home**
+
+### Key Features 🌟
+
+* Companion app notifications 🔔
+* Travel time and ETA notification updates 🔁
+* On notification tap custom link 👆
+* Speakers TTS support 🔊
+* Adjustable notifications 💬
+
+### Import the blueprint 🗺️
+
+[![Import Itinerary Tracker Notification blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FBlueprints%2FItinerary-Tracker-Notification%2Fitinerary-tracker-notification.yaml)
+
+### Example 📌
+
+<img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/Blueprints/Itinerary-Tracker-Notification/itinerary-tracker-notification.gif?raw=true" width="35%">

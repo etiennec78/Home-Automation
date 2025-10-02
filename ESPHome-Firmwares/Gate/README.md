@@ -18,7 +18,7 @@ Supports the following features :
 
 ## Flowchart 🔀
 
-[<img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Automatic%20Gate/Automatic%20Gate%20Flowchart.png?raw=true" width="100%">](https://miro.com/app/board/uXjVMpH4Tno=/)
+[<img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/flowchart.png?raw=true" width="100%">](https://miro.com/app/board/uXjVMpH4Tno=/)
 
 ## How to install 🚀
 
@@ -28,7 +28,7 @@ Supports the following features :
 2. [ESPHome installed](https://esphome.io/guides/installing_esphome.html)
 3. Your gate documentation to identify the gate opening/closing pin
 4. Your ESP32 documentation to identify the pin used for the relay ([this model](https://amzn.to/3y2UtCr) uses GPIO16 and GPIO17)
-5. Home Assistant sensors : [Persons](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#gps-location-trackers-), [Proximity sensors](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#proximity-sensors-), [Notify group](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#notify-all-devices-group-), optional : [phone iBeacons UUIDs](https://github.com/etiennec78/Home-Automation/blob/master/Automatic%20Gate/sensors.md#bluetooth-transmitter-)
+5. Home Assistant sensors : [Persons](/sensors.md#gps-location-trackers-), [Proximity sensors](/sensors.md#proximity-sensors-), [Notify group](/sensors.md#notify-all-devices-group-), optional : [phone iBeacons UUIDs](/sensors.md#bluetooth-transmitter-)
 
 ### Steps 📜
 
@@ -53,4 +53,4 @@ Supports the following features :
 
 |       |       |       |
 | :---: | :---: | :---: |
-| <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Automatic%20Gate/Extra/Esphome%20gate%20firmware/whole.jpg?raw=true" width="100%" alt="Whole view" > | <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Automatic%20Gate/Extra/Esphome%20gate%20firmware/case.jpg?raw=true" width="100%" alt="Case view"> | <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home%20Automation/Automatic%20Gate/Extra/Esphome%20gate%20firmware/esp.jpg?raw=true" width="100%" alt="Close view"> |
+| <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Gate/whole.jpg?raw=true" width="100%" alt="Whole view" > | <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Gate/case.jpg?raw=true" width="100%" alt="Case view"> | <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Gate/esp.jpg?raw=true" width="100%" alt="Close view"> |

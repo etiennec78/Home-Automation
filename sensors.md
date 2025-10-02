@@ -1,6 +1,6 @@
 # Description 📝
 
-* Sensors used in Automatic Gate [blueprint](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate), [automations](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Automations), [frontend](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Frontend), and [gate firmware](https://github.com/etiennec78/Home-Automation/tree/master/Automatic%20Gate/Extra/Esphome%20gate%20firmware)
+* Sensors used in Automatic Gate [blueprint](Blueprints/Automatic-Gate), [blueprints](Blueprints/Automatic-Gate/Extra/Automations), [frontend](Blueprints/Automatic-Gate/Extra/Frontend), and [gate firmware](ESPHome-Firmwares/Gate)
 * Prefer installing sensors through the UI when possible
 * Replace user0 with your real name
 * Some sensors require to be set for each user
@@ -12,7 +12,7 @@
 
 **The switch or cover which controls your gate**
 
-Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware/gate.yaml) or any other integration
+Could be from my [esphome firmware](ESPHome-Firmwares/Gate) or any other integration
 
 
 ## GPS location trackers 🌎
@@ -228,7 +228,7 @@ Settings :
 
 **Each BLE rssi tracker entity to monitor your distance from the gate while leaving, to close it when you're out of reach**
 
-Could be from my [esphome firmware](Extra/Esphome%20gate%20firmware) or any other bluetooth iBeacon scanner near your gate
+Could be from my [esphome firmware](Esphome-Firmwares/Gate) or any other bluetooth iBeacon scanner near your gate
 
 ## Bluetooth scanner switch ⏻
 
@@ -270,7 +270,7 @@ logbook:
 
 ## Notify all devices group 🔔
 
-**A group which allows my [esphome firmware](Extra/Esphome%20gate%20firmware) to notify all users in case of an event like your gate opening**
+**A group which allows my [esphome firmware](ESPHome-Firmwares/Gate) to notify all users in case of an event like your gate opening**
 
 Install a [notification group](https://www.home-assistant.io/integrations/group/#notify-groups) in your [configuration.yaml](https://www.home-assistant.io/docs/configuration/) file :
 
@@ -285,7 +285,7 @@ notify:
 
 ## Nearest distance sensor 🤏
 
-Only necessary for [esphome firmware](Extra/Esphome%20gate%20firmware)
+Only necessary for [esphome firmware](ESPHome-Firmwares/Gate)
 
 **Gives the distance of the nearest person from your gate, to only open if someone is close enough**
 
