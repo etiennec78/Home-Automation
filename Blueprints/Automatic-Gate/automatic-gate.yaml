@@ -782,7 +782,8 @@ actions:
             "status": none,
             "error": none,
             "quick_triggers": 0,
-            "last_closed_stop": 0,
+            "last_closed": 0,
+            "auto_closed": false
           }
         }}
       itinerary_value: |-
@@ -817,70 +818,73 @@ actions:
           entity_id: "{{ itinerary_sensor }}"
         data:
           value: "{{ itinerary_value | to_json }}"
+      - alias: Save if the blueprint recently tried closing the gate
+        variables:
+          tried_closing_recently: |-
+            {{
+              itinerary_value.last_closed
+                | as_datetime
+                + timedelta(seconds=lead_time)
+                > now()
+            }}
       - choose:
           - alias: If the gate may be closing on the driver
             conditions:
-              - alias: If blueprint recently auto-closed gate because of vehicle stopped
+              - condition: template
+                value_template: "{{ tried_closing_recently }}"
+              - alias: If the user wants his gate to reopen if the driving sensor quickly triggers
                 condition: template
-                value_template: |-
-                  {{
-                    itinerary_value.last_closed_stop
-                      | as_datetime
-                      + timedelta(seconds=lead_time)
-                      > now()
-                  }}
+                value_template: !input quick_triggers_reopen_gate
+              - alias: If the gate was not closed manually
+                condition: template
+                value_template: "{{ itinerary_value.auto_closed }}"
               - alias: If one of the gates is closing/closed
                 condition: template
                 value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
             sequence:
-              - alias: If the user wants his gate to reopen if the driving sensor quickly triggers
-                if:
-                  - condition: template
-                    value_template: !input quick_triggers_reopen_gate
-                then:
-                  - alias: Reopen each gate to avoid closing on the driver
-                    repeat: &open_gates
-                      for_each: !input gate
-                      sequence:
-                        - action: |-
-                            {% if states[repeat.item].domain == 'switch' %}
-                              switch.turn_on
-                            {% elif states[repeat.item].domain == 'cover' %}
-                              cover.open_cover
-                            {% endif %}
-                          target:
-                            entity_id: "{{ repeat.item }}"
-                  - alias: Set notification ids
-                    variables:
-                      title_id: "gate_reopening"
-                      message_id: "triggered_frequently"
-                  - alias: Get notification translation
-                    variables: *get_translation
-                  - alias: Log error
-                    action: system_log.write
-                    data:
-                      level: error
-                      message: "{{ message }}"
-                      logger: blueprints.etiennec78.automatic_gate
-                  - alias: Notify driver that the gate is reopening
-                    action: "{{ notify_service }}"
-                    data:
-                      title: "{{ title }}"
-                      message: "{{ message }}"
-                      data: &notification_data
-                        car_ui: true
-                        notification_icon: mdi:alert-circle
-                        channel: Itinerary status
-                        importance: high
-                        ttl: 0
-                        push:
-                          sound:
-                            name: "default"
-                            critical: 1
-                        tag: itinerary-status
-                        timeout: 300
-                  - sequence: *tts
-              - stop: Blueprint triggered too frequently after closing gate
+              - alias: Reopen each gate to avoid closing on the driver
+                repeat: &open_gates
+                  for_each: !input gate
+                  sequence:
+                    - action: |-
+                        {% if states[repeat.item].domain == 'switch' %}
+                          switch.turn_on
+                        {% elif states[repeat.item].domain == 'cover' %}
+                          cover.open_cover
+                        {% endif %}
+                      target:
+                        entity_id: "{{ repeat.item }}"
+              - alias: Set notification ids
+                variables:
+                  title_id: "gate_reopening"
+                  message_id: "triggered_frequently"
+              - alias: Get notification translation
+                variables: *get_translation
+              - alias: Log error
+                action: system_log.write
+                data:
+                  level: error
+                  message: "{{ message }}"
+                  logger: blueprints.etiennec78.automatic_gate
+              - alias: Notify driver that the gate is reopening
+                action: "{{ notify_service }}"
+                data:
+                  title: "{{ title }}"
+                  message: "{{ message }}"
+                  data: &notification_data
+                    car_ui: true
+                    notification_icon: mdi:alert-circle
+                    channel: Itinerary status
+                    importance: high
+                    ttl: 0
+                    push:
+                      sound:
+                        name: "default"
+                        critical: 1
+                    tag: itinerary-status
+                    timeout: 300
+              - sequence: *tts
+              - stop: Blueprint triggered closing on the user
                 error: true
           - alias: If this is the third time the error occurs in a row
             conditions:
@@ -919,6 +923,30 @@ actions:
                     action: automation.turn_off
                     target:
                       entity_id: "{{ this.entity_id }}"
+          - alias: If the gate recently tried to close but the gate does not need to reopen
+            conditions:
+              - condition: template
+                value_template: "{{ tried_closing_recently }}"
+            sequence:
+              - alias: Set notification ids
+                variables:
+                  title_id: "itinerary_canceled"
+                  message_id: "triggered_frequently"
+              - alias: Get notification translation
+                variables: *get_translation
+              - alias: Log error
+                action: system_log.write
+                data:
+                  level: error
+                  message: "{{ message }}"
+                  logger: blueprints.etiennec78.automatic_gate
+              - alias: Notify driver of itinerary cancelation
+                action: "{{ notify_service }}"
+                data:
+                  title: "{{ title }}"
+                  message: "{{ message }}"
+                  data: *notification_data
+              - stop: The gate recently tried to close
     else:
       - alias: If the quick triggers counter is not at 0
         if:
@@ -1632,6 +1660,18 @@ actions:
               - condition: template
                 value_template: "{{ wait.trigger.id != 'manual' }}"
             then:
+              - alias: Update the last closed variable
+                variables:
+                  update:
+                    last_closed: "{{ now() | as_timestamp | int }}"
+                    auto_closed: "{{ wait.trigger.id != 'closing_order' }}"
+                  itinerary_value: "{{ dict(itinerary_value, **update) }}"
+              - alias: Save the last closed variable
+                action: input_text.set_value
+                target:
+                  entity_id: "{{ itinerary_sensor }}"
+                data:
+                  value: "{{ itinerary_value | to_json }}"
               - alias: If closing is enabled
                 if:
                   - condition: template
@@ -1741,26 +1781,6 @@ actions:
                                 {% endif %}
                               target:
                                 entity_id: "{{ repeat.item }}"
-                      - alias: If closing behavior set to auto/timer and was triggered by vehicle stopped
-                        if:
-                          - condition: template
-                            value_template: |-
-                              {{
-                                closing_behavior in ['auto', 'timer']
-                                and wait.trigger.id == 'vehicle_stopped'
-                              }}
-                        then:
-                          - alias: Update the last closed because of vehicle stopped variable
-                            variables:
-                              update:
-                                last_closed_stop: "{{ now() | as_timestamp | int }}"
-                              itinerary_value: "{{ dict(itinerary_value, **update) }}"
-                          - alias: Save the last closed variable
-                            action: input_text.set_value
-                            target:
-                              entity_id: "{{ itinerary_sensor }}"
-                            data:
-                              value: "{{ itinerary_value | to_json }}"
       - alias: Wait for driver to travel 250m away from activation zone, then return, to start itinerary
         repeat:
           count: 2
