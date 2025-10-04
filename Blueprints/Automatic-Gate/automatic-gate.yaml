@@ -786,10 +786,19 @@ actions:
           }
         }}
       itinerary_value: |-
-        {{
-          states(itinerary_sensor)
-          | from_json(default_itinerary_sensor_value)
-        }}
+        {%
+          set state = (
+            states(itinerary_sensor)
+            | from_json(default_itinerary_sensor_value)
+          )
+        %}
+        {%
+          if default_itinerary_sensor_value.keys() == state.keys()
+        %}
+          {{ state }}
+        {% else %}
+          {{ default_itinerary_sensor_value }}
+        {% endif %}
       timeouts:
         closing_suggestion: !input suggest_closing_after
         safety_delay: "{{ safety_delay * 60 }}"
