@@ -802,10 +802,10 @@ actions:
         safety_delay: "undefined"
         timer: "{{ none }}"
         default: "{{ none }}"
-  - alias: If blueprint triggered less than 2 minutes ago
+  - alias: If last automation iteration ended less than 5s ago
     if:
       - condition: template
-        value_template: "{{ states[itinerary_sensor].last_updated + timedelta(minutes=2) > now() }}"
+        value_template: "{{ states[itinerary_sensor].last_updated + timedelta(seconds=5) > now() }}"
     then:
       - alias: Update the quick triggers counter
         variables:
