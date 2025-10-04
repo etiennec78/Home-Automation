@@ -1385,7 +1385,7 @@ actions:
                         {% endif %}
                       {% else %}
                         {% if closing_behavior == 'timer' %}
-                          timer_closing
+                          timer
                         {% else %}
                           {% if security_notif_override %}
                             safety_delay
