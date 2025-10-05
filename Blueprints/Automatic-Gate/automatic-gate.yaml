@@ -1486,7 +1486,7 @@ actions:
                         set start_time = (
                           timer_reset_timestamp if (
                             timer_reset_timestamp is not none
-                            and timeout_type == 'timer'
+                            and timeout_type in ['timer', 'wait_notif_reception']
                           )
                           else wait_trigger_start
                         )
