@@ -352,6 +352,15 @@ blueprint:
           default: true
           selector:
             boolean:
+        timer_notif_reception_delay:
+          name: 📬 Timer notification reception delay
+          description: The time the automation will wait before forcing the gate to open/close if the timer notification on Android has still not been received
+          default: 60
+          selector:
+            number:
+              min: 5
+              max: 300
+              unit_of_measurement: seconds
 
     notification_settings:
       name: Notification settings
@@ -806,7 +815,7 @@ actions:
         closing_suggestion: !input suggest_closing_after
         safety_delay: "{{ safety_delay * 60 }}"
         timer: !input timer_closing
-        wait_notif_reception: 60
+        wait_notif_reception: !input timer_notif_reception_delay
         default: 2147483647
       timeout_messages:
         closing_suggestion: "closing_suggestion"
