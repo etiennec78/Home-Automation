@@ -1379,7 +1379,7 @@ actions:
                           id: notification_received
                           event_type: mobile_app_notification_received
                           event_data:
-                            action_1_key: "{{ canceling_order_id }}"
+                            action_2_key: "{{ opening_order_id }}"
                           enabled: "{{ wait_notif_reception }}"
                       timeout: |-
                         {% if opening_behavior == 'timer' %}
@@ -1539,7 +1539,7 @@ actions:
                       id: notification_received
                       event_type: mobile_app_notification_received
                       event_data:
-                        action_1_key: "{{ canceling_order_id }}"
+                        action_2_key: "{{ closing_order_id }}"
                       enabled: "{{ wait_notif_reception }}"
                   timeout:
                     seconds: "{{ trigger_timeout }}"
