@@ -355,10 +355,10 @@ blueprint:
         timer_notif_reception_delay:
           name: 📬 Timer notification reception delay
           description: The time the automation will wait before forcing the gate to open/close if the timer notification on Android has still not been received
-          default: 60
+          default: 5
           selector:
             number:
-              min: 5
+              min: 1
               max: 300
               unit_of_measurement: seconds
 
