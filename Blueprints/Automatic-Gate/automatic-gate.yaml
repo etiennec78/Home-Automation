@@ -1561,7 +1561,7 @@ actions:
                               wait.trigger.id in ['manual', 'closing_order']
                               or (
                                 wait.remaining == 0
-                                and timeout_type == 'timer'
+                                and timeout_type in ['timer', 'wait_notif_reception']
                               )
                             }}
                       then:
