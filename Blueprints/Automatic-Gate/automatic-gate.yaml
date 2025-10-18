@@ -1463,23 +1463,25 @@ actions:
                         {% endif %}
                       {% endif %}
                     trigger_timeout: |-
+                      {% if timeout_type == 'safety_delay' %}
+                        {% set start_time = wait_trigger_start %}
+                      {% elif timer_reset_timestamp is not none %}
+                        {% set start_time = timer_reset_timestamp %}
+                      {% else %}
+                        {% set start_time = none %}
+                      {% endif %}
                       {%
-                        set start_time = (
-                          timer_reset_timestamp if (
-                            timer_reset_timestamp is not none
-                            and timeout_type == 'timer'
+                        set remaining_timeout = timeouts[timeout_type]
+                      %}
+                      {% if start_time is not none %}
+                        {% set remaining_timeout = (
+                            remaining_timeout
+                            + start_time
+                            - now() | as_timestamp
                           )
-                          else wait_trigger_start
-                        )
-                      %}
-                      {%
-                        set remaining_timeout = (
-                          timeouts[timeout_type]
-                          + start_time
-                          - now() | as_timestamp
-                        )
-                      %}
-                      {{ remaining_timeout if remaining_timeout > 0 else 0 }}
+                        %}
+                      {% endif %}
+                      {{ max(remaining_timeout, 0) }}
                 - alias: Wait for events before closing the gate
                   wait_for_trigger:
                     - alias: Manual closing
