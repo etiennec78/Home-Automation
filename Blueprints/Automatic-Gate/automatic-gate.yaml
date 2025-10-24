@@ -1213,11 +1213,13 @@ actions:
           closing_behavior: !input departure_closing_behavior
           opening_message: "leaving_home"
           timeout_messages: |-
-            dict(
-              timeout_messages, **{
-                'safety_delay': 'did_not_leave'
-              }
-            )
+            {{
+              dict(
+                timeout_messages, **{
+                  'safety_delay': 'did_not_leave'
+                }
+              )
+            }}
       - alias: Open and close gate by following behaviors set by the user
         sequence: &open_close_behavior
           - alias: Initialize a variable to wait for the phone to receive the notification before starting the timer
