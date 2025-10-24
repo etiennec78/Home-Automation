@@ -568,6 +568,7 @@ variables:
   close_when_disconnected_from: !input close_when_disconnected_from
   wifi_devices: !input wifi_devices
   forbidden_zones: !input forbidden_zones
+  open_when_connected_to: !input open_when_connected_to
   dont_lock_if_people_remaining: !input dont_lock_if_people_remaining
   quick_tt_updates: 0
   last_quick_tt_update: "{{ none }}"
