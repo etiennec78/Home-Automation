@@ -393,12 +393,6 @@ blueprint:
           default: false
           selector:
             boolean:
-        tts_text:
-          name: 💬 TTS text
-          description: The **content** of the TTS
-          default: "{{ title[:-2] ~ message }}"
-          selector:
-            template:
         phone_tts_stream:
           name: 📻 Phone TTS audio stream
           description: The **audio stream** used for playing the phone TTS. Can be useful to **bypass Do Not Disturb**.
@@ -750,7 +744,19 @@ actions:
             data:
               message: TTS
               data:
-                tts_text: !input tts_text
+                tts_text: |-
+                  {%
+                    set clean_title = (
+                      title
+                        | regex_replace('[\u2600-\u26FF]', '')
+                        | regex_replace('[\u2700-\u27BF]', '')
+                        | regex_replace('[\U0001F300-\U0001F5FF]', '')
+                        | regex_replace('[\U0001F600-\U0001F64F]', '')
+                        | regex_replace('[\U0001F680-\U0001F6FF]', '')
+                    ).strip()
+                  %}
+                  {% set separator = ' ' if clean_title[-1] in ['.', '!', '?'] else '. ' %}
+                  {{ clean_title ~ separator ~ message }}
                 channel: Itinerary status
                 importance: high
                 ttl: 0
