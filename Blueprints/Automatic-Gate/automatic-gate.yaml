@@ -393,12 +393,6 @@ blueprint:
           default: false
           selector:
             boolean:
-        tts_text:
-          name: 💬 TTS text
-          description: The **content** of the TTS
-          default: "{{ title[:-2] ~ message }}"
-          selector:
-            template:
         phone_tts_stream:
           name: 📻 Phone TTS audio stream
           description: The **audio stream** used for playing the phone TTS. Can be useful to **bypass Do Not Disturb**.
@@ -750,7 +744,7 @@ actions:
             data:
               message: TTS
               data:
-                tts_text: !input tts_text
+                tts_text: "{{ title[:-2] ~ message }}"
                 channel: Itinerary status
                 importance: high
                 ttl: 0
