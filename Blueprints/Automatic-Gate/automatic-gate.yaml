@@ -746,14 +746,17 @@ actions:
               data:
                 tts_text: |-
                   {%
-                    set clean_title = title
-                      | regex_replace('[\u2600-\u26FF]', '')
-                      | regex_replace('[\u2700-\u27BF]', '')
-                      | regex_replace('[\U0001F300-\U0001F5FF]', '')
-                      | regex_replace('[\U0001F600-\U0001F64F]', '')
-                      | regex_replace('[\U0001F680-\U0001F6FF]', '')
+                    set clean_title = (
+                      title
+                        | regex_replace('[\u2600-\u26FF]', '')
+                        | regex_replace('[\u2700-\u27BF]', '')
+                        | regex_replace('[\U0001F300-\U0001F5FF]', '')
+                        | regex_replace('[\U0001F600-\U0001F64F]', '')
+                        | regex_replace('[\U0001F680-\U0001F6FF]', '')
+                    ).strip()
                   %}
-                  {{ clean_title ~ message }}
+                  {% set separator = ' ' if clean_title[-1] in ['.', '!', '?'] else '. ' %}
+                  {{ clean_title ~ separator ~ message }}
                 channel: Itinerary status
                 importance: high
                 ttl: 0
