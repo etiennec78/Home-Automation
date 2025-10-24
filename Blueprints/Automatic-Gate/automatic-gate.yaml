@@ -303,7 +303,7 @@ blueprint:
           selector:
             number:
               min: 1
-              max: 20
+              max: 120
               unit_of_measurement: seconds
 
     security_features:
