@@ -744,7 +744,16 @@ actions:
             data:
               message: TTS
               data:
-                tts_text: "{{ title[:-2] ~ message }}"
+                tts_text: |-
+                  {%
+                    set clean_title = title
+                      | regex_replace('[\u2600-\u26FF]', '')
+                      | regex_replace('[\u2700-\u27BF]', '')
+                      | regex_replace('[\U0001F300-\U0001F5FF]', '')
+                      | regex_replace('[\U0001F600-\U0001F64F]', '')
+                      | regex_replace('[\U0001F680-\U0001F6FF]', '')
+                  %}
+                  {{ clean_title ~ message }}
                 channel: Itinerary status
                 importance: high
                 ttl: 0
