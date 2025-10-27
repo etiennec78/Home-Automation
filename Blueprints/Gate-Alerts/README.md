@@ -2,20 +2,20 @@
 
 ## Description 📝
 
-A blueprint that **notifies** selected users when the gate:
+A blueprint that notifies selected users when the gate:
 
-* **Opens**
-* **Closes**
-* Encounters an **error**
-* Has been left **open** for **too long**
-* Has been **offline** for **too long**
+* Opens 🔓
+* Closes 🔐
+* Encounters an error ⚠
+* Has been left open for too long 🔓
+* Has been offline for too long 🌐
 
 
 ## Key Features 🌟
 
 * Compatible with gate switches, covers, and position tracked covers 🔗
 * Companion app notifications 🔔
-* Close gate button in notifications 🔐
+* Button to close the gate from notifications 🔐
 * Dashboard persistent notifications 📢
 * Android TTS support 📳
 * Media players TTS support 🔊
@@ -23,11 +23,16 @@ A blueprint that **notifies** selected users when the gate:
 * Customizable extra actions ➕
 
 
+## Buy Me a Coffee ☕
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
+
+
 ## Installation Guide 🚀
 
 ### Requirements 📝
 
-* A smart gate connected to Home Assisstant like my [ESPHome Gate Firmware](/ESPHome-Firmwares/Gate)
+* A smart gate connected to Home Assistant like my [ESPHome Gate Firmware](/ESPHome-Firmwares/Gate)
 
 ### Import the blueprint 🗺️
 
@@ -39,15 +44,9 @@ A blueprint that **notifies** selected users when the gate:
 2. Select `Gate Alerts` in your [blueprint dashboard](https://my.home-assistant.io/create-link/?redirect=blueprints)
 3. Fill in the `Essential Inputs` category
 4. Optional: Fill in other categories
-4. Press `Save` in the bottom right corner
-5. Optional: In the upper-right corner, press `⁝` then `Run actions` and check your notifications for errors
-6. Optional: On Android, go to your applications settings, then select `Home Assistant > Notifications > Gate alerts` and change the sound to differentiate your gate from other notifications
-
-### How to update 🔁
-
-Go to [Settings > Automations & Scenes > Blueprints](https://my.home-assistant.io/redirect/blueprints)
-
-Click on the three-dot menu to the right of Gate Alerts, and select "Re-import blueprint"
+5. Press `Save` in the bottom right corner
+6. Optional: In the upper-right corner, press `⁝` then `Run actions` and check your notifications for errors
+7. Optional: On Android, go to your applications settings, then select `Home Assistant > Notifications > Gate alerts` and change the sound to differentiate your gate from other notifications
 
 
 ## Examples 📌
