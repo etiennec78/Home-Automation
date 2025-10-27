@@ -829,6 +829,7 @@ actions:
         variables:
           update:
             status: "{{ none }}"
+            error: "triggered_frequently"
             quick_triggers: "{{ itinerary_value.quick_triggers + 1 }}"
           itinerary_value: "{{ dict(itinerary_value, **update) }}"
       - alias: Save the quick triggers counter
