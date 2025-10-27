@@ -1,4 +1,4 @@
-# Esphome Velux Roller Shutter 🪟
+# ESPHome Velux Roller Shutter 🪟
 
 ## Description 📝
 
@@ -6,12 +6,19 @@ An ESPHome firmware for automating roller shutters using an [ESP32 C3](https://a
 
 Compatible with [KLI 310](https://amzn.to/4eJeVcS) and 860963 Velux remotes
 
+
 ## Key Features 🌟
 
 * **Physical & Remote Input**: Handles both controls with proper state feedback 👆
 * **Bidirectional Control**: Supports opening/closing even while the shutter is in motion 🔄
 * **Position Control**: Precise shutter positioning through cover entity 🎯
 * **Real-Time Position**: Continuously reports position as the shutter moves 🚩
+
+
+## Buy Me a Coffee ☕
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
+
 
 ## Installation Guide 🚀
 
@@ -27,20 +34,20 @@ Compatible with [KLI 310](https://amzn.to/4eJeVcS) and 860963 Velux remotes
    ```bash
    git clone https://github.com/etiennec78/Home-Automation.git
    ```
-   
+
 2. Configure the shutter:
    * Rename [secrets_example.yaml](secrets_example.yaml) to `secrets.yaml`
    * Open the file
    * Set your shutter settings
    * Fill in the required inputs
-   
+
 3. Flash the ESP32:
    * Connect the ESP32 to your computer
    * Execute:
      ```bash
      python -m esphome run velux-shutter.yaml
      ```
-    
+
 4. Hardware Setup:
    * Remove batteries from the remote
    * Solder the [remote pins](https://github.com/yannikmotzet/velux-integra-control#wiring) to the ESP32
@@ -49,7 +56,8 @@ Compatible with [KLI 310](https://amzn.to/4eJeVcS) and 860963 Velux remotes
 5. Home Assistant Integration:
    * Home Assistant should detect your ESPHome device
    * Enter API key when prompted
-   
+
+
 ## Pictures 📷
 
 | Internals | Cover | Demo |

@@ -1,41 +1,22 @@
-# Ble car device 🚗
+# ESP Bluetooth Dummie 🚗
 
 ## Description 📝
 
-A really small Arduino code to let an [ESP32](https://amzn.to/44BPk0g) sit in your car and show up as a **BLE device** so that your phone can connect to it and monitor if you are in your car
+A small Arduino sketch for an [ESP32](https://amzn.to/4kNCDHc) installed in your car so your phone detects it as a Bluetooth device and reports when you're driving
 
-Useful if your car does not support Bluetooth or Android Auto
+Useful if your car does not support Bluetooth, Android Auto, or CarPlay
 
-*Note : Please ensure that the USB ports in your car are powered off when the engine is turned off*
+## Installation Guide 🚀
 
-## How to install 🚀
+### Setup 🛠️
 
 1. [Download Arduino IDE](https://www.arduino.cc/en/software)
-2. Add ESP32 in your device library (Tools > Board > Board Manager > Install esp32 by Espressif Systems)
+2. Add ESP32 to your board library (Tools > Board > Board Manager > Install esp32 by Espressif Systems)
 3. Download the latest version of [ESP32-BLE-Keyboard](https://github.com/T-vK/ESP32-BLE-Keyboard/releases)
 4. Import the library (Sketch > Include Library > Add .ZIP Library...)
-5. Open [the script](Extra/ESP-Bluetooth-Dummie/esp-bluetooth-dummie.ino) and change the device name
+5. Open [the script](esp-bluetooth-dummie.ino) and change the device name
 6. Plug your ESP32 into your computer
-7. Click on "Select Board" and chose the corresponding ESP32 (If you don't know, select ESP32 Dev Module)
+7. Click on "Select Board" and choose the corresponding ESP32 (If you don't know, select ESP32 Dev Module)
 8. Click on the right arrow icon to upload your sketch to your ESP32
-9. Pair the device with your phones by Bluetooth
-10. Plug your ESP32 into your car, and verify that your USB port doesn't deliver charge while the engine is off
-11. Add a template sensor in Home Assistant to detect when you are driving, either from the UI (Settings > Devices > Helpers > Add a helper > Template > Binary) or your config
-
-UI tempate
-
-```yaml
-{{ '00:00:00:00:00:00 (Vehicle)' in state_attr('sensor.user0_bluetooth_connection', 'connected_paired_devices') }}
-```
-Config template
-
-```yaml
-template:
-  - binary_sensor:
-      - name: "user0 driving"
-        unique_id: "user0_driving"
-        icon: mdi:steering
-        device_class:  moving
-        state: >
-          {{ '00:00:00:00:00:00 (Vehicle)' in state_attr('sensor.user0_bluetooth_connection', 'connected_paired_devices') }}
-```
+9. Pair the device with your phones via Bluetooth
+10. Add an Android or iOS [template Bluetooth sensor](/sensors.md#driving-sensors-) in Home Assistant to detect when you are driving

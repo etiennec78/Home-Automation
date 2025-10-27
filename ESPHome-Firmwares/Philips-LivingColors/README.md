@@ -1,36 +1,83 @@
-# Esphome Philips LivingColors firmware 💡
+# ESPHome Philips LivingColors firmware 💡
 
 ## Description 📝
 
 A simple ESPHome configuration to hack a Philips LivingColors Mini with an ESP32
 
-Has both E1.31 and WLED protocols enabled by default for light software control (e.g.: [Artemis](https://github.com/Artemis-RGB/Artemis))
+Has both E1.31 and WLED protocols enabled by default for lighting software control (e.g.: [Artemis](https://github.com/Artemis-RGB/Artemis))
 
-## How to Install 🚀
 
-### Prerequisites 📝
+## Buy Me a Coffee ☕
 
-1. An [ESP32](https://amzn.to/44BPk0g)
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
+
+
+## Installation Guide 🚀
+
+### Requirements 📝
+
+1. An [ESP32](https://amzn.to/4kNCDHc)
 2. [ESPHome installed](https://esphome.io/guides/installing_esphome.html)
-3. Pins +, -, R, G, B from the led controller soldered onto the ESP32 as shown in [this tutorial](https://thewerner.medium.com/a-brain-for-the-light-c5b290c2e31a)
 
-### Steps 📜
+### Setup 🛠️
 
-1. Clone this repo
-    * Run : `git clone https://github.com/etiennec78/Home-Automation.git`
-2. Edit [the file](livingcolors.yaml) to fill your needs
-    * Change GPIO pins
-    * Replace any "!secret" line with your own information
-    * Remove E1.31 or WLED if you don't need them
-3. Flash your ESP32
-    * Plug it into your computer
-    * Run : `python -m esphome run livingcolors.yaml`
-4. Connect your ESP32 to Home Assistant
-    * Home Assistant should detect your ESPHome device automatically on your LAN
-    * Connect it and enter your api_key
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/etiennec78/Home-Automation.git
+   ```
+
+2. Configure the lamp:
+   * Rename [secrets_example.yaml](secrets_example.yaml) to `secrets.yaml`
+   * Open the file
+   * Set your lamp settings
+   * Fill in the required inputs
+
+3. Flash the ESP32:
+   * Connect the ESP32 to your computer
+   * Execute:
+     ```bash
+     python -m esphome run livingcolors.yaml
+     ```
+
+4. Hardware Setup:
+   * Unplug the lamp
+   * Solder pins +, -, R, G, B from the led controller to the ESP32 as shown in [this tutorial](https://thewerner.medium.com/a-brain-for-the-light-c5b290c2e31a)
+   * Plug back the lamp
+
+5. Home Assistant Integration:
+   * Home Assistant should detect your ESPHome device
+   * Enter API key when prompted
+
+### Artemis RGB setup 💡
+
+[Artemis RGB](https://artemis-rgb.com/) is open-source lighting software which aims at grouping all peripherals into a single app to synchronize effects
+
+With the E1.31 effect enabled by default, you can add the device to Artemis by following these steps:
+
+1. Download and install [Artemis](https://artemis-rgb.com/)
+2. Open the Plugins settings: Settings > Plugins
+3. Search for the `DMX Devices` plugin and enable it
+4. Click on the cog
+5. In the lower-left corner, click on `Add device`
+6. Fill in your device information
+  * Display name: `Philips LivingColors`
+  * IP: Your ESP32 local ip address
+  * Port: `5568`
+  * Universe: `1`
+  * Model: `LivingColors`
+  * Manufacturer: `Philips`
+7. In the upper-right corner, click on `Add LED`
+8. Click on `Save changes` for both windows
+9. Open the Devices tab: Settings > Devices
+10. Click on `Properties` under your Philips LivingColors
+11. Go to the `Layout` tab
+12. Select `Custom` as your `Layout provider`
+13. Click on `Browse` to select your `Current layout`
+14. Select the [./Artemis-Layout/LivingColors_Micro.xml](Artemis-Layout/LivingColors_Micro.xml) file from this repo
+
 
 ## Pictures 📷
 
-|       |       |       |
+| | | |
 | :---: | :---: | :---: |
-| <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Philips-LivingColors/livingcolors1.jpg?raw=true" width="100%" alt="First lamp components view" > | <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Philips-LivingColors/livingcolors2.jpg?raw=true" width="100%" alt="Second lamp components view"> | <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Philips-LivingColors/livingcolors3.jpg?raw=true" width="100%" alt="Third lamp components view"> |
+| ![First lamp components view](https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Philips-LivingColors/livingcolors1.jpg?raw=true) | ![Second lamp components view](https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Philips-LivingColors/livingcolors2.jpg?raw=true) | ![Third lamp components view](https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Philips-LivingColors/livingcolors3.jpg?raw=true) |

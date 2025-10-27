@@ -1,292 +1,461 @@
-# Description 📝
-
-* Sensors used in Automatic Gate [blueprint](Blueprints/Automatic-Gate), [blueprints](Blueprints/Automatic-Gate/Extra/Automations), [frontend](Blueprints/Automatic-Gate/Extra/Frontend), and [gate firmware](ESPHome-Firmwares/Gate)
-* Prefer installing sensors through the UI when possible
-* Replace user0 with your real name
-* Some sensors require to be set for each user
-
-
-# Required sensors 📌
-
 ## Gate ⛩️
 
-**The switch or cover which controls your gate**
+The entity representing your gate or garage door
 
-Could be from my [esphome firmware](ESPHome-Firmwares/Gate) or any other integration
+This can come from my [ESPHome firmware](ESPHome-Firmwares/Gate) or any other integration
 
 
-## GPS location trackers 🌎
+## GPS location trackers / Persons 🌎
 
-**Each GPS location tracker necessary to detect if you're in your leaving/arriving, estimate your travel time, and track your distance**
+Each GPS device tracker needed to track your position
 
-*Notes :*
+#### Summary 📝
 
-* *⚠️ Use high precision while driving in your ETA calculation zone or you could time out*
-* *If your location tracker has report latency (wifi/ble), and you plug Android Auto just after leaving, your gate could open thinking you are still there*
-* *If high precision mode does not trigger, please increase its range (try 2500m if you don't use Android Auto)*
+Less frequent location updates can impact ETA accuracy
 
-Install through [companion app](https://companion.home-assistant.io/docs/core/location/) settings : *Settings > Companion app > Manage sensors > Background location ✔*
+| Service | Location frequency |
+| :--- | :---: |
+| Android 📱 | 🟩 |
+| iPhone 📱 | 🟨 |
+| Smart vehicle 🌐 | ❓ |
 
-Settings :
+❓: Depending on vehicle model
 
-* High accuracy mode : ✔
-* High accuracy mode only when connected to BT devices : Select vehicles bluetooth devices
-* High accuracy mode only when entering zone : `zone.home` *(or another zone if your gate is not at home)*
-* High accuracy mode trigger range for zone : The range in which you want your phone to spam location updates when arriving (suggested : 1000m)
-* High accuracy interval : `5s`
-* High accuracy mode only when connected to BT devices : ✔
-* Minimal precision : Keep default
-* Location sent : `Exact`
+<details>
+  <summary>Option 1: Android or iPhone 📱</summary>
 
-Then, assign these device trackers to each person by going into : *[Settings > People](https://my.home-assistant.io/redirect/people/) > Select a user > Track devices > Your new device tracker*
+  #### Setup 🛠️
+
+  1. Install through the [companion app](https://companion.home-assistant.io/docs/core/location/) settings: Settings > Companion app > Manage sensors > Background location ✔
+  2. Apply the settings from below
+  3. Assign the trackers to a person: [Settings > People](https://my.home-assistant.io/redirect/people/) > *Select a user* > Track devices > *Your new device tracker*
+  4. Repeat steps 1-3 for each user
+
+  #### Settings 🔧
+
+  | Setting | Parameter |
+  | :--- | :---: |
+  | High accuracy mode | ✅ |
+  | High accuracy mode only when connected to BT devices | *Select vehicles bluetooth devices* |
+  | High accuracy mode only when entering zone | `zone.home` *(your gate zone)* |
+  | High accuracy mode trigger range for zone | *The range in which you want your phone to send frequent location updates when arriving (suggested: 1000m)* |
+  | High accuracy interval | `5s` |
+  | High accuracy mode only when connected to BT devices | ✅ |
+  | Minimal precision | *If your position seems off, please decrease this value* |
+  | Location sent | `Exact` |
+
+  #### Notes 📌
+
+  * If high precision mode does not trigger, please increase its range or check its conditions
+
+</details>
+
+<details>
+  <summary>Option 2: Smart vehicle 🌐</summary>
+
+  Some Home Assistant vehicle integrations or add-ons create a device_tracker that can be used to track your vehicle GPS location
+
+</details>
 
 
 ## Driving sensors 🚗
 
-**Each driving sensor which will detect when you start and stop driving**
+Each driving sensor that detects when you start and stop driving
 
-Either Android Auto, bluetooth connexion, or both grouped
+Use Android Auto, Apple CarPlay, Bluetooth, or a combination of these
 
-### Option 1 : Android Auto connection
+If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack adapter](https://amzn.to/3G0vOCT), a [Bluetooth-to-radio adapter](https://amzn.to/4jVEoRp), or use an [ESP32 emulating a Bluetooth keyboard](./Extra/ESP-Bluetooth-Dummie)
 
-Install through [companion app](https://companion.home-assistant.io/docs/core/sensors#android-auto) settings : *Settings > Companion app > Manage sensors > Android Auto ✔*
+#### Summary 📝
 
-### Option 2 : Bluetooth connection with template sensor
+| Service | Wireless | Compatibility |
+| :--- | :---: | :---: |
+| Android Bluetooth 🍏🛜 | ✅ | Android 5+ |
+| iOS Bluetooth 🍎🛜 | ✅ | iOS 15+ |
+| Android Auto 🍏🔌 | ❓ | Android 9+ |
+| Apple CarPlay 🍎🔌 | ❓ | iOS 15+ |
+| Smart vehicle 🌐 | ✅ | - |
 
-Install through [companion app](https://companion.home-assistant.io/docs/core/sensors/#bluetooth-sensors) settings : *Settings > Companion app > Manage sensors > Bluetooth connection ✔*
+<details>
+  <summary>Option 1: Android Bluetooth 🍏🛜</summary>
 
-Install a [template helper](https://www.home-assistant.io/integrations/template/) through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Template > Binary sensor*
+  ### Setup 🛠️
 
-Settings :
+  1. Install through the [companion app](https://companion.home-assistant.io/docs/core/sensors/#bluetooth-sensors) settings: Settings > Companion app > Manage sensors > Bluetooth connection ✔
+  2. Install a [template helper](https://www.home-assistant.io/integrations/template/) through the UI: [Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Template > Binary sensor
+  3. Apply the settings from below
 
-* Name : `User0 driving`
-* State template : `{{ '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user0_bluetooth_connection', 'connected_paired_devices') }}`
-* Device class : `Moving`
+  #### Settings 🔧
 
-Or in your [configuration.yaml](https://www.home-assistant.io/docs/configuration/) file :
+  | Setting | Parameter |
+  | :--- | :---: |
+  | Name | `User0 driving` |
+  | State template | `{{ '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user0_bluetooth_connection', 'connected_paired_devices') }}` |
+  | Device class | `Moving` |
 
-```yaml
-template:
-  - binary_sensor:
-    - name: "user0 driving"
-      unique_id: "user0_driving"
-      icon: mdi:steering
-      device_class:  moving
-      state: >
-        {{ '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user0_bluetooth_connection', 'connected_paired_devices') }}
-```
+  Where:
 
-*Note : If your vehicle repeatedly cuts the USB power supply during engine start-up, you should add `delay_off: 00:00:03` in binary_sensor attributes (e.g, after state:)*
+  * `00:00:00:00:00:00` is your vehicle MAC address
+  * `BT-Device` is the device name of your vehicle
+  * `sensor.user0_bluetooth_connection` is your Bluetooth companion app sensor
+  * `connected_paired_devices` needs to be left untouched
 
-* `00:00:00:00:00:00:00` is your vehicle mac address
-* `Bt-Device` is the device name of your vehicle
-* `sensor.user0_bluetooth_connection` is your bluetooth companion sensor
-* `connected_paired_devices` needs to be left untouched
+</details>
 
-### Option 3 : Both (for multiple vehicles)
+<details>
+  <summary>Option 2: iOS Bluetooth 🍎🛜</summary>
 
-Install sensors from options 1 & 2
+  #### Setup 🛠️
 
-Then use the following template : `{{ is_state('binary_sensor.user0_android_auto', 'on') or '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user0_bluetooth_connection', 'connected_paired_devices') }}`
+  1. Add an [input boolean helper](https://www.home-assistant.io/integrations/input_boolean/) through the UI: [Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Toggle
+  2. Name the sensor as you wish
+  3. Ensure that you have paired your vehicle to your phone
+  4. Import these Apple Shortcuts: [connection](https://www.icloud.com/shortcuts/f211cc4d6ac7414f852618a018bbafa4), [disconnection](https://www.icloud.com/shortcuts/6d186bbb01c54cc5b23e106f42b6d541)
+  5. Tap on `Configure shortcut`
+  6. Change the entity_id to the one you created in step 2
+  7. Tap on `Add this shortcut`
+  8. Go into the `Automation` tab
+  9. Tap on `+` in the upper-right corner or the `New Automation` button
+  10. Scroll down to Bluetooth
+  11. Tap on `Choose` to the right of `Device`
+  12. Select your vehicle bluetooth connection and press `Done`
+  13. Choose `When: Is Connected`, and tick `Run Immediately`
+  14. Tap on `Next` in the upper-right corner
+  15. In the `My shortcuts` section, please tap on `Automatic Gateway - Car Connection`
+  16. Repeat steps 8-16 but set the trigger to `When: Is Disconnected` and the blueprint to `Car Disconnection`
+  17. Execute both blueprints once to select your Home Assistant server
+
+</details>
+
+<details>
+  <summary>Option 3: Android Auto 🍏🔌</summary>
+
+  #### Setup 🛠️
+
+  * Install through the [companion app](https://companion.home-assistant.io/docs/core/sensors#android-auto) settings: Settings > Companion app > Manage sensors > Android Auto ✔
+
+</details>
+
+<details>
+  <summary>Option 4: Apple CarPlay 🍎🔌</summary>
+
+  #### Setup 🛠️
+
+  1. Add an [input boolean helper](https://www.home-assistant.io/integrations/input_boolean/) through the UI: [Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Toggle
+  2. Name the sensor as you wish
+  3. Ensure that you have paired your vehicle to your phone
+  4. Import these Apple Shortcuts: [connection](https://www.icloud.com/shortcuts/f211cc4d6ac7414f852618a018bbafa4), [disconnection](https://www.icloud.com/shortcuts/6d186bbb01c54cc5b23e106f42b6d541)
+  5. Tap on `Configure shortcut`
+  6. Change the entity_id to the one you created in step 2
+  7. Tap on `Add this shortcut`
+  8. Go into the `Automation` tab
+  9. Tap on `+` in the upper-right corner or the `New Automation` button
+  10. Scroll down to CarPlay
+  11. Choose `When: Connects`, and tick `Run Immediately`
+  12. Tap on `Next` in the upper-right corner
+  13. In the `My shortcuts` section, please tap on `Automatic Gateway - Car Connection`
+  14. Repeat steps 8-13 but set the trigger to `When: Disconnects` and the blueprint to `Car Disconnection`
+  15. Execute both blueprints once to select your Home Assistant server
+
+</details>
+
+<details>
+  <summary>Option 5: Smart vehicle 🌐</summary>
+
+  Some Home Assistant vehicle integrations or add-ons create a binary_sensor that reports when your vehicle is being driven
+
+</details>
+
+<details>
+  <summary>Combining these sensors 🔗</summary>
+
+  If some people drive several cars, combine their sensors so there is only one per person
+
+  #### Setup 🛠️
+
+  1. Install sensors from any option above
+  2. Install a [template helper](https://www.home-assistant.io/integrations/template/) through the UI: [Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Template > Binary sensor
+  3. Apply the settings from below
+
+  #### Settings 🔧
+
+  | Setting | Parameter |
+  | :--- | :---: |
+  | Name | `User0 driving` |
+  | State template | `{{ is_state('sensor.first_sensor', 'on') and is_state('sensor.second_sensor', 'on') }}` |
+  | Device class | `Moving` |
+
+  > Replace `sensor.first_sensor` and `sensor.second_sensor` with your own sensor entity ids
+
+</details>
 
 
 ## Travel time sensors ✈️
 
-**Each travel time sensor monitoring each user time left before arrival**
+Each travel time sensor monitoring each user's time left before arrival
 
-### Option 1 : Waze
+#### Summary 📝
 
-**⚠️ Please disable [auto-polling](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)**
+| Service | Supported | Reliability | Free | No credit card required |
+| :--- | :---: | :---: | :---: | :---: |
+| Here Travel Time 🚘 | ✅ | 🟩 | 🟢 | ❌ |
+| Google Travel Time 🚘 | ❌ | 🟩 | ✅ | ❌ |
+| Waze Travel Time 🚘 | ✅ | 🟧 | ✅ | ✅ |
+| Smart vehicle 🌐 | ❓ | ❓ | ❓ | ❓ |
 
-Install [Waze Travel Time](https://www.home-assistant.io/integrations/waze_travel_time/) integration through the UI : *[Settings > Devices & services > Add integration > Waze Travel Time](https://my.home-assistant.io/redirect/config_flow_start/?domain=waze_travel_time)*
+❓: Depending on vehicle model
 
-Install the integration multiple times if you have multiple users
+🟢: Free until a limit is reached
 
-Settings :
+> ⚠️ Please [disable sensor auto-polling (steps 1, 2)](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval), as the Automatic Gate will refresh the sensor itself
 
-* Name : `User0 Travel Time`
-* Origin : `person.user0`
-* Destination : `zone.home` *(or another zone if your gate is not at home)*
-* Region : Select your region
+> ⚠️ Please note that I am not responsible for any charges incurred by travel time services
 
-### Option 2 : Google Maps
+<details>
+  <summary>Option 1: Here Travel Time 🚘</summary>
 
-**⚠️ Please disable [auto-polling](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)**
+  #### Setup 🛠️
 
-⚠️ Work in progress ! The current integration is not reporting usable attributes
+  1. Install [HERE Travel Time](https://www.home-assistant.io/integrations/here_travel_time/) integration through the UI: [Settings > Devices & services > Add integration > HERE Travel Time](https://my.home-assistant.io/redirect/config_flow_start/?domain=here_travel_time)
+  2. Apply the settings from below
+  3. ⚠️ [Disable sensor auto-polling (steps 1, 2)](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)
+  4. Repeat steps 1-3 for each user
 
-Install [Google Maps Travel Time](https://www.home-assistant.io/integrations/google_travel_time/) integration through the UI : *[Settings > Devices & services > Add integration > Google Maps Travel Time](https://my.home-assistant.io/redirect/config_flow_start/?domain=google_travel_time)*
+  #### Settings 🔧
 
-Install the integration multiple times if you have multiple users
+  | Setting | Parameter |
+  | :--- | :---: |
+  | Name | `User0 Travel Time` |
+  | Origin | `person.user0` |
+  | Destination | `zone.home` *(your gate zone)* |
+  | Region | Select your region |
 
-* Name : `User0 Travel Time`
-* API key : Your api key
-* Origin : `person.user0`
-* Destination : `zone.home` *(or another zone if your gate is not at home)*
+</details>
 
+<details>
+  <summary>Option 2: Google Travel Time 🚘</summary>
 
-## Proximity sensors 📏
+  ⚠️ Work in progress, the current integration is not compatible
 
-**Each proximity sensor which calculates the distance of each user from your gate**
+  #### Setup 🛠️
 
-Delivered by the
+  1. Install [Google Maps Travel Time](https://www.home-assistant.io/integrations/google_travel_time/) integration through the UI: [Settings > Devices & services > Add integration > Google Maps Travel Time](https://my.home-assistant.io/redirect/config_flow_start/?domain=google_travel_time)
+  2. Apply the settings from below
+  3. ⚠️ [Disable sensor auto-polling (steps 1, 2)](https://www.home-assistant.io/integrations/google_travel_time/#defining-a-custom-polling-interval)
+  4. Repeat steps 1-3 for each user
 
-Install the [Proximity](https://www.home-assistant.io/integrations/proximity/) integration through the UI : *[Settings > Devices & services > Add integration > Proximity](https://my.home-assistant.io/redirect/config_flow_start/?domain=proximity)*
+  | Setting | Parameter |
+  | :--- | :---: |
+  | Name | `User0 Travel Time` |
+  | API key | *Your api key* |
+  | Origin | `person.user0` |
+  | Destination | `zone.home` *(your gate zone)* |
 
-Settings :
+</details>
 
-* Track distance to : `zone.home` *(or another zone if your gate is not at home)*
-* Devices or persons to track : `[person.user0, ...]`
-* Zones to ignore : `[]`
-* Tolerance distance : Not required by Automatic Gate
+<details>
+  <summary>Option 3: Waze Travel Time 🚘</summary>
 
+  Please note that Waze is not reliable and could fail to fetch new travel times
 
-## Notify services 💬
+  #### Setup 🛠️
 
-**Each phone notification service to notify of the itinerary status**
+  1. Install [Waze Travel Time](https://www.home-assistant.io/integrations/waze_travel_time/) integration through the UI: [Settings > Devices & services > Add integration > Waze Travel Time](https://my.home-assistant.io/redirect/config_flow_start/?domain=waze_travel_time)
+  2. Apply the settings from below
+  3. ⚠️ [Disable sensor auto-polling (steps 1, 2)](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)
+  4. Repeat steps 1-3 for each user
 
-Delivered by the [companion app](https://companion.home-assistant.io/docs/notifications/notifications-basic) by default
+  #### Settings 🔧
 
-Find the service ids by going into : *[Developer tools > Services tab](https://my.home-assistant.io/redirect/developer_states/) > searching for "notify."*
+  | Setting | Parameter |
+  | :--- | :---: |
+  | Name | `User0 Travel Time` |
+  | Origin | `person.user0` |
+  | Destination | `zone.home` *(your gate zone)* |
+  | Region | Select your region |
+
+</details>
+
+<details>
+  <summary>Option 4: Smart vehicle 🌐</summary>
+
+  Some Home Assistant vehicle integrations or add-ons create a sensor that reports your remaining travel time
+
+  To use this sensor in Automatic Gate, select `Listen for updates` for `Travel time refresh rate` in the `Travel time settings` inputs category
+
+</details>
 
 
 ## Itinerary sensors 🗺️
 
-**Each empty itinerary input text helper to store each user itinerary state**
+Each input text helper stores user itinerary states and serves as a trigger for third-party automations
 
-Install an [input text helper](https://www.home-assistant.io/integrations/input_text/) through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Text*
+#### Setup 🛠️
 
-Settings :
+1. Add an [input text helper](https://www.home-assistant.io/integrations/input_text/) through the UI: [Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Text
+2. Apply the settings from below
 
-* Name : `User0 itinerary`
-* Icon : `mdi:map`
-* Minimum lenght : `0`
-* Maximum length : `100`
-* Display mode : `Text`
+#### Settings 🔧
 
-Or in your [configuration.yaml](https://www.home-assistant.io/docs/configuration/) file :
+| Setting | Parameter |
+| :--- | :---: |
+| Name | `User0 itinerary` |
+| Icon | `mdi:map` |
+| Minimum length | `0` |
+| Maximum length | `255` |
+| Display mode | `Text` |
 
-```yaml
-input_text:
-  user0_itinerary:
-    name: User0 itinerary
-    initial: none
-    icon: mdi:map
-```
+> ⚠️ Don't forget to set the maximum length to 255
 
-## Planned opening 📅
+#### Data stored 💾
 
-**An empty input datetime helper which will be used to set an ETA and plan the opening of your gate**
+<details>
+  <summary>Sensor JSON structure 🏗️</summary>
 
-Install an [input datetime helper](https://www.home-assistant.io/integrations/input_datetime/) through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Date and/or time*
+| Key | Value |
+| :---: | :---: |
+| `status` | Holds the current Automatic Gate state for this user |
+| `error` | Holds the error id if the Automatic Gate had to stop |
+| `quick_triggers` | Holds the amount of time the Automatic Gate was triggered too quickly in a row for this user |
+| `last_closed` | Holds the timestamp of the last time the Automatic Gate tried to close the gate |
+| `auto_closed` | Holds if the Automatic Gate closed the gate with a timer or automatically, without an interaction from the user |
 
-Settings :
+</details>
 
-* Name : `Automatic gate planned opening`
-* What do you want to input : `Date and time`
+<details>
+  <summary>Possible status ℹ️</summary>
 
-Or in your [configuration.yaml](https://www.home-assistant.io/docs/configuration/) file :
+| State | Meaning |
+| :---: | :---: |
+| `{{none}}` | The automation is not running for this user |
+| `leaving` | The user is currently leaving home |
+| `arriving` | The user is driving and being tracked by the automation |
+| `on_approach` | The user has triggered the gate opening, and will arrive soon |
 
-```yaml
-input_datetime:
-  planned_opening:
-    name: Automatic gate planned opening
-    has_date: true
-    has_time: true
-```
+</details>
 
+<details>
+  <summary>Possible errors 🚨</summary>
 
+| Error | Meaning |
+| :---: | :---: |
+| `{{none}}` | No error occurred |
+| `vehicle_stopped` | The driver stopped his vehicle unexpectedly |
+| `canceling_order` | The driver pressed the cancel itinerary button |
+| `did_not_leave` | The driver did not leave home on time |
+| `did_not_arrive` | The driver did not arrive home on time with the gate open |
+| `timed_out` | The driver's phone did not report a new position in time |
+| `vehicle_away` | The gate was waiting for an event to open upon departure, but the user left the activation zone |
+| `travel_time_did_not_respond` | The travel time sensor did not update its value in time |
+| `not_home` | The driver enabled the home presence check before opening, but was not detected at home |
+| `triggered_frequently` | This driver triggered the blueprint multiple times too quickly |
+| `updated_frequently` | The blueprint tried to update the travel time sensor too frequently and was stopped to prevent costs |
+| `forbidden_zone` | The driver entered a forbidden zone upon arrival |
+| `invalid_travel_time_sensor` | The travel time sensor provided does not exist |
+| `unsupported_tt_integration` | The travel time sensor provided is not compatible with this blueprint |
+| `too_close` | The driver started his vehicle in the activation zone, but outside his home |
 
-# Optional sensors ➕
+</details>
+
+<details>
+  <summary>Automation examples 🔗</summary>
+
+  ##### Template code to retrieve itinerary sensor data
+
+  ```jinja2
+  {# EDIT THESE LINES #}
+  {% set itinerary_sensor = 'input_text.itinerary_sensor' %}
+  {% set attribute = 'status' %}
+  {% set desired_state = none %}
+
+  {%
+    set default_itinerary_sensor_value = {
+      "status": none,
+      "error": none,
+      "quick_triggers": 0,
+      "last_closed": 0,
+      "auto_closed": false
+    }
+  %}
+  {{
+    (
+      states(itinerary_sensor)
+      | from_json(default_itinerary_sensor_value)
+    ).get(attribute) == desired_state
+  }}
+  ```
+
+  ##### Trigger examples
+
+  | Attribute | Desired state | Description |
+  | :---: | :---: | :--- |
+  | `status` | `['arriving', 'on_approach']` | Is true while the user is driving towards home |
+  | `status` | `leaving` | Is true while the user is leaving and becomes false when the gate has been closed behind |
+  | `error` | remove the `== desired_state` part | Triggers when an error occurs, contains the error code |
+
+</details>
+
 
 ## Bluetooth transmitter 📡
 
-**Companion app ble transmitter to let a scanner automatically close your gate upon leaving**
+Companion app BLE transmitter lets a scanner automatically close your gate upon leaving
 
 The automation will automatically turn the transmitter off if not needed
 
-*Notes :*
+#### Setup 🛠️
 
-* *Your bluetooth transmitter should report your devices unavailable after a small time period or this won't have any effect*
-* *Be aware that having your BLE transmitter too far away from your gate could make your gate close onto your car when the signal is lost before leaving*
-* *The transmitter should be set to off by default since this blueprint will automatically turn it on when needed*
+1. Install through the [companion app](https://www.home-assistant.io/integrations/mobile_app/) settings: Settings > Companion app > Manage sensors > BLE Transmitter
+2. Apply the settings from below
 
-Install through [companion app](https://www.home-assistant.io/integrations/mobile_app/) settings : *Settings > Companion app > Manage sensors > BLE Transmitter ✔*
+#### Settings 🔧
 
-Settings :
+| Setting | Parameter |
+| :--- | :---: |
+| Advertise mode | - |
+| Transmit only enabled on Home Wifi Network SSIDs | ❌ |
+| Major | - |
+| Measured power at 1 meter | - |
+| Minor | - |
+| Enable transmitter | - |
+| Transmit power | - |
+| UUID | [Random UUID](https://www.uuidgenerator.net/) |
 
-* Advertise mode : `Low latency (10Hz)`
-* Transmit only enabled on Home Wifi Network SSIDs : ✖
-* major : `100`
-* Measured power at 1 meter : Not necessary for Automatic Gate
-* minor : `1`
-* Enable transmitter : ✖
-* Transmit power : `High`
-* UUID : A [random UUID](https://www.uuidgenerator.net/)
+#### Notes 📌
+
+* Automatic Gate turns on the iBeacon itself with the right settings when needed
+* Your Bluetooth transmitter should mark your devices as unavailable after a short time or this will have no effect
+* ⚠️ Be aware that placing your BLE transmitter too far from your gate could cause the gate to close on your vehicle if it loses connection
+
 
 ## Bluetooth entities 🔎
 
-**Each BLE rssi tracker entity to monitor your distance from the gate while leaving, to close it when you're out of reach**
+Each BLE RSSI tracker entity monitors your distance from the gate while leaving, to close it when you're out of reach
 
-Could be from my [esphome firmware](Esphome-Firmwares/Gate) or any other bluetooth iBeacon scanner near your gate
+Could be from my [ESPHome firmware](ESPHome-Firmwares/Gate) or any other bluetooth iBeacon scanner near your gate
+
 
 ## Bluetooth scanner switch ⏻
 
-**A switch which can turn on/off your BLE scanner. Not useful if you want your BLE scanner running 24/7**
+A switch which can turn on/off your BLE scanner. Not needed if your BLE scanner runs 24/7
 
-## Last notification 🔔
-
-Only necessary for itinerary tracker notification [automation](Extra/Automations)
-
-**An empty input datetime helper which will store the last time a tracking notification was sent to your devices**
-
-Install an [input datetime helper](https://www.home-assistant.io/integrations/input_datetime/) through the UI : *[Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Date and/or time*
-
-Settings :
-
-* Name : `Last notification`
-* Icon : `mdi:bell`
-* What do you want to input : `Date and time`
-
-Or in your [configuration.yaml](https://www.home-assistant.io/docs/configuration/) file :
-
-```yaml
-input_datetime:
-  planned_opening:
-    name: Last notification
-    icon : mdi:bell
-    has_date: true
-    has_time: true
-```
-
-Then you may mute this sensor by adding this line to your [configuration.yaml](https://www.home-assistant.io/docs/configuration/) file
-
-```yaml
-logbook:
-  exclude:
-    entities:
-      - input_datetime.last_notification
-```
-
-## Notify all devices group 🔔
-
-**A group which allows my [esphome firmware](ESPHome-Firmwares/Gate) to notify all users in case of an event like your gate opening**
-
-Install a [notification group](https://www.home-assistant.io/integrations/group/#notify-groups) in your [configuration.yaml](https://www.home-assistant.io/docs/configuration/) file :
-
-```yaml
-notify:
-  platform: group
-  name: "All devices"
-  services:
-    - service: mobile_app_user0_phone
-    - ...
-```
 
 ## Nearest distance sensor 🤏
 
-Only necessary for [esphome firmware](ESPHome-Firmwares/Gate)
+Only necessary for [ESPHome firmware](ESPHome-Firmwares/Gate)
 
-**Gives the distance of the nearest person from your gate, to only open if someone is close enough**
+Provides the distance of the nearest person to your gate, to open only if someone is close enough
 
-To install, please follow the instructions for the [required proximity sensors](sensors.md#proximity-sensors-)
+#### Setup 🛠️
+
+1. Install the [Proximity](https://www.home-assistant.io/integrations/proximity/) integration through the UI: [Settings > Devices & services > Add integration > Proximity](https://my.home-assistant.io/redirect/config_flow_start/?domain=proximity)
+2. Apply the settings from below
+3. Optional: Disable all sensors except `sensor.nearest_distance`
+
+#### Settings 🔧
+
+| Setting | Parameter |
+| :--- | :---: |
+| Track distance to | `zone.home` *(your gate zone)* |
+| Devices or persons to track | `[person.user0, ...]` |
+| Zones to ignore | - |
+| Tolerance distance | - |

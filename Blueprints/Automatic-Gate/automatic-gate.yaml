@@ -1,5 +1,5 @@
 blueprint:
-  name: Automatic Gate
+  name: Automatic Gate ⛩️
   source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Blueprints/Automatic-Gate/automatic-gate.yaml"
   domain: automation
   author: etiennec78
@@ -7,39 +7,40 @@ blueprint:
     # Automatic Gate ⛩️
 
     ## Description 📝
-    **Modular** and **secure** gate automation that **opens your gate** upon leaving or arriving
-    Makes managing your gate while driving easier : don't ever touch your screen or remote again
-    Have your gate greet you when you arrive home and be ready for you
-    Customize the options to tailor the system to your exact needs
+    Modular and secure gate automation that opens and closes your gate upon leaving or arriving
+    Makes managing your gate while driving easier: You won't ever have to use your remote again
 
     ## Key Features 🌟
-    * **Automatic Opening**: Your gate will open automatically when you drive home. No need to press any buttons ! 🏠
-    * **Smart Navigation**: Directly open the gate when leaving home, or launch an itinerary when starting from outside 🚀
     * **Multi-User Support**: Manages up to 10 drivers simultaneously 🚗
-    * **Collision Prevention**: Ensures the gate doesn't close on anyone arriving or leaving at the same time 🚧
+    * **Broad Compatibility**: This blueprint is compatible with most vehicles and most travel time providers (Waze, Here, smart vehicles) 🔗
+    * **Notification Translations**: This blueprint ships with built-in and custom translations 🌍
     * **Security & Reliability**:
-      * Precise Waze and ETA calculations to have your gate fully open exactly when you arrive home 🎯
-      * Real-time position tracking to adjust timing for traffic or if you pass by without entering 📍
-      * Car status monitoring to cancel everything if you leave your car ✋
+      * Precise ETA calculations to have your gate fully open exactly when you arrive home 🎯
+      * Vehicle status monitoring to cancel the itinerary and close the gate if you stop your vehicle or pass by without entering ✋
+      * Collision prevention to ensure the gate doesn't close on anyone arriving or leaving at the same time 🚧
       * Built-in timeouts in case of an internet loss ⏳
       * Maximum entry and leaving time before auto-closing ⌛
+      * Custom forbidden zones to cancel the itinerary when entered ⛔
       * Notification alerts at each decision of the automation 🚨
-      * Manual actions prioritized over the automation, letting you control your gate even while the automation is running ✍️
     * **Customizable Settings**:
-      * Auto-close with iBeacon 📡
-      * Adjustable notifications 💬
-      * Customizable security options 🔒
+      * Open/Close the gate
+        * Automatically 🧠
+        * By asking for a confirmation ✅
+        * By starting a cancellable timer ⏱️
       * Customizable gate operation timings 🛠️
       * Customizable travel time refresh rate 🔁
-      * Multiple gates supported by reusing the blueprint ♻️
+      * Read notifications aloud on Android 🗣️
+      * Multiple gate support ⛩️
+      * Open/Close with iBeacon 📡
+      * House locks support 🔐
+      * Avoid opening when parked near house 🅿️
 
     ## More info ℹ️
-    * Version : 1.1.0
-    * Set up sensors : [click here](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md)
-    * Flowchart : [click here](https://miro.com/app/board/uXjVMpH4Tno=/)
-    * Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/Automatic-Gate)
-    * Discord : etiennec78
-    [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/etiennec78)
+    * Version: 2.0.0
+    * Set up sensors: [click here](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md)
+    * Github: [click here](https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/Automatic-Gate)
+    * Discord: @etiennec78
+    [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
   homeassistant:
     min_version: 2025.4.0
   input:
@@ -86,7 +87,7 @@ blueprint:
         persons:
           name: 👤 Tracked users
           description: |-
-            Each **user** which should be **[tracked](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#gps-location-trackers-)** for **position updates**
+            Each **user** which should be **[tracked](https://github.com/etiennec78/Home-Automation/blob/master/sensors.gps-location-trackers--persons-)** for **position updates**
             *Notes :*
             *⚠️ Use high precision while driving in your ETA zone or you could time out*
             *If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving, your gate could open thinking you are still there*
