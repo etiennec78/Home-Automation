@@ -1,28 +1,30 @@
 blueprint:
-  name: Itinerary tracker notification
+  name: Itinerary Tracker Notification 📍
   source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Blueprints/Itinerary-Tracker-Notification/itinerary-tracker-notification.yaml"
   domain: automation
   author: etiennec78
   description: |-
-    # Itinerary tracker notification 📍
+    # Itinerary Tracker Notification 📍
 
     ## Description 📝
-    A blueprint that **notifies** all selected users when another one is **driving home**
+    A blueprint that notifies all selected users when another one is driving home
 
     ## Key Features 🌟
-    * Companion app notifications 🔔
     * Travel time and ETA notification updates 🔁
-    * On notification tap custom link 👆
-    * Speakers TTS support 🔊
-    * Adjustable notifications 💬
+    * Companion app notifications 🔔
+    * Custom link on notification tap 👆
+    * Dashboard persistent notifications 📢
+    * Media players TTS support 🔊
+    * Notification limiter ⌛
+    * Built-in translations 🌍
+    * State-based notification filtering 📍
 
     ## More info ℹ️
-    * Version : 1.1.0
-    * Set up sensors : [click here](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md)
-    * Flowchart : [click here](https://miro.com/app/board/uXjVMpH4Tno=/)
-    * Github : [click here](https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/Automatic-Gate)
-    * Discord : etiennec78
-    [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/etiennec78)
+    * Version: 2.0.0
+    * Set up sensors: [click here](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md)
+    * Github: [click here](https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/Automatic-Gate)
+    * Discord: @etiennec78
+    [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
   homeassistant:
     min_version: 2025.4.0
   input:

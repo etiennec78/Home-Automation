@@ -1,35 +1,35 @@
 blueprint:
-  name: Gate alerts 🚨
+  name: Gate Alerts 🚨
   source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Blueprints/Gate-Alerts/gate-alerts.yaml"
   domain: automation
   author: etiennec78
   description: |-
-    # Gate alerts 🚨
+    # Gate Alerts 🚨
 
     ## Description 📝
-    A blueprint that **notifies** selected users when the gate:
-    * **Opens**
-    * **Closes**
-    * Encounters an **error**
-    * Has been left **open** for **too long**
-    * Has been **offline** for **too long**
+    A blueprint that notifies selected users when the gate:
+    * Opens 🔓
+    * Closes 🔐
+    * Encounters an error ⚠
+    * Has been left open for too long 🔓
+    * Has been offline for too long 🌐
 
     ## Key Features 🌟
-    * Compatible with gate switches, covers, and covers with position tracking 🔗
+    * Compatible with gate switches, covers, and position tracked covers 🔗
     * Companion app notifications 🔔
+    * Button to close the gate from notifications 🔐
     * Dashboard persistent notifications 📢
-    * Companion app TTS support 📳
-    * Speakers TTS support 🔊
-    * Adjustable notifications 💬
+    * Android TTS support 📳
+    * Media players TTS support 🔊
+    * Built-in translations 🌍
     * Customizable extra actions ➕
-    * Close gate button in notifications 🔐
 
     ## More Info ℹ️
     * Version: 2.0.0
     * Set up sensors: [click here](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md)
     * GitHub: [click here](https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/Gate-Alerts)
-    * Discord: etiennec78
-    [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/etiennec78)
+    * Discord: @etiennec78
+    [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
   homeassistant:
     min_version: 2024.10.0
   input:

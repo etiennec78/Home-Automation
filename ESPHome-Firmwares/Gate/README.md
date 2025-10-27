@@ -1,56 +1,116 @@
-# Esphome Gate Firmware ⚙️
+# ESPHome Gate Firmware ⛩️
 
-## Description
+## Description 📝
 
-An [ESP32](https://amzn.to/3y2UtCr) firmware I use to **smartify** my FAAC [E024S](https://faac.fr/Docs/Documentations%20techniques/13%20PLATINE_ELECTRONIQUE/E024S/RevE/E024S_732642RevE_FR.pdf) **gate**
+An ESPHome firmware for automating gates using an [ESP32](https://amzn.to/3y2UtCr) microcontroller. It integrates seamlessly with Home Assistant to provide smart gate control functionality
 
-Supports the following features :
 
-* Only accepting open requests when someone is nearer than **1km from home** 📏
-* Only accepting requests when **ready**, to avoid double presses which would make it report the wrong state ✅
-* Only using **one pin**, to only use one relay and work by **guessing** the actual state of the gate 💡
-* Opening and closing **even while moving**, by sending a double pulse, and inverting time taken to move to the current position 🔄
-* **Error reporting** in HA, to see why the gate decided not to move ⛔
-* **BLE scanner**, with automatically turns entity status to unavailable after no signal for 25s 📡
-* **BLE switch**, which allows you to **turn off** the continuous BLE scanning ⏯️
+## Key Features 🌟
 
-*Note : Since this gate firmware relies on a single opening pin without any extra sensors, please keep in mind that it won't be able to register any state change from another source than itself. If you open your gate with your remote, please also close it with your remote, as closing with your esp32 would invert the virtual state of the gate*
+* **Proximity-based Access**: Only accepts open requests when users are within 1km of home 📍
+* **Queue System**: Prevents the controller from sending two pulses too quickly ⏳
+* **Single Pin Operation**: Uses state inference to control the gate with just one relay ⚡
+* **Bidirectional Control**: Supports opening/closing even while the gate is in motion 🔄
+* **Position Control**: Precise gate positioning through cover entity 🎯
+* **Real-Time Position**: Continuously reports position as the gate moves 🚩
+* **BLE Integration**: Built-in iBeacon scanner for automations 📡
 
-## Flowchart 🔀
+> ⚠️ Since this firmware uses a single control pin without additional sensors, it cannot detect state changes from external controls (e.g., remotes). For consistent operation, use the same control method to open and then close consecutively.
 
-[<img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/flowchart.png?raw=true" width="100%">](https://miro.com/app/board/uXjVMpH4Tno=/)
+> ⚠️ Be aware that this firmware could contain bugs, so please read the code carefully and try it on a bare ESP32 first
 
-## How to install 🚀
 
-### Prerequisites 📝
+## Buy Me a Coffee ☕
 
-1. An [ESP32 with relay](https://amzn.to/3y2UtCr)
-2. [ESPHome installed](https://esphome.io/guides/installing_esphome.html)
-3. Your gate documentation to identify the gate opening/closing pin
-4. Your ESP32 documentation to identify the pin used for the relay ([this model](https://amzn.to/3y2UtCr) uses GPIO16 and GPIO17)
-5. Home Assistant sensors : [Persons](/sensors.md#gps-location-trackers-), [Proximity sensors](/sensors.md#proximity-sensors-), [Notify group](/sensors.md#notify-all-devices-group-), optional : [phone iBeacons UUIDs](/sensors.md#bluetooth-transmitter-)
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
 
-### Steps 📜
 
-1. Clone this repo
-    * Run : `git clone https://github.com/etiennec78/Home-Automation.git`
-2. Edit [the file](gate.yaml) to fill your needs
-    * Change the GPIO pin
-    * Replace any "!secret" line with your own information
-    * Adapt the gate moving time (default 42s)
-3. Flash your ESP32
-    * Plug it into your computer
-    * Run : `python -m esphome run gate.yaml`
-4. Harware connections
-    * Run a cable between your gate opening/closing pin and your ESP32 relay pin
-    * Either power your ESP32 with a gate pin, or an external supply
-5. Connect your ESP32 to Home Assistant
-    * Home Assistant should detect your ESPHome device automatically on your LAN
-    * Connect it and enter your api_key
-    * Finally, go to *[Settings > Devices & services > ESPHome](https://my.home-assistant.io/redirect/integration/?domain=esphome) > three-dot menu to the right of your gate > Configure > Allow the device to make Home Assistant service calls ✔*
+## Installation Guide 🚀
 
-# Pictures 📷
+### Requirements 📝
 
-|       |       |       |
+* [ESP32 with relay module](https://amzn.to/3y2UtCr)
+* [ESPHome](https://esphome.io/guides/installing_esphome.html) installed
+* Gate documentation (for control pin identification)
+* ESP32 documentation to identify relay pins ([this model](https://amzn.to/3y2UtCr) uses GPIO16 and GPIO17)
+* Home Assistant sensors:
+   * [Persons](/sensors.md#gps-location-trackers--persons-)
+   * [Nearest distance sensor](/sensors.md#nearest-distance-sensor-)
+   * Optional: [Phone iBeacon UUIDs](/sensors.md#bluetooth-transmitter-)
+
+### Setup 🛠️
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/etiennec78/Home-Automation.git
+   ```
+
+2. Configure the gate:
+   * Rename [secrets_example.yaml](secrets_example.yaml) to `secrets.yaml`
+   * Open the file
+   * Set your gate settings
+   * Fill in the required inputs
+   * Set your optional inputs as needed, and uncomment "Optional" lines in [gate.yaml](gate.yaml) accordingly
+
+3. Flash the ESP32:
+   * Connect the ESP32 to your computer
+   * Execute:
+     ```bash
+     python -m esphome run gate.yaml
+     ```
+
+4. Hardware Setup:
+   * Connect the gate control pin to the ESP32 relay
+   * Connect a power supply
+
+5. Home Assistant Integration:
+   * Home Assistant should detect your ESPHome device
+   * Enter API key when prompted
+   * Enable device service calls: [Settings > Devices & services > ESPHome](https://my.home-assistant.io/redirect/integration/?domain=esphome) > three-dot menu to the right of your gate > Configure > Allow the device to make Home Assistant service calls ✔
+   * Import and configure [Gate Alerts](/Blueprints/Gate-Alerts)
+
+### Gate Operation Logic 🔄
+
+The firmware supports two operation modes: Normal and Inverted
+
+The tables below show the number of pulses required to stop/open/close, depending on the current state
+
+#### Inverted Mode
+
+The gate closes on pulse while opening
+
+| State | Stop | Open | Close |
+| :--- | :---: | :---: | :---: |
+| Open | 0 | 0 | 1 |
+| Closed | 0 | 1 | 0 |
+| Opening | 1 | 0 | 2 |
+| Closing | **2** | **1** | 0 |
+| Paused (o) | 0 | **2** | 1 |
+| Paused (c) | **-** | **-** | **-** |
+
+#### Normal Mode
+
+The gate stops on pulse while opening
+
+| State | Stop | Open | Close |
+| :--- | :---: | :---: | :---: |
+| Open | 0 | 0 | 1 |
+| Closed | 0 | 1 | 0 |
+| Opening | 1 | 0 | 2 |
+| Closing | **1** | **2** | 0 |
+| Paused (o) | 0 | **3** | 1 |
+| Paused (c) | **0** | **1** | **3** |
+
+
+## Error states 🚨
+
+| State | Meaning |
+| :---: | :---: |
+| `nobody_near_home` | No one was close enough to the gate to allow it to open |
+
+
+## Pictures 📷
+
+| Complete Setup | Enclosure | ESP32 Module |
 | :---: | :---: | :---: |
-| <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Gate/whole.jpg?raw=true" width="100%" alt="Whole view" > | <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Gate/case.jpg?raw=true" width="100%" alt="Case view"> | <img src="https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Gate/esp.jpg?raw=true" width="100%" alt="Close view"> |
+| ![Complete Setup](https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Gate/whole.jpg?raw=true) | ![Enclosure](https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Gate/case.jpg?raw=true) | ![ESP32 Module](https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Gate/esp.jpg?raw=true) |
