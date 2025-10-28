@@ -636,6 +636,7 @@ variables:
         valid_config: "Your configuration seems valid"
         invalid_translations: "Your custom translations are not valid !"
         missing_ble_entities: "You have not entered any iBeacon scanners"
+        missing_wifi_trackers: "You have not entered any Wi-Fi trackers"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -683,6 +684,7 @@ variables:
         valid_config: "Votre configuration semble valide"
         invalid_translations: "Vos traductions personnalisées ne sont pas valides !"
         missing_ble_entities: "Vous n'avez pas entré de scanner iBeacon"
+        missing_wifi_trackers: "Vous n'avez pas entré de traqueurs WiFi"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -766,6 +768,18 @@ actions:
           - alias: Add the error
             variables:
               message_ids: "{{ union(message_ids, ['missing_ble_entities']) }}"
+      - alias: Check wifi sensors
+        if:
+          - condition: template
+            value_template: |-
+              {{
+                'wifi' in only_open_near
+                and wifi_devices | length == 0
+              }}
+        then:
+          - alias: Add the error
+            variables:
+              message_ids: "{{ union(message_ids, ['missing_wifi_trackers']) }}"
   - alias: If the config is valid
     if:
       - condition: template
