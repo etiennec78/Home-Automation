@@ -733,57 +733,93 @@ actions:
             {% else %}
               {{ default_itinerary_sensor_value }}
             {% endif %}
-  - alias: Initialize a list containing error messages
+  - alias: Initialize variables for the error checker
     variables:
-      message_ids: []
+      messages: []
+      custom_translations_error: "{{ custom_translations_json is none }}"
+  - alias: If custom translations failed to be parsed as json
+    if:
+      - condition: template
+        value_template: "{{ custom_translations_error }}"
+    then:
+      - alias: Reset custom translations
+        variables:
+          custom_translations_json: "{{ default_custom_translations }}"
   - alias: Check for errors
-    sequence:
-      - alias: Check custom translations
-        if:
-          - condition: template
-            value_template: "{{ custom_translations_json is none }}"
-        then:
-          - variables:
-              custom_translations_json: "{{ default_custom_translations }}"
-          - alias: Add the error
-            variables:
-              message_ids: "{{ union(message_ids, ['invalid_translations']) }}"
-      - alias: Check ble sensors
-        if:
-          - condition: template
-            value_template: |-
-              {{
-                (
-                  'ble' in (
-                    only_open_near
-                    + open_when_connected_to
-                    + close_when_disconnected_from
-                  )
-                  or ble_transmitter_entities | length > 0
-                  or ble_scanner_switch != ""
+    repeat:
+      for_each:
+        - alias: Check custom translations
+          condition: "{{ custom_translations_error }}"
+          message_id: "invalid_translations"
+        - alias: Check missing ble sensors
+          condition: |-
+            {{
+              (
+                'ble' in (
+                  only_open_near
+                  + open_when_connected_to
+                  + close_when_disconnected_from
                 )
-                and ble_entities | length == 0
-              }}
-        then:
-          - alias: Add the error
-            variables:
-              message_ids: "{{ union(message_ids, ['missing_ble_entities']) }}"
-      - alias: Check wifi sensors
-        if:
-          - condition: template
-            value_template: |-
-              {{
-                'wifi' in only_open_near
-                and wifi_devices | length == 0
-              }}
-        then:
-          - alias: Add the error
-            variables:
-              message_ids: "{{ union(message_ids, ['missing_wifi_trackers']) }}"
+                or ble_transmitter_entities | length > 0
+                or ble_scanner_switch != ""
+              )
+              and ble_entities | length == 0
+            }}
+          message_id: "missing_ble_entities"
+        - alias: Check missing wifi sensors
+          condition: |-
+            {{
+              'wifi' in only_open_near
+              and wifi_devices | length == 0
+            }}
+          message_id: "missing_wifi_trackers"
+      sequence:
+        - alias: If a check failed
+          if:
+            - condition: template
+              value_template: "{{ repeat.item.condition }}"
+          then:
+            - alias: Append the error message to the list
+              variables:
+                message_id: "{{ repeat.item.message_id }}"
+                message: &get_message |-
+                  {# Custom translation #}
+                  {%
+                    if 'message' in custom_translations_json
+                    and message_id in custom_translations_json['message']
+                  %}
+                    {%
+                      set message_string = (
+                        custom_translations_json['message'][message_id]
+                      )
+                    %}
+
+                  {# Selected language #}
+                  {% elif message_id in strings[language]['message'] %}
+                    {%
+                      set message_string = (
+                        strings[language]['message'][message_id]
+                      )
+                    %}
+
+                  {# Fallback to english #}
+                  {% else %}
+                    {%
+                      set message_string = (
+                        strings['en']['message'][message_id]
+                      )
+                    %}
+                  {% endif %}
+                  {{
+                    message_string.format(
+                      quick_triggers=itinerary_value.quick_triggers
+                    )
+                  }}
+                messages: "{{ messages | union([message]) }}"
   - alias: If the config is valid
     if:
       - condition: template
-        value_template: "{{ message_ids | length == 0 }}"
+        value_template: "{{ messages | length == 0 }}"
     then:
       - alias: If the blueprint was triggered manually
         if:
@@ -796,39 +832,7 @@ actions:
               message_id: "valid_config"
           - alias: Get notification translation
             variables: &get_translation
-              message: &get_message |-
-                {# Custom translation #}
-                {%
-                  if 'message' in custom_translations_json
-                  and message_id in custom_translations_json['message']
-                %}
-                  {%
-                    set message_string = (
-                      custom_translations_json['message'][message_id]
-                    )
-                  %}
-
-                {# Selected language #}
-                {% elif message_id in strings[language]['message'] %}
-                  {%
-                    set message_string = (
-                      strings[language]['message'][message_id]
-                    )
-                  %}
-
-                {# Fallback to english #}
-                {% else %}
-                  {%
-                    set message_string = (
-                      strings['en']['message'][message_id]
-                    )
-                  %}
-                {% endif %}
-                {{
-                  message_string.format(
-                    quick_triggers=itinerary_value.quick_triggers
-                  )
-                }}
+              message: *get_message
               title: &get_title |-
                 {# Custom translation #}
                 {%
@@ -874,22 +878,10 @@ actions:
             data:
               notification_id: "{{ config_checker_tag }}"
     else:
-      - alias: Set title id
+      - alias: Build the notification
         variables:
           title_id: "invalid_config"
           title: *get_title
-          messages: []
-      - alias: Get all message translations
-        repeat:
-          for_each: "{{ message_ids }}"
-          sequence:
-            - alias: Append the message to the list
-              variables:
-                message_id: "{{ repeat.item }}"
-                message: *get_message
-                messages: "{{ messages | union([message]) }}"
-      - alias: Merge all message translations
-        variables:
           message: "{{ '\n'.join(messages) }}"
       - alias: Notify all users on the dashboard that the config is invalid
         action: persistent_notification.create

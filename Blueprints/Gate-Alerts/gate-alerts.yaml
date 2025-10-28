@@ -320,33 +320,82 @@ conditions:
     value_template: "{{ notification_type != 'close' or not is_state(gate, 'closed') or state_attr(gate, 'supported_features') | bitwise_and(4) == 0 }}"
 
 actions:
-  - alias: Initialize a list containing error messages
+  - alias: Initialize variables for the error checker
     variables:
-      message_ids: []
+      messages: []
+      custom_translations_error: "{{ custom_translations_json is none }}"
+  - alias: If custom translations failed to be parsed as json
+    if:
+      - condition: template
+        value_template: "{{ custom_translations_error }}"
+    then:
+      - alias: Reset custom translations
+        variables:
+          custom_translations_json: "{{ default_custom_translations }}"
   - alias: Check for errors
-    sequence:
-      - alias: Check custom translations
-        if:
-          - condition: template
-            value_template: "{{ custom_translations_json is none }}"
-        then:
-          - variables:
-              custom_translations_json: "{{ default_custom_translations }}"
-          - alias: Add the error
-            variables:
-              message_ids: "{{ union(message_ids, ['invalid_translations']) }}"
-      - alias: Check gate error sensor presence
-        if:
-          - condition: template
-            value_template: "{{ notification_type == 'error' and not error_message_sensor }}"
-        then:
-          - alias: Add the error
-            variables:
-              message_ids: "{{ union(message_ids, ['missing_error_sensor']) }}"
+    repeat:
+      for_each:
+        - alias: Check custom translations
+          condition: "{{ custom_translations_error }}"
+          message_id: "invalid_translations"
+        - alias: Check gate error sensor presence
+          condition: "{{ notification_type == 'error' and not error_message_sensor }}"
+          message_id: "missing_error_sensor"
+        - alias: Check missing wifi sensors
+          condition: |-
+            {{
+              'wifi' in only_open_near
+              and wifi_devices | length == 0
+            }}
+          message_id: "missing_wifi_trackers"
+      sequence:
+        - alias: If a check failed
+          if:
+            - condition: template
+              value_template: "{{ repeat.item.condition }}"
+          then:
+            - alias: Append the error message to the list
+              variables:
+                message_id: "{{ repeat.item.message_id }}"
+                message: &get_message |-
+                  {# Custom translation #}
+                  {%
+                    if 'message' in custom_translations_json
+                    and message_id in custom_translations_json['message']
+                  %}
+                    {%
+                      set message_string = (
+                        custom_translations_json['message'][message_id]
+                      )
+                    %}
+
+                  {# Selected language #}
+                  {% elif message_id in strings[language]['message'] %}
+                    {%
+                      set message_string = (
+                        strings[language]['message'][message_id]
+                      )
+                    %}
+
+                  {# Fallback to english #}
+                  {% else %}
+                    {%
+                      set message_string = (
+                        strings['en']['message'][message_id]
+                      )
+                    %}
+                  {% endif %}
+                  {{
+                    message_string.format(
+                      notification_delay=notification_delay,
+                      error=error
+                    )
+                  }}
+                messages: "{{ messages | union([message]) }}"
   - alias: If the config is valid
     if:
       - condition: template
-        value_template: "{{ message_ids | length == 0 }}"
+        value_template: "{{ messages | length == 0 }}"
     then:
       - alias: If the blueprint was triggered manually
         if:
@@ -359,40 +408,7 @@ actions:
               message_id: "valid_config"
           - alias: Get notification translation
             variables: &get_translation
-              message: &get_message |-
-                {# Custom translation #}
-                {%
-                  if 'message' in custom_translations_json
-                  and message_id in custom_translations_json['message']
-                %}
-                  {%
-                    set message_string = (
-                      custom_translations_json['message'][message_id]
-                    )
-                  %}
-
-                {# Selected language #}
-                {% elif message_id in strings[language]['message'] %}
-                  {%
-                    set message_string = (
-                      strings[language]['message'][message_id]
-                    )
-                  %}
-
-                {# Fallback to english #}
-                {% else %}
-                  {%
-                    set message_string = (
-                      strings['en']['message'][message_id]
-                    )
-                  %}
-                {% endif %}
-                {{
-                  message_string.format(
-                    notification_delay=notification_delay,
-                    error=error
-                  )
-                }}
+              message: *get_message
               title: &get_title |-
                 {# Custom translation #}
                 {%
@@ -421,22 +437,10 @@ actions:
             data:
               notification_id: "{{ config_checker_tag }}"
     else:
-      - alias: Set title id
+      - alias: Build the notification
         variables:
           title_id: "invalid_config"
           title: *get_title
-          messages: []
-      - alias: Get all message translations
-        repeat:
-          for_each: "{{ message_ids }}"
-          sequence:
-            - alias: Append the message to the list
-              variables:
-                message_id: "{{ repeat.item }}"
-                message: *get_message
-                messages: "{{ messages | union([message]) }}"
-      - alias: Merge all message translations
-        variables:
           message: "{{ '\n'.join(messages) }}"
       - alias: Notify all users on the dashboard that the config is invalid
         action: persistent_notification.create
