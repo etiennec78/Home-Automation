@@ -215,7 +215,9 @@ variables:
     button: {}
   custom_translations_json: "{{ custom_translations | from_json(none) }}"
   notification_tag: "gate-{{ notification_type }}"
+  config_checker_tag: "{{ 'config-checker-' ~ this.context.id }}"
   closing_order_id: "{{ 'closing_order_' ~ this.context.id }}"
+  blueprint_name: "{{ state_attr(this.entity_id, 'friendly_name') }}"
   strings:
     en:
       title:
@@ -225,8 +227,8 @@ variables:
         close: Gate closing 🔐
         error: Gate error ⚠
         offline: Gate offline 🌐
-        valid_config: "Valid configuration ✅"
-        invalid_config: "Invalid configuration 🛠️"
+        valid_config: "{{blueprint_name}}: Valid configuration ✅"
+        invalid_config: "{{blueprint_name}}: Invalid configuration 🛠️"
       message:
         open: The gate is opening
         still_open: The gate is open
@@ -247,8 +249,8 @@ variables:
         close: Fermeture portail 🔐
         error: Erreur portail ⚠
         offline: Portail hors ligne 🌐
-        valid_config: "Configuration valide ✅"
-        invalid_config: "Configuration invalide 🛠️"
+        valid_config: "{{blueprint_name}}: Configuration valide ✅"
+        invalid_config: "{{blueprint_name}}: Configuration invalide 🛠️"
       message:
         open: Ouverture du portail en cours
         still_open: Le portail est ouvert
@@ -412,12 +414,12 @@ actions:
             data:
               title: "{{ title }}"
               message: "{{ message }}"
-              notification_id: ga-config-checker
+              notification_id: "{{ config_checker_tag }}"
         else:
           - alias: Remove the previous dashboard notification
             action: persistent_notification.dismiss
             data:
-              notification_id: ga-config-checker
+              notification_id: "{{ config_checker_tag }}"
     else:
       - alias: Set title id
         variables:
@@ -441,7 +443,7 @@ actions:
         data:
           title: "{{ title }}"
           message: "{{ message }}"
-          notification_id: ga-config-checker
+          notification_id: "{{ config_checker_tag }}"
 
   - alias: Only continue if the blueprint was not triggered manually
     condition: template

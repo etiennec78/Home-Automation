@@ -235,12 +235,14 @@ variables:
   custom_translations: !input custom_translations
   dismissed_idx: []
   notification_tag: "{{ 'itinerary-tracker-' ~ this.context.id }}"
+  config_checker_tag: "{{ 'config-checker-' ~ this.context.id }}"
   persistent_id: "{{ 'persistent_' ~ this.context.id }}"
   persistent_active: !input persistent_notification
   next_refresh: 0
   remaining: 0
   nearly_arrived_sent: false
   last_arrival_timestamp: 0
+  blueprint_name: "{{ state_attr(this.entity_id, 'friendly_name') }}"
   custom_translations_json: "{{ custom_translations | from_json(none) }}"
   default_custom_translations:
     title: {}
@@ -248,8 +250,8 @@ variables:
   strings:
     en:
       title:
-        valid_config: "Valid configuration ✅"
-        invalid_config: "Invalid configuration 🛠️"
+        valid_config: "{{blueprint_name}}: Valid configuration ✅"
+        invalid_config: "{{blueprint_name}}: Invalid configuration 🛠️"
       message:
         itinerary_started: "{driver_name} just got into their car"
         itinerary_ongoing: "{driver_name} will arrive arround {arrival}"
@@ -260,8 +262,8 @@ variables:
         invalid_translations: "Your custom translations are not valid !"
     fr:
       title:
-        valid_config: "Configuration valide ✅"
-        invalid_config: "Configuration invalide 🛠️"
+        valid_config: "{{blueprint_name}}: Configuration valide ✅"
+        invalid_config: "{{blueprint_name}}: Configuration invalide 🛠️"
       message:
         itinerary_started: "{driver_name} vient de monter dans sa voiture"
         itinerary_ongoing: "{driver_name} arrivera vers {arrival}"
@@ -402,12 +404,12 @@ actions:
             data:
               title: "{{ title }}"
               message: "{{ message }}"
-              notification_id: itn-config-checker
+              notification_id: "{{ config_checker_tag }}"
         else:
           - alias: Remove the previous dashboard notification
             action: persistent_notification.dismiss
             data:
-              notification_id: itn-config-checker
+              notification_id: "{{ config_checker_tag }}"
     else:
       - alias: Set title id
         variables:
@@ -431,7 +433,7 @@ actions:
         data:
           title: "{{ title }}"
           message: "{{ message }}"
-          notification_id: itn-config-checker
+          notification_id: "{{ config_checker_tag }}"
 
   - alias: Only continue if the blueprint was not triggered manually
     condition: template

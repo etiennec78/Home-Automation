@@ -565,6 +565,7 @@ variables:
   quick_tt_updates: 0
   last_quick_tt_update: "{{ none }}"
   failed_updates: 0
+  config_checker_tag: "{{ 'config-checker-' ~ this.context.id }}"
   opening_order_id: "{{ 'opening_order_' ~ this.context.id }}"
   closing_order_id: "{{ 'closing_order_' ~ this.context.id }}"
   canceling_order_id: "{{ 'canceling_order_' ~ this.context.id }}"
@@ -590,6 +591,7 @@ variables:
     timer: "{{ none }}"
     default: "{{ none }}"
   itinerary_value: "{{ none }}"
+  blueprint_name: "{{ state_attr(this.entity_id, 'friendly_name') }}"
   strings:
     en:
       title:
@@ -602,8 +604,8 @@ variables:
         itinerary_canceled: "Itinerary canceled ❌"
         awaiting: "Gate awaiting {awaited_persons} 💤"
         disabled: "Automatic Gate disabled 🚫"
-        valid_config: "Valid configuration ✅"
-        invalid_config: "Invalid configuration 🛠️"
+        valid_config: "{{blueprint_name}}: Valid configuration ✅"
+        invalid_config: "{{blueprint_name}}: Invalid configuration 🛠️"
       message:
         leaving_home: "You are leaving home"
         vehicle_started: "You have started your vehicle"
@@ -648,8 +650,8 @@ variables:
         itinerary_canceled: "Itinéraire annulé ❌"
         awaiting: "Portail en attente de {awaited_persons} 💤"
         disabled: "Automatic Gate désactivé 🚫"
-        valid_config: "Configuration valide ✅"
-        invalid_config: "Configuration invalide 🛠️"
+        valid_config: "{{blueprint_name}}: Configuration valide ✅"
+        invalid_config: "{{blueprint_name}}: Configuration invalide 🛠️"
       message:
         leaving_home: "Vous sortez de la maison"
         vehicle_started: "Vous avez démarré votre véhicule"
@@ -827,12 +829,12 @@ actions:
             data:
               title: "{{ title }}"
               message: "{{ message }}"
-              notification_id: ag-config-checker
+              notification_id: "{{ config_checker_tag }}"
         else:
           - alias: Remove the previous dashboard notification
             action: persistent_notification.dismiss
             data:
-              notification_id: ag-config-checker
+              notification_id: "{{ config_checker_tag }}"
     else:
       - alias: Set title id
         variables:
@@ -856,7 +858,7 @@ actions:
         data:
           title: "{{ title }}"
           message: "{{ message }}"
-          notification_id: ag-config-checker
+          notification_id: "{{ config_checker_tag }}"
       - alias: If the blueprint was not triggered manually
         if:
           - condition: template
@@ -877,7 +879,7 @@ actions:
                   sound:
                     name: "default"
                     critical: 1
-                tag: config-checker
+                tag: "{{ config_checker_tag }}"
           - sequence: &tts
               - alias: Notify over TTS
                 action: "{{ notify_service }}"
