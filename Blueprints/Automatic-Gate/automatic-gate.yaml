@@ -604,8 +604,8 @@ variables:
         itinerary_canceled: "Itinerary canceled ❌"
         awaiting: "Gate awaiting {awaited_persons} 💤"
         disabled: "Automatic Gate disabled 🚫"
-        valid_config: "{{blueprint_name}}: Valid configuration ✅"
-        invalid_config: "{{blueprint_name}}: Invalid configuration 🛠️"
+        valid_config: "{{blueprint_name}}: Valid configuration 🛠️✅"
+        invalid_config: "{{blueprint_name}}: Invalid configuration 🛠️❌"
       message:
         leaving_home: "You are leaving home"
         vehicle_started: "You have started your vehicle"
@@ -652,8 +652,8 @@ variables:
         itinerary_canceled: "Itinéraire annulé ❌"
         awaiting: "Portail en attente de {awaited_persons} 💤"
         disabled: "Automatic Gate désactivé 🚫"
-        valid_config: "{{blueprint_name}}: Configuration valide ✅"
-        invalid_config: "{{blueprint_name}}: Configuration invalide 🛠️"
+        valid_config: "{{blueprint_name}}: Configuration valide 🛠️✅"
+        invalid_config: "{{blueprint_name}}: Configuration invalide 🛠️❌"
       message:
         leaving_home: "Vous sortez de la maison"
         vehicle_started: "Vous avez démarré votre véhicule"
