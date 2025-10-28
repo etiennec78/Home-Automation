@@ -379,8 +379,9 @@ actions:
                 {% endif %}
                 {{
                   message_string.format(
-                    notification_delay=notification_delay,
-                    error=error
+                    driver_name=driver_name,
+                    arrival=arrival,
+                    remaining_minutes=remaining_minutes
                   )
                 }}
               title: &get_title |-
