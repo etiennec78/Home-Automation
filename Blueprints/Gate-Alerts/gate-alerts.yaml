@@ -236,6 +236,7 @@ variables:
         offline: The gate has been offline for {{notification_delay}} minutes
         valid_config: "Your configuration seems valid"
         invalid_translations: "Your custom translations are not valid !"
+        missing_error_sensor: "You have not entered the sensor containing gate error codes"
       button:
         close: Close 🔐
     fr:
@@ -257,6 +258,7 @@ variables:
         offline: Le portail est hors ligne depuis {{notification_delay}} minutes
         valid_config: "Votre configuration semble valide"
         invalid_translations: "Vos traductions personnalisées ne sont pas valides !"
+        missing_error_sensor: "Vous n'avez pas entré le capteur contenant les codes d'erreur du portail"
       button:
         close: Refermer 🔐
 
@@ -319,16 +321,26 @@ actions:
   - alias: Initialize a list containing error messages
     variables:
       message_ids: []
-  - choose:
-      - conditions:
+  - alias: Check for errors
+    sequence:
+      - alias: Check custom translations
+        if:
           - condition: template
             value_template: "{{ custom_translations_json is none }}"
-        sequence:
+        then:
           - variables:
               custom_translations_json: "{{ default_custom_translations }}"
-          - alias: Add an error
+          - alias: Add the error
             variables:
               message_ids: "{{ union(message_ids, ['invalid_translations']) }}"
+      - alias: Check gate error sensor presence
+        if:
+          - condition: template
+            value_template: "{{ notification_type == 'error' and not error_message_sensor }}"
+        then:
+          - alias: Add the error
+            variables:
+              message_ids: "{{ union(message_ids, ['missing_error_sensor']) }}"
   - alias: If the config is valid
     if:
       - condition: template
