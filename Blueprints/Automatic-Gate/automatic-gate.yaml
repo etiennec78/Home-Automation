@@ -565,7 +565,7 @@ variables:
   quick_tt_updates: 0
   last_quick_tt_update: "{{ none }}"
   failed_updates: 0
-  config_checker_tag: "{{ 'config-checker-' ~ this.context.id }}"
+  config_checker_tag: "{{ 'config-checker-' ~ this.attributes.id }}"
   opening_order_id: "{{ 'opening_order_' ~ this.context.id }}"
   closing_order_id: "{{ 'closing_order_' ~ this.context.id }}"
   canceling_order_id: "{{ 'canceling_order_' ~ this.context.id }}"

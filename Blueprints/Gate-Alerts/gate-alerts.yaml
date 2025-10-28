@@ -215,7 +215,7 @@ variables:
     button: {}
   custom_translations_json: "{{ custom_translations | from_json(none) }}"
   notification_tag: "gate-{{ notification_type }}"
-  config_checker_tag: "{{ 'config-checker-' ~ this.context.id }}"
+  config_checker_tag: "{{ 'config-checker-' ~ this.attributes.id }}"
   closing_order_id: "{{ 'closing_order_' ~ this.context.id }}"
   blueprint_name: "{{ state_attr(this.entity_id, 'friendly_name') }}"
   strings:
