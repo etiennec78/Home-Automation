@@ -553,15 +553,6 @@ variables:
   timer_closing: !input timer_closing
   language: !input language
   custom_translations: !input custom_translations
-  default_custom_translations: |-
-    {{
-      {
-        "title": {},
-        "message": {},
-        "button": {}
-      }
-    }}
-  custom_translations_json: "{{ custom_translations | from_json(none) }}"
   ble_entities: !input ble_entities
   ble_scanner_switch: !input ble_scanner_switch
   ble_transmitter_entities: !input ble_transmitter_entities
@@ -574,6 +565,31 @@ variables:
   quick_tt_updates: 0
   last_quick_tt_update: "{{ none }}"
   failed_updates: 0
+  opening_order_id: "{{ 'opening_order_' ~ this.context.id }}"
+  closing_order_id: "{{ 'closing_order_' ~ this.context.id }}"
+  canceling_order_id: "{{ 'canceling_order_' ~ this.context.id }}"
+  default_itinerary_sensor_value:
+    status: "{{ none }}"
+    error: "{{ none }}"
+    quick_triggers: 0
+    last_closed: 0
+    auto_closed: false
+  default_custom_translations:
+    title: {}
+    message: {}
+    button: {}
+  custom_translations_json: "{{ custom_translations | from_json(none) }}"
+  timeouts:
+    closing_suggestion: !input suggest_closing_after
+    safety_delay: "{{ safety_delay * 60 }}"
+    timer: !input timer_closing
+    default: 2147483647
+  timeout_messages:
+    closing_suggestion: "closing_suggestion"
+    safety_delay: "undefined"
+    timer: "{{ none }}"
+    default: "{{ none }}"
+  itinerary_value: "{{ none }}"
   strings:
     en:
       title:
@@ -586,6 +602,7 @@ variables:
         itinerary_canceled: "Itinerary canceled ❌"
         awaiting: "Gate awaiting {awaited_persons} 💤"
         disabled: "Automatic Gate disabled 🚫"
+        valid_config: "Valid configuration ✅"
         invalid_config: "Invalid configuration 🛠️"
       message:
         leaving_home: "You are leaving home"
@@ -614,6 +631,7 @@ variables:
         invalid_travel_time_sensor: "Your travel time sensor does not exist !"
         unsupported_tt_integration: "Your travel time integration is not supported !"
         too_close: "You have started driving too close to the gate zone"
+        valid_config: "Your configuration seems valid"
         invalid_translations: "Your custom translations are not valid !"
       button:
         open: "Open 🔓"
@@ -630,6 +648,7 @@ variables:
         itinerary_canceled: "Itinéraire annulé ❌"
         awaiting: "Portail en attente de {awaited_persons} 💤"
         disabled: "Automatic Gate désactivé 🚫"
+        valid_config: "Configuration valide ✅"
         invalid_config: "Configuration invalide 🛠️"
       message:
         leaving_home: "Vous sortez de la maison"
@@ -658,6 +677,7 @@ variables:
         invalid_travel_time_sensor: "Votre capteur de temps de trajet n'existe pas !"
         unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
         too_close: "Vous avez démarré trop près de la zone du portail"
+        valid_config: "Votre configuration semble valide"
         invalid_translations: "Vos traductions personnalisées ne sont pas valides !"
       button:
         open: "Ouvrir 🔓"
@@ -674,152 +694,217 @@ triggers:
 conditions: []
 
 actions:
-  - if:
+  - alias: If the blueprint was not triggered manually
+    if:
       - condition: template
-        value_template: "{{ custom_translations_json is none }}"
+        value_template: "{{ trigger.platform is not none }}"
     then:
-      - variables:
-          custom_translations_json: "{{ default_custom_translations }}"
-      - alias: Set title and message ids
+      - alias: Set variables containing data related to the driver
+        variables:
+          idx: "{{ driving_sensors.index(trigger.entity_id) }}"
+          person: "{{ persons[idx] }}"
+          driving_sensor: "{{ trigger.entity_id }}"
+          travel_time_sensor: |-
+            {% if travel_time_sensors | length > idx %}
+              {{ travel_time_sensors[idx] }}
+            {% else %}
+              {{ none }}
+            {% endif %}
+          notify_service: "{{ notify_services[idx] }}"
+          ios_device: "{{ device_attr(notify_devices[idx], 'manufacturer') == 'Apple' }}"
+          itinerary_sensor: "{{ itinerary_sensors[idx] }}"
+          itinerary_value: |-
+            {%
+              set state = (
+                states(itinerary_sensor)
+                | from_json(default_itinerary_sensor_value)
+              )
+            %}
+            {%
+              if default_itinerary_sensor_value.keys() == state.keys()
+            %}
+              {{ state }}
+            {% else %}
+              {{ default_itinerary_sensor_value }}
+            {% endif %}
+  - alias: Initialize a list containing error messages
+    variables:
+      message_ids: []
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ custom_translations_json is none }}"
+        sequence:
+          - variables:
+              custom_translations_json: "{{ default_custom_translations }}"
+          - alias: Add an error
+            variables:
+              message_ids: "{{ union(message_ids, ['invalid_translations']) }}"
+  - alias: If the config is valid
+    if:
+      - condition: template
+        value_template: "{{ message_ids | length == 0 }}"
+    then:
+      - alias: If the blueprint was triggered manually
+        if:
+          - condition: template
+            value_template: "{{ trigger.platform is none }}"
+        then:
+          - alias: Set message ids
+            variables:
+              title_id: "valid_config"
+              message_id: "valid_config"
+          - alias: Get notification translation
+            variables: &get_translation
+              message: &get_message |-
+                {# Custom translation #}
+                {%
+                  if 'message' in custom_translations_json
+                  and message_id in custom_translations_json['message']
+                %}
+                  {%
+                    set message_string = (
+                      custom_translations_json['message'][message_id]
+                    )
+                  %}
+
+                {# Selected language #}
+                {% elif message_id in strings[language]['message'] %}
+                  {%
+                    set message_string = (
+                      strings[language]['message'][message_id]
+                    )
+                  %}
+
+                {# Fallback to english #}
+                {% else %}
+                  {%
+                    set message_string = (
+                      strings['en']['message'][message_id]
+                    )
+                  %}
+                {% endif %}
+                {{
+                  message_string.format(
+                    quick_triggers=itinerary_value.quick_triggers
+                  )
+                }}
+              title: &get_title |-
+                {# Custom translation #}
+                {%
+                  if 'title' in custom_translations_json
+                  and title_id in custom_translations_json['title']
+                %}
+                  {%
+                    set title_string = (
+                      custom_translations_json['title'][title_id]
+                    )
+                  %}
+
+                {# Selected language #}
+                {% elif title_id in strings[language]['title'] %}
+                  {%
+                    set title_string = (
+                      strings[language]['title'][title_id]
+                    )
+                  %}
+
+                {# Fallback to english #}
+                {% else %}
+                  {%
+                    set title_string = (
+                      strings['en']['title'][title_id]
+                    )
+                  %}
+                {% endif %}
+                {{
+                  title_string.format(
+                    awaited_persons=awaited_persons
+                  )
+                }}
+          - alias: Notify all users on the dashboard that the config is valid
+            action: persistent_notification.create
+            data:
+              title: "{{ title }}"
+              message: "{{ message }}"
+              notification_id: ag-config-checker
+        else:
+          - alias: Remove the previous dashboard notification
+            action: persistent_notification.dismiss
+            data:
+              notification_id: ag-config-checker
+    else:
+      - alias: Set title id
         variables:
           title_id: "invalid_config"
-          message_id: "invalid_translations"
-      - alias: Get notification translation
-        variables: &get_translation
-          title_string: |-
-            {# Custom translation #}
-            {%
-              if 'title' in custom_translations_json
-              and title_id in custom_translations_json['title']
-            %}
-              {{ custom_translations_json['title'][title_id] }}
-
-            {# Selected language #}
-            {% elif title_id in strings[language]['title'] %}
-              {{ strings[language]['title'][title_id] }}
-
-            {# Fallback to english #}
-            {% else %}
-              {{ strings['en']['title'][title_id] }}
-            {% endif %}
-          title: |-
-            {{
-              title_string.format(
-                awaited_persons=awaited_persons
-              )
-            }}
-          message_string: |-
-            {# Custom translation #}
-            {%
-              if 'message' in custom_translations_json
-              and message_id in custom_translations_json['message']
-            %}
-              {{ custom_translations_json['message'][message_id] }}
-
-            {# Selected language #}
-            {% elif message_id in strings[language]['message'] %}
-              {{ strings[language]['message'][message_id] }}
-
-            {# Fallback to english #}
-            {% else %}
-              {{ strings['en']['message'][message_id] }}
-            {% endif %}
-          message: |-
-            {{
-              message_string.format(
-                quick_triggers=itinerary_value.quick_triggers
-              )
-            }}
-      - alias: Notify driver that his config is invalid
-        action: "{{ notify_service }}"
-        data:
-          title: "{{ title }}"
-          message: "{{ message }}"
-          data:
-            notification_icon: mdi:hammer-wrench
-            channel: Automatic Gate config
-            tag: invalid-config
-            ttl: 0
-      - sequence: &tts
-          - alias: Notify over TTS
-            action: "{{ notify_service }}"
-            data:
-              message: TTS
-              data:
-                tts_text: |-
-                  {%
-                    set clean_title = (
-                      title
-                        | regex_replace('[\u2600-\u26FF]', '')
-                        | regex_replace('[\u2700-\u27BF]', '')
-                        | regex_replace('[\U0001F300-\U0001F5FF]', '')
-                        | regex_replace('[\U0001F600-\U0001F64F]', '')
-                        | regex_replace('[\U0001F680-\U0001F6FF]', '')
-                    ).strip()
-                  %}
-                  {% set separator = ' ' if clean_title[-1] in ['.', '!', '?'] else '. ' %}
-                  {{ clean_title ~ separator ~ message }}
-                channel: Itinerary status
-                importance: high
-                ttl: 0
-                media_stream: !input phone_tts_stream
-            enabled: !input phone_tts
+          title: *get_title
+          messages: []
+      - alias: Get all message translations
+        repeat:
+          for_each: "{{ message_ids }}"
+          sequence:
+            - alias: Append the message to the list
+              variables:
+                message_id: "{{ repeat.item }}"
+                message: *get_message
+                messages: "{{ messages | union([message]) }}"
+      - alias: Merge all message translations
+        variables:
+          message: "{{ '\n'.join(messages) }}"
       - alias: Notify all users on the dashboard that the config is invalid
         action: persistent_notification.create
         data:
           title: "{{ title }}"
           message: "{{ message }}"
-  - alias: Store list index of driver, extract driver sensors
-    variables:
-      idx: "{{ driving_sensors.index(trigger.entity_id) }}"
-      person: "{{ persons[idx] }}"
-      driving_sensor: "{{ trigger.entity_id }}"
-      travel_time_sensor: |-
-        {% if travel_time_sensors | length > idx %}
-          {{ travel_time_sensors[idx] }}
-        {% else %}
-          {{ none }}
-        {% endif %}
-      notify_service: "{{ notify_services[idx] }}"
-      ios_device: "{{ device_attr(notify_devices[idx], 'manufacturer') == 'Apple' }}"
-      itinerary_sensor: "{{ itinerary_sensors[idx] }}"
-      opening_order_id: "{{ 'opening_order_' ~ this.context.id }}"
-      closing_order_id: "{{ 'closing_order_' ~ this.context.id }}"
-      canceling_order_id: "{{ 'canceling_order_' ~ this.context.id }}"
-      default_itinerary_sensor_value: |-
-        {{
-          {
-            "status": none,
-            "error": none,
-            "quick_triggers": 0,
-            "last_closed": 0,
-            "auto_closed": false
-          }
-        }}
-      itinerary_value: |-
-        {%
-          set state = (
-            states(itinerary_sensor)
-            | from_json(default_itinerary_sensor_value)
-          )
-        %}
-        {%
-          if default_itinerary_sensor_value.keys() == state.keys()
-        %}
-          {{ state }}
-        {% else %}
-          {{ default_itinerary_sensor_value }}
-        {% endif %}
-      timeouts:
-        closing_suggestion: !input suggest_closing_after
-        safety_delay: "{{ safety_delay * 60 }}"
-        timer: !input timer_closing
-        default: 2147483647
-      timeout_messages:
-        closing_suggestion: "closing_suggestion"
-        safety_delay: "undefined"
-        timer: "{{ none }}"
-        default: "{{ none }}"
+          notification_id: ag-config-checker
+      - alias: If the blueprint was not triggered manually
+        if:
+          - condition: template
+            value_template: "{{ trigger.platform is not none }}"
+        then:
+          - alias: Notify the driver that his config is invalid
+            action: "{{ notify_service }}"
+            data:
+              title: "{{ title }}"
+              message: "{{ message }}"
+              data:
+                car_ui: true
+                notification_icon: mdi:hammer-wrench
+                channel: Automatic Gate
+                importance: high
+                ttl: 0
+                push:
+                  sound:
+                    name: "default"
+                    critical: 1
+                tag: config-checker
+          - sequence: &tts
+              - alias: Notify over TTS
+                action: "{{ notify_service }}"
+                data:
+                  message: TTS
+                  data:
+                    tts_text: |-
+                      {%
+                        set clean_title = (
+                          title
+                            | regex_replace('[\u2600-\u26FF]', '')
+                            | regex_replace('[\u2700-\u27BF]', '')
+                            | regex_replace('[\U0001F300-\U0001F5FF]', '')
+                            | regex_replace('[\U0001F600-\U0001F64F]', '')
+                            | regex_replace('[\U0001F680-\U0001F6FF]', '')
+                        ).strip()
+                      %}
+                      {% set separator = ' ' if clean_title[-1] in ['.', '!', '?'] else '. ' %}
+                      {{ clean_title ~ separator ~ message }}
+                    channel: Itinerary status
+                    importance: high
+                    ttl: 0
+                    media_stream: !input phone_tts_stream
+                enabled: !input phone_tts
+  - alias: Only continue if the blueprint was not triggered manually
+    condition: template
+    value_template: "{{ trigger.platform is not none }}"
   - alias: If last automation iteration ended less than 5s ago
     if:
       - condition: template

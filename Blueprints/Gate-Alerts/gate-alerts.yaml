@@ -209,8 +209,13 @@ variables:
   car_visible: !input car_visible
   language: !input language
   custom_translations: !input custom_translations
-  custom_translations_json: "{{ custom_translations | from_json }}"
+  default_custom_translations:
+    title: {}
+    message: {}
+    button: {}
+  custom_translations_json: "{{ custom_translations | from_json(none) }}"
   notification_tag: "gate-{{ notification_type }}"
+  closing_order_id: "{{ 'closing_order_' ~ this.context.id }}"
   strings:
     en:
       title:
@@ -220,6 +225,8 @@ variables:
         close: Gate closing 🔐
         error: Gate error ⚠
         offline: Gate offline 🌐
+        valid_config: "Valid configuration ✅"
+        invalid_config: "Invalid configuration 🛠️"
       message:
         open: The gate is opening
         still_open: The gate is open
@@ -227,6 +234,8 @@ variables:
         close: The gate is closing
         error: "The gate has encountered an error: {error}"
         offline: The gate has been offline for {{notification_delay}} minutes
+        valid_config: "Your configuration seems valid"
+        invalid_translations: "Your custom translations are not valid !"
       button:
         close: Close 🔐
     fr:
@@ -237,6 +246,8 @@ variables:
         close: Fermeture portail 🔐
         error: Erreur portail ⚠
         offline: Portail hors ligne 🌐
+        valid_config: "Configuration valide ✅"
+        invalid_config: "Configuration invalide 🛠️"
       message:
         open: Ouverture du portail en cours
         still_open: Le portail est ouvert
@@ -244,6 +255,8 @@ variables:
         close: Fermeture du portail en cours
         error: "Le portail a rencontré une erreur: {error}"
         offline: Le portail est hors ligne depuis {{notification_delay}} minutes
+        valid_config: "Votre configuration semble valide"
+        invalid_translations: "Vos traductions personnalisées ne sont pas valides !"
       button:
         close: Refermer 🔐
 
@@ -303,74 +316,154 @@ conditions:
     value_template: "{{ notification_type != 'close' or not is_state(gate, 'closed') or state_attr(gate, 'supported_features') | bitwise_and(4) == 0 }}"
 
 actions:
-  - alias: Set closing order ID to track notification closing button press
+  - alias: Initialize a list containing error messages
     variables:
-      closing_order_id: "{{ 'closing_order_' ~ this.context.id }}"
+      message_ids: []
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ custom_translations_json is none }}"
+        sequence:
+          - variables:
+              custom_translations_json: "{{ default_custom_translations }}"
+          - alias: Add an error
+            variables:
+              message_ids: "{{ union(message_ids, ['invalid_translations']) }}"
+  - alias: If the config is valid
+    if:
+      - condition: template
+        value_template: "{{ message_ids | length == 0 }}"
+    then:
+      - alias: If the blueprint was triggered manually
+        if:
+          - condition: template
+            value_template: "{{ trigger.platform is none }}"
+        then:
+          - alias: Set message ids
+            variables:
+              title_id: "valid_config"
+              message_id: "valid_config"
+          - alias: Get notification translation
+            variables: &get_translation
+              message: &get_message |-
+                {# Custom translation #}
+                {%
+                  if 'message' in custom_translations_json
+                  and message_id in custom_translations_json['message']
+                %}
+                  {%
+                    set message_string = (
+                      custom_translations_json['message'][message_id]
+                    )
+                  %}
+
+                {# Selected language #}
+                {% elif message_id in strings[language]['message'] %}
+                  {%
+                    set message_string = (
+                      strings[language]['message'][message_id]
+                    )
+                  %}
+
+                {# Fallback to english #}
+                {% else %}
+                  {%
+                    set message_string = (
+                      strings['en']['message'][message_id]
+                    )
+                  %}
+                {% endif %}
+                {{
+                  message_string.format(
+                    notification_delay=notification_delay,
+                    error=error
+                  )
+                }}
+              title: &get_title |-
+                {# Custom translation #}
+                {%
+                  if 'title' in custom_translations_json
+                  and title_id in custom_translations_json['title']
+                %}
+                  {{ custom_translations_json['title'][title_id] }}
+
+                {# Selected language #}
+                {% elif title_id in strings[language]['title'] %}
+                  {{ strings[language]['title'][title_id] }}
+
+                {# Fallback to english #}
+                {% else %}
+                  {{ strings['en']['title'][title_id] }}
+                {% endif %}
+          - alias: Notify all users on the dashboard that the config is valid
+            action: persistent_notification.create
+            data:
+              title: "{{ title }}"
+              message: "{{ message }}"
+              notification_id: ga-config-checker
+        else:
+          - alias: Remove the previous dashboard notification
+            action: persistent_notification.dismiss
+            data:
+              notification_id: ga-config-checker
+    else:
+      - alias: Set title id
+        variables:
+          title_id: "invalid_config"
+          title: *get_title
+          messages: []
+      - alias: Get all message translations
+        repeat:
+          for_each: "{{ message_ids }}"
+          sequence:
+            - alias: Append the message to the list
+              variables:
+                message_id: "{{ repeat.item }}"
+                message: *get_message
+                messages: "{{ messages | union([message]) }}"
+      - alias: Merge all message translations
+        variables:
+          message: "{{ '\n'.join(messages) }}"
+      - alias: Notify all users on the dashboard that the config is invalid
+        action: persistent_notification.create
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
+          notification_id: ga-config-checker
+
+  - alias: Only continue if the blueprint was not triggered manually
+    condition: template
+    value_template: "{{ trigger.platform is not none }}"
 
   - alias: If gate paused or fully open, and supporting position
     if:
       condition: template
       value_template: "{{ notification_type == 'open' and is_state(gate, 'open') and notification_delay == 0 and state_attr(gate, 'supported_features') | bitwise_and(4) == 4 }}"
     then:
+      - alias: Set notification ids
+        variables:
+          title_id: "still_open"
+          message_id: "still_open"
+          button_id: "close"
       - alias: Get notification translation
-        variables: &get_translation
-          string_id: "still_open"
-          title: |-
-            {# Custom translation #}
-            {%
-              if 'title' in custom_translations_json
-              and string_id in custom_translations_json['title']
-            %}
-              {{ custom_translations_json['title'][string_id] }}
-
-            {# Selected language #}
-            {% elif string_id in strings[language]['title'] %}
-              {{ strings[language]['title'][string_id] }}
-
-            {# Fallback to english #}
-            {% else %}
-              {{ strings['en']['title'][string_id] }}
-            {% endif %}
-          message_string: |-
-            {# Custom translation #}
-            {%
-              if 'message' in custom_translations_json
-              and string_id in custom_translations_json['message']
-            %}
-              {{ custom_translations_json['message'][string_id] }}
-
-            {# Selected language #}
-            {% elif string_id in strings[language]['message'] %}
-              {{ strings[language]['message'][string_id] }}
-
-            {# Fallback to english #}
-            {% else %}
-              {{ strings['en']['message'][string_id] }}
-            {% endif %}
-          message: |-
-            {{
-              message_string.format(
-                error=error
-              )
-            }}
+        variables: *get_translation
       - alias: Get button translation
         variables: &get_translation_button
-          string_id: "close"
           button_text: |-
             {# Custom translation #}
             {%
               if 'button' in custom_translations_json
-              and string_id in custom_translations_json['button']
+              and button_id in custom_translations_json['button']
             %}
-              {{ custom_translations_json['button'][string_id] }}
+              {{ custom_translations_json['button'][button_id] }}
 
             {# Selected language #}
-            {% elif string_id in strings[language]['button'] %}
-              {{ strings[language]['button'][string_id] }}
+            {% elif button_id in strings[language]['button'] %}
+              {{ strings[language]['button'][button_id] }}
 
             {# Fallback to english #}
             {% else %}
-              {{ strings['en']['button'][string_id] }}
+              {{ strings['en']['button'][button_id] }}
             {% endif %}
       - alias: Replace opening notif on each phone silently
         repeat:
@@ -406,9 +499,9 @@ actions:
               message: "{{ message }}"
               notification_id: "{{ notification_tag }}"
     else:
-      - alias: Get notification translation
+      - alias: Set notification ids
         variables:
-          string_id: |-
+          title_id: |-
             {%
               if notification_type == 'open'
               and notification_delay != 0
@@ -417,11 +510,12 @@ actions:
             {% else %}
               {{ notification_type }}
             {% endif %}
-          <<: *get_translation
+          message_id: "{{ title_id }}"
+          button_id: "close"
+      - alias: Get notification translation
+        variables: *get_translation
       - alias: Get button translation
-        variables:
-          string_id: "close"
-          <<: *get_translation_button
+        variables: *get_translation_button
       - alias: Notify each user
         repeat:
           for_each: "{{ notify_services }}"
