@@ -636,7 +636,9 @@ variables:
         valid_config: "Your configuration seems valid"
         invalid_translations: "Your custom translations are not valid !"
         missing_ble_entities: "You have not entered any iBeacon scanners"
+        ble_not_used: "You have entered an iBeacon scanner but are not using it"
         missing_wifi_trackers: "You have not entered any Wi-Fi trackers"
+        wifi_not_used: "You have entered a Wi-Fi tracker but are not using it"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -684,7 +686,9 @@ variables:
         valid_config: "Votre configuration semble valide"
         invalid_translations: "Vos traductions personnalisées ne sont pas valides !"
         missing_ble_entities: "Vous n'avez pas entré de scanner iBeacon"
-        missing_wifi_trackers: "Vous n'avez pas entré de traqueurs WiFi"
+        ble_not_used: "Vous avez entré un scanner iBeacon mais ne l'utilisez pas"
+        missing_wifi_trackers: "Vous n'avez pas entré de traqueurs Wi-Fi"
+        wifi_not_used: "Vous avez entré un traqueur Wi-Fi mais ne l'utilisez pas"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -766,6 +770,19 @@ actions:
               and ble_entities | length == 0
             }}
           message_id: "missing_ble_entities"
+        - alias: Check missing ble sensors
+          condition: |-
+            {{
+              ble_entities | length > 0
+              and (
+                'ble' not in (
+                  only_open_near
+                  + open_when_connected_to
+                  + close_when_disconnected_from
+                )
+              )
+            }}
+          message_id: "ble_not_used"
         - alias: Check missing wifi sensors
           condition: |-
             {{
@@ -773,6 +790,13 @@ actions:
               and wifi_devices | length == 0
             }}
           message_id: "missing_wifi_trackers"
+        - alias: Check missing wifi sensors
+          condition: |-
+            {{
+              wifi_devices | length > 0
+              and 'wifi' not in only_open_near
+            }}
+          message_id: "wifi_not_used"
       sequence:
         - alias: If a check failed
           if:
