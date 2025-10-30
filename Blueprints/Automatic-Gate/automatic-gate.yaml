@@ -651,6 +651,7 @@ variables:
         ble_not_used: "You have entered an iBeacon scanner but are not using it"
         missing_wifi_trackers: "You have not entered any Wi-Fi trackers"
         wifi_not_used: "You have entered a Wi-Fi tracker but are not using it"
+        missing_gps_data: "One of the device trackers does not support GPS tracking"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -699,8 +700,9 @@ variables:
         invalid_translations: "Vos traductions personnalisées ne sont pas valides !"
         missing_ble_entities: "Vous n'avez pas entré de scanner iBeacon"
         ble_not_used: "Vous avez entré un scanner iBeacon mais ne l'utilisez pas"
-        missing_wifi_trackers: "Vous n'avez pas entré de traqueurs Wi-Fi"
-        wifi_not_used: "Vous avez entré un traqueur Wi-Fi mais ne l'utilisez pas"
+        missing_wifi_trackers: "Vous n'avez pas entré de traceurs Wi-Fi"
+        wifi_not_used: "Vous avez entré un traceur Wi-Fi mais ne l'utilisez pas"
+        missing_gps_data: "L'un des traceurs ne prend pas en charge le suivi GPS"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -820,6 +822,16 @@ actions:
                   and 'wifi' not in only_open_near
                 }}
               message_id: "wifi_not_used"
+            - alias: Check that device trackers contain GPS data
+              condition: |-
+                {{
+                  (
+                    persons
+                    | select('is_state_attr', 'source_type', 'gps')
+                    | list
+                  ) == persons
+                }}
+              message_id: "missing_gps_data"
           sequence:
             - alias: If a check failed
               if:
