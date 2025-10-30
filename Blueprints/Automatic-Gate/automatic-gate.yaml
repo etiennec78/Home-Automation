@@ -838,7 +838,7 @@ actions:
                     persons
                     | select('is_state_attr', 'source_type', 'gps')
                     | list
-                  ) == persons
+                  ) != persons
                 }}
               message_id: "missing_gps_data"
             - alias: Check that iBeacons report unknown by default
@@ -848,7 +848,7 @@ actions:
                     ble_entities
                     | select('is_state', 'unknown')
                     | list
-                  ) == ble_entities
+                  ) != ble_entities
                 }}
               message_id: "ibeacon_not_unknown"
             - alias:
