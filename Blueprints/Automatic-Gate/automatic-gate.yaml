@@ -652,6 +652,7 @@ variables:
         missing_wifi_trackers: "You have not entered any Wi-Fi trackers"
         wifi_not_used: "You have entered a Wi-Fi tracker but are not using it"
         missing_gps_data: "One of the device trackers does not support GPS tracking"
+        ibeacon_not_unknown: "One of your iBeacon trackers is currently not reporting 'unknown'. If you are currently near your iBeacon, you can ignore this error."
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -703,6 +704,7 @@ variables:
         missing_wifi_trackers: "Vous n'avez pas entré de traceurs Wi-Fi"
         wifi_not_used: "Vous avez entré un traceur Wi-Fi mais ne l'utilisez pas"
         missing_gps_data: "L'un des traceurs ne prend pas en charge le suivi GPS"
+        ibeacon_not_unknown: "L'un de vos traceurs iBeacon a actuellement un état différent de 'unknown'. Si vous vous trouvez actuellement à proximité de votre iBeacon, vous pouvez ignorer cette erreur."
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -832,6 +834,16 @@ actions:
                   ) == persons
                 }}
               message_id: "missing_gps_data"
+            - alias: Check that iBeacons report unknown by default
+              conditions: |-
+                {{
+                  (
+                    ble_entities
+                    | select('is_state', 'unknown')
+                    | list
+                  ) == ble_entities
+                }}
+              message_id: "ibeacon_not_unknown"
           sequence:
             - alias: If a check failed
               if:
