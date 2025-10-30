@@ -367,13 +367,6 @@ actions:
             - alias: Check gate error sensor presence
               condition: "{{ notification_type == 'error' and not error_message_sensor }}"
               message_id: "missing_error_sensor"
-            - alias: Check missing wifi sensors
-              condition: |-
-                {{
-                  'wifi' in only_open_near
-                  and wifi_devices | length == 0
-                }}
-              message_id: "missing_wifi_trackers"
           sequence:
             - alias: If a check failed
               if:
