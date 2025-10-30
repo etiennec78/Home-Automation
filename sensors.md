@@ -2,7 +2,29 @@
 
 The entity representing your gate or garage door
 
-This can come from my [ESPHome firmware](ESPHome-Firmwares/Gate) or any other integration
+This can come from my [ESPHome firmware](ESPHome-Firmwares/Gate) or from any other integration
+
+#### Supported Gate Types ⚙️
+
+There are two main types of gate entities you can use:
+
+1. State-based gates: entities that stay ON while open and OFF when closed
+   These are fully compatible with the Automatic Gate blueprint
+
+2. Pulse-triggered gates: entities that briefly turn ON then OFF to send a pulse to the gate motor
+   Read the section below for more information
+
+#### Notes for Pulse-Triggered Gates ⚠️
+
+If your gate uses a pulse trigger for all actions, it cannot reliably handle the closing sequence automatically, because it does not know its own position
+
+Sending another pulse while still opening may simply stop the gate instead of closing it
+
+To use such gates:
+
+* Option 1: Disable the closing behavior in the blueprint settings
+* Option 2: Use the [ESPHome Gate Firmware](ESPHome-Firmwares/Gate), which supports pulse-triggered gates correctly
+* Option 3: If you have three separate pulse triggers (for open / close / stop), you can combine them into a single gate entity using a [state-based template cover](https://www.home-assistant.io/integrations/template/#state-based-cover---garage-door)
 
 
 ## GPS location trackers / Persons 🌎
