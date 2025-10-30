@@ -833,13 +833,17 @@ actions:
               message_id: "wifi_not_used"
             - alias: Check that device trackers contain GPS data
               condition: |-
-                {{
-                  (
-                    persons
-                    | select('is_state_attr', 'source_type', 'gps')
-                    | list
-                  ) != persons
-                }}
+                {% set data = namespace(error=false) %}
+                {% for tracker in persons %}
+                  {% if states[tracker].domain == 'person' %}
+                    {% set tracker = state_attr(tracker, 'source') %}
+                  {% endif %}
+                  {% if not is_state_attr(tracker, 'source_type', 'gps') %}
+                    {% set data.error = true %}
+                    {% break %}
+                  {% endif %}
+                {% endfor %}
+                {{ data.error }}
               message_id: "missing_gps_data"
             - alias: Check that iBeacons report unknown by default
               condition: |-
