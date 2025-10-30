@@ -862,7 +862,7 @@ actions:
               condition: |-
                 {{
                   (
-                    travel_time_sensors
+                    itinerary_sensors
                     | map('state_attr', 'max')
                     | min
                   ) < 254
