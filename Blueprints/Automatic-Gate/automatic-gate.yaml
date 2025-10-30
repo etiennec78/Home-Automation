@@ -626,6 +626,7 @@ variables:
         closing_suggestion: "{{suggest_closing_after}} seconds have passed"
         ble_out_of_range: "Your iBeacon is out of range"
         awaiting: "The gate will close once all users have entered/exited"
+        something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
         vehicle_stopped: "You have left your vehicle"
         canceling_order: "You have pressed the cancel button"
         did_not_leave: "The vehicle did not leave in less than {{safety_delay}} minutes"
@@ -680,6 +681,7 @@ variables:
         closing_suggestion: "{{suggest_closing_after}} secondes se sont écoulées"
         ble_out_of_range: "Votre iBeacon est hors de portée"
         awaiting: "Le portail se refermera une fois tous les conducteurs entrés/sortis"
+        something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
         vehicle_stopped: "Le véhicule a été arrêté"
         canceling_order: "Vous avez appuyé sur le bouton annuler"
         did_not_leave: "Le véhicule n'est pas sorti en moins de {{safety_delay}} minutes"
@@ -761,6 +763,7 @@ actions:
     variables:
       messages: []
       custom_translations_error: "{{ custom_translations_json is none }}"
+      successful_check: false
   - alias: If custom translations failed to be parsed as json
     if:
       - condition: template
@@ -1026,6 +1029,29 @@ actions:
                         ttl: 0
                         media_stream: !input phone_tts_stream
                     enabled: !input phone_tts
+      - alias: Confirm that no error occured while the config checker was running
+        variables:
+          successful_check: true
+    continue_on_error: true
+  - alias: If an error occured while the config checker was running
+    if:
+      - condition: template
+        value_template: "{{ not successful_check }}"
+    then:
+      - alias: Set notification ids
+        variables:
+          title_id: "invalid_config"
+          message_id: "something_went_wrong"
+      - alias: Get notification translation
+        variables: *get_translation
+      - alias: Notify all users on the dashboard that an error occured
+        action: persistent_notification.create
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
+          notification_id: "{{ config_checker_tag }}"
+      - stop: Config checker failed
+        error: true
   - alias: Only continue if the blueprint was not triggered manually
     condition: template
     value_template: "{{ trigger.platform is not none }}"

@@ -248,6 +248,7 @@ variables:
         close: The gate is closing
         error: "The gate has encountered an error: {error}"
         offline: The gate has been offline for {{notification_delay}} minutes
+        something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
         valid_config: "Your configuration seems valid"
         invalid_translations: "Your custom translations are not valid !"
         missing_error_sensor: "You have not entered the sensor containing gate error codes"
@@ -270,6 +271,7 @@ variables:
         close: Fermeture du portail en cours
         error: "Le portail a rencontré une erreur: {error}"
         offline: Le portail est hors ligne depuis {{notification_delay}} minutes
+        something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
         valid_config: "Votre configuration semble valide"
         invalid_translations: "Vos traductions personnalisées ne sont pas valides !"
         missing_error_sensor: "Vous n'avez pas entré le capteur contenant les codes d'erreur du portail"
@@ -336,6 +338,7 @@ actions:
     variables:
       messages: []
       custom_translations_error: "{{ custom_translations_json is none }}"
+      successfull_check: false
   - alias: If custom translations failed to be parsed as json
     if:
       - condition: template
@@ -471,6 +474,29 @@ actions:
               title: "{{ title }}"
               message: "{{ message }}"
               notification_id: "{{ config_checker_tag }}"
+      - alias: Confirm that no error occured while the config checker was running
+        variables:
+          successful_check: true
+    continue_on_error: true
+  - alias: If an error occured while the config checker was running
+    if:
+      - condition: template
+        value_template: "{{ not successful_check }}"
+    then:
+      - alias: Set notification ids
+        variables:
+          title_id: "invalid_config"
+          message_id: "something_went_wrong"
+      - alias: Get notification translation
+        variables: *get_translation
+      - alias: Notify all users on the dashboard that an error occured
+        action: persistent_notification.create
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
+          notification_id: "{{ config_checker_tag }}"
+      - stop: Config checker failed
+        error: true
 
   - alias: Only continue if the blueprint was not triggered manually
     condition: template

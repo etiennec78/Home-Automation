@@ -269,6 +269,7 @@ variables:
         itinerary_ongoing: "{driver_name} will arrive arround {arrival}"
         nearly_arrived: "{driver_name} will arrive in {remaining_minutes} minutes"
         driver_arrived: "{driver_name} just arrived home"
+        something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
         unsupported_tt_integration: "Your travel time integration is not supported !"
         valid_config: "Your configuration seems valid"
         invalid_translations: "Your custom translations are not valid !"
@@ -281,6 +282,7 @@ variables:
         itinerary_ongoing: "{driver_name} arrivera vers {arrival}"
         nearly_arrived: "{driver_name} arrivera dans {remaining_minutes} minutes"
         driver_arrived: "{driver_name} vient d'arriver à la maison"
+        something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
         unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
         valid_config: "Votre configuration semble valide"
         invalid_translations: "Vos traductions personnalisées ne sont pas valides !"
@@ -336,6 +338,7 @@ actions:
     variables:
       messages: []
       custom_translations_error: "{{ custom_translations_json is none }}"
+      successfull_check: false
   - alias: If custom translations failed to be parsed as json
     if:
       - condition: template
@@ -462,6 +465,29 @@ actions:
               title: "{{ title }}"
               message: "{{ message }}"
               notification_id: "{{ config_checker_tag }}"
+      - alias: Confirm that no error occured while the config checker was running
+        variables:
+          successful_check: true
+    continue_on_error: true
+  - alias: If an error occured while the config checker was running
+    if:
+      - condition: template
+        value_template: "{{ not successful_check }}"
+    then:
+      - alias: Build notification
+        variables:
+          title_id: "invalid_config"
+          message_id: "something_went_wrong"
+          title: *get_title
+          message: *get_message
+      - alias: Notify all users on the dashboard that an error occured
+        action: persistent_notification.create
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
+          notification_id: "{{ config_checker_tag }}"
+      - stop: Config checker failed
+        error: true
 
   - alias: Only continue if the blueprint was not triggered manually
     condition: template
