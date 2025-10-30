@@ -997,7 +997,7 @@ actions:
             variables:
               title_id: "invalid_config"
               title: *get_title
-              message: "{{ '\n'.join(messages) }}"
+              message: "{{ '• ' ~ '\n· '.join(messages) }}"
           - alias: Notify all users on the dashboard that the config is invalid
             action: persistent_notification.create
             data:
