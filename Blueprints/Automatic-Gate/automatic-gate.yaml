@@ -532,6 +532,18 @@ blueprint:
           selector:
             boolean:
 
+    config_checker:
+      name: Config checker
+      icon: mdi:shield-check
+      collapsed: true
+      input:
+        always_run_checks:
+          name: 🧪 Always run tests
+          description: Always run tests even if the blueprint was not triggered manually
+          default: true
+          selector:
+            boolean:
+
 variables:
   gate: !input gate
   gate_location: !input gate_location
@@ -749,215 +761,226 @@ actions:
       - alias: Reset custom translations
         variables:
           custom_translations_json: "{{ default_custom_translations }}"
-  - alias: Check for errors
-    repeat:
-      for_each:
-        - alias: Check custom translations
-          condition: "{{ custom_translations_error }}"
-          message_id: "invalid_translations"
-        - alias: Check missing ble sensors
-          condition: |-
-            {{
-              (
-                'ble' in (
-                  only_open_near
-                  + open_when_connected_to
-                  + close_when_disconnected_from
-                )
-                or ble_transmitter_entities | length > 0
-                or ble_scanner_switch != ""
-              )
-              and ble_entities | length == 0
-            }}
-          message_id: "missing_ble_entities"
-        - alias: Check missing ble sensors
-          condition: |-
-            {{
-              ble_entities | length > 0
-              and (
-                'ble' not in (
-                  only_open_near
-                  + open_when_connected_to
-                  + close_when_disconnected_from
-                )
-              )
-            }}
-          message_id: "ble_not_used"
-        - alias: Check missing wifi sensors
-          condition: |-
-            {{
-              'wifi' in only_open_near
-              and wifi_devices | length == 0
-            }}
-          message_id: "missing_wifi_trackers"
-        - alias: Check missing wifi sensors
-          condition: |-
-            {{
-              wifi_devices | length > 0
-              and 'wifi' not in only_open_near
-            }}
-          message_id: "wifi_not_used"
-      sequence:
-        - alias: If a check failed
-          if:
-            - condition: template
-              value_template: "{{ repeat.item.condition }}"
-          then:
-            - alias: Append the error message to the list
-              variables:
-                message_id: "{{ repeat.item.message_id }}"
-                message: &get_message |-
-                  {# Custom translation #}
-                  {%
-                    if 'message' in custom_translations_json
-                    and message_id in custom_translations_json['message']
-                  %}
-                    {%
-                      set message_string = (
-                        custom_translations_json['message'][message_id]
-                      )
-                    %}
-
-                  {# Selected language #}
-                  {% elif message_id in strings[language]['message'] %}
-                    {%
-                      set message_string = (
-                        strings[language]['message'][message_id]
-                      )
-                    %}
-
-                  {# Fallback to english #}
-                  {% else %}
-                    {%
-                      set message_string = (
-                        strings['en']['message'][message_id]
-                      )
-                    %}
-                  {% endif %}
-                  {{
-                    message_string.format(
-                      quick_triggers=itinerary_value.quick_triggers
-                    )
-                  }}
-                messages: "{{ messages | union([message]) }}"
-  - alias: If the config is valid
+  - alias: If the config checker should run checks
     if:
-      - condition: template
-        value_template: "{{ messages | length == 0 }}"
-    then:
-      - alias: If the blueprint was triggered manually
-        if:
-          - condition: template
+      - condition: or
+        conditions:
+          - alias: If checks should always be run
+            condition: template
+            value_template: !input always_run_checks
+          - alias: If the blueprint was executed manually
+            condition: template
             value_template: "{{ trigger.platform is none }}"
-        then:
-          - alias: Set message ids
-            variables:
-              title_id: "valid_config"
-              message_id: "valid_config"
-          - alias: Get notification translation
-            variables: &get_translation
-              message: *get_message
-              title: &get_title |-
-                {# Custom translation #}
-                {%
-                  if 'title' in custom_translations_json
-                  and title_id in custom_translations_json['title']
-                %}
-                  {%
-                    set title_string = (
-                      custom_translations_json['title'][title_id]
-                    )
-                  %}
-
-                {# Selected language #}
-                {% elif title_id in strings[language]['title'] %}
-                  {%
-                    set title_string = (
-                      strings[language]['title'][title_id]
-                    )
-                  %}
-
-                {# Fallback to english #}
-                {% else %}
-                  {%
-                    set title_string = (
-                      strings['en']['title'][title_id]
-                    )
-                  %}
-                {% endif %}
+    then:
+      - alias: Check for errors
+        repeat:
+          for_each:
+            - alias: Check custom translations
+              condition: "{{ custom_translations_error }}"
+              message_id: "invalid_translations"
+            - alias: Check missing ble sensors
+              condition: |-
                 {{
-                  title_string.format(
-                    awaited_persons=awaited_persons
+                  (
+                    'ble' in (
+                      only_open_near
+                      + open_when_connected_to
+                      + close_when_disconnected_from
+                    )
+                    or ble_transmitter_entities | length > 0
+                    or ble_scanner_switch != ""
+                  )
+                  and ble_entities | length == 0
+                }}
+              message_id: "missing_ble_entities"
+            - alias: Check missing ble sensors
+              condition: |-
+                {{
+                  ble_entities | length > 0
+                  and (
+                    'ble' not in (
+                      only_open_near
+                      + open_when_connected_to
+                      + close_when_disconnected_from
+                    )
                   )
                 }}
-          - alias: Notify all users on the dashboard that the config is valid
+              message_id: "ble_not_used"
+            - alias: Check missing wifi sensors
+              condition: |-
+                {{
+                  'wifi' in only_open_near
+                  and wifi_devices | length == 0
+                }}
+              message_id: "missing_wifi_trackers"
+            - alias: Check missing wifi sensors
+              condition: |-
+                {{
+                  wifi_devices | length > 0
+                  and 'wifi' not in only_open_near
+                }}
+              message_id: "wifi_not_used"
+          sequence:
+            - alias: If a check failed
+              if:
+                - condition: template
+                  value_template: "{{ repeat.item.condition }}"
+              then:
+                - alias: Append the error message to the list
+                  variables:
+                    message_id: "{{ repeat.item.message_id }}"
+                    message: &get_message |-
+                      {# Custom translation #}
+                      {%
+                        if 'message' in custom_translations_json
+                        and message_id in custom_translations_json['message']
+                      %}
+                        {%
+                          set message_string = (
+                            custom_translations_json['message'][message_id]
+                          )
+                        %}
+
+                      {# Selected language #}
+                      {% elif message_id in strings[language]['message'] %}
+                        {%
+                          set message_string = (
+                            strings[language]['message'][message_id]
+                          )
+                        %}
+
+                      {# Fallback to english #}
+                      {% else %}
+                        {%
+                          set message_string = (
+                            strings['en']['message'][message_id]
+                          )
+                        %}
+                      {% endif %}
+                      {{
+                        message_string.format(
+                          quick_triggers=itinerary_value.quick_triggers
+                        )
+                      }}
+                    messages: "{{ messages | union([message]) }}"
+      - alias: If the config is valid
+        if:
+          - condition: template
+            value_template: "{{ messages | length == 0 }}"
+        then:
+          - alias: If the blueprint was triggered manually
+            if:
+              - condition: template
+                value_template: "{{ trigger.platform is none }}"
+            then:
+              - alias: Set message ids
+                variables:
+                  title_id: "valid_config"
+                  message_id: "valid_config"
+              - alias: Get notification translation
+                variables: &get_translation
+                  message: *get_message
+                  title: &get_title |-
+                    {# Custom translation #}
+                    {%
+                      if 'title' in custom_translations_json
+                      and title_id in custom_translations_json['title']
+                    %}
+                      {%
+                        set title_string = (
+                          custom_translations_json['title'][title_id]
+                        )
+                      %}
+
+                    {# Selected language #}
+                    {% elif title_id in strings[language]['title'] %}
+                      {%
+                        set title_string = (
+                          strings[language]['title'][title_id]
+                        )
+                      %}
+
+                    {# Fallback to english #}
+                    {% else %}
+                      {%
+                        set title_string = (
+                          strings['en']['title'][title_id]
+                        )
+                      %}
+                    {% endif %}
+                    {{
+                      title_string.format(
+                        awaited_persons=awaited_persons
+                      )
+                    }}
+              - alias: Notify all users on the dashboard that the config is valid
+                action: persistent_notification.create
+                data:
+                  title: "{{ title }}"
+                  message: "{{ message }}"
+                  notification_id: "{{ config_checker_tag }}"
+            else:
+              - alias: Remove the previous dashboard notification
+                action: persistent_notification.dismiss
+                data:
+                  notification_id: "{{ config_checker_tag }}"
+        else:
+          - alias: Build the notification
+            variables:
+              title_id: "invalid_config"
+              title: *get_title
+              message: "{{ '\n'.join(messages) }}"
+          - alias: Notify all users on the dashboard that the config is invalid
             action: persistent_notification.create
             data:
               title: "{{ title }}"
               message: "{{ message }}"
               notification_id: "{{ config_checker_tag }}"
-        else:
-          - alias: Remove the previous dashboard notification
-            action: persistent_notification.dismiss
-            data:
-              notification_id: "{{ config_checker_tag }}"
-    else:
-      - alias: Build the notification
-        variables:
-          title_id: "invalid_config"
-          title: *get_title
-          message: "{{ '\n'.join(messages) }}"
-      - alias: Notify all users on the dashboard that the config is invalid
-        action: persistent_notification.create
-        data:
-          title: "{{ title }}"
-          message: "{{ message }}"
-          notification_id: "{{ config_checker_tag }}"
-      - alias: If the blueprint was not triggered manually
-        if:
-          - condition: template
-            value_template: "{{ trigger.platform is not none }}"
-        then:
-          - alias: Notify the driver that his config is invalid
-            action: "{{ notify_service }}"
-            data:
-              title: "{{ title }}"
-              message: "{{ message }}"
-              data:
-                car_ui: true
-                notification_icon: mdi:hammer-wrench
-                channel: Automatic Gate
-                importance: high
-                ttl: 0
-                push:
-                  sound:
-                    name: "default"
-                    critical: 1
-                tag: "{{ config_checker_tag }}"
-          - sequence: &tts
-              - alias: Notify over TTS
+          - alias: If the blueprint was not triggered manually
+            if:
+              - condition: template
+                value_template: "{{ trigger.platform is not none }}"
+            then:
+              - alias: Notify the driver that his config is invalid
                 action: "{{ notify_service }}"
                 data:
-                  message: TTS
+                  title: "{{ title }}"
+                  message: "{{ message }}"
                   data:
-                    tts_text: |-
-                      {%
-                        set clean_title = (
-                          title
-                            | regex_replace('[\u2600-\u26FF]', '')
-                            | regex_replace('[\u2700-\u27BF]', '')
-                            | regex_replace('[\U0001F300-\U0001F5FF]', '')
-                            | regex_replace('[\U0001F600-\U0001F64F]', '')
-                            | regex_replace('[\U0001F680-\U0001F6FF]', '')
-                        ).strip()
-                      %}
-                      {% set separator = ' ' if clean_title[-1] in ['.', '!', '?'] else '. ' %}
-                      {{ clean_title ~ separator ~ message }}
-                    channel: Itinerary status
+                    car_ui: true
+                    notification_icon: mdi:hammer-wrench
+                    channel: Automatic Gate
                     importance: high
                     ttl: 0
-                    media_stream: !input phone_tts_stream
-                enabled: !input phone_tts
+                    push:
+                      sound:
+                        name: "default"
+                        critical: 1
+                    tag: "{{ config_checker_tag }}"
+              - sequence: &tts
+                  - alias: Notify over TTS
+                    action: "{{ notify_service }}"
+                    data:
+                      message: TTS
+                      data:
+                        tts_text: |-
+                          {%
+                            set clean_title = (
+                              title
+                                | regex_replace('[\u2600-\u26FF]', '')
+                                | regex_replace('[\u2700-\u27BF]', '')
+                                | regex_replace('[\U0001F300-\U0001F5FF]', '')
+                                | regex_replace('[\U0001F600-\U0001F64F]', '')
+                                | regex_replace('[\U0001F680-\U0001F6FF]', '')
+                            ).strip()
+                          %}
+                          {% set separator = ' ' if clean_title[-1] in ['.', '!', '?'] else '. ' %}
+                          {{ clean_title ~ separator ~ message }}
+                        channel: Itinerary status
+                        importance: high
+                        ttl: 0
+                        media_stream: !input phone_tts_stream
+                    enabled: !input phone_tts
   - alias: Only continue if the blueprint was not triggered manually
     condition: template
     value_template: "{{ trigger.platform is not none }}"
