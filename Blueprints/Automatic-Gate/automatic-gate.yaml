@@ -653,6 +653,7 @@ variables:
         wifi_not_used: "You have entered a Wi-Fi tracker but are not using it"
         missing_gps_data: "One of the device trackers does not support GPS tracking"
         ibeacon_not_unknown: "One of your iBeacon trackers is currently not reporting 'unknown'. If you are currently near your iBeacon, you can ignore this error."
+        missing_arrival_opening_method: "You don't have any way to detect your arrival. Please add a travel time sensor or use an iBeacon."
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -705,6 +706,7 @@ variables:
         wifi_not_used: "Vous avez entré un traceur Wi-Fi mais ne l'utilisez pas"
         missing_gps_data: "L'un des traceurs ne prend pas en charge le suivi GPS"
         ibeacon_not_unknown: "L'un de vos traceurs iBeacon a actuellement un état différent de 'unknown'. Si vous vous trouvez actuellement à proximité de votre iBeacon, vous pouvez ignorer cette erreur."
+        missing_arrival_opening_method: "Vous n'avez aucune méthode pour détecter votre arrivée. Ajoutez un capteur de temps de trajet ou utilisez un iBeacon."
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -844,6 +846,13 @@ actions:
                   ) == ble_entities
                 }}
               message_id: "ibeacon_not_unknown"
+            - alias:
+              conditions: |-
+                {{
+                  travel_time_sensors | length == 0
+                  and 'ble' not in open_when_connected_to
+                }}
+              message_id: "missing_arrival_opening_method"
           sequence:
             - alias: If a check failed
               if:
