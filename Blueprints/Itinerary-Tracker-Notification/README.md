@@ -35,7 +35,7 @@ A blueprint that notifies all selected users when another one is driving home
 3. Fill in the `Per Person Sensors` category
 4. Optional: Fill in other categories
 5. Press `Save` in the bottom right corner
-6. Optional: In the upper-right corner, press `⁝` then `Run actions` and check your notifications for errors
+6. Optional: In the upper-right corner, press `⁝` then `Run actions` and check your dashboard notifications for configuration errors
 
 
 ## Example 📌

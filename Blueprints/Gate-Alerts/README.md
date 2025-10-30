@@ -45,7 +45,7 @@ A blueprint that notifies selected users when the gate:
 3. Fill in the `Essential Inputs` category
 4. Optional: Fill in other categories
 5. Press `Save` in the bottom right corner
-6. Optional: In the upper-right corner, press `⁝` then `Run actions` and check your notifications for errors
+6. Optional: In the upper-right corner, press `⁝` then `Run actions` and check your dashboard notifications for configuration errors
 7. Optional: On Android, go to your applications settings, then select `Home Assistant > Notifications > Gate alerts` and change the sound to differentiate your gate from other notifications
 
 
