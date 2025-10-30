@@ -274,6 +274,7 @@ variables:
         valid_config: "Your configuration seems valid"
         invalid_translations: "Your custom translations are not valid !"
         invalid_per_person_sensors: "You have not entered a consistent number of sensors between each input in the 'Per Person Sensors' category"
+        invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service"
     fr:
       title:
         valid_config: "{{blueprint_name}}: Configuration valide 🛠️✅"
@@ -288,6 +289,7 @@ variables:
         valid_config: "Votre configuration semble valide"
         invalid_translations: "Vos traductions personnalisées ne sont pas valides !"
         invalid_per_person_sensors: "Vous n'avez pas entré un nombre de capteurs cohérent entre chaque champ de la category 'Per Person Sensors'"
+        invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS"
 
 triggers:
   - trigger: state
@@ -376,6 +378,9 @@ actions:
                   )
                 }}
               message_id: "invalid_per_person_sensors"
+            - alias: Check for tts and media player sensors presence
+              condition: "{{ (speaker_tts_devices | length > 0) != (speaker_tts_service | length > 0) }}"
+              message_id: "invalid_speakers"
           sequence:
             - alias: If a check failed
               if:

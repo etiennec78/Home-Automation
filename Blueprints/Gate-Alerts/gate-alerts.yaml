@@ -171,7 +171,7 @@ blueprint:
           description: |-
             **TTS service** you want to use for your speakers
             *Note: Optional*
-          default: []
+          default: ""
           selector:
             target:
               entity:
@@ -252,6 +252,7 @@ variables:
         valid_config: "Your configuration seems valid"
         invalid_translations: "Your custom translations are not valid !"
         missing_error_sensor: "You have not entered the sensor containing gate error codes"
+        invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service"
       button:
         close: Close 🔐
     fr:
@@ -275,6 +276,7 @@ variables:
         valid_config: "Votre configuration semble valide"
         invalid_translations: "Vos traductions personnalisées ne sont pas valides !"
         missing_error_sensor: "Vous n'avez pas entré le capteur contenant les codes d'erreur du portail"
+        invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS"
       button:
         close: Refermer 🔐
 
@@ -367,6 +369,9 @@ actions:
             - alias: Check gate error sensor presence
               condition: "{{ notification_type == 'error' and not error_message_sensor }}"
               message_id: "missing_error_sensor"
+            - alias: Check for tts and media player sensors presence
+              condition: "{{ (speaker_tts_devices | length > 0) != (speaker_tts_service | length > 0) }}"
+              message_id: "invalid_speakers"
           sequence:
             - alias: If a check failed
               if:
