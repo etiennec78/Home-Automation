@@ -712,7 +712,7 @@ variables:
         ibeacon_not_unknown: "L'un de vos traceurs iBeacon a actuellement un état différent de 'unknown'. Si vous vous trouvez actuellement à proximité de votre iBeacon, vous pouvez ignorer cette erreur."
         missing_arrival_opening_method: "Vous n'avez aucune méthode pour détecter votre arrivée. Ajoutez un capteur de temps de trajet ou utilisez un iBeacon."
         invalid_travel_time_sensor_length: "Le capteur stockant les infos sur votre itinéraire a une longueur maximale trop petite"
-        invalid_per_person_sensors: "Vous n'avez pas entré autant de capteurs pour chaque champ dans la category 'Per Person Sensors'"
+        invalid_per_person_sensors: "Vous n'avez pas entré autant de capteurs pour chaque champ dans la catégorie 'Per Person Sensors'"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -882,7 +882,7 @@ actions:
                     == driving_sensors | length
                     <= itinerary_sensors | length
                     and (
-                      persons | length == itineray_sensors | length
+                      persons | length == itinerary_sensors | length
                       or ble in open_when_connected_to
                     )
                   )
