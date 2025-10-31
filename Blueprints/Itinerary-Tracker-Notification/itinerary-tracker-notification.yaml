@@ -246,8 +246,8 @@ variables:
   language: !input language
   custom_translations: !input custom_translations
   dismissed_idx: []
-  notification_tag: "{{ 'itinerary-tracker-' ~ this.attributes.id }}"
-  config_checker_tag: "{{ 'config-checker-' ~ this.context.id }}"
+  notification_tag: "{{ 'itinerary-tracker-' ~ this.context.id }}"
+  config_checker_tag: "{{ 'config-checker-' ~ this.attributes.id }}"
   persistent_id: "{{ 'persistent_' ~ this.context.id }}"
   persistent_active: !input persistent_notification
   next_refresh: 0
