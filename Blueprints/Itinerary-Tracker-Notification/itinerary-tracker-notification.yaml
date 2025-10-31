@@ -275,6 +275,7 @@ variables:
         invalid_translations: "Your custom translations are not valid !"
         invalid_per_person_sensors: "You have not entered a consistent number of sensors between each input in the 'Per Person Sensors' category"
         invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service"
+        per_person_sensors_mismatch: "You do not appear to have entered all your per person sensors in the same order"
     fr:
       title:
         valid_config: "{{blueprint_name}}: Configuration valide 🛠️✅"
@@ -290,6 +291,7 @@ variables:
         invalid_translations: "Vos traductions personnalisées ne sont pas valides !"
         invalid_per_person_sensors: "Vous n'avez pas entré un nombre de capteurs cohérent entre chaque champ de la category 'Per Person Sensors'"
         invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS"
+        per_person_sensors_mismatch: "Vous ne semblez pas avoir entré tous vos capteurs par personne dans le même ordre"
 
 triggers:
   - trigger: state
@@ -381,6 +383,63 @@ actions:
             - alias: Check for tts and media player sensors presence
               condition: "{{ (speaker_tts_devices | length > 0) != (speaker_tts_service | length > 0) }}"
               message_id: "invalid_speakers"
+            - alias: Check that per person sensors are in the right order
+              condition: |-
+                {%
+                  set per_person_phone_sensors = [
+                    driving_sensors
+                  ]
+                %}
+                {% set data = namespace(error=false, entities_to_check=[]) %}
+                {% for device_idx in range(notify_devices | length) %}
+                  {% set data.entities_to_check = [] %}
+                  {% set related_entities = device_entities(
+                      notify_devices[device_idx]
+                    )
+                  %}
+                  {% for checker_idx in range(notify_devices | length) %}
+                    {% if device_idx == checker_idx %}
+                      {% continue %}
+                    {% endif %}
+
+                    {# Append device trackers to the list #}
+                    {% if checker_idx < persons | length %}
+                      {% set trackers = [persons[checker_idx]] %}
+                      {% if states[trackers[0]].domain == 'person' %}
+                        {% set trackers = state_attr(trackers[0], 'device_trackers') %}
+                      {% endif %}
+                      {% set data.entities_to_check = data.entities_to_check + trackers %}
+                    {% endif %}
+
+                    {# Append all other per person sensors #}
+                    {% for sensors in per_person_phone_sensors %}
+                      {% if sensors | length > checker_idx %}
+                        {%
+                          set data.entities_to_check = (
+                            data.entities_to_check
+                            + [sensors[checker_idx]]
+                          )
+                        %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endfor %}
+
+                  {# Check if sensors from the list belong to another user #}
+                  {%
+                    if (
+                      data.entities_to_check
+                      | select('in', related_entities)
+                      | list
+                      | length
+                      != 0
+                    )
+                  %}
+                    {% set data.error = true %}
+                    {% break %}
+                  {% endif %}
+                {% endfor %}
+                {{ data.error }}
+              message_id: "per_person_sensors_mismatch"
           sequence:
             - alias: If a check failed
               if:

@@ -657,6 +657,7 @@ variables:
         missing_arrival_opening_method: "You don't have any way to detect your arrival. Please add a travel time sensor or use an iBeacon."
         invalid_travel_time_sensor_length: "The maximum length of your travel time sensor is too short"
         invalid_per_person_sensors: "You have not entered as many sensors for each field in the 'Per Person Sensors' category"
+        per_person_sensors_mismatch: "You do not appear to have entered all your per person sensors in the same order"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -713,6 +714,7 @@ variables:
         missing_arrival_opening_method: "Vous n'avez aucune méthode pour détecter votre arrivée. Ajoutez un capteur de temps de trajet ou utilisez un iBeacon."
         invalid_travel_time_sensor_length: "Le capteur stockant les infos sur votre itinéraire a une longueur maximale trop petite"
         invalid_per_person_sensors: "Vous n'avez pas entré autant de capteurs pour chaque champ dans la catégorie 'Per Person Sensors'"
+        per_person_sensors_mismatch: "Vous ne semblez pas avoir entré tous vos capteurs par personne dans le même ordre"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -888,6 +890,65 @@ actions:
                   )
                 }}
               message_id: "invalid_per_person_sensors"
+            - alias: Check that per person sensors are in the right order
+              condition: |-
+                {%
+                  set per_person_phone_sensors = [
+                    driving_sensors,
+                    ble_transmitter_entities,
+                    wifi_devices
+                  ]
+                %}
+                {% set data = namespace(error=false, entities_to_check=[]) %}
+                {% for device_idx in range(notify_devices | length) %}
+                  {% set data.entities_to_check = [] %}
+                  {% set related_entities = device_entities(
+                      notify_devices[device_idx]
+                    )
+                  %}
+                  {% for checker_idx in range(notify_devices | length) %}
+                    {% if device_idx == checker_idx %}
+                      {% continue %}
+                    {% endif %}
+
+                    {# Append device trackers to the list #}
+                    {% if checker_idx < persons | length %}
+                      {% set trackers = [persons[checker_idx]] %}
+                      {% if states[trackers[0]].domain == 'person' %}
+                        {% set trackers = state_attr(trackers[0], 'device_trackers') %}
+                      {% endif %}
+                      {% set data.entities_to_check = data.entities_to_check + trackers %}
+                    {% endif %}
+
+                    {# Append all other per person sensors #}
+                    {% for sensors in per_person_phone_sensors %}
+                      {% if sensors | length > checker_idx %}
+                        {%
+                          set data.entities_to_check = (
+                            data.entities_to_check
+                            + [sensors[checker_idx]]
+                          )
+                        %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endfor %}
+
+                  {# Check if sensors from the list belong to another user #}
+                  {%
+                    if (
+                      data.entities_to_check
+                      | select('in', related_entities)
+                      | list
+                      | length
+                      != 0
+                    )
+                  %}
+                    {% set data.error = true %}
+                    {% break %}
+                  {% endif %}
+                {% endfor %}
+                {{ data.error }}
+              message_id: "per_person_sensors_mismatch"
           sequence:
             - alias: If a check failed
               if:

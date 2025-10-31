@@ -92,6 +92,7 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
   | Name | `User0 driving` |
   | State template | `{{ '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user0_bluetooth_connection', 'connected_paired_devices') }}` |
   | Device class | `Moving` |
+  | Device | *Your phone* |
 
   Where:
 
@@ -184,6 +185,7 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
   | Name | `User0 driving` |
   | State template | `{{ is_state('sensor.first_sensor', 'on') and is_state('sensor.second_sensor', 'on') }}` |
   | Device class | `Moving` |
+  | Device | *Your phone* |
 
   > Replace `sensor.first_sensor` and `sensor.second_sensor` with your own sensor entity ids
 
