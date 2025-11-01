@@ -532,6 +532,24 @@ blueprint:
           selector:
             boolean:
 
+    config_checker:
+      name: Config checker
+      icon: mdi:shield-check
+      collapsed: true
+      input:
+        always_run_checks:
+          name: 🧪 Always run tests
+          description: Always run tests even if the blueprint was not triggered manually
+          default: true
+          selector:
+            boolean:
+        stop_check_failed:
+          name: ✋🏻 Stop if tests failed
+          description: Stop the blueprint if at least one test has failed
+          default: false
+          selector:
+            boolean:
+
 variables:
   gate: !input gate
   gate_location: !input gate_location
@@ -553,15 +571,6 @@ variables:
   timer_closing: !input timer_closing
   language: !input language
   custom_translations: !input custom_translations
-  default_custom_translations: |-
-    {{
-      {
-        "title": {},
-        "message": {},
-        "button": {}
-      }
-    }}
-  custom_translations_json: "{{ custom_translations | from_json(none) }}"
   ble_entities: !input ble_entities
   ble_scanner_switch: !input ble_scanner_switch
   ble_transmitter_entities: !input ble_transmitter_entities
@@ -574,6 +583,33 @@ variables:
   quick_tt_updates: 0
   last_quick_tt_update: "{{ none }}"
   failed_updates: 0
+  config_checker_tag: "{{ 'config-checker-' ~ this.attributes.id }}"
+  opening_order_id: "{{ 'opening_order_' ~ this.context.id }}"
+  closing_order_id: "{{ 'closing_order_' ~ this.context.id }}"
+  canceling_order_id: "{{ 'canceling_order_' ~ this.context.id }}"
+  default_itinerary_sensor_value:
+    status: "{{ none }}"
+    error: "{{ none }}"
+    quick_triggers: 0
+    last_closed: 0
+    auto_closed: false
+  default_custom_translations:
+    title: {}
+    message: {}
+    button: {}
+  custom_translations_json: "{{ custom_translations | from_json(none) }}"
+  timeouts:
+    closing_suggestion: !input suggest_closing_after
+    safety_delay: "{{ safety_delay * 60 }}"
+    timer: !input timer_closing
+    default: 2147483647
+  timeout_messages:
+    closing_suggestion: "closing_suggestion"
+    safety_delay: "undefined"
+    timer: "{{ none }}"
+    default: "{{ none }}"
+  itinerary_value: "{{ none }}"
+  blueprint_name: "{{ state_attr(this.entity_id, 'friendly_name') }}"
   strings:
     en:
       title:
@@ -586,7 +622,8 @@ variables:
         itinerary_canceled: "Itinerary canceled ❌"
         awaiting: "Gate awaiting {awaited_persons} 💤"
         disabled: "Automatic Gate disabled 🚫"
-        invalid_config: "Invalid configuration 🛠️"
+        valid_config: "{{blueprint_name}}: Valid configuration 🛠️✅"
+        invalid_config: "{{blueprint_name}}: Invalid configuration 🛠️❌"
       message:
         leaving_home: "You are leaving home"
         vehicle_started: "You have started your vehicle"
@@ -595,6 +632,7 @@ variables:
         closing_suggestion: "{{suggest_closing_after}} seconds have passed"
         ble_out_of_range: "Your iBeacon is out of range"
         awaiting: "The gate will close once all users have entered/exited"
+        something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
         vehicle_stopped: "You have left your vehicle"
         canceling_order: "You have pressed the cancel button"
         did_not_leave: "The vehicle did not leave in less than {{safety_delay}} minutes"
@@ -614,7 +652,19 @@ variables:
         invalid_travel_time_sensor: "Your travel time sensor does not exist !"
         unsupported_tt_integration: "Your travel time integration is not supported !"
         too_close: "You have started driving too close to the gate zone"
+        valid_config: "Your configuration seems valid"
         invalid_translations: "Your custom translations are not valid !"
+        missing_ble_entities: "You have not entered any iBeacon scanners"
+        ble_not_used: "You have entered an iBeacon scanner but are not using it"
+        missing_wifi_trackers: "You have not entered any Wi-Fi trackers"
+        wifi_not_used: "You have entered a Wi-Fi tracker but are not using it"
+        missing_gps_data: "One of the device trackers does not support GPS tracking"
+        ibeacon_not_unknown: "One of your iBeacon trackers is currently not reporting 'unknown'. If you are currently near your iBeacon, you can ignore this error."
+        missing_arrival_opening_method: "You don't have any way to detect your arrival. Please add a travel time sensor or use an iBeacon."
+        too_many_arrival_opening_method: "You are using several methods to detect your arrival. One is enough."
+        invalid_travel_time_sensor_length: "The maximum length of your travel time sensor is too short"
+        invalid_per_person_sensors: "You have not entered the correct number of sensors in the per person sensor inputs"
+        per_person_sensors_mismatch: "You do not appear to have entered all your per person sensors in the same order"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -630,7 +680,8 @@ variables:
         itinerary_canceled: "Itinéraire annulé ❌"
         awaiting: "Portail en attente de {awaited_persons} 💤"
         disabled: "Automatic Gate désactivé 🚫"
-        invalid_config: "Configuration invalide 🛠️"
+        valid_config: "{{blueprint_name}}: Configuration valide 🛠️✅"
+        invalid_config: "{{blueprint_name}}: Configuration invalide 🛠️❌"
       message:
         leaving_home: "Vous sortez de la maison"
         vehicle_started: "Vous avez démarré votre véhicule"
@@ -639,6 +690,7 @@ variables:
         closing_suggestion: "{{suggest_closing_after}} secondes se sont écoulées"
         ble_out_of_range: "Votre iBeacon est hors de portée"
         awaiting: "Le portail se refermera une fois tous les conducteurs entrés/sortis"
+        something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
         vehicle_stopped: "Le véhicule a été arrêté"
         canceling_order: "Vous avez appuyé sur le bouton annuler"
         did_not_leave: "Le véhicule n'est pas sorti en moins de {{safety_delay}} minutes"
@@ -658,7 +710,19 @@ variables:
         invalid_travel_time_sensor: "Votre capteur de temps de trajet n'existe pas !"
         unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
         too_close: "Vous avez démarré trop près de la zone du portail"
+        valid_config: "Votre configuration semble valide"
         invalid_translations: "Vos traductions personnalisées ne sont pas valides !"
+        missing_ble_entities: "Vous n'avez pas entré de scanner iBeacon"
+        ble_not_used: "Vous avez entré un scanner iBeacon mais ne l'utilisez pas"
+        missing_wifi_trackers: "Vous n'avez pas entré de traceurs Wi-Fi"
+        wifi_not_used: "Vous avez entré un traceur Wi-Fi mais ne l'utilisez pas"
+        missing_gps_data: "L'un des traceurs ne prend pas en charge le suivi GPS"
+        ibeacon_not_unknown: "L'un de vos traceurs iBeacon a actuellement un état différent de 'unknown'. Si vous vous trouvez actuellement à proximité de votre iBeacon, vous pouvez ignorer cette erreur."
+        missing_arrival_opening_method: "Vous n'avez aucune méthode pour détecter votre arrivée. Ajoutez un capteur de temps de trajet ou utilisez un iBeacon."
+        too_many_arrival_opening_method: "Vous utilisez plusieurs méthodes pour détecter votre arrivée. Une seule suffit."
+        invalid_travel_time_sensor_length: "Le capteur stockant les infos sur votre itinéraire a une longueur maximale trop petite"
+        invalid_per_person_sensors: "Vous n'avez pas entré le bon nombre de capteurs dans les champs de capteurs par personne"
+        per_person_sensors_mismatch: "Vous ne semblez pas avoir entré tous vos capteurs par personne dans le même ordre"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -674,152 +738,430 @@ triggers:
 conditions: []
 
 actions:
-  - if:
+  - alias: If the blueprint was not triggered manually
+    if:
       - condition: template
-        value_template: "{{ custom_translations_json is none }}"
+        value_template: "{{ trigger.platform is not none }}"
     then:
-      - variables:
+      - alias: Set variables containing data related to the driver
+        variables:
+          idx: "{{ driving_sensors.index(trigger.entity_id) }}"
+          person: "{{ persons[idx] }}"
+          driving_sensor: "{{ trigger.entity_id }}"
+          travel_time_sensor: |-
+            {% if travel_time_sensors | length > idx %}
+              {{ travel_time_sensors[idx] }}
+            {% else %}
+              {{ none }}
+            {% endif %}
+          notify_service: "{{ notify_services[idx] }}"
+          ios_device: "{{ device_attr(notify_devices[idx], 'manufacturer') == 'Apple' }}"
+          itinerary_sensor: "{{ itinerary_sensors[idx] }}"
+          itinerary_value: |-
+            {%
+              set state = (
+                states(itinerary_sensor)
+                | from_json(default_itinerary_sensor_value)
+              )
+            %}
+            {%
+              if default_itinerary_sensor_value.keys() == state.keys()
+            %}
+              {{ state }}
+            {% else %}
+              {{ default_itinerary_sensor_value }}
+            {% endif %}
+  - alias: Initialize variables for the error checker
+    variables:
+      messages: []
+      custom_translations_error: "{{ custom_translations_json is none }}"
+      successful_check: false
+  - alias: If custom translations failed to be parsed as json
+    if:
+      - condition: template
+        value_template: "{{ custom_translations_error }}"
+    then:
+      - alias: Reset custom translations
+        variables:
           custom_translations_json: "{{ default_custom_translations }}"
-      - alias: Set title and message ids
+  - alias: If the config checker should run checks
+    if:
+      - condition: or
+        conditions:
+          - alias: If checks should always be run
+            condition: template
+            value_template: !input always_run_checks
+          - alias: If the blueprint was executed manually
+            condition: template
+            value_template: "{{ trigger.platform is none }}"
+    then:
+      - alias: Check for errors
+        repeat:
+          for_each:
+            - alias: Check custom translations
+              condition: "{{ custom_translations_error }}"
+              message_id: "invalid_translations"
+            - alias: Check missing ble sensors
+              condition: |-
+                {{
+                  (
+                    'ble' in (
+                      only_open_near
+                      + open_when_connected_to
+                      + close_when_disconnected_from
+                    )
+                    or ble_transmitter_entities | length > 0
+                    or ble_scanner_switch != ""
+                  )
+                  and ble_entities | length == 0
+                }}
+              message_id: "missing_ble_entities"
+            - alias: Check missing ble sensors
+              condition: |-
+                {{
+                  ble_entities | length > 0
+                  and (
+                    'ble' not in (
+                      only_open_near
+                      + open_when_connected_to
+                      + close_when_disconnected_from
+                    )
+                  )
+                }}
+              message_id: "ble_not_used"
+            - alias: Check missing wifi sensors
+              condition: |-
+                {{
+                  'wifi' in only_open_near
+                  and wifi_devices | length == 0
+                }}
+              message_id: "missing_wifi_trackers"
+            - alias: Check missing wifi sensors
+              condition: |-
+                {{
+                  wifi_devices | length > 0
+                  and 'wifi' not in only_open_near
+                }}
+              message_id: "wifi_not_used"
+            - alias: Check that device trackers contain GPS data
+              condition: |-
+                {% set data = namespace(error=false) %}
+                {% for tracker in persons %}
+                  {% if states[tracker].domain == 'person' %}
+                    {% set tracker = state_attr(tracker, 'source') %}
+                  {% endif %}
+                  {% if not is_state_attr(tracker, 'source_type', 'gps') %}
+                    {% set data.error = true %}
+                    {% break %}
+                  {% endif %}
+                {% endfor %}
+                {{ data.error }}
+              message_id: "missing_gps_data"
+            - alias: Check that iBeacons report unknown by default
+              condition: |-
+                {{
+                  trigger.platform is none
+                  and (
+                    ble_entities
+                    | select('is_state', 'unknown')
+                    | list
+                  ) != ble_entities
+                }}
+              message_id: "ibeacon_not_unknown"
+            - alias: Check that the user entered a sensor to detect his arrival
+              condition: |-
+                {{
+                  travel_time_sensors | length == 0
+                  and 'ble' not in open_when_connected_to
+                }}
+              message_id: "missing_arrival_opening_method"
+            - alias: Check that the user entered a sensor to detect his arrival
+              condition: |-
+                {{
+                  travel_time_sensors | length > 0
+                  and 'ble' in open_when_connected_to
+                }}
+              message_id: "too_many_arrival_opening_method"
+            - alias: Check that the travel time sensor has a valid maximum length
+              condition: |-
+                {{
+                  (
+                    itinerary_sensors
+                    | map('state_attr', 'max')
+                    | min
+                  ) < 254
+                }}
+              message_id: "invalid_travel_time_sensor_length"
+            - alias: Check that all per person sensors have been entered
+              condition: |-
+                {% set persons_len = persons | length %}
+                {{
+                  not(
+                    persons_len
+                    == driving_sensors | length
+                    <= itinerary_sensors | length
+                    and (
+                      persons_len == itinerary_sensors | length
+                      or ble in open_when_connected_to
+                    )
+                    and wifi_devices | length <= persons_len
+                    and ble_entities | length <= persons_len
+                    and ble_transmitter_entities | length <= persons_len
+                  )
+                }}
+              message_id: "invalid_per_person_sensors"
+            - alias: Check that per person sensors are in the right order
+              condition: |-
+                {%
+                  set per_person_phone_sensors = [
+                    driving_sensors,
+                    ble_transmitter_entities,
+                    wifi_devices
+                  ]
+                %}
+                {% set data = namespace(error=false, entities_to_check=[]) %}
+                {% for device_idx in range(notify_devices | length) %}
+                  {% set data.entities_to_check = [] %}
+                  {% set related_entities = device_entities(
+                      notify_devices[device_idx]
+                    )
+                  %}
+                  {% for checker_idx in range(notify_devices | length) %}
+                    {% if device_idx == checker_idx %}
+                      {% continue %}
+                    {% endif %}
+
+                    {# Append device trackers to the list #}
+                    {% if checker_idx < persons | length %}
+                      {% set trackers = [persons[checker_idx]] %}
+                      {% if states[trackers[0]].domain == 'person' %}
+                        {% set trackers = state_attr(trackers[0], 'device_trackers') %}
+                      {% endif %}
+                      {% set data.entities_to_check = data.entities_to_check + trackers %}
+                    {% endif %}
+
+                    {# Append all other per person sensors #}
+                    {% for sensors in per_person_phone_sensors %}
+                      {% if sensors | length > checker_idx %}
+                        {%
+                          set data.entities_to_check = (
+                            data.entities_to_check
+                            + [sensors[checker_idx]]
+                          )
+                        %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endfor %}
+
+                  {# Check if sensors from the list belong to another user #}
+                  {%
+                    if (
+                      data.entities_to_check
+                      | select('in', related_entities)
+                      | list
+                      | length
+                      != 0
+                    )
+                  %}
+                    {% set data.error = true %}
+                    {% break %}
+                  {% endif %}
+                {% endfor %}
+                {{ data.error }}
+              message_id: "per_person_sensors_mismatch"
+          sequence:
+            - alias: If a check failed
+              if:
+                - condition: template
+                  value_template: "{{ repeat.item.condition }}"
+              then:
+                - alias: Append the error message to the list
+                  variables:
+                    message_id: "{{ repeat.item.message_id }}"
+                    message: &get_message |-
+                      {# Custom translation #}
+                      {%
+                        if 'message' in custom_translations_json
+                        and message_id in custom_translations_json['message']
+                      %}
+                        {%
+                          set message_string = (
+                            custom_translations_json['message'][message_id]
+                          )
+                        %}
+
+                      {# Selected language #}
+                      {% elif message_id in strings[language]['message'] %}
+                        {%
+                          set message_string = (
+                            strings[language]['message'][message_id]
+                          )
+                        %}
+
+                      {# Fallback to english #}
+                      {% else %}
+                        {%
+                          set message_string = (
+                            strings['en']['message'][message_id]
+                          )
+                        %}
+                      {% endif %}
+                      {{
+                        message_string.format(
+                          quick_triggers=itinerary_value.quick_triggers
+                        )
+                      }}
+                    messages: "{{ messages | union([message]) }}"
+      - alias: If the config is valid
+        if:
+          - condition: template
+            value_template: "{{ messages | length == 0 }}"
+        then:
+          - alias: If the blueprint was triggered manually
+            if:
+              - condition: template
+                value_template: "{{ trigger.platform is none }}"
+            then:
+              - alias: Set message ids
+                variables:
+                  title_id: "valid_config"
+                  message_id: "valid_config"
+              - alias: Get notification translation
+                variables: &get_translation
+                  message: *get_message
+                  title: &get_title |-
+                    {# Custom translation #}
+                    {%
+                      if 'title' in custom_translations_json
+                      and title_id in custom_translations_json['title']
+                    %}
+                      {%
+                        set title_string = (
+                          custom_translations_json['title'][title_id]
+                        )
+                      %}
+
+                    {# Selected language #}
+                    {% elif title_id in strings[language]['title'] %}
+                      {%
+                        set title_string = (
+                          strings[language]['title'][title_id]
+                        )
+                      %}
+
+                    {# Fallback to english #}
+                    {% else %}
+                      {%
+                        set title_string = (
+                          strings['en']['title'][title_id]
+                        )
+                      %}
+                    {% endif %}
+                    {{
+                      title_string.format(
+                        awaited_persons=awaited_persons
+                      )
+                    }}
+              - alias: Notify all users on the dashboard that the config is valid
+                action: persistent_notification.create
+                data:
+                  title: "{{ title }}"
+                  message: "{{ message }}"
+                  notification_id: "{{ config_checker_tag }}"
+            else:
+              - alias: Remove the previous dashboard notification
+                action: persistent_notification.dismiss
+                data:
+                  notification_id: "{{ config_checker_tag }}"
+        else:
+          - alias: Build the notification
+            variables:
+              title_id: "invalid_config"
+              title: *get_title
+              message: "{{ '• ' ~ '\n· '.join(messages) }}"
+          - alias: Notify all users on the dashboard that the config is invalid
+            action: persistent_notification.create
+            data:
+              title: "{{ title }}"
+              message: "{{ message }}"
+              notification_id: "{{ config_checker_tag }}"
+          - alias: If the blueprint was not triggered manually
+            if:
+              - condition: template
+                value_template: "{{ trigger.platform is not none }}"
+            then:
+              - alias: Notify the driver that his config is invalid
+                action: "{{ notify_service }}"
+                data:
+                  title: "{{ title }}"
+                  message: "{{ message }}"
+                  data:
+                    car_ui: true
+                    notification_icon: mdi:hammer-wrench
+                    channel: Automatic Gate
+                    importance: high
+                    ttl: 0
+                    push:
+                      sound:
+                        name: "default"
+                        critical: 1
+                    tag: "{{ config_checker_tag }}"
+              - sequence: &tts
+                  - alias: Notify over TTS
+                    action: "{{ notify_service }}"
+                    data:
+                      message: TTS
+                      data:
+                        tts_text: |-
+                          {%
+                            set clean_title = (
+                              title
+                                | regex_replace('[\u2600-\u26FF]', '')
+                                | regex_replace('[\u2700-\u27BF]', '')
+                                | regex_replace('[\U0001F300-\U0001F5FF]', '')
+                                | regex_replace('[\U0001F600-\U0001F64F]', '')
+                                | regex_replace('[\U0001F680-\U0001F6FF]', '')
+                            ).strip()
+                          %}
+                          {% set separator = ' ' if clean_title[-1] in ['.', '!', '?'] else '. ' %}
+                          {{ clean_title ~ separator ~ message }}
+                        channel: Itinerary status
+                        importance: high
+                        ttl: 0
+                        media_stream: !input phone_tts_stream
+                    enabled: !input phone_tts
+      - alias: Confirm that no error occured while the config checker was running
+        variables:
+          successful_check: true
+    continue_on_error: true
+  - alias: If an error occured while the config checker was running
+    if:
+      - condition: template
+        value_template: "{{ not successful_check }}"
+    then:
+      - alias: Set notification ids
         variables:
           title_id: "invalid_config"
-          message_id: "invalid_translations"
+          message_id: "something_went_wrong"
       - alias: Get notification translation
-        variables: &get_translation
-          title_string: |-
-            {# Custom translation #}
-            {%
-              if 'title' in custom_translations_json
-              and title_id in custom_translations_json['title']
-            %}
-              {{ custom_translations_json['title'][title_id] }}
-
-            {# Selected language #}
-            {% elif title_id in strings[language]['title'] %}
-              {{ strings[language]['title'][title_id] }}
-
-            {# Fallback to english #}
-            {% else %}
-              {{ strings['en']['title'][title_id] }}
-            {% endif %}
-          title: |-
-            {{
-              title_string.format(
-                awaited_persons=awaited_persons
-              )
-            }}
-          message_string: |-
-            {# Custom translation #}
-            {%
-              if 'message' in custom_translations_json
-              and message_id in custom_translations_json['message']
-            %}
-              {{ custom_translations_json['message'][message_id] }}
-
-            {# Selected language #}
-            {% elif message_id in strings[language]['message'] %}
-              {{ strings[language]['message'][message_id] }}
-
-            {# Fallback to english #}
-            {% else %}
-              {{ strings['en']['message'][message_id] }}
-            {% endif %}
-          message: |-
-            {{
-              message_string.format(
-                quick_triggers=itinerary_value.quick_triggers
-              )
-            }}
-      - alias: Notify driver that his config is invalid
-        action: "{{ notify_service }}"
-        data:
-          title: "{{ title }}"
-          message: "{{ message }}"
-          data:
-            notification_icon: mdi:hammer-wrench
-            channel: Automatic Gate config
-            tag: invalid-config
-            ttl: 0
-      - sequence: &tts
-          - alias: Notify over TTS
-            action: "{{ notify_service }}"
-            data:
-              message: TTS
-              data:
-                tts_text: |-
-                  {%
-                    set clean_title = (
-                      title
-                        | regex_replace('[\u2600-\u26FF]', '')
-                        | regex_replace('[\u2700-\u27BF]', '')
-                        | regex_replace('[\U0001F300-\U0001F5FF]', '')
-                        | regex_replace('[\U0001F600-\U0001F64F]', '')
-                        | regex_replace('[\U0001F680-\U0001F6FF]', '')
-                    ).strip()
-                  %}
-                  {% set separator = ' ' if clean_title[-1] in ['.', '!', '?'] else '. ' %}
-                  {{ clean_title ~ separator ~ message }}
-                channel: Itinerary status
-                importance: high
-                ttl: 0
-                media_stream: !input phone_tts_stream
-            enabled: !input phone_tts
-      - alias: Notify all users on the dashboard that the config is invalid
+        variables: *get_translation
+      - alias: Notify all users on the dashboard that an error occured
         action: persistent_notification.create
         data:
           title: "{{ title }}"
           message: "{{ message }}"
-  - alias: Store list index of driver, extract driver sensors
-    variables:
-      idx: "{{ driving_sensors.index(trigger.entity_id) }}"
-      person: "{{ persons[idx] }}"
-      driving_sensor: "{{ trigger.entity_id }}"
-      travel_time_sensor: |-
-        {% if travel_time_sensors | length > idx %}
-          {{ travel_time_sensors[idx] }}
-        {% else %}
-          {{ none }}
-        {% endif %}
-      notify_service: "{{ notify_services[idx] }}"
-      ios_device: "{{ device_attr(notify_devices[idx], 'manufacturer') == 'Apple' }}"
-      itinerary_sensor: "{{ itinerary_sensors[idx] }}"
-      opening_order_id: "{{ 'opening_order_' ~ this.context.id }}"
-      closing_order_id: "{{ 'closing_order_' ~ this.context.id }}"
-      canceling_order_id: "{{ 'canceling_order_' ~ this.context.id }}"
-      default_itinerary_sensor_value: |-
-        {{
-          {
-            "status": none,
-            "error": none,
-            "quick_triggers": 0,
-            "last_closed": 0,
-            "auto_closed": false
-          }
-        }}
-      itinerary_value: |-
-        {%
-          set state = (
-            states(itinerary_sensor)
-            | from_json(default_itinerary_sensor_value)
-          )
-        %}
-        {%
-          if default_itinerary_sensor_value.keys() == state.keys()
-        %}
-          {{ state }}
-        {% else %}
-          {{ default_itinerary_sensor_value }}
-        {% endif %}
-      timeouts:
-        closing_suggestion: !input suggest_closing_after
-        safety_delay: "{{ safety_delay * 60 }}"
-        timer: !input timer_closing
-        default: 2147483647
-      timeout_messages:
-        closing_suggestion: "closing_suggestion"
-        safety_delay: "undefined"
-        timer: "{{ none }}"
-        default: "{{ none }}"
+          notification_id: "{{ config_checker_tag }}"
+      - stop: Config checker failed
+        error: true
+  - alias: Only continue if the blueprint was not triggered manually
+    condition: template
+    value_template: |-
+      {{
+        trigger.platform is not none and (
+          successful_check
+          or not stop_check_failed
+        )
+      }}
   - alias: If last automation iteration ended less than 5s ago
     if:
       - condition: template

@@ -10,6 +10,7 @@
 
 1. Go to [Settings > Automations & Scenes > Blueprints](https://my.home-assistant.io/redirect/blueprints)
 2. Click on the three-dot menu to the right of the blueprint needing an update, and select "Re-import blueprint"
+3. Optional: At the right of the blueprint, press `⁝` then `Run actions` and check your notifications for configuration errors
 
 ## How to install manually 👨‍🔧
 

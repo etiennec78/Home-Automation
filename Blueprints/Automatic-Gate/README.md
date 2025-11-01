@@ -63,5 +63,5 @@ Makes managing your gate while driving easier: You won't ever have to use your r
 3. Fill in `Essential Inputs` and `Per Person Sensors` categories
 4. Optional: Fill in other categories
 5. Press `Save` in the bottom right corner
-6. Optional: In the upper-right corner, press `⁝` then `Run actions` and check your notifications for errors
+6. Optional: In the upper-right corner, press `⁝` then `Run actions` and check your dashboard notifications for configuration errors
 7. Setup the [Gate Alerts blueprint](../Gate-Alerts) to receive notifications when opening
