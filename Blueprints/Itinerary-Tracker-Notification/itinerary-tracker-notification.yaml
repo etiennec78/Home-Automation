@@ -282,6 +282,7 @@ variables:
         invalid_per_person_sensors: "You have not entered a consistent number of sensors between each input in the 'Per Person Sensors' category"
         invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service"
         per_person_sensors_mismatch: "You do not appear to have entered all your per person sensors in the same order"
+        no_notification_method: "You have not entered any method for receiving notifications"
     fr:
       title:
         valid_config: "{{blueprint_name}}: Configuration valide 🛠️✅"
@@ -298,6 +299,7 @@ variables:
         invalid_per_person_sensors: "Vous n'avez pas entré un nombre de capteurs cohérent entre chaque champ de la category 'Per Person Sensors'"
         invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS"
         per_person_sensors_mismatch: "Vous ne semblez pas avoir entré tous vos capteurs par personne dans le même ordre"
+        no_notification_method: "Vous n'avez entré aucune méthode pour recevoir les notifications"
 
 triggers:
   - trigger: state
@@ -446,6 +448,14 @@ actions:
                 {% endfor %}
                 {{ data.error }}
               message_id: "per_person_sensors_mismatch"
+            - alias: Check that there is a way to notify the user
+              condition: |-
+                {{
+                  notify_devices | length == 0
+                  and speaker_tts_devices | length == 0
+                  and not persistent_active
+                }}
+              message_id: "no_notification_method"
           sequence:
             - alias: If a check failed
               if:
