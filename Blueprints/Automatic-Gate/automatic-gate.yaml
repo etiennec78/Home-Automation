@@ -123,7 +123,12 @@ blueprint:
                 device_class: duration
         notify_devices:
           name: 💬 Notify devices
-          description: Each [**device** to **notify**](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#notify-services-)
+          description: |-
+            Each [**device** to **notify**](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#notify-services-)
+            *Notes:*
+            *Optional but highly recommended*
+            *If the driver does not have a notify devices, gate behaviors will be limited to fully auto or disabled*
+          default: []
           selector:
             device:
               multiple: true
@@ -576,6 +581,7 @@ variables:
   ble_transmitter_entities: !input ble_transmitter_entities
   only_open_near: !input only_open_near
   close_when_disconnected_from: !input close_when_disconnected_from
+  itinerary_started_notif: !input itinerary_started_notif
   wifi_devices: !input wifi_devices
   forbidden_zones: !input forbidden_zones
   open_when_connected_to: !input open_when_connected_to
@@ -754,8 +760,17 @@ actions:
             {% else %}
               {{ none }}
             {% endif %}
-          notify_service: "{{ notify_services[idx] }}"
-          ios_device: "{{ device_attr(notify_devices[idx], 'manufacturer') == 'Apple' }}"
+          notify_service: |-
+            {% if notify_services | length > idx %}
+              {{ notify_services[idx] }}
+            {% else %}
+              {{ none }}
+            {% endif %}
+          ios_device: |-
+            {{
+              false if notify_service is none
+              else device_attr(notify_devices[idx], 'manufacturer') == 'Apple'
+            }}
           itinerary_sensor: "{{ itinerary_sensors[idx] }}"
           itinerary_value: |-
             {%
@@ -1090,46 +1105,51 @@ actions:
               - condition: template
                 value_template: "{{ trigger.platform is not none }}"
             then:
-              - alias: Notify the driver that his config is invalid
-                action: "{{ notify_service }}"
-                data:
-                  title: "{{ title }}"
-                  message: "{{ message }}"
-                  data:
-                    car_ui: true
-                    notification_icon: mdi:hammer-wrench
-                    channel: Automatic Gate
-                    importance: high
-                    ttl: 0
-                    push:
-                      sound:
-                        name: "default"
-                        critical: 1
-                    tag: "{{ config_checker_tag }}"
-              - sequence: &tts
-                  - alias: Notify over TTS
+              - alias: If a notify service exists
+                if:
+                  - condition: template
+                    value_template: "{{ notify_service is not none }}"
+                then:
+                  - alias: Notify the driver that his config is invalid
                     action: "{{ notify_service }}"
                     data:
-                      message: TTS
+                      title: "{{ title }}"
+                      message: "{{ message }}"
                       data:
-                        tts_text: |-
-                          {%
-                            set clean_title = (
-                              title
-                                | regex_replace('[\u2600-\u26FF]', '')
-                                | regex_replace('[\u2700-\u27BF]', '')
-                                | regex_replace('[\U0001F300-\U0001F5FF]', '')
-                                | regex_replace('[\U0001F600-\U0001F64F]', '')
-                                | regex_replace('[\U0001F680-\U0001F6FF]', '')
-                            ).strip()
-                          %}
-                          {% set separator = ' ' if clean_title[-1] in ['.', '!', '?'] else '. ' %}
-                          {{ clean_title ~ separator ~ message }}
-                        channel: Itinerary status
+                        car_ui: true
+                        notification_icon: mdi:hammer-wrench
+                        channel: Automatic Gate
                         importance: high
                         ttl: 0
-                        media_stream: !input phone_tts_stream
-                    enabled: !input phone_tts
+                        push:
+                          sound:
+                            name: "default"
+                            critical: 1
+                        tag: "{{ config_checker_tag }}"
+                  - sequence: &tts
+                      - alias: Notify over TTS
+                        action: "{{ notify_service }}"
+                        data:
+                          message: TTS
+                          data:
+                            tts_text: |-
+                              {%
+                                set clean_title = (
+                                  title
+                                    | regex_replace('[\u2600-\u26FF]', '')
+                                    | regex_replace('[\u2700-\u27BF]', '')
+                                    | regex_replace('[\U0001F300-\U0001F5FF]', '')
+                                    | regex_replace('[\U0001F600-\U0001F64F]', '')
+                                    | regex_replace('[\U0001F680-\U0001F6FF]', '')
+                                ).strip()
+                              %}
+                              {% set separator = ' ' if clean_title[-1] in ['.', '!', '?'] else '. ' %}
+                              {{ clean_title ~ separator ~ message }}
+                            channel: Itinerary status
+                            importance: high
+                            ttl: 0
+                            media_stream: !input phone_tts_stream
+                        enabled: !input phone_tts
       - alias: Confirm that no error occured while the config checker was running
         variables:
           successful_check: true
@@ -1228,24 +1248,29 @@ actions:
                   level: error
                   message: "{{ message }}"
                   logger: blueprints.etiennec78.automatic_gate
-              - alias: Notify driver that the gate is reopening
-                action: "{{ notify_service }}"
-                data:
-                  title: "{{ title }}"
-                  message: "{{ message }}"
-                  data: &notification_data
-                    car_ui: true
-                    notification_icon: mdi:alert-circle
-                    channel: Itinerary status
-                    importance: high
-                    ttl: 0
-                    push:
-                      sound:
-                        name: "default"
-                        critical: 1
-                    tag: itinerary-status
-                    timeout: 300
-              - sequence: *tts
+              - alias: If a notify service exists
+                if:
+                  - condition: template
+                    value_template: "{{ notify_service is not none }}"
+                then:
+                  - alias: Notify driver that the gate is reopening
+                    action: "{{ notify_service }}"
+                    data:
+                      title: "{{ title }}"
+                      message: "{{ message }}"
+                      data: &notification_data
+                        car_ui: true
+                        notification_icon: mdi:alert-circle
+                        channel: Itinerary status
+                        importance: high
+                        ttl: 0
+                        push:
+                          sound:
+                            name: "default"
+                            critical: 1
+                        tag: itinerary-status
+                        timeout: 300
+                  - sequence: *tts
               - stop: Blueprint triggered closing on the user
                 error: true
           - alias: If this is the third time the error occurs in a row
@@ -1269,13 +1294,18 @@ actions:
                       level: error
                       message: "{{ message }}"
                       logger: blueprints.etiennec78.automatic_gate
-                  - alias: Notify driver that the blueprint is disabling itself
-                    action: "{{ notify_service }}"
-                    data:
-                      title: "{{ title }}"
-                      message: "{{ message }}"
-                      data: *notification_data
-                  - sequence: *tts
+                  - alias: If a notify service exists
+                    if:
+                      - condition: template
+                        value_template: "{{ notify_service is not none }}"
+                    then:
+                      - alias: Notify driver that the blueprint is disabling itself
+                        action: "{{ notify_service }}"
+                        data:
+                          title: "{{ title }}"
+                          message: "{{ message }}"
+                          data: *notification_data
+                      - sequence: *tts
                   - alias: Notify all users on the dashboard that the blueprint has disabled itself
                     action: persistent_notification.create
                     data:
@@ -1302,12 +1332,18 @@ actions:
                   level: error
                   message: "{{ message }}"
                   logger: blueprints.etiennec78.automatic_gate
-              - alias: Notify driver of itinerary cancelation
-                action: "{{ notify_service }}"
-                data:
-                  title: "{{ title }}"
-                  message: "{{ message }}"
-                  data: *notification_data
+              - alias: If a notify service exists
+                if:
+                  - condition: template
+                    value_template: "{{ notify_service is not none }}"
+                then:
+                  - alias: Notify driver of itinerary cancelation
+                    action: "{{ notify_service }}"
+                    data:
+                      title: "{{ title }}"
+                      message: "{{ message }}"
+                      data: *notification_data
+                  - sequence: *tts
               - stop: The gate recently tried to close
     else:
       - alias: If the quick triggers counter is not at 0
@@ -1340,7 +1376,11 @@ actions:
           - alias: If driver has iBeacon entity set for auto-closing
             if:
               - condition: template
-                value_template: "{{ (ble_entities | length) - 1 >= idx }}"
+                value_template: |-
+                  {{
+                    notify_service is not none
+                    and idx < ble_entities | length
+                  }}
             then:
               - alias: Save iBeacon states
                 variables:
@@ -1438,15 +1478,20 @@ actions:
                   - alias: Set title id
                     variables:
                       title_id: "itinerary_canceled"
-                  - alias: Get notification translation
-                    variables: *get_translation
-                  - alias: Notify driver of itinerary cancelation
-                    action: "{{ notify_service }}"
-                    data:
-                      title: "{{ title }}"
-                      message: "{{ message }}"
-                      data: *notification_data
-                  - sequence: *tts
+                  - alias: If a notify service exists
+                    if:
+                      - condition: template
+                        value_template: "{{ notify_service is not none }}"
+                    then:
+                      - alias: Get notification translation
+                        variables: *get_translation
+                      - alias: Notify driver of itinerary cancelation
+                        action: "{{ notify_service }}"
+                        data:
+                          title: "{{ title }}"
+                          message: "{{ message }}"
+                          data: *notification_data
+                      - sequence: *tts
                   - alias: Mark error in driver itinerary sensor
                     variables:
                       update:
@@ -1464,7 +1509,11 @@ actions:
                   - alias: If driver has an iBeacon entity set for auto-closing
                     if:
                       - condition: template
-                        value_template: "{{ (ble_entities | length) - 1 >= idx }}"
+                        value_template: |-
+                          {{
+                            notify_service is not none
+                            and idx < ble_entities | length
+                          }}
                     then:
                       - alias: If driver has a saved iBeacon transmitter state
                         if:
@@ -1564,6 +1613,27 @@ actions:
                 }
               )
             }}
+      - alias: If there is no notification service
+        if:
+          - condition: template
+            value_template: "{{ notify_service is none }}"
+        then:
+          - alias: If the opening behavior uses a notification service
+            if:
+              - condition: template
+                value_template: "{{ opening_behavior in ['timer', 'notif'] }}"
+            then:
+              - alias: Change the opening behavior to full auto
+                variables:
+                  opening_behavior: auto
+          - alias: If the closing behavior uses a notification service
+            if:
+              - condition: template
+                value_template: "{{ closing_behavior in ['timer', 'notif'] }}"
+            then:
+              - alias: Change the closing behavior to full auto
+                variables:
+                  closing_behavior: auto
       - alias: Open and close gate by following behaviors set by the user
         sequence: &open_close_behavior
           - alias: Initialize a variable to wait for the phone to receive the notification before starting the timer
@@ -2128,23 +2198,33 @@ actions:
                           message_id: "awaiting"
                       - alias: Get notification translation
                         variables: *get_translation
-                      - alias: Notify driver that gate will wait for next person
-                        action: "{{ notify_service }}"
-                        data:
-                          title: "{{ title }}"
-                          message: "{{ message }}"
-                          data:
-                            <<: *notification_data
-                            notification_icon: mdi:sleep
-                            timeout: ""
-                      - sequence: *tts
+                      - alias: If a notify service exists
+                        if:
+                          - condition: template
+                            value_template: "{{ notify_service is not none }}"
+                        then:
+                          - alias: Notify driver that gate will wait for next person
+                            action: "{{ notify_service }}"
+                            data:
+                              title: "{{ title }}"
+                              message: "{{ message }}"
+                              data:
+                                <<: *notification_data
+                                notification_icon: mdi:sleep
+                                timeout: ""
+                          - sequence: *tts
                       - alias: Wait for gate closed
                         wait_for_trigger:
                           - trigger: template
                             value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
-                      - alias: Remove awaiting user notification
-                        action: "{{ notify_service }}"
-                        data: *clear_notification
+                      - alias: If a notify service exists
+                        if:
+                          - condition: template
+                            value_template: "{{ notify_service is not none }}"
+                        then:
+                          - alias: Remove awaiting user notification
+                            action: "{{ notify_service }}"
+                            data: *clear_notification
                     else:
                       - alias: If an error needs to be raised
                         if:
@@ -2266,7 +2346,15 @@ actions:
       entity_id: "{{ itinerary_sensor }}"
     data:
       value: "{{ itinerary_value | to_json }}"
-  - sequence:
+  - alias: If a notify service exists and the user wants to be notified
+    if:
+      - condition: template
+        value_template: |-
+          {{
+            notify_service is not none
+            and itinerary_started_notif
+          }}
+    then:
       - alias: Set notification ids
         variables:
           title_id: "itinerary_started"
@@ -2283,7 +2371,6 @@ actions:
             notification_icon: mdi:map-check
             timeout: ""
       - sequence: *tts
-    enabled: !input itinerary_started_notif
   - alias: Repeat while driver still driving
     repeat:
       while:
