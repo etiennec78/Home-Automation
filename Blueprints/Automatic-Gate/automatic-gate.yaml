@@ -1615,29 +1615,29 @@ actions:
                 }
               )
             }}
-      - alias: If there is no notification service
-        if:
-          - condition: template
-            value_template: "{{ notify_service is none }}"
-        then:
-          - alias: If the opening behavior uses a notification service
-            if:
-              - condition: template
-                value_template: "{{ opening_behavior in ['timer', 'notif'] }}"
-            then:
-              - alias: Change the opening behavior to full auto
-                variables:
-                  opening_behavior: auto
-          - alias: If the closing behavior uses a notification service
-            if:
-              - condition: template
-                value_template: "{{ closing_behavior in ['timer', 'notif'] }}"
-            then:
-              - alias: Change the closing behavior to full auto
-                variables:
-                  closing_behavior: auto
       - alias: Open and close gate by following behaviors set by the user
         sequence: &open_close_behavior
+          - alias: If there is no notification service
+            if:
+              - condition: template
+                value_template: "{{ notify_service is none }}"
+            then:
+              - alias: If the opening behavior uses a notification service
+                if:
+                  - condition: template
+                    value_template: "{{ opening_behavior in ['timer', 'notif'] }}"
+                then:
+                  - alias: Change the opening behavior to full auto
+                    variables:
+                      opening_behavior: auto
+              - alias: If the closing behavior uses a notification service
+                if:
+                  - condition: template
+                    value_template: "{{ closing_behavior in ['timer', 'notif'] }}"
+                then:
+                  - alias: Change the closing behavior to full auto
+                    variables:
+                      closing_behavior: auto
           - alias: Initialize a variable to wait for the phone to receive the notification before starting the timer
             variables:
               wait_notif_reception: "{{ not ios_device and opening_behavior == 'timer' }}"
