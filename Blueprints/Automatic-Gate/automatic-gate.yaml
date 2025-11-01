@@ -860,7 +860,8 @@ actions:
             - alias: Check that iBeacons report unknown by default
               condition: |-
                 {{
-                  (
+                  trigger.platform is none
+                  and (
                     ble_entities
                     | select('is_state', 'unknown')
                     | list
