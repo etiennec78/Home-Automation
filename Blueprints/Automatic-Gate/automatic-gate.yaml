@@ -136,7 +136,9 @@ blueprint:
                 integration: mobile_app
         itinerary_sensors:
           name: 🗺️ Itinerary sensors
-          description: Each empty **[itinerary input text](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#itinerary-sensors-%EF%B8%8F)** helper to store each user **itinerary state**
+          description: |-
+            Each empty **[itinerary input text](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#itinerary-sensors-%EF%B8%8F)** helper to store each user **itinerary state**
+            *Note: You can use these sensors to sync multiple instances of the Automatic Gate with different configurations by adding sensors from the others at the end of this list*
           selector:
             entity:
               multiple: true
@@ -897,7 +899,7 @@ actions:
                   and 'ble' in open_when_connected_to
                 }}
               message_id: "too_many_arrival_opening_method"
-            - alias: Check that the travel time sensor has a valid maximum length
+            - alias: Check that travel time sensors have a valid maximum length
               condition: |-
                 {{
                   (
@@ -916,7 +918,7 @@ actions:
                     == driving_sensors | length
                     <= itinerary_sensors | length
                     and (
-                      persons_len == itinerary_sensors | length
+                      persons_len == travel_time_sensors | length
                       or ble in open_when_connected_to
                     )
                     and wifi_devices | length <= persons_len
@@ -2175,9 +2177,14 @@ actions:
                               )
                             %}
                             {% if value.status in ['on_approach', 'leaving'] %}
+                              {% if sensor_idx < persons | length %}
+                                {% set name_sensor = persons[sensor_idx] %}
+                              {% else %}
+                                {% set name_sensor = itinerary_sensors[sensor_idx] %}
+                              {% endif %}
                               {%
                                 set data.drivers_near_gate = data.drivers_near_gate + [
-                                  state_attr(persons[sensor_idx], 'friendly_name')
+                                  state_attr(name_sensor, 'friendly_name')
                                 ]
                               %}
                             {% endif %}
