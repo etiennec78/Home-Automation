@@ -543,6 +543,12 @@ blueprint:
           default: true
           selector:
             boolean:
+        stop_check_failed:
+          name: ✋🏻 Stop if tests failed
+          description: Stop the blueprint if at least one test has failed
+          default: false
+          selector:
+            boolean:
 
 variables:
   gate: !input gate
@@ -1135,7 +1141,13 @@ actions:
         error: true
   - alias: Only continue if the blueprint was not triggered manually
     condition: template
-    value_template: "{{ trigger.platform is not none }}"
+    value_template: |-
+      {{
+        trigger.platform is not none and (
+          successful_check
+          or not stop_check_failed
+        )
+      }}
   - alias: If last automation iteration ended less than 5s ago
     if:
       - condition: template
