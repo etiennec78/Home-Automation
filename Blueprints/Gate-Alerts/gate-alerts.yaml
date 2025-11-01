@@ -10,7 +10,7 @@ blueprint:
     A blueprint that notifies selected users when the gate:
     * Opens 🔓
     * Closes 🔐
-    * Encounters an error ⚠
+    * Encounters an error ⚠️
     * Has been left open for too long 🔓
     * Has been offline for too long 🌐
 
@@ -218,7 +218,7 @@ variables:
         still_open: Gate open 🔓
         left_open: Gate left open 🔓
         close: Gate closing 🔐
-        error: Gate error ⚠
+        error: Gate error ⚠️
         offline: Gate offline 🌐
       message:
         open: The gate is opening
@@ -235,7 +235,7 @@ variables:
         still_open: Portail ouvert 🔓
         left_open: Portail laissé ouvert 🔓️
         close: Fermeture portail 🔐
-        error: Erreur portail ⚠
+        error: Erreur portail ⚠️
         offline: Portail hors ligne 🌐
       message:
         open: Ouverture du portail en cours
