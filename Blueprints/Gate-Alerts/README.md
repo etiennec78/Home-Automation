@@ -6,7 +6,7 @@ A blueprint that notifies selected users when the gate:
 
 * Opens 🔓
 * Closes 🔐
-* Encounters an error ⚠
+* Encounters an error ⚠️
 * Has been left open for too long 🔓
 * Has been offline for too long 🌐
 
