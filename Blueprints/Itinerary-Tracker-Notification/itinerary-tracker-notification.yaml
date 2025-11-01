@@ -560,6 +560,10 @@ actions:
       - alias: Confirm that no error occured while the config checker was running
         variables:
           successful_check: true
+    else:
+      - alias: Mark the check as successful since it did not happen
+        variables:
+          successful_check: true
     continue_on_error: true
   - alias: If an error occured while the config checker was running
     if:
