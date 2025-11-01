@@ -821,14 +821,12 @@ actions:
                   variables:
                     message_id: "unsupported_tt_integration"
                     message: *get_message
-                - alias: Notify driver about unsupported integration
-                  action: "{{ notify_service }}"
+                - alias: Notify all users on the dashboard that the integration is unsupported
+                  action: persistent_notification.create
                   data:
-                    notification_icon: mdi:alert-circle
-                    tag: "{{ notification_tag }}"
-                    channel: Itinerary status
-                    data:
-                      importance: high
+                    title: "{{ title }}"
+                    message: "{{ message }}"
+                    notification_id: "{{ persistent_id }}"
                 - stop: Travel time integration not supported
                   error: true
             - alias: Convert ETA to needed types
