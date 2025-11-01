@@ -363,6 +363,9 @@ blueprint:
         ask_reopen_manually_closed:
           name: 🚧 Ask before reopening if manually closed
           description: If the gate was recently closed, but not automatically, ask the user to confirm before reopening it on departure
+          default: true
+          selector:
+            boolean:
 
     notification_settings:
       name: Notification settings
