@@ -360,6 +360,9 @@ blueprint:
           default: true
           selector:
             boolean:
+        ask_reopen_manually_closed:
+          name: 🚧 Ask before reopening if manually closed
+          description: If the gate was recently closed, but not automatically, ask the user to confirm before reopening it on departure
 
     notification_settings:
       name: Notification settings
@@ -1615,29 +1618,84 @@ actions:
                 }
               )
             }}
-      - alias: If there is no notification service
-        if:
-          - condition: template
-            value_template: "{{ notify_service is none }}"
+      - if:
+          - alias: If the user doesn't want his gate to open automatically if someone just closed it
+            condition: template
+            value_template: !input ask_reopen_manually_closed
+          - alias: If the opening behavior is automatic
+            condition: template
+            value_template: "{{ opening_behavior in ['timer', 'auto'] }}"
+          - alias: If the gate was recently closed manually
+            condition: template
+            value_template: |-
+              {%
+                set data = namespace(
+                  recently_closed=false,
+                  auto_closed=false
+                )
+              %}
+              {% for gate_entity in gate %}
+                {%
+                  if (
+                    states[gate_entity].last_closed
+                    + timedelta(minutes=2)
+                    > now()
+                  )
+                %}
+                  {% set data.recently_closed = true %}
+                  {% break %}
+                {% endif %}
+              {% endfor %}
+              {% if data.recently_closed %}
+                {% for sensor in itinerary_sensors %}
+                  {%
+                    set value = (
+                      states(sensor)
+                      | from_json(default_itinerary_sensor_value)
+                    )
+                  %}
+                  {%
+                    if (
+                      value.last_closed
+                      | as_datetime
+                      + timedelta(minutes=2)
+                      > now()
+                    )
+                    and value.auto_closed
+                  %}
+                    {% set data.auto_closed = true %}
+                    {% break %}
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+              {{ data.recently_closed and not data.auto_closed }}
         then:
-          - alias: If the opening behavior uses a notification service
-            if:
-              - condition: template
-                value_template: "{{ opening_behavior in ['timer', 'notif'] }}"
-            then:
-              - alias: Change the opening behavior to full auto
-                variables:
-                  opening_behavior: auto
-          - alias: If the closing behavior uses a notification service
-            if:
-              - condition: template
-                value_template: "{{ closing_behavior in ['timer', 'notif'] }}"
-            then:
-              - alias: Change the closing behavior to full auto
-                variables:
-                  closing_behavior: auto
+          - alias: Change the opening behavior to notificaiton request
+            variables:
+              opening_behavior: notif
       - alias: Open and close gate by following behaviors set by the user
         sequence: &open_close_behavior
+          - alias: If there is no notification service
+            if:
+              - condition: template
+                value_template: "{{ notify_service is none }}"
+            then:
+              - alias: If the opening behavior uses a notification service
+                if:
+                  - condition: template
+                    value_template: "{{ opening_behavior in ['timer', 'notif'] }}"
+                then:
+                  - alias: Change the opening behavior to full auto
+                    variables:
+                      opening_behavior: auto
+              - alias: If the closing behavior uses a notification service
+                if:
+                  - condition: template
+                    value_template: "{{ closing_behavior in ['timer', 'notif'] }}"
+                then:
+                  - alias: Change the closing behavior to full auto
+                    variables:
+                      closing_behavior: auto
           - alias: Initialize a variable to wait for the phone to receive the notification before starting the timer
             variables:
               wait_notif_reception: "{{ not ios_device and opening_behavior == 'timer' }}"
