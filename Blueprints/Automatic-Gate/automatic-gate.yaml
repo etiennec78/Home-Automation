@@ -663,7 +663,7 @@ variables:
         missing_arrival_opening_method: "You don't have any way to detect your arrival. Please add a travel time sensor or use an iBeacon."
         too_many_arrival_opening_method: "You are using several methods to detect your arrival. One is enough."
         invalid_travel_time_sensor_length: "The maximum length of your travel time sensor is too short"
-        invalid_per_person_sensors: "You have not entered as many sensors for each field in the 'Per Person Sensors' category"
+        invalid_per_person_sensors: "You have not entered the correct number of sensors in the per person sensor inputs"
         per_person_sensors_mismatch: "You do not appear to have entered all your per person sensors in the same order"
       button:
         open: "Open 🔓"
@@ -721,7 +721,7 @@ variables:
         missing_arrival_opening_method: "Vous n'avez aucune méthode pour détecter votre arrivée. Ajoutez un capteur de temps de trajet ou utilisez un iBeacon."
         too_many_arrival_opening_method: "Vous utilisez plusieurs méthodes pour détecter votre arrivée. Une seule suffit."
         invalid_travel_time_sensor_length: "Le capteur stockant les infos sur votre itinéraire a une longueur maximale trop petite"
-        invalid_per_person_sensors: "Vous n'avez pas entré autant de capteurs pour chaque champ dans la catégorie 'Per Person Sensors'"
+        invalid_per_person_sensors: "Vous n'avez pas entré le bon nombre de capteurs dans les champs de capteurs par personne"
         per_person_sensors_mismatch: "Vous ne semblez pas avoir entré tous vos capteurs par personne dans le même ordre"
       button:
         open: "Ouvrir 🔓"
@@ -893,15 +893,19 @@ actions:
               message_id: "invalid_travel_time_sensor_length"
             - alias: Check that all per person sensors have been entered
               condition: |-
+                {% set persons_len = persons | length %}
                 {{
                   not(
-                    persons | length
+                    persons_len
                     == driving_sensors | length
                     <= itinerary_sensors | length
                     and (
-                      persons | length == itinerary_sensors | length
+                      persons_len == itinerary_sensors | length
                       or ble in open_when_connected_to
                     )
+                    and wifi_devices | length <= persons_len
+                    and ble_entities | length <= persons_len
+                    and ble_transmitter_entities | length <= persons_len
                   )
                 }}
               message_id: "invalid_per_person_sensors"
