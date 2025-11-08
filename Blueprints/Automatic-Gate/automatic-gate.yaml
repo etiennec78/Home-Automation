@@ -679,6 +679,7 @@ variables:
         invalid_itinerary_sensor_length: "The maximum character length of your itinerary sensor is too short (255 is recommended)"
         invalid_per_person_sensors: "You have not entered the correct number of sensors in the per person sensor inputs"
         per_person_sensors_mismatch: "You do not appear to have entered all your per person sensors in the same order"
+        ble_trackers_mismatch: "Not all of your iBeacon trackers are from the same device"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -737,6 +738,7 @@ variables:
         invalid_itinerary_sensor_length: "La longueur maximale de votre capteur d'itinéraire est trop courte (255 recommandé)"
         invalid_per_person_sensors: "Vous n'avez pas entré le bon nombre de capteurs dans les champs de capteurs par personne"
         per_person_sensors_mismatch: "Vous ne semblez pas avoir entré tous vos capteurs par personne dans le même ordre"
+        ble_trackers_mismatch: "Vos traceurs iBeacon ne proviennent pas tous du même appareil"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -992,6 +994,23 @@ actions:
                 {% endfor %}
                 {{ data.error }}
               message_id: "per_person_sensors_mismatch"
+            - alias: Check that all ble tracker entities come from the same device
+              condition: |-
+                {% if ble_entities | length > 1 %}
+                  {{
+                    ble_entities
+                    | select(
+                      'in', device_entities(
+                        device_id(ble_entities[0])
+                      )
+                    )
+                    | list
+                    != ble_entities
+                  }}
+                {% else %}
+                  {{ false }}
+                {% endif %}
+              message_id: "ble_trackers_mismatch"
           sequence:
             - alias: If a check failed
               if:
