@@ -680,6 +680,7 @@ variables:
         invalid_per_person_sensors: "You have not entered the correct number of sensors in the per person sensor inputs"
         per_person_sensors_mismatch: "You do not appear to have entered all your per person sensors in the same order"
         ble_trackers_mismatch: "Not all of your iBeacon trackers are from the same device"
+        wifi_tracker_is_gps: "One of your Wi-Fi trackers is a GPS type instead of a Router type"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -739,6 +740,7 @@ variables:
         invalid_per_person_sensors: "Vous n'avez pas entré le bon nombre de capteurs dans les champs de capteurs par personne"
         per_person_sensors_mismatch: "Vous ne semblez pas avoir entré tous vos capteurs par personne dans le même ordre"
         ble_trackers_mismatch: "Vos traceurs iBeacon ne proviennent pas tous du même appareil"
+        wifi_tracker_is_gps: "L'un de vos traceurs Wi-Fi est de type GPS au lieu de Routeur"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -1011,6 +1013,17 @@ actions:
                   {{ false }}
                 {% endif %}
               message_id: "ble_trackers_mismatch"
+            - alias: Check that Wi-Fi device trackers does not contain GPS data
+              condition: |-
+                {{
+                  wifi_devices
+                  | map('state_attr', 'source_type')
+                  | select('equalto', 'gps')
+                  | list
+                  | length
+                  != 0
+                }}
+              message_id: "wifi_trackers_contain_gps_data"
           sequence:
             - alias: If a check failed
               if:
