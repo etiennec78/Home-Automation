@@ -257,10 +257,10 @@ variables:
         offline: The gate has been offline for {{notification_delay}} minutes
         something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
         valid_config: "Your configuration seems valid"
-        invalid_translations: "Your custom translations are not valid !"
-        missing_error_sensor: "You have not entered the sensor containing gate error codes"
-        invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service"
-        no_notification_method: "You have not entered any method for receiving notifications"
+        invalid_translations: "Your custom translations are not valid (#1)"
+        missing_error_sensor: "You have not entered the sensor containing gate error codes (#15)"
+        invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service (#16)"
+        no_notification_method: "You have not entered any method for receiving notifications (#17)"
       button:
         close: Close 🔐
     fr:
@@ -282,10 +282,10 @@ variables:
         offline: Le portail est hors ligne depuis {{notification_delay}} minutes
         something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
         valid_config: "Votre configuration semble valide"
-        invalid_translations: "Vos traductions personnalisées ne sont pas valides !"
-        missing_error_sensor: "Vous n'avez pas entré le capteur contenant les codes d'erreur du portail"
-        invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS"
-        no_notification_method: "Vous n'avez entré aucune méthode pour recevoir les notifications"
+        invalid_translations: "Vos traductions personnalisées ne sont pas valides (#1)"
+        missing_error_sensor: "Vous n'avez pas entré le capteur contenant les codes d'erreur du portail (#15)"
+        invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS (#16)"
+        no_notification_method: "Vous n'avez entré aucune méthode pour recevoir les notifications (#17)"
       button:
         close: Refermer 🔐
 

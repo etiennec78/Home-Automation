@@ -278,11 +278,11 @@ variables:
         something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
         unsupported_tt_integration: "Your travel time integration is not supported !"
         valid_config: "Your configuration seems valid"
-        invalid_translations: "Your custom translations are not valid !"
-        invalid_per_person_sensors: "You have not entered a consistent number of sensors between each input in the 'Per Person Sensors' category"
-        invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service"
-        per_person_sensors_mismatch: "You do not appear to have entered all your per person sensors in the same order"
-        no_notification_method: "You have not entered any method for receiving notifications"
+        invalid_translations: "Your custom translations are not valid (#1)"
+        invalid_per_person_sensors: "You have not entered a consistent number of sensors between each input in the 'Per Person Sensors' category (#11)"
+        invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service (#16)"
+        per_person_sensors_mismatch: "You do not appear to have entered all your per person sensors in the same order (#12)"
+        no_notification_method: "You have not entered any method for receiving notifications (#17)"
     fr:
       title:
         valid_config: "{{blueprint_name}}: Configuration valide 🛠️✅"
@@ -295,11 +295,11 @@ variables:
         something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
         unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
         valid_config: "Votre configuration semble valide"
-        invalid_translations: "Vos traductions personnalisées ne sont pas valides !"
-        invalid_per_person_sensors: "Vous n'avez pas entré un nombre de capteurs cohérent entre chaque champ de la category 'Per Person Sensors'"
-        invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS"
-        per_person_sensors_mismatch: "Vous ne semblez pas avoir entré tous vos capteurs par personne dans le même ordre"
-        no_notification_method: "Vous n'avez entré aucune méthode pour recevoir les notifications"
+        invalid_translations: "Vos traductions personnalisées ne sont pas valides (#1)"
+        invalid_per_person_sensors: "Vous n'avez pas entré un nombre de capteurs cohérent entre chaque champ de la category 'Per Person Sensors' (#11)"
+        invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS (#16)"
+        per_person_sensors_mismatch: "Vous ne semblez pas avoir entré tous vos capteurs par personne dans le même ordre (#12)"
+        no_notification_method: "Vous n'avez entré aucune méthode pour recevoir les notifications (#17)"
 
 triggers:
   - trigger: state
