@@ -223,7 +223,7 @@ Each travel time sensor monitoring each user's time left before arrival
 | Service | Supported | Reliability | Free | No credit card required |
 | :--- | :---: | :---: | :---: | :---: |
 | Here Travel Time 🚘 | ✅ | 🟩 | 🟢 | ❌ |
-| Google Travel Time 🚘 | ❌ | 🟩 | ✅ | ❌ |
+| Google Maps Travel Time 🚘 | ✅ | 🟩 | ✅ | ❌ |
 | Waze Travel Time 🚘 | ✅ | 🟧 | ✅ | ✅ |
 | Smart vehicle 🌐 | ❓ | ❓ | ❓ | ❓ |
 
