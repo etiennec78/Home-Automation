@@ -70,7 +70,7 @@ blueprint:
           name: ✈️ Travel time sensors
           description: |-
             Each **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#travel-time-sensors-%EF%B8%8F)** monitoring each user **time left before arrival** (same order)
-            *Note: Optional if "Track travel time" is set to false*
+            *Note: Optional*
           default: []
           selector:
             entity:
