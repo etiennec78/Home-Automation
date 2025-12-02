@@ -1708,219 +1708,224 @@ actions:
                   - alias: Change the closing behavior to full auto
                     variables:
                       closing_behavior: auto
-          - alias: Initialize a variable to wait for the phone to receive the notification before starting the timer
-            variables:
-              wait_notif_reception: "{{ not ios_device and opening_behavior == 'timer' }}"
-          - alias: If opening behavior is set to cancelable timer or notification request
+          - alias: If one of the gates is closed
             if:
               - condition: template
-                value_template: "{{ opening_behavior in ['timer', 'notif'] }}"
+                value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
             then:
-              - choose:
-                  - alias: If opening behavior is set to notification request
-                    conditions:
-                      - condition: template
-                        value_template: "{{ opening_behavior == 'notif' }}"
-                    sequence:
-                      - alias: Set notification ids
-                        variables:
-                          message_id: "{{ opening_message }}"
-                          title_id: "open_gate"
-                      - alias: Get notification translation
-                        variables: *get_translation
-                      - alias: Get button translation
-                        variables: &get_button_translations
-                          button_ids:
-                            - "open"
-                            - "cancel"
-                          buttons: |-
-                            {% set data = namespace(buttons=[]) %}
-                            {% for button_id in button_ids %}
-                              {# Custom translation #}
-                              {%
-                                if 'button' in custom_translations_json
-                                and button_id in custom_translations_json['button']
-                              %}
-                                {% set translation = custom_translations_json['button'][button_id] %}
-
-                              {# Selected language #}
-                              {% elif button_id in strings[language]['button'] %}
-                                {% set translation = strings[language]['button'][button_id] %}
-
-                              {# Fallback to english #}
-                              {% else %}
-                                {% set translation = strings['en']['button'][button_id] %}
-                              {% endif %}
-
-                              {% set data.buttons = data.buttons + [translation] %}
-
-                            {% endfor %}
-                            {{ data.buttons }}
-                      - alias: Ask the user if he wants to open the gate
-                        action: "{{ notify_service }}"
-                        data:
-                          title: "{{ title }}"
-                          message: "{{ message }}"
-                          data:
-                            <<: *notification_data
-                            notification_icon: mdi:lock-question
-                            sticky: true
-                            persistent: true
-                            timeout: ""
-                            actions:
-                              - action: "{{ opening_order_id }}"
-                                title: "{{ buttons[0] }}"
-                                icon: sfsymbols:lock.open
-                              - action: "{{ canceling_order_id }}"
-                                title: "{{ buttons[1] }}"
-                                icon: sfsymbols:xmark
-                  - alias: If opening behavior is set to cancelable timer
-                    conditions:
-                      - condition: template
-                        value_template: "{{ opening_behavior == 'timer' }}"
-                    sequence:
-                      - alias: Set notification ids
-                        variables:
-                          message_id: "{{ opening_message }}"
-                          title_id: "timer_opening"
-                      - alias: Get notification translation
-                        variables: *get_translation
-                      - alias: Get button translation
-                        variables:
-                          button_ids:
-                            - "cancel"
-                            - "open"
-                          <<: *get_button_translations
-                      - alias: Send the cancelable timer notification to the user
-                        action: "{{ notify_service }}"
-                        data:
-                          title: "{{ title }}"
-                          message: "{{ message }}"
-                          data:
-                            <<: *notification_data
-                            notification_icon: mdi:timer-lock-open
-                            sticky: true
-                            persistent: true
-                            confirmation: "{{ not ios_device }}"
-                            timeout: "{{ timer_opening }}"
-                            chronometer: true
-                            when: "{{ timer_opening }}"
-                            when_relative: true
-                            actions:
-                              - action: "{{ canceling_order_id }}"
-                                title: "{{ buttons[0] }}"
-                                icon: sfsymbols:xmark
-                              - action: "{{ opening_order_id }}"
-                                title: "{{ buttons[1] }}"
-                                icon: sfsymbols:lock.open
-              - sequence: *tts
-              - alias: Listen for events a second time if the first event was a notification received confirmation
-                repeat:
-                  until:
-                    - condition: template
-                      value_template: "{{ wait.trigger.id != 'notification_received' }}"
-                  sequence:
-                    - alias: Wait for events before opening the gate or canceling the itinerary
-                      wait_for_trigger:
-                        - alias: Manual opening
-                          trigger: template
-                          id: manual
-                          value_template: "{{ gate | select('is_state', ['on', 'open', 'opening']) | list != [] }}"
-                        - alias: Vehicle left
-                          trigger: template
-                          id: vehicle_stopped
-                          value_template: "{{ is_state(driving_sensor, 'off') }}"
-                        - alias: Activation zone left
-                          trigger: template
-                          id: vehicle_away
-                          value_template: &activation_zone_out_trigger |-
-                            {% if state_attr(person, 'gps_accuracy') is none %}
-                              {% set accuracy = 100 %}
-                            {% else %}
-                              {% set accuracy = state_attr(person, 'gps_accuracy') %}
-                            {% endif %}
-                            {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
-
-                            {{ gate_distance > activation_zone }}
-                        - alias: Forbidden zone entered
-                          trigger: template
-                          id: forbidden_zone
-                          value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
-                        - alias: Opening button pressed
-                          trigger: event
-                          id: opening_order
-                          event_type: mobile_app_notification_action
-                          event_data:
-                            action: "{{ opening_order_id }}"
-                        - alias: Canceling button pressed
-                          trigger: event
-                          id: canceling_order
-                          event_type: mobile_app_notification_action
-                          event_data:
-                            action: "{{ canceling_order_id }}"
-                        - alias: Notification received
-                          trigger: event
-                          id: notification_received
-                          event_type: mobile_app_notification_received
-                          event_data:
-                            action_2_key: "{{ opening_order_id }}"
-                          enabled: "{{ wait_notif_reception }}"
-                      timeout: |-
-                        {% if opening_behavior == 'timer' %}
-                          {{ timer_opening }}
-                        {% else %}
-                          2147483647
-                        {% endif %}
-                    - choose:
-                        - alias: If the timer ran out but not in timer mode
-                          conditions:
-                            - condition: template
-                              value_template: |-
-                                {{
-                                  wait.remaining == 0
-                                  and opening_behavior != 'timer'
-                                }}
-                          sequence:
-                            - stop: This timer shouldn't reach zero !
-                              error: true
-                        - alias: If the notification was received
-                          conditions:
-                            - condition: template
-                              value_template: "{{ wait.trigger.id == 'notification_received' }}"
-                          sequence:
-                            - alias: Stop waiting for notification reception
-                              variables:
-                                wait_notif_reception: false
-                        - alias: If an error needs to be raised
-                          conditions:
-                            - condition: template
-                              value_template: "{{ wait.trigger.id in ['vehicle_stopped', 'vehicle_away', 'forbidden_zone', 'canceling_order'] }}"
-                          sequence:
-                            - alias: Set error id
-                              variables:
-                                message_id: "{{ wait.trigger.id }}"
-                            - alias: Create error
-                              sequence: *create_error
-                            - stop: Opening canceled
-                      default:
-                        - alias: Remove opening notification
-                          action: "{{ notify_service }}"
-                          data: &clear_notification
-                            message: clear_notification
-                            data:
-                              tag: itinerary-status
-          - alias: If opening is enabled
-            if:
-              - condition: template
-                value_template: "{{ opening_behavior != 'off' }}"
-            then:
-              - alias: If one of the gates is closing/closed
+              - alias: Initialize a variable to wait for the phone to receive the notification before starting the timer
+                variables:
+                  wait_notif_reception: "{{ not ios_device and opening_behavior == 'timer' }}"
+              - alias: If opening behavior is set to cancelable timer or notification request
                 if:
                   - condition: template
-                    value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
+                    value_template: "{{ opening_behavior in ['timer', 'notif'] }}"
                 then:
-                  - alias: Open each gate because driver is leaving
-                    repeat: *open_gates
+                  - choose:
+                      - alias: If opening behavior is set to notification request
+                        conditions:
+                          - condition: template
+                            value_template: "{{ opening_behavior == 'notif' }}"
+                        sequence:
+                          - alias: Set notification ids
+                            variables:
+                              message_id: "{{ opening_message }}"
+                              title_id: "open_gate"
+                          - alias: Get notification translation
+                            variables: *get_translation
+                          - alias: Get button translation
+                            variables: &get_button_translations
+                              button_ids:
+                                - "open"
+                                - "cancel"
+                              buttons: |-
+                                {% set data = namespace(buttons=[]) %}
+                                {% for button_id in button_ids %}
+                                  {# Custom translation #}
+                                  {%
+                                    if 'button' in custom_translations_json
+                                    and button_id in custom_translations_json['button']
+                                  %}
+                                    {% set translation = custom_translations_json['button'][button_id] %}
+
+                                  {# Selected language #}
+                                  {% elif button_id in strings[language]['button'] %}
+                                    {% set translation = strings[language]['button'][button_id] %}
+
+                                  {# Fallback to english #}
+                                  {% else %}
+                                    {% set translation = strings['en']['button'][button_id] %}
+                                  {% endif %}
+
+                                  {% set data.buttons = data.buttons + [translation] %}
+
+                                {% endfor %}
+                                {{ data.buttons }}
+                          - alias: Ask the user if he wants to open the gate
+                            action: "{{ notify_service }}"
+                            data:
+                              title: "{{ title }}"
+                              message: "{{ message }}"
+                              data:
+                                <<: *notification_data
+                                notification_icon: mdi:lock-question
+                                sticky: true
+                                persistent: true
+                                timeout: ""
+                                actions:
+                                  - action: "{{ opening_order_id }}"
+                                    title: "{{ buttons[0] }}"
+                                    icon: sfsymbols:lock.open
+                                  - action: "{{ canceling_order_id }}"
+                                    title: "{{ buttons[1] }}"
+                                    icon: sfsymbols:xmark
+                      - alias: If opening behavior is set to cancelable timer
+                        conditions:
+                          - condition: template
+                            value_template: "{{ opening_behavior == 'timer' }}"
+                        sequence:
+                          - alias: Set notification ids
+                            variables:
+                              message_id: "{{ opening_message }}"
+                              title_id: "timer_opening"
+                          - alias: Get notification translation
+                            variables: *get_translation
+                          - alias: Get button translation
+                            variables:
+                              button_ids:
+                                - "cancel"
+                                - "open"
+                              <<: *get_button_translations
+                          - alias: Send the cancelable timer notification to the user
+                            action: "{{ notify_service }}"
+                            data:
+                              title: "{{ title }}"
+                              message: "{{ message }}"
+                              data:
+                                <<: *notification_data
+                                notification_icon: mdi:timer-lock-open
+                                sticky: true
+                                persistent: true
+                                confirmation: "{{ not ios_device }}"
+                                timeout: "{{ timer_opening }}"
+                                chronometer: true
+                                when: "{{ timer_opening }}"
+                                when_relative: true
+                                actions:
+                                  - action: "{{ canceling_order_id }}"
+                                    title: "{{ buttons[0] }}"
+                                    icon: sfsymbols:xmark
+                                  - action: "{{ opening_order_id }}"
+                                    title: "{{ buttons[1] }}"
+                                    icon: sfsymbols:lock.open
+                  - sequence: *tts
+                  - alias: Listen for events a second time if the first event was a notification received confirmation
+                    repeat:
+                      until:
+                        - condition: template
+                          value_template: "{{ wait.trigger.id != 'notification_received' }}"
+                      sequence:
+                        - alias: Wait for events before opening the gate or canceling the itinerary
+                          wait_for_trigger:
+                            - alias: Manual opening
+                              trigger: template
+                              id: manual
+                              value_template: "{{ gate | select('is_state', ['on', 'open', 'opening']) | list != [] }}"
+                            - alias: Vehicle left
+                              trigger: template
+                              id: vehicle_stopped
+                              value_template: "{{ is_state(driving_sensor, 'off') }}"
+                            - alias: Activation zone left
+                              trigger: template
+                              id: vehicle_away
+                              value_template: &activation_zone_out_trigger |-
+                                {% if state_attr(person, 'gps_accuracy') is none %}
+                                  {% set accuracy = 100 %}
+                                {% else %}
+                                  {% set accuracy = state_attr(person, 'gps_accuracy') %}
+                                {% endif %}
+                                {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
+
+                                {{ gate_distance > activation_zone }}
+                            - alias: Forbidden zone entered
+                              trigger: template
+                              id: forbidden_zone
+                              value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
+                            - alias: Opening button pressed
+                              trigger: event
+                              id: opening_order
+                              event_type: mobile_app_notification_action
+                              event_data:
+                                action: "{{ opening_order_id }}"
+                            - alias: Canceling button pressed
+                              trigger: event
+                              id: canceling_order
+                              event_type: mobile_app_notification_action
+                              event_data:
+                                action: "{{ canceling_order_id }}"
+                            - alias: Notification received
+                              trigger: event
+                              id: notification_received
+                              event_type: mobile_app_notification_received
+                              event_data:
+                                action_2_key: "{{ opening_order_id }}"
+                              enabled: "{{ wait_notif_reception }}"
+                          timeout: |-
+                            {% if opening_behavior == 'timer' %}
+                              {{ timer_opening }}
+                            {% else %}
+                              2147483647
+                            {% endif %}
+                        - choose:
+                            - alias: If the timer ran out but not in timer mode
+                              conditions:
+                                - condition: template
+                                  value_template: |-
+                                    {{
+                                      wait.remaining == 0
+                                      and opening_behavior != 'timer'
+                                    }}
+                              sequence:
+                                - stop: This timer shouldn't reach zero !
+                                  error: true
+                            - alias: If the notification was received
+                              conditions:
+                                - condition: template
+                                  value_template: "{{ wait.trigger.id == 'notification_received' }}"
+                              sequence:
+                                - alias: Stop waiting for notification reception
+                                  variables:
+                                    wait_notif_reception: false
+                            - alias: If an error needs to be raised
+                              conditions:
+                                - condition: template
+                                  value_template: "{{ wait.trigger.id in ['vehicle_stopped', 'vehicle_away', 'forbidden_zone', 'canceling_order'] }}"
+                              sequence:
+                                - alias: Set error id
+                                  variables:
+                                    message_id: "{{ wait.trigger.id }}"
+                                - alias: Create error
+                                  sequence: *create_error
+                                - stop: Opening canceled
+                          default:
+                            - alias: Remove opening notification
+                              action: "{{ notify_service }}"
+                              data: &clear_notification
+                                message: clear_notification
+                                data:
+                                  tag: itinerary-status
+              - alias: If opening is enabled
+                if:
+                  - condition: template
+                    value_template: "{{ opening_behavior != 'off' }}"
+                then:
+                  - alias: If one of the gates is closing/closed
+                    if:
+                      - condition: template
+                        value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
+                    then:
+                      - alias: Open each gate because driver is leaving
+                        repeat: *open_gates
           - alias: Set variables for the following repeat sequence
             variables:
               break: "{{ closing_behavior in ['auto', 'off'] }}"
