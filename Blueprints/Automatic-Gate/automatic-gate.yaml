@@ -50,7 +50,7 @@ blueprint:
       collapsed: true
       input:
         gate:
-          name: ⛩️ Gate
+          name: ⛩️ Gates
           description: The **switch** or **cover** which controls your **[gate](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#gate-%EF%B8%8F)**
           selector:
             entity:
