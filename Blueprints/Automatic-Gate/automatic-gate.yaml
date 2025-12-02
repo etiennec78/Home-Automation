@@ -155,7 +155,9 @@ blueprint:
           name: 🗺️ Itinerary sensors
           description: |-
             Each empty **[itinerary input text](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#itinerary-sensors-%EF%B8%8F)** helper to store each user **itinerary state**
-            *Note: You can use these sensors to sync multiple instances of the Automatic Gate with different configurations by adding sensors from the others at the end of this list*
+            *Notes:*
+            *⚠️ The maximum length needs to be set to 255*
+            *You can use these sensors to sync multiple instances of the Automatic Gate with different configurations by adding sensors from the others at the end of this list*
           selector:
             entity:
               multiple: true
