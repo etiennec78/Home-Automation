@@ -578,6 +578,7 @@ variables:
   itinerary_sensors: !input itinerary_sensors
   travel_time_rate: !input travel_time_rate
   continuously_refresh_interval: !input continuously_refresh_interval
+  departure_opening_behavior: !input departure_opening_behavior
   activation_zone: !input activation_zone
   suggest_closing_after: !input suggest_closing_after
   timer_opening: !input timer_opening
@@ -1384,10 +1385,14 @@ actions:
       # OPEN GATE ON EXIT #
       #####################
 
-      - alias: If one of the gates is closed
+      - alias: If the gate opening behavior is not set to off and one of the gates is closed
         if:
           - condition: template
-            value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
+            value_template: |-
+              {{
+                departure_opening_behavior != 'off
+                and gate | select('is_state', ['off', 'closed', 'closing']) | list != []
+              }}
         then:
           - sequence: &start_ibeacons
               - alias: If driver has iBeacon entity set for auto-closing
@@ -1708,10 +1713,14 @@ actions:
                   - alias: Change the closing behavior to full auto
                     variables:
                       closing_behavior: auto
-          - alias: If one of the gates is closed
+          - alias: If the gate opening behavior is not set to off and one of the gates is closed
             if:
               - condition: template
-                value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
+                value_template: |-
+                  {{
+                    opening_behavior != 'off
+                    and gate | select('is_state', ['off', 'closed', 'closing']) | list != []
+                  }}
             then:
               - alias: Initialize a variable to wait for the phone to receive the notification before starting the timer
                 variables:
@@ -1914,18 +1923,13 @@ actions:
                                 message: clear_notification
                                 data:
                                   tag: itinerary-status
-              - alias: If opening is enabled
+              - alias: If one of the gates is closing/closed
                 if:
                   - condition: template
-                    value_template: "{{ opening_behavior != 'off' }}"
+                    value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
                 then:
-                  - alias: If one of the gates is closing/closed
-                    if:
-                      - condition: template
-                        value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
-                    then:
-                      - alias: Open each gate because driver is leaving
-                        repeat: *open_gates
+                  - alias: Open each gate because driver is leaving
+                    repeat: *open_gates
           - alias: Set variables for the following repeat sequence
             variables:
               break: "{{ closing_behavior in ['auto', 'off'] }}"
