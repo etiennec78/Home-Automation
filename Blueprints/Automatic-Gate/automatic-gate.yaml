@@ -458,7 +458,7 @@ blueprint:
             boolean:
         phone_tts_stream:
           name: 📻 Phone TTS audio stream
-          description: The **audio stream** used for playing the phone TTS. Can be useful to **bypass Do Not Disturb**.
+          description: The **audio stream** used for playing the phone TTS. Can be useful to **bypass Do Not Disturb**
           default: "notification_stream"
           selector:
             select:
