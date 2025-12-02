@@ -2236,7 +2236,7 @@ actions:
                   entity_id: "{{ itinerary_sensor }}"
                 data:
                   value: "{{ itinerary_value | to_json }}"
-              - alias: If closing is enabled
+              - alias: If gate closing is enabled
                 if:
                   - condition: template
                     value_template: "{{ closing_behavior != 'off' }}"
@@ -2273,7 +2273,11 @@ actions:
                   - alias: If someone is currently approaching or leaving
                     if:
                       - condition: template
-                        value_template: "{{ drivers_near_gate != [] }}"
+                        value_template: |-
+                          {{
+                            drivers_near_gate != []
+                            and gate | select('is_state', ['on', 'opened', 'closing']) | list != []
+                          }}
                     then:
                       - alias: Format drivers near gate as a string
                         variables:
