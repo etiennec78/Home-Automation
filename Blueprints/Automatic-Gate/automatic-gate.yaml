@@ -1390,7 +1390,7 @@ actions:
           - condition: template
             value_template: |-
               {{
-                departure_opening_behavior != 'off
+                departure_opening_behavior != 'off'
                 and gate | select('is_state', ['off', 'closed', 'closing']) | list != []
               }}
         then:
@@ -1718,7 +1718,7 @@ actions:
               - condition: template
                 value_template: |-
                   {{
-                    opening_behavior != 'off
+                    opening_behavior != 'off'
                     and gate | select('is_state', ['off', 'closed', 'closing']) | list != []
                   }}
             then:
