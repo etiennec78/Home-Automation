@@ -255,16 +255,17 @@ blueprint:
       name: Gate behavior
       icon: mdi:brain
       collapsed: true
+      description: |-
+        Available gate behaviors:
+        - **Fully automatic** : Your gate will open/close itself
+        - **Cancelable timer** : A notification of a cancelable timer will be sent before opening/closing your gate
+        - **Notification request** : An actionable notification will be sent to open/close your gate
+        - **Disabled** : Your gate won't open/close
       input:
         departure_opening_behavior:
           name: 🛫🔓 Departure opening behavior
           description: |-
             Automatic gate **opening** behavior on **departure**
-
-              - **Fully automatic** : Your gate will automatically open
-              - **Cancelable timer** : A notification of a cancelable timer will be sent before opening your gate
-              - **Notification request** : An actionable notification will be sent to open your gate
-              - **Disabled** : Your gate will stay closed
           default: "auto"
           selector:
             select:
@@ -280,12 +281,7 @@ blueprint:
         departure_closing_behavior:
           name: 🛫🔐 Departure closing behavior
           description: |-
-            Automatic gate **closing** behavior on **arrival**
-
-              - **Fully automatic** : Your gate will automatically close
-              - **Cancelable timer** : A notification of a cancelable timer will be sent before opening your gate
-              - **Notification request** : An actionable notification will be sent to close your gate
-              - **Disabled** : Your gate won't close automatically
+            Automatic gate **closing** behavior on **departure**
           default: "notif"
           selector:
             select:
@@ -311,11 +307,6 @@ blueprint:
           name: 🛬🔓 Arrival opening behavior
           description: |-
             Gate automatic **opening** behavior on **arrival**
-
-              - **Fully automatic** : Your gate will automatically open
-              - **Cancelable timer** : A notification of a cancelable timer will be sent before opening your gate
-              - **Notification request** : An actionable notification will be sent to open your gate
-              - **Disabled** : Your gate will stay closed
           default: "auto"
           selector:
             select:
@@ -332,11 +323,6 @@ blueprint:
           name: 🛬🔐 Arrival closing behavior
           description: |-
             Gate automatic **closing** behavior on **arrival**
-
-              - **Fully automatic** : Your gate will automatically close
-              - **Cancelable timer** : A notification of a cancelable timer will be sent before opening your gate
-              - **Notification request** : An actionable notification will be sent to close your gate
-              - **Disabled** : Your gate won't close automatically
           default: "auto"
           selector:
             select:
