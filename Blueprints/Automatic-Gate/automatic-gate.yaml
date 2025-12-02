@@ -1384,221 +1384,226 @@ actions:
       # OPEN GATE ON EXIT #
       #####################
 
-      - sequence: &start_ibeacons
-          - alias: If driver has iBeacon entity set for auto-closing
-            if:
-              - condition: template
-                value_template: |-
-                  {{
-                    notify_service is not none
-                    and idx < ble_entities | length
-                  }}
-            then:
-              - alias: Save iBeacon states
-                variables:
-                  old_ibeacon_transmitter_states: |-
-                    {% if (ble_transmitter_entities | length) - 1 >= idx %}
-                      {{ {
-                        'state': states(ble_transmitter_entities[idx])
-                          if states(ble_transmitter_entities[idx]) == 'Stopped' else none,
-                        'transmit_power': (state_attr(ble_transmitter_entities[idx], 'Transmitting power') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
-                          if state_attr(ble_transmitter_entities[idx], 'Transmitting power') != 'high' else none,
-                        'advertise_mode': (state_attr(ble_transmitter_entities[idx], 'Advertise mode') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
-                          if state_attr(ble_transmitter_entities[idx], 'Advertise mode') != 'lowLatency' else none
-                      } }}
-                    {% else %}
-                      {{ none }}
-                    {% endif %}
-              - alias: If driver has a saved iBeacon transmitter state
-                if:
-                  - condition: template
-                    value_template: "{{ old_ibeacon_transmitter_states != none }}"
-                then:
-                  - alias: Change iBeacon state if needed
-                    if:
-                      - condition: template
-                        value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
-                    then:
-                      - action: "{{ notify_service }}"
-                        data:
-                          message: command_ble_transmitter
-                          data:
-                            command: turn_on
-                  - alias: Change iBeacon transmitting power if needed
-                    if:
-                      - condition: template
-                        value_template: "{{ old_ibeacon_transmitter_states['transmit_power'] != none }}"
-                    then:
-                      - action: "{{ notify_service }}"
-                        data:
-                          message: command_ble_transmitter
-                          data:
-                            command: ble_set_transmit_power
-                            ble_transmit: ble_transmit_high
-                  - alias: Change iBeacon advertise mode if needed
-                    if:
-                      - condition: template
-                        value_template: "{{ old_ibeacon_transmitter_states['advertise_mode'] != none }}"
-                    then:
-                      - action: "{{ notify_service }}"
-                        data:
-                          message: command_ble_transmitter
-                          data:
-                            command: ble_set_advertise_mode
-                            ble_advertise: ble_advertise_low_latency
-              - alias: Activate iBeacon scanner if switch set
-                if:
-                - condition: template
-                  value_template: "{{ ble_scanner_switch != '' and is_state(ble_scanner_switch, 'off') }}"
-                then:
-                  - action: switch.turn_on
-                    target:
-                      entity_id: "{{ ble_scanner_switch }}"
-      - alias: If driver chose to wait for iBeacon or WiFi before opening to ensure that vehicle is not parked outside
+      - alias: If one of the gates is closed
         if:
           - condition: template
-            value_template: |-
-              {{
-                'wifi' in only_open_near and (wifi_devices | length) - 1 >= idx
-                or 'ble' in only_open_near and (ble_entities | length) - 1 >= idx
-              }}
+            value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
         then:
-          - alias: Wait for iBeacon or WiFi to report home
-            wait_template: |-
-              {{
-                not is_state(ble_entities[idx], 'unknown')
-                or is_state(wifi_devices[idx], 'home')
-                or is_state(driving_sensor, 'off')
-              }}
-            continue_on_timeout: true
-            timeout: !input only_open_near_timeout
-          - alias: If an error occured
+          - sequence: &start_ibeacons
+              - alias: If driver has iBeacon entity set for auto-closing
+                if:
+                  - condition: template
+                    value_template: |-
+                      {{
+                        notify_service is not none
+                        and idx < ble_entities | length
+                      }}
+                then:
+                  - alias: Save iBeacon states
+                    variables:
+                      old_ibeacon_transmitter_states: |-
+                        {% if (ble_transmitter_entities | length) - 1 >= idx %}
+                          {{ {
+                            'state': states(ble_transmitter_entities[idx])
+                              if states(ble_transmitter_entities[idx]) == 'Stopped' else none,
+                            'transmit_power': (state_attr(ble_transmitter_entities[idx], 'Transmitting power') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
+                              if state_attr(ble_transmitter_entities[idx], 'Transmitting power') != 'high' else none,
+                            'advertise_mode': (state_attr(ble_transmitter_entities[idx], 'Advertise mode') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
+                              if state_attr(ble_transmitter_entities[idx], 'Advertise mode') != 'lowLatency' else none
+                          } }}
+                        {% else %}
+                          {{ none }}
+                        {% endif %}
+                  - alias: If driver has a saved iBeacon transmitter state
+                    if:
+                      - condition: template
+                        value_template: "{{ old_ibeacon_transmitter_states != none }}"
+                    then:
+                      - alias: Change iBeacon state if needed
+                        if:
+                          - condition: template
+                            value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
+                        then:
+                          - action: "{{ notify_service }}"
+                            data:
+                              message: command_ble_transmitter
+                              data:
+                                command: turn_on
+                      - alias: Change iBeacon transmitting power if needed
+                        if:
+                          - condition: template
+                            value_template: "{{ old_ibeacon_transmitter_states['transmit_power'] != none }}"
+                        then:
+                          - action: "{{ notify_service }}"
+                            data:
+                              message: command_ble_transmitter
+                              data:
+                                command: ble_set_transmit_power
+                                ble_transmit: ble_transmit_high
+                      - alias: Change iBeacon advertise mode if needed
+                        if:
+                          - condition: template
+                            value_template: "{{ old_ibeacon_transmitter_states['advertise_mode'] != none }}"
+                        then:
+                          - action: "{{ notify_service }}"
+                            data:
+                              message: command_ble_transmitter
+                              data:
+                                command: ble_set_advertise_mode
+                                ble_advertise: ble_advertise_low_latency
+                  - alias: Activate iBeacon scanner if switch set
+                    if:
+                    - condition: template
+                      value_template: "{{ ble_scanner_switch != '' and is_state(ble_scanner_switch, 'off') }}"
+                    then:
+                      - action: switch.turn_on
+                        target:
+                          entity_id: "{{ ble_scanner_switch }}"
+          - alias: If driver chose to wait for iBeacon or WiFi before opening to ensure that vehicle is not parked outside
             if:
               - condition: template
                 value_template: |-
                   {{
-                    wait.remaining == 0
-                    or is_state(driving_sensor, 'off')
+                    'wifi' in only_open_near and (wifi_devices | length) - 1 >= idx
+                    or 'ble' in only_open_near and (ble_entities | length) - 1 >= idx
                   }}
             then:
-              - alias: Set error id
-                variables:
-                  message_id: |-
-                    {{ wait.remaining == 0 | iif('not_home', 'vehicle_stopped') }}
-              - alias: Create error
-                sequence: &create_error
-                  - alias: Set title id
+              - alias: Wait for iBeacon or WiFi to report home
+                wait_template: |-
+                  {{
+                    not is_state(ble_entities[idx], 'unknown')
+                    or is_state(wifi_devices[idx], 'home')
+                    or is_state(driving_sensor, 'off')
+                  }}
+                continue_on_timeout: true
+                timeout: !input only_open_near_timeout
+              - alias: If an error occured
+                if:
+                  - condition: template
+                    value_template: |-
+                      {{
+                        wait.remaining == 0
+                        or is_state(driving_sensor, 'off')
+                      }}
+                then:
+                  - alias: Set error id
                     variables:
-                      title_id: "itinerary_canceled"
-                  - alias: If a notify service exists
-                    if:
-                      - condition: template
-                        value_template: "{{ notify_service is not none }}"
-                    then:
-                      - alias: Get notification translation
-                        variables: *get_translation
-                      - alias: Notify driver of itinerary cancelation
-                        action: "{{ notify_service }}"
-                        data:
-                          title: "{{ title }}"
-                          message: "{{ message }}"
-                          data: *notification_data
-                      - sequence: *tts
-                  - alias: Mark error in driver itinerary sensor
-                    variables:
-                      update:
-                        status: "{{ none }}"
-                        error: "{{ message_id }}"
-                      itinerary_value: "{{ dict(itinerary_value, **update) }}"
-                  - alias: Save the itinerary status
-                    action: input_text.set_value
-                    target:
-                      entity_id: "{{ itinerary_sensor }}"
-                    data:
-                      value: "{{ itinerary_value | to_json }}"
-              - alias: Restore iBeacon states
-                sequence: &restore_ibeacons
-                  - alias: If driver has an iBeacon entity set for auto-closing
-                    if:
-                      - condition: template
-                        value_template: |-
-                          {{
-                            notify_service is not none
-                            and idx < ble_entities | length
-                          }}
-                    then:
-                      - alias: If driver has a saved iBeacon transmitter state
+                      message_id: |-
+                        {{ wait.remaining == 0 | iif('not_home', 'vehicle_stopped') }}
+                  - alias: Create error
+                    sequence: &create_error
+                      - alias: Set title id
+                        variables:
+                          title_id: "itinerary_canceled"
+                      - alias: If a notify service exists
                         if:
                           - condition: template
-                            value_template: "{{ old_ibeacon_transmitter_states != none }}"
+                            value_template: "{{ notify_service is not none }}"
                         then:
-                          - alias: If iBeacon transmitter was stopped, stop it
-                            if:
-                              - condition: template
-                                value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
-                            then:
-                              - action: "{{ notify_service }}"
-                                data:
-                                  message: command_ble_transmitter
-                                  data:
-                                    command: turn_off
-                          - alias: If iBeacon transmitting power was not set to high, restore it
-                            if:
-                              - condition: template
-                                value_template: "{{ old_ibeacon_transmitter_states['transmit_power'] != none }}"
-                            then:
-                              - action: "{{ notify_service }}"
-                                data:
-                                  message: command_ble_transmitter
-                                  data:
-                                    command: ble_set_transmit_power
-                                    ble_transmit: "ble_transmit_{{ old_ibeacon_transmitter_states['transmit_power'] }}"
-                          - alias: If iBeacon transmitter advertise power was not set to low latency, restore it
-                            if:
-                              - condition: template
-                                value_template: "{{ old_ibeacon_transmitter_states['advertise_mode'] != none }}"
-                            then:
-                              - action: "{{ notify_service }}"
-                                data:
-                                  message: command_ble_transmitter
-                                  data:
-                                    command: ble_set_advertise_mode
-                                    ble_advertise: "ble_advertise_{{ old_ibeacon_transmitter_states['advertise_mode'] }}"
-                  - alias: Check if there is another driver near the gate
-                    variables:
-                      someone_near_gate: |-
-                        {% set data = namespace(result=false) %}
-                        {% for sensor_idx in range(itinerary_sensors | length) %}
-                          {% if sensor_idx != idx %}
-                            {%
-                              set value = (
-                                states(
-                                  itinerary_sensors[sensor_idx]
-                                )
-                                | from_json(default_itinerary_sensor_value)
-                              )
-                            %}
-                            {% if value.status in ['on_approach', 'leaving'] %}
-                              {% set data.result = true %}
-                              {% break %}
-                            {% endif %}
-                          {% endif %}
-                        {% endfor %}
-                        {{ data.result }}
-                  - alias: If iBeacon switch set, and doesn't need to stay on
-                    if:
-                      - condition: template
-                        value_template: |-
-                          {{
-                            ble_scanner_switch != ''
-                            and not someone_near_gate
-                          }}
-                    then:
-                      - alias: Deactivate iBeacon scanner
-                        action: switch.turn_off
+                          - alias: Get notification translation
+                            variables: *get_translation
+                          - alias: Notify driver of itinerary cancelation
+                            action: "{{ notify_service }}"
+                            data:
+                              title: "{{ title }}"
+                              message: "{{ message }}"
+                              data: *notification_data
+                          - sequence: *tts
+                      - alias: Mark error in driver itinerary sensor
+                        variables:
+                          update:
+                            status: "{{ none }}"
+                            error: "{{ message_id }}"
+                          itinerary_value: "{{ dict(itinerary_value, **update) }}"
+                      - alias: Save the itinerary status
+                        action: input_text.set_value
                         target:
-                          entity_id: "{{ ble_scanner_switch }}"
-              - stop: Opening canceled
+                          entity_id: "{{ itinerary_sensor }}"
+                        data:
+                          value: "{{ itinerary_value | to_json }}"
+                  - alias: Restore iBeacon states
+                    sequence: &restore_ibeacons
+                      - alias: If driver has an iBeacon entity set for auto-closing
+                        if:
+                          - condition: template
+                            value_template: |-
+                              {{
+                                notify_service is not none
+                                and idx < ble_entities | length
+                              }}
+                        then:
+                          - alias: If driver has a saved iBeacon transmitter state
+                            if:
+                              - condition: template
+                                value_template: "{{ old_ibeacon_transmitter_states != none }}"
+                            then:
+                              - alias: If iBeacon transmitter was stopped, stop it
+                                if:
+                                  - condition: template
+                                    value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
+                                then:
+                                  - action: "{{ notify_service }}"
+                                    data:
+                                      message: command_ble_transmitter
+                                      data:
+                                        command: turn_off
+                              - alias: If iBeacon transmitting power was not set to high, restore it
+                                if:
+                                  - condition: template
+                                    value_template: "{{ old_ibeacon_transmitter_states['transmit_power'] != none }}"
+                                then:
+                                  - action: "{{ notify_service }}"
+                                    data:
+                                      message: command_ble_transmitter
+                                      data:
+                                        command: ble_set_transmit_power
+                                        ble_transmit: "ble_transmit_{{ old_ibeacon_transmitter_states['transmit_power'] }}"
+                              - alias: If iBeacon transmitter advertise power was not set to low latency, restore it
+                                if:
+                                  - condition: template
+                                    value_template: "{{ old_ibeacon_transmitter_states['advertise_mode'] != none }}"
+                                then:
+                                  - action: "{{ notify_service }}"
+                                    data:
+                                      message: command_ble_transmitter
+                                      data:
+                                        command: ble_set_advertise_mode
+                                        ble_advertise: "ble_advertise_{{ old_ibeacon_transmitter_states['advertise_mode'] }}"
+                      - alias: Check if there is another driver near the gate
+                        variables:
+                          someone_near_gate: |-
+                            {% set data = namespace(result=false) %}
+                            {% for sensor_idx in range(itinerary_sensors | length) %}
+                              {% if sensor_idx != idx %}
+                                {%
+                                  set value = (
+                                    states(
+                                      itinerary_sensors[sensor_idx]
+                                    )
+                                    | from_json(default_itinerary_sensor_value)
+                                  )
+                                %}
+                                {% if value.status in ['on_approach', 'leaving'] %}
+                                  {% set data.result = true %}
+                                  {% break %}
+                                {% endif %}
+                              {% endif %}
+                            {% endfor %}
+                            {{ data.result }}
+                      - alias: If iBeacon switch set, and doesn't need to stay on
+                        if:
+                          - condition: template
+                            value_template: |-
+                              {{
+                                ble_scanner_switch != ''
+                                and not someone_near_gate
+                              }}
+                        then:
+                          - alias: Deactivate iBeacon scanner
+                            action: switch.turn_off
+                            target:
+                              entity_id: "{{ ble_scanner_switch }}"
+                  - stop: Opening canceled
       - alias: Set the itinerary status to "leaving"
         variables:
           update:
