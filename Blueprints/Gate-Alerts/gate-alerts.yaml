@@ -176,6 +176,32 @@ blueprint:
             target:
               entity:
                 domain: tts
+        tts_volume_night_time_start:
+          name: 🌙 TTS night time start
+          description: |-
+            The time at which the volume of the TTS will start being lowered
+            *Note: Optional*
+          default: ""
+          selector:
+            time:
+        tts_volume_night_time_end:
+          name: ☀️ TTS night time end
+          description: |-
+            The time at which the volume of the TTS will stop being lowered
+            *Note: Optional*
+          default: ""
+          selector:
+            time:
+        tts_volume_at_night:
+          name: 🔇 TTS sound volume at night
+          description: |-
+            The **sound volume** you want to apply to your speakers before reading TTS **at night**
+          default: 10
+          selector:
+            number:
+              min: 0
+              max: 100
+              unit_of_measurement: "%"
 
     extra_actions:
       name: Extra actions
@@ -218,6 +244,9 @@ variables:
   persistent_notification: !input persistent_notification
   speaker_tts_devices: !input speaker_tts_devices
   speaker_tts_service: !input speaker_tts_service
+  tts_volume_night_time_start: !input tts_volume_night_time_start
+  tts_volume_night_time_end: !input tts_volume_night_time_end
+  tts_volume_at_night: !input tts_volume_at_night
   error_message_sensor: !input error_message_sensor
   error: |-
     {% if error_message_sensor == [] %}
@@ -670,16 +699,93 @@ actions:
                       ttl: 0
                       media_stream: !input phone_tts_stream
 
-      - alias: Play TTS on each speaker
-        repeat:
-          for_each: "{{ speaker_tts_devices }}"
-          sequence:
-            - action: tts.speak
-              data:
-                cache: true
-                media_player_entity_id: "{{ repeat.item }}"
-                message: "{{ message }}"
-              target: "{{ speaker_tts_service }}"
+      - alias: If the user has entered a TTS service
+        if:
+          - condition: template
+            value_template: "{{ speaker_tts_service != '' }}"
+        then:
+          - alias: Play TTS on each speaker
+            repeat:
+              for_each: "{{ speaker_tts_devices }}"
+              sequence:
+                - alias: Initialize a variable to store the speaker volume later
+                  variables:
+                    old_volume: "{{ none }}"
+
+                - alias: If the tts night mode is currently active
+                  if:
+                    - condition: template
+                      value_template: |-
+                        {% set start = today_at(tts_volume_night_time_start) %}
+                        {% set end = today_at(tts_volume_night_time_end) %}
+                        {% set time = now() %}
+                        {{
+                          tts_volume_night_time_start != ''
+                          and tts_volume_night_time_end != ''
+                          and (
+                            start <= end and start <= time <= end
+                            or start > end and (time >= start or time <= end)
+                          )
+                        }}
+                  then:
+                    - alias: If the speaker is not exposing its volume because it is turned off
+                      if:
+                        - condition: template
+                          value_template: |-
+                            {{
+                              is_state(repeat.item, 'off')
+                              and state_attr(repeat.item, 'volume_level') is none
+                            }}
+                      then:
+                        - alias: Turn on the speaker
+                          action: media_player.turn_on
+                          target:
+                            entity_id: "{{ repeat.item }}"
+                        - alias: Wait for the speaker to turn on
+                          wait_template: "{{ not is_state(repeat.item, 'off') }}"
+                          continue_on_timeout: true
+                          timeout: 3
+
+                    - alias: Only continue if the speaker has a higher volume than night mode
+                      condition: template
+                      value_template: |-
+                        {{
+                          state_attr(repeat.item, 'volume_level') is none
+                          or (
+                            state_attr(repeat.item, 'volume_level') * 100
+                          ) | int > tts_volume_at_night
+                        }}
+
+                    - alias: Save the current volume
+                      variables:
+                        old_volume: "{{ state_attr(repeat.item, 'volume_level') }}"
+
+                    - alias: Lower the volume
+                      action: media_player.volume_set
+                      target:
+                        entity_id: "{{ repeat.item }}"
+                      data:
+                        volume_level: "{{ tts_volume_at_night / 100 }}"
+
+                - alias: Play the TTS
+                  action: tts.speak
+                  data:
+                    cache: true
+                    media_player_entity_id: "{{ repeat.item }}"
+                    message: "{{ message }}"
+                  target: "{{ speaker_tts_service }}"
+
+                - alias: If the old volume could be saved
+                  if:
+                    - condition: template
+                      value_template: "{{ old_volume is not none }}"
+                  then:
+                    - alias: Restore the old volume
+                      action: media_player.volume_set
+                      target:
+                        entity_id: "{{ repeat.item }}"
+                      data:
+                        volume_level: "{{ old_volume }}"
 
       - alias: Send persistent notification to dashboard, if enabled
         if:
