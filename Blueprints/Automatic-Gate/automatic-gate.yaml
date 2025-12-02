@@ -811,6 +811,10 @@ actions:
       - alias: Reset custom translations
         variables:
           custom_translations_json: "{{ default_custom_translations }}"
+
+    ##################
+    # ERROR CHECKING #
+    ##################
   - alias: If the config checker should run checks
     if:
       - condition: or
