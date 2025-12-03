@@ -1128,6 +1128,7 @@ actions:
                         notification_icon: mdi:hammer-wrench
                         channel: Automatic Gate
                         importance: high
+                        priority: high
                         ttl: 0
                         push:
                           sound:
@@ -1155,6 +1156,7 @@ actions:
                               {{ clean_title ~ separator ~ message }}
                             channel: Itinerary status
                             importance: high
+                            priority: high
                             ttl: 0
                             media_stream: !input phone_tts_stream
                         enabled: !input phone_tts
@@ -1275,6 +1277,7 @@ actions:
                         notification_icon: mdi:alert-circle
                         channel: Itinerary status
                         importance: high
+                        priority: high
                         ttl: 0
                         push:
                           sound:

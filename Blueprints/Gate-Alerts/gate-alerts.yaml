@@ -598,6 +598,7 @@ actions:
                   notification_icon: mdi:gate-alert
                   channel: Gate alerts
                   importance: high
+                  priority: high
                   ttl: 0
                   sticky: true
                   persistent: true
@@ -650,6 +651,7 @@ actions:
                   notification_icon: mdi:gate-alert
                   channel: Gate alerts
                   importance: high
+                  priority: high
                   ttl: 0
                   sticky: true
                   persistent: "{{ notification_type == 'open' }}"
@@ -696,6 +698,7 @@ actions:
                       tts_text: "{{ message }}"
                       channel: Gate alerts
                       importance: high
+                      priority: high
                       ttl: 0
                       media_stream: !input phone_tts_stream
 
