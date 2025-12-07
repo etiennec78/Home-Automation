@@ -1930,6 +1930,40 @@ actions:
                 then:
                   - alias: Open each gate because driver is leaving
                     repeat: *open_gates
+            else:
+              - alias: If the opening behavior is set to off and all gates are closed
+                if:
+                  - condition: template
+                    value_template: |-
+                      {{
+                        departure_opening_behavior == 'off'
+                        and gate | select('is_state', ['on', 'open', 'opening']) | list == []
+                      }}
+                then:
+                  - alias: Wait for a gate to open
+                    wait_for_trigger:
+                      - alias: Manual opening
+                        trigger: template
+                        id: manual
+                        value_template: "{{ gate | select('is_state', ['on', 'open', 'opening']) | list != [] }}"
+                      - alias: Vehicle left
+                        trigger: template
+                        id: vehicle_stopped
+                        value_template: "{{ is_state(driving_sensor, 'off') }}"
+                      - alias: Activation zone left
+                        trigger: template
+                        id: vehicle_away
+                        value_template: *activation_zone_out_trigger
+                      - alias: Forbidden zone entered
+                        trigger: template
+                        id: forbidden_zone
+                        value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
+                  - alias: If an error needs to be raised
+                    if:
+                      - condition: template
+                        value_template: "{{ wait.trigger.id != 'manual' }}"
+                    then:
+                      - stop: Closing canceled
           - alias: Set variables for the following repeat sequence
             variables:
               break: "{{ closing_behavior in ['auto', 'off'] }}"
