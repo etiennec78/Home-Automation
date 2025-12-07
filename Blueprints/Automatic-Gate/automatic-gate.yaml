@@ -1844,6 +1844,10 @@ actions:
                               trigger: template
                               id: vehicle_stopped
                               value_template: "{{ is_state(driving_sensor, 'off') }}"
+                            - alias: Vehicle restarted
+                              trigger: template
+                              id: vehicle_restarted
+                              value_template: "{{ is_state(driving_sensor, 'on') }}"
                             - alias: Activation zone left
                               trigger: template
                               id: vehicle_away
@@ -2035,6 +2039,10 @@ actions:
                       trigger: template
                       id: vehicle_stopped
                       value_template: "{{ is_state(driving_sensor, 'off') }}"
+                    - alias: Vehicle restarted
+                      trigger: template
+                      id: vehicle_restarted
+                      value_template: "{{ is_state(driving_sensor, 'on') }}"
                     - alias: Activation zone left
                       trigger: template
                       id: vehicle_away
@@ -2219,17 +2227,24 @@ actions:
                                               icon: sfsymbols:xmark
                             - sequence: *tts
                       else:
-                        - alias: If the itinerary needs to be canceled
-                          if:
-                            - condition: template
-                              value_template: "{{ wait.trigger.id == 'canceling_order' }}"
-                          then:
-                            - alias: Set error id
-                              variables:
-                                message_id: "canceling_order"
-                            - alias: Create error
-                              sequence: *create_error
-                            - stop: Closing canceled
+                        - choose:
+                            - alias: If the itinerary needs to be canceled
+                              conditions:
+                                - condition: template
+                                  value_template: "{{ wait.trigger.id == 'canceling_order' }}"
+                              sequence:
+                                - alias: Set error id
+                                  variables:
+                                    message_id: "canceling_order"
+                                - alias: Create error
+                                  sequence: *create_error
+                                - stop: Closing canceled
+                            - alias: If the vehicle was restarted
+                              conditions:
+                                - condition: template
+                                  value_template: "{{ wait.trigger.id == 'vehicle_restarted' }}"
+                              sequence:
+                                - stop: Letting the new instance take over
           - alias: If itinerary started or departure gate closing notification was sent
             if:
               - condition: template
