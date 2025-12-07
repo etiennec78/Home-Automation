@@ -222,9 +222,15 @@ blueprint:
       icon: mdi:shield-check
       collapsed: true
       input:
+        run_checks_when_enabled:
+          name: 🧪 Run tests when blueprint enabled
+          description: Run tests after adding the blueprint, updating inputs, and after HA startup
+          default: true
+          selector:
+            boolean:
         always_run_checks:
-          name: 🧪 Always run tests
-          description: Always run tests even if the blueprint was not triggered manually
+          name: 🧪 Run tests when triggered
+          description: Run tests when the blueprint is triggered by a driving sensor
           default: true
           selector:
             boolean:
@@ -325,6 +331,7 @@ trigger_variables:
 triggers:
   - alias: Wait for gate opening or fully open
     trigger: state
+    id: open
     entity_id: !input gate
     to:
       - "on"
@@ -339,6 +346,7 @@ triggers:
 
   - alias: Wait for gate closing
     trigger: state
+    id: close
     entity_id: !input gate
     to:
       - "off"
@@ -353,6 +361,7 @@ triggers:
 
   - alias: Wait for error
     trigger: state
+    id: error
     entity_id: !input error_message_sensor
     not_to:
       - "unknown"
@@ -362,16 +371,29 @@ triggers:
 
   - alias: Wait for gate unavailable for duration
     trigger: state
+    id: offline
     entity_id: !input gate
     to: "unavailable"
     for:
       minutes: !input notification_delay
     enabled: "{{ notification_type == 'offline' }}"
 
+  - alias: Trigger when the blueprint the user added the blueprint, updated inputs, or HA started
+    trigger: template
+    id: blueprint_enabled
+    value_template: "{{ is_state(this.entity_id, 'on') }}"
+    enabled: !input run_checks_when_enabled
+
 conditions:
   - alias: If triggered by gate fully closed, only continue if it does not support position tracking
     condition: template
-    value_template: "{{ notification_type != 'close' or not is_state(gate, 'closed') or state_attr(gate, 'supported_features') | bitwise_and(4) == 0 }}"
+    value_template: |-
+      {{
+        trigger.id == 'blueprint_enabled'
+        or notification_type != 'close'
+        or not is_state(gate, 'closed')
+        or state_attr(gate, 'supported_features') | bitwise_and(4) == 0
+      }}
 
 actions:
   - alias: Initialize variables for the error checker
@@ -391,12 +413,19 @@ actions:
     if:
       - condition: or
         conditions:
-          - alias: If checks should always be run
-            condition: template
-            value_template: !input always_run_checks
           - alias: If the blueprint was executed manually
             condition: template
             value_template: "{{ trigger.platform is none }}"
+          - alias: If checks should be run when triggered by a driving sensor
+            condition: and
+            conditions:
+              - condition: trigger
+                id: vehicle_started
+              - condition: template
+                value_template: !input always_run_checks
+          - alias: If the user added the blueprint, updated inputs, or HA started
+            condition: trigger
+            id: blueprint_enabled
     then:
       - alias: Check for errors
         repeat:
@@ -546,11 +575,13 @@ actions:
       - stop: Config checker failed
         error: true
 
-  - alias: Only continue if the blueprint was not triggered manually
+  - alias: Only continue if the blueprint was triggered by a driving sensor
     condition: template
     value_template: |-
       {{
-        trigger.platform is not none and (
+        trigger.platform is not none
+        and trigger.id != 'blueprint_enabled'
+        and (
           successful_check
           or not stop_check_failed
         )

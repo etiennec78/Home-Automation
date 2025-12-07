@@ -246,9 +246,15 @@ blueprint:
       icon: mdi:shield-check
       collapsed: true
       input:
+        run_checks_when_enabled:
+          name: 🧪 Run tests when blueprint enabled
+          description: Run tests after adding the blueprint, updating inputs, and after HA startup
+          default: true
+          selector:
+            boolean:
         always_run_checks:
-          name: 🧪 Always run tests
-          description: Always run tests even if the blueprint was not triggered manually
+          name: 🧪 Run tests when triggered
+          description: Run tests when the blueprint is triggered by a driving sensor
           default: true
           selector:
             boolean:
@@ -331,17 +337,23 @@ variables:
 
 triggers:
   - trigger: state
+    id: vehicle_started
     entity_id: !input driving_sensors
     from: "off"
     to: "on"
+  - alias: Trigger when the blueprint the user added the blueprint, updated inputs, or HA started
+    trigger: template
+    id: blueprint_enabled
+    value_template: "{{ is_state(this.entity_id, 'on') }}"
+    enabled: !input run_checks_when_enabled
 
 conditions: []
 
 actions:
-  - alias: If the blueprint was not triggered manually
+  - alias: If the blueprint was triggered by a driving sensor
     if:
-      - condition: template
-        value_template: "{{ trigger.platform is not none }}"
+      - condition: trigger
+        id: vehicle_started
     then:
       - alias: Set variables containing data related to the driver
         variables:
@@ -393,12 +405,19 @@ actions:
     if:
       - condition: or
         conditions:
-          - alias: If checks should always be run
-            condition: template
-            value_template: !input always_run_checks
           - alias: If the blueprint was executed manually
             condition: template
             value_template: "{{ trigger.platform is none }}"
+          - alias: If checks should be run when triggered by a driving sensor
+            condition: and
+            conditions:
+              - condition: trigger
+                id: vehicle_started
+              - condition: template
+                value_template: !input always_run_checks
+          - alias: If the user added the blueprint, updated inputs, or HA started
+            condition: trigger
+            id: blueprint_enabled
     then:
       - alias: Check for errors
         repeat:
@@ -613,11 +632,13 @@ actions:
       - stop: Config checker failed
         error: true
 
-  - alias: Only continue if the blueprint was not triggered manually
+  - alias: Only continue if the blueprint was triggered by a driving sensor
     condition: template
     value_template: |-
       {{
-        trigger.platform is not none and (
+        trigger.platform is not none
+        and trigger.id == 'vehicle_started'
+        and (
           successful_check
           or not stop_check_failed
         )
