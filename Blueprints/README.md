@@ -51,5 +51,6 @@ Refer to the table below to fix the errors
   | #15 | You have not entered the sensor containing gate error codes | The 'error' notification type of this blueprint relies on a sensor providing error codes. Please ensure you have entered this sensor in the 'Error Message Sensor' input |
   | #16 | You need at least a speaker and a TTS service | Either remove your speakers and TTS service, or fill both of these inputs |
   | #17 | You have not entered any method for receiving notifications | Either use dashboard notifications, speakers, or mobile devices |
+  | #18 | A bound for the speakers' night mode schedule is missing | Either fill both night start and night end inputs, or clear both |
   
 </details>

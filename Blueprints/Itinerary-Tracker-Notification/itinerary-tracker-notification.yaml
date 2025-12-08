@@ -317,6 +317,7 @@ variables:
         invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service (#16)"
         per_person_sensors_mismatch: "You do not appear to have entered all your per person sensors in the same order (#12)"
         no_notification_method: "You have not entered any method for receiving notifications (#17)"
+        night_mode_missing_bound: "A bound for the speakers' night mode schedule is missing (#18)"
     fr:
       title:
         valid_config: "{{blueprint_name}}: Configuration valide 🛠️✅"
@@ -334,6 +335,7 @@ variables:
         invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS (#16)"
         per_person_sensors_mismatch: "Vous ne semblez pas avoir entré tous vos capteurs par personne dans le même ordre (#12)"
         no_notification_method: "Vous n'avez entré aucune méthode pour recevoir les notifications (#17)"
+        night_mode_missing_bound: "Il manque une borne des horaires du mode nuit des enceintes (#18)"
 
 triggers:
   - trigger: state
@@ -503,6 +505,13 @@ actions:
                   and not persistent_active
                 }}
               message_id: "no_notification_method"
+            - alias: Check that both or neither night time end and start have been entered
+              condition: |-
+                {{
+                  (tts_volume_night_time_start == '')
+                  | bitwise_xor(tts_volume_night_time_end == '')
+                }}
+              message_id: "night_mode_missing_bound"
           sequence:
             - alias: If a check failed
               if:
