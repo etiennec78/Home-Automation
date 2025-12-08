@@ -1048,7 +1048,7 @@ actions:
                   | length
                   != 0
                 }}
-              message_id: "wifi_trackers_contain_gps_data"
+              message_id: "wifi_tracker_is_gps"
           sequence:
             - alias: If a check failed
               if:
