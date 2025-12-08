@@ -2260,17 +2260,17 @@ actions:
               - alias: Remove closing notification
                 action: "{{ notify_service }}"
                 data: *clear_notification
-              - alias: Reset the itinerary status
-                variables:
-                  update:
-                    status: "{{ none }}"
-                  itinerary_value: "{{ dict(itinerary_value, **update) }}"
-              - alias: Save the itinerary status
-                action: input_text.set_value
-                target:
-                  entity_id: "{{ itinerary_sensor }}"
-                data:
-                  value: "{{ itinerary_value | to_json }}"
+          - alias: Reset the itinerary status
+            variables:
+              update:
+                status: "{{ none }}"
+              itinerary_value: "{{ dict(itinerary_value, **update) }}"
+          - alias: Save the itinerary status
+            action: input_text.set_value
+            target:
+              entity_id: "{{ itinerary_sensor }}"
+            data:
+              value: "{{ itinerary_value | to_json }}"
           - alias: If gate not closed manually
             if:
               - condition: template
