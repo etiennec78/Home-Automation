@@ -52,5 +52,6 @@ Refer to the table below to fix the errors
   | #16 | You need at least a speaker and a TTS service | Either remove your speakers and TTS service, or fill both of these inputs |
   | #17 | You have not entered any method for receiving notifications | Either use dashboard notifications, speakers, or mobile devices |
   | #18 | A bound for the speakers' night mode schedule is missing | Either fill both night start and night end inputs, or clear both |
+  | #19 | One of your iBeacon transmitters is invalid | Please check your 'iBeacon transmitter entities' inputs for invalid sensors |
   
 </details>

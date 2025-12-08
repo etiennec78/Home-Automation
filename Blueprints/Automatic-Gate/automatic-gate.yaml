@@ -689,6 +689,7 @@ variables:
         per_person_sensors_mismatch: "You do not appear to have entered all your per person sensors in the same order (#12)"
         ble_trackers_mismatch: "Not all of your iBeacon trackers are from the same device (#13)"
         wifi_tracker_is_gps: "One of your Wi-Fi trackers is a GPS type instead of a Router type (#14)"
+        invalid_ibeacon_transmitter: "One of your iBeacon transmitters is invalid (#19)"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -749,6 +750,7 @@ variables:
         per_person_sensors_mismatch: "Vous ne semblez pas avoir entré tous vos capteurs par personne dans le même ordre (#12)"
         ble_trackers_mismatch: "Vos traceurs iBeacon ne proviennent pas tous du même appareil (#13)"
         wifi_tracker_is_gps: "L'un de vos traceurs Wi-Fi est de type GPS au lieu de Routeur (#14)"
+        invalid_ibeacon_transmitter: "L'un de vos transmetteurs iBeacon est invalide (#19)"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -1049,6 +1051,17 @@ actions:
                   != 0
                 }}
               message_id: "wifi_tracker_is_gps"
+            - alias: Check that iBeacon transmitters are valid
+              condition: |-
+                {{
+                  transmitters
+                  | map('state_attr', 'options')
+                  | reject('contains', 'Transmitting')
+                  | list
+                  | length
+                  != 0
+                }}
+              message_id: "invalid_ibeacon_transmitter"
           sequence:
             - alias: If a check failed
               if:
