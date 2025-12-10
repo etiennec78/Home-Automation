@@ -956,7 +956,7 @@ actions:
                     <= itinerary_sensors | length
                     and (
                       persons_len == travel_time_sensors | length
-                      or ble in open_when_connected_to
+                      or 'ble' in open_when_connected_to
                     )
                     and wifi_devices | length <= persons_len
                     and ble_entities | length <= persons_len
