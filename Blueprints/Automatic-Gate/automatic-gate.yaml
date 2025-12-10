@@ -630,7 +630,6 @@ variables:
     safety_delay: "undefined"
     timer: "{{ none }}"
     default: "{{ none }}"
-  itinerary_value: "{{ none }}"
   blueprint_name: "{{ state_attr(this.entity_id, 'friendly_name') }}"
   strings:
     en:
@@ -677,19 +676,19 @@ variables:
         valid_config: "Your configuration seems valid"
         invalid_translations: "Your custom translations are not valid (#1)"
         missing_ble_entities: "You have not entered any iBeacon scanners (#2)"
-        ble_not_used: "You have entered an iBeacon scanner but are not using it (#3)"
+        ble_not_used: "You have entered these iBeacon scanners: '{data}' but are not using them (#3)"
         missing_wifi_trackers: "You have not entered any Wi-Fi trackers (#4)"
-        wifi_not_used: "You have entered a Wi-Fi tracker but are not using it (#5)"
-        missing_gps_data: "One of the device trackers does not support GPS tracking (#6)"
-        ibeacon_not_unknown: "One of your iBeacon trackers is currently not reporting 'unknown'. If you are currently near your iBeacon, you can ignore this error. (#7)"
-        missing_arrival_opening_method: "You don't have any way to detect your arrival. Please add a travel time sensor or use an iBeacon. (#8)"
+        wifi_not_used: "You have entered these Wi-Fi trackers: '{data}' but are not using them (#5)"
+        missing_gps_data: "These trackers/persons: '{data}' do not support GPS tracking (#6)"
+        ibeacon_not_unknown: "These iBeacon trackers: '{data}' are currently not reporting an 'unknown' state. If you are currently near them, you can ignore this error. (#7)"
+        missing_arrival_opening_method: "You don not have any way to detect your arrival. Please add a travel time sensor or use an iBeacon. (#8)"
         too_many_arrival_opening_method: "You are using several methods to detect your arrival. One is enough. (#9)"
-        invalid_itinerary_sensor_length: "The maximum character length of your itinerary sensor is too short (255 is recommended) (#10)"
-        invalid_per_person_sensors: "You have not entered the correct number of sensors in the per person sensor inputs (#11)"
-        per_person_sensors_mismatch: "You do not appear to have entered all your per person sensors in the same order (#12)"
-        ble_trackers_mismatch: "Not all of your iBeacon trackers are from the same device (#13)"
-        wifi_tracker_is_gps: "One of your Wi-Fi trackers is a GPS type instead of a Router type (#14)"
-        invalid_ibeacon_transmitter: "One of your iBeacon transmitters is invalid (#19)"
+        invalid_itinerary_sensor_length: "These itinerary sensors: '{data}' have a maximum length of less than 255 (#10)"
+        invalid_per_person_sensors: "You have not entered a consistent number of sensors in the per person sensor inputs (#11)"
+        per_person_sensors_mismatch: "These persons: '{data}' appear to have mixed up per person sensors (#12)"
+        ble_trackers_mismatch: "These iBeacon trackers: '{data}' come from a different device than the others (#13)"
+        wifi_tracker_is_gps: "These trackers: '{data}' are GPS-based, not router-based (#14)"
+        invalid_ibeacon_transmitter: "These iBeacon transmitters: '{data}' are invalid (#19)"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -738,19 +737,19 @@ variables:
         valid_config: "Votre configuration semble valide"
         invalid_translations: "Vos traductions personnalisées ne sont pas valides (#1)"
         missing_ble_entities: "Vous n'avez pas entré de scanner iBeacon (#2)"
-        ble_not_used: "Vous avez entré un scanner iBeacon mais ne l'utilisez pas (#3)"
+        ble_not_used: "Vous avez entré ces scanners iBeacon: '{data}' mais ne les utilisez pas (#3)"
         missing_wifi_trackers: "Vous n'avez pas entré de traceurs Wi-Fi (#4)"
-        wifi_not_used: "Vous avez entré un traceur Wi-Fi mais ne l'utilisez pas (#5)"
-        missing_gps_data: "L'un des traceurs ne prend pas en charge le suivi GPS (#6)"
-        ibeacon_not_unknown: "L'un de vos traceurs iBeacon a actuellement un état différent de 'unknown'. Si vous vous trouvez actuellement à proximité de votre iBeacon, vous pouvez ignorer cette erreur. (#7)"
+        wifi_not_used: "Vous avez entré ces traceurs Wi-Fi: '{data}' mais ne les utilisez pas (#5)"
+        missing_gps_data: "Ces traceurs/personnes: '{data}' ne prend pas en charge le suivi GPS (#6)"
+        ibeacon_not_unknown: "Ces traceurs iBeacon: '{data}' sont actuellement dans un état différent de 'unknown'. Si vous vous trouvez actuellement à proximité, vous pouvez ignorer cette erreur. (#7)"
         missing_arrival_opening_method: "Vous n'avez aucune méthode pour détecter votre arrivée. Ajoutez un capteur de temps de trajet ou utilisez un iBeacon. (#8)"
         too_many_arrival_opening_method: "Vous utilisez plusieurs méthodes pour détecter votre arrivée. Une seule suffit. (#9)"
-        invalid_itinerary_sensor_length: "La longueur maximale de votre capteur d'itinéraire est trop courte (255 recommandé) (#10)"
+        invalid_itinerary_sensor_length: "Ces capteurs d'itinéraire: '{data}' ont une longueur maximale inférieure à 255 (#10)"
         invalid_per_person_sensors: "Vous n'avez pas entré le bon nombre de capteurs dans les champs de capteurs par personne (#11)"
-        per_person_sensors_mismatch: "Vous ne semblez pas avoir entré tous vos capteurs par personne dans le même ordre (#12)"
-        ble_trackers_mismatch: "Vos traceurs iBeacon ne proviennent pas tous du même appareil (#13)"
-        wifi_tracker_is_gps: "L'un de vos traceurs Wi-Fi est de type GPS au lieu de Routeur (#14)"
-        invalid_ibeacon_transmitter: "L'un de vos transmetteurs iBeacon est invalide (#19)"
+        per_person_sensors_mismatch: "Ces personnes: '{data}' semblent avoir des capteurs par personne mélangés (#12)"
+        ble_trackers_mismatch: "Ces traceurs iBeacon: '{data}' proviennent d'un appareil différent des autres (#13)"
+        wifi_tracker_is_gps: "Ces traceurs: '{data}' sont de type GPS au lieu de Routeur (#14)"
+        invalid_ibeacon_transmitter: "Ces transmetteurs iBeacon: '{data}' sont invalides (#19)"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -853,10 +852,10 @@ actions:
         repeat:
           for_each:
             - alias: Check custom translations
-              condition: "{{ custom_translations_error }}"
+              error: "{{ custom_translations_error }}"
               message_id: "invalid_translations"
             - alias: Check missing ble sensors
-              condition: |-
+              error: |-
                 {{
                   (
                     'ble' in (
@@ -870,84 +869,107 @@ actions:
                   and ble_entities | length == 0
                 }}
               message_id: "missing_ble_entities"
-            - alias: Check missing ble sensors
-              condition: |-
-                {{
-                  ble_entities | length > 0
-                  and (
+            - alias: Check that ble is used if a device is set
+              error: |-
+                {%
+                  if ble_entities | length > 0 and (
                     'ble' not in (
                       only_open_near
                       + open_when_connected_to
                       + close_when_disconnected_from
                     )
                   )
-                }}
+                %}
+                  {{
+                    ble_entities
+                    | map('state_attr', 'friendly_name')
+                    | list
+                  }}
+                {% else %}
+                  {{ false }}
+                {% endif %}
               message_id: "ble_not_used"
             - alias: Check missing wifi sensors
-              condition: |-
+              error: |-
                 {{
                   'wifi' in only_open_near
                   and wifi_devices | length == 0
                 }}
               message_id: "missing_wifi_trackers"
-            - alias: Check missing wifi sensors
-              condition: |-
-                {{
-                  wifi_devices | length > 0
-                  and 'wifi' not in only_open_near
-                }}
+            - alias: Check that wifi is used if a device is set
+              error: |-
+                {%
+                  if (
+                    wifi_devices | length > 0
+                    and 'wifi' not in only_open_near
+                  )
+                %}
+                  {{
+                    wifi_devices
+                    | map('state_attr', 'friendly_name')
+                    | list
+                  }}
+                {% else %}
+                  {{ false }}
+                {% endif %}
               message_id: "wifi_not_used"
             - alias: Check that device trackers contain GPS data
-              condition: |-
-                {% set data = namespace(error=false) %}
+              error: |-
+                {% set data = namespace(invalid=[]) %}
                 {% for tracker in persons %}
+                  {% set original_entity = tracker %}
                   {% if states[tracker].domain == 'person' %}
                     {% set tracker = state_attr(tracker, 'source') %}
                   {% endif %}
                   {% if not is_state_attr(tracker, 'source_type', 'gps') %}
-                    {% set data.error = true %}
-                    {% break %}
+                    {% set data.invalid = data.invalid + [original_entity] %}
                   {% endif %}
                 {% endfor %}
-                {{ data.error }}
+                {{
+                  data.invalid
+                  | map('state_attr', 'friendly_name')
+                  | list
+                }}
               message_id: "missing_gps_data"
             - alias: Check that iBeacons report unknown by default
-              condition: |-
-                {{
-                  trigger.platform is none
-                  and (
+              error: |-
+                {% if trigger.platform is none %}
+                  {{
                     ble_entities
-                    | select('is_state', 'unknown')
+                    | reject('is_state', 'unknown')
+                    | map('state_attr', 'friendly_name')
                     | list
-                  ) != ble_entities
-                }}
+                  }}
+                {% else %}
+                  {{ false }}
+                {% endif %}
               message_id: "ibeacon_not_unknown"
             - alias: Check that the user entered a sensor to detect his arrival
-              condition: |-
+              error: |-
                 {{
                   travel_time_sensors | length == 0
                   and 'ble' not in open_when_connected_to
                 }}
               message_id: "missing_arrival_opening_method"
             - alias: Check that the user entered a sensor to detect his arrival
-              condition: |-
+              error: |-
                 {{
                   travel_time_sensors | length > 0
                   and 'ble' in open_when_connected_to
                 }}
               message_id: "too_many_arrival_opening_method"
             - alias: Check that itinerary sensors have a valid maximum length
-              condition: |-
+              error: |-
                 {{
-                  (
-                    itinerary_sensors
-                    | map('state_attr', 'max')
-                    | min
-                  ) < 254
+                  itinerary_sensors
+                  | expand
+                  | selectattr('attributes.max', 'lessthan', 255)
+                  | map(attribute='name')
+                  | list
                 }}
               message_id: "invalid_itinerary_sensor_length"
             - alias: Check that all per person sensors have been entered
-              condition: |-
+              error: |-
                 {% set persons_len = persons | length %}
                 {{
                   not(
@@ -965,7 +987,7 @@ actions:
                 }}
               message_id: "invalid_per_person_sensors"
             - alias: Check that per person sensors are in the right order
-              condition: |-
+              error: |-
                 {%
                   set per_person_phone_sensors = [
                     driving_sensors,
@@ -973,7 +995,7 @@ actions:
                     wifi_devices
                   ]
                 %}
-                {% set data = namespace(error=false, entities_to_check=[]) %}
+                {% set data = namespace(invalid=[], entities_to_check=[]) %}
                 {% for device_idx in range(notify_devices | length) %}
                   {% set data.entities_to_check = [] %}
                   {% set related_entities = device_entities(
@@ -1007,68 +1029,86 @@ actions:
                     {% endfor %}
                   {% endfor %}
 
-                  {# Check if sensors from the list belong to another user #}
-                  {%
-                    if (
-                      data.entities_to_check
-                      | select('in', related_entities)
-                      | list
-                      | length
-                      != 0
-                    )
-                  %}
-                    {% set data.error = true %}
-                    {% break %}
-                  {% endif %}
+                  {# Append sensors belonging to the wrong users #}
+                    {%
+                      if (
+                        data.entities_to_check
+                        | select('in', related_entities)
+                        | list
+                        | length
+                        != 0
+                      )
+                    %}
+                      {% set data.invalid = data.invalid + [persons[device_idx]] %}
+                    {% endif %}
                 {% endfor %}
-                {{ data.error }}
+                {{
+                  data.invalid
+                  | map('state_attr', 'friendly_name')
+                  | list
+                }}
               message_id: "per_person_sensors_mismatch"
             - alias: Check that all ble tracker entities come from the same device
-              condition: |-
+              error: |-
                 {% if ble_entities | length > 1 %}
+                  {% set data = namespace(appearances={}) %}
+                  {% for entity in ble_entities %}
+                    {% set id = device_id(entity) %}
+                    {% if id in data.appearances %}
+                      {% set data_update = data.appearances[id] + 1 %}
+                    {% else %}
+                      {% set data_update = 1 %}
+                    {% endif %}
+                    {%
+                      set data.appearances = (
+                        data.appearances
+                        | combine({id: data_update})
+                      )
+                    %}
+                  {% endfor %}
                   {{
                     ble_entities
-                    | select(
+                    | reject(
                       'in', device_entities(
-                        device_id(ble_entities[0])
+                        data.appearances.items() | max(attribute=1) | first
                       )
                     )
+                    | map('state_attr', 'friendly_name')
                     | list
-                    != ble_entities
                   }}
                 {% else %}
                   {{ false }}
                 {% endif %}
               message_id: "ble_trackers_mismatch"
             - alias: Check that Wi-Fi device trackers does not contain GPS data
-              condition: |-
+              error: |-
                 {{
                   wifi_devices
-                  | map('state_attr', 'source_type')
-                  | select('equalto', 'gps')
+                  | expand
+                  | selectattr('attributes.source_type', 'equalto', 'gps')
+                  | map(attribute='name')
                   | list
-                  | length
-                  != 0
                 }}
               message_id: "wifi_tracker_is_gps"
             - alias: Check that iBeacon transmitters are valid
-              condition: |-
+              error: |-
                 {{
-                  transmitters
+                  ble_transmitter_entities
                   | map('state_attr', 'options')
                   | reject('contains', 'Transmitting')
+                  | map('state_attr', 'friendly_name')
                   | list
-                  | length
-                  != 0
                 }}
               message_id: "invalid_ibeacon_transmitter"
           sequence:
             - alias: If a check failed
               if:
                 - condition: template
-                  value_template: "{{ repeat.item.condition }}"
+                  value_template: |-
+                    {% set error = repeat.item.error %}
+                    {{ error != [] if error is list else error }}
               then:
-                - alias: Append the error message to the list
+                - alias: Get notification translation
                   variables:
                     message_id: "{{ repeat.item.message_id }}"
                     message: &get_message |-
@@ -1077,33 +1117,33 @@ actions:
                         if 'message' in custom_translations_json
                         and message_id in custom_translations_json['message']
                       %}
-                        {%
-                          set message_string = (
-                            custom_translations_json['message'][message_id]
-                          )
-                        %}
+                        {{ custom_translations_json['message'][message_id] }}
 
                       {# Selected language #}
                       {% elif message_id in strings[language]['message'] %}
-                        {%
-                          set message_string = (
-                            strings[language]['message'][message_id]
-                          )
-                        %}
+                        {{ strings[language]['message'][message_id] }}
 
                       {# Fallback to english #}
                       {% else %}
-                        {%
-                          set message_string = (
-                            strings['en']['message'][message_id]
-                          )
-                        %}
+                        {{ strings['en']['message'][message_id] }}
                       {% endif %}
-                      {{
-                        message_string.format(
-                          quick_triggers=itinerary_value.quick_triggers
-                        )
-                      }}
+                - alias: If the error variable contains a list
+                  if:
+                    - condition: template
+                      value_template: "{{ repeat.item.error is list }}"
+                  then:
+                    - alias: Format the string with error data
+                      variables:
+                        message: |-
+                          {{
+                            message.format(
+                              data=(
+                                ', '.join(repeat.item.error)
+                              )
+                            )
+                          }}
+                - alias: Append the error message to the list
+                  variables:
                     messages: "{{ messages | union([message]) }}"
       - alias: If the config is valid
         if:
@@ -1375,6 +1415,14 @@ actions:
                       title_id: "disabled"
                   - alias: Get notification translation
                     variables: *get_translation
+                  - alias: Format the error message
+                    variables:
+                      message: |-
+                        {{
+                          message.format(
+                            quick_triggers=itinerary_value.quick_triggers
+                          )
+                        }}
                   - alias: Log error
                     action: system_log.write
                     data:
