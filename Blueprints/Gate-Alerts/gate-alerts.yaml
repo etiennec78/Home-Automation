@@ -292,6 +292,7 @@ variables:
         offline: The gate has been offline for {{notification_delay}} minutes
         something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
         valid_config: "Your configuration seems valid"
+        more_info: "More info"
         invalid_translations: "Your custom translations are not valid (#1)"
         missing_error_sensor: "You have not entered the sensor containing gate error codes (#15)"
         invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service (#16)"
@@ -318,6 +319,7 @@ variables:
         offline: Le portail est hors ligne depuis {{notification_delay}} minutes
         something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
         valid_config: "Votre configuration semble valide"
+        more_info: "Plus d'infos"
         invalid_translations: "Vos traductions personnalisées ne sont pas valides (#1)"
         missing_error_sensor: "Vous n'avez pas entré le capteur contenant les codes d'erreur du portail (#15)"
         invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS (#16)"
@@ -550,11 +552,17 @@ actions:
               title_id: "invalid_config"
               title: *get_title
               message: "{{ '• ' ~ '\n• '.join(messages) }}"
+          - alias: Build the more info link
+            variables:
+              message_id: "more_info"
+              more_info: *get_message
+              link: "https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/README.md#error-codes-table-%EF%B8%8F"
+              more_info_md: "[{{more_info}}]({{link}})"
           - alias: Notify all users on the dashboard that the config is invalid
             action: persistent_notification.create
             data:
               title: "{{ title }}"
-              message: "{{ message }}"
+              message: "{{ message ~ '\n\n' ~ more_info_md }}"
               notification_id: "{{ config_checker_tag }}"
       - alias: Confirm that no error occured while the config checker was running
         variables:

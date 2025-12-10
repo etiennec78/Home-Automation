@@ -30,7 +30,7 @@ Refer to the table below to fix the errors
 
 
 <details>
-  <summary>Error codes table ⚠️</summary>
+  <summary><h3>Error codes table ⚠️</h3></summary>
 
   | Error code | Error | Fix |
   | :---: | :--- | :--- |

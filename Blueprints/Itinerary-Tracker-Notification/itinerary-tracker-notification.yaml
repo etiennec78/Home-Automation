@@ -312,6 +312,7 @@ variables:
         something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
         unsupported_tt_integration: "Your travel time integration is not supported !"
         valid_config: "Your configuration seems valid"
+        more_info: "More info"
         invalid_translations: "Your custom translations are not valid (#1)"
         invalid_per_person_sensors: "You have not entered a consistent number of sensors in the per person sensor inputs (#11)"
         invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service (#16)"
@@ -330,6 +331,7 @@ variables:
         something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
         unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
         valid_config: "Votre configuration semble valide"
+        more_info: "Plus d'infos"
         invalid_translations: "Vos traductions personnalisées ne sont pas valides (#1)"
         invalid_per_person_sensors: "Vous n'avez pas entré le bon nombre de capteurs dans les champs de capteurs par personne (#11)"
         invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS (#16)"
@@ -610,11 +612,17 @@ actions:
               title_id: "invalid_config"
               title: *get_title
               message: "{{ '• ' ~ '\n• '.join(messages) }}"
+          - alias: Build the more info link
+            variables:
+              message_id: "more_info"
+              more_info: *get_message
+              link: "https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/README.md#error-codes-table-%EF%B8%8F"
+              more_info_md: "[{{more_info}}]({{link}})"
           - alias: Notify all users on the dashboard that the config is invalid
             action: persistent_notification.create
             data:
               title: "{{ title }}"
-              message: "{{ message }}"
+              message: "{{ message ~ '\n\n' ~ more_info_md }}"
               notification_id: "{{ config_checker_tag }}"
       - alias: Confirm that no error occured while the config checker was running
         variables:

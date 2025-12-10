@@ -674,6 +674,7 @@ variables:
         unsupported_tt_integration: "Your travel time integration is not supported !"
         too_close: "You have started driving too close to the gate zone"
         valid_config: "Your configuration seems valid"
+        more_info: "More info"
         invalid_translations: "Your custom translations are not valid (#1)"
         missing_ble_entities: "You have not entered any iBeacon scanners (#2)"
         ble_not_used: "You have entered these iBeacon scanners: '{data}' but are not using them (#3)"
@@ -735,6 +736,7 @@ variables:
         unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
         too_close: "Vous avez démarré trop près de la zone du portail"
         valid_config: "Votre configuration semble valide"
+        more_info: "Plus d'infos"
         invalid_translations: "Vos traductions personnalisées ne sont pas valides (#1)"
         missing_ble_entities: "Vous n'avez pas entré de scanner iBeacon (#2)"
         ble_not_used: "Vous avez entré ces scanners iBeacon: '{data}' mais ne les utilisez pas (#3)"
@@ -1212,11 +1214,17 @@ actions:
               title_id: "invalid_config"
               title: *get_title
               message: "{{ '• ' ~ '\n• '.join(messages) }}"
+          - alias: Build the more info link
+            variables:
+              message_id: "more_info"
+              more_info: *get_message
+              link: "https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/README.md#error-codes-table-%EF%B8%8F"
+              more_info_md: "[{{more_info}}]({{link}})"
           - alias: Notify all users on the dashboard that the config is invalid
             action: persistent_notification.create
             data:
               title: "{{ title }}"
-              message: "{{ message }}"
+              message: "{{ message ~ '\n\n' ~ more_info_md }}"
               notification_id: "{{ config_checker_tag }}"
           - alias: If the blueprint was not triggered manually
             if:
