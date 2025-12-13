@@ -258,6 +258,7 @@ variables:
   persistent_active: !input persistent_notification
   next_refresh: 0
   remaining: 0
+  nearly_arrived_timestamp: "{{ none }}"
   nearly_arrived_sent: false
   last_arrival_timestamp: 0
   blueprint_name: "{{ state_attr(this.entity_id, 'friendly_name') }}"
@@ -723,12 +724,18 @@ actions:
                   {%
                     if nearly_arrived_tts
                     and not nearly_arrived_sent
-                    and remaining > nearly_arrived_time*60
+                    and nearly_arrived_timestamp is not none
                   %}
-                    {% set values = values | union([remaining - nearly_arrived_time*60]) %}
+                    {%
+                      set values = values | union(
+                        [
+                          nearly_arrived_timestamp - now() | as_timestamp
+                        ]
+                      )
+                    %}
                   {% endif %}
 
-                  {{ min(values) }}
+                  {{ max(min(values), 0) }}
             - choose:
                 - alias: If triggered by a mobile notification cleared
                   conditions:
@@ -770,8 +777,8 @@ actions:
                   value_template: |-
                     {{ nearly_arrived_tts
                       and not nearly_arrived_sent
-                      and next_refresh != 0
-                      and remaining <= nearly_arrived_time*60
+                      and nearly_arrived_timestamp is not none
+                      and nearly_arrived_timestamp <= now() | as_timestamp
                       and speaker_tts_devices != []
                       and speaker_tts_service != ''
                       and persons | select('is_state', 'home') | list != []
@@ -838,6 +845,18 @@ actions:
                 remaining_minutes: "{{ (remaining/60) | round }}"
                 arrival_timestamp: "{{ as_timestamp(now()) + remaining }}"
                 arrival: "{{ arrival_timestamp | timestamp_custom('%H:%M') }}"
+            - alias: If the nearly arrived tts has not been triggered yet
+              if:
+                - condition: template
+                  value_template: |-
+                    {{
+                      nearly_arrived_tts
+                      and not nearly_arrived_sent
+                    }}
+              then:
+                - alias: Calculate the timestamp for the nearly arrived tts trigger
+                  variables:
+                    nearly_arrived_timestamp: "{{ arrival_timestamp - nearly_arrived_time*60 }}"
             - alias: Do not send notification if the time of arrival did not change
               condition: template
               value_template: |-
