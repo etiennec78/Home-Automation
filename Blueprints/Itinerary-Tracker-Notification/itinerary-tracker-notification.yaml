@@ -891,10 +891,6 @@ actions:
             - alias: Only continue loop if notifications not on cooldown
               condition: template
               value_template: "{{ next_refresh <= now() | as_timestamp }}"
-            - alias: Calculate next refresh
-              variables:
-                cooldown: !input notif_refresh_rate_ftn
-                next_refresh: "{{ now() | as_timestamp + cooldown }}"
             - alias: Calculate ETA
               variables:
                 remaining: |-
@@ -924,6 +920,10 @@ actions:
                     notification_id: "{{ persistent_id }}"
                 - stop: Travel time integration not supported
                   error: true
+            - alias: Calculate next refresh
+              variables:
+                cooldown: !input notif_refresh_rate_ftn
+                next_refresh: "{{ now() | as_timestamp + cooldown }}"
             - alias: Convert ETA to needed types
               variables:
                 remaining_minutes: "{{ (remaining/60) | round }}"
