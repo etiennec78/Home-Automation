@@ -1413,7 +1413,7 @@ actions:
                         {% if (ble_transmitter_entities | length) - 1 >= idx %}
                           {{ {
                             'state': states(ble_transmitter_entities[idx])
-                              if states(ble_transmitter_entities[idx]) == 'Stopped' else none,
+                              if states(ble_transmitter_entities[idx]) in ['Stopped', 'Bluetooth is turned off'] else none,
                             'transmit_power': (state_attr(ble_transmitter_entities[idx], 'Transmitting power') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
                               if state_attr(ble_transmitter_entities[idx], 'Transmitting power') != 'high' else none,
                             'advertise_mode': (state_attr(ble_transmitter_entities[idx], 'Advertise mode') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
@@ -1432,7 +1432,19 @@ actions:
                           - condition: template
                             value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
                         then:
-                          - action: "{{ notify_service }}"
+                          - alias: If bluetooth is off
+                            if:
+                              - condition: template
+                                value_template: "{{ old_ibeacon_transmitter_states['state'] == 'Bluetooth is turned off' }}"
+                            then:
+                              - alias: Turn on bluetooth
+                                action: "{{ notify_service }}"
+                                data:
+                                  message: command_bluetooth
+                                  data:
+                                    command: turn_on
+                          - alias: Start the iBeacon transmitter
+                            action: "{{ notify_service }}"
                             data:
                               message: command_ble_transmitter
                               data:
@@ -1545,12 +1557,24 @@ actions:
                               - condition: template
                                 value_template: "{{ old_ibeacon_transmitter_states != none }}"
                             then:
-                              - alias: If iBeacon transmitter was stopped, stop it
+                              - alias: If iBeacon transmitter was stopped
                                 if:
                                   - condition: template
                                     value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
                                 then:
-                                  - action: "{{ notify_service }}"
+                                  - alias: If bluetooth was off
+                                    if:
+                                      - condition: template
+                                        value_template: "{{ old_ibeacon_transmitter_states['state'] == 'Bluetooth is turned off' }}"
+                                    then:
+                                      - alias: Turn off bluetooth
+                                        action: "{{ notify_service }}"
+                                        data:
+                                          message: command_bluetooth
+                                          data:
+                                            command: turn_off
+                                  - alias: Stop the iBeacon transmitter
+                                    action: "{{ notify_service }}"
                                     data:
                                       message: command_ble_transmitter
                                       data:
