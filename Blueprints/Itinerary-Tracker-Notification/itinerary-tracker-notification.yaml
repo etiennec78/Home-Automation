@@ -246,9 +246,15 @@ blueprint:
       icon: mdi:shield-check
       collapsed: true
       input:
+        run_checks_when_enabled:
+          name: 🧪 Run tests when blueprint enabled
+          description: Run tests after adding the blueprint, updating inputs, and after HA startup
+          default: true
+          selector:
+            boolean:
         always_run_checks:
-          name: 🧪 Always run tests
-          description: Always run tests even if the blueprint was not triggered manually
+          name: 🧪 Run tests when triggered
+          description: Run tests when the blueprint is triggered by a driving sensor
           default: true
           selector:
             boolean:
@@ -307,11 +313,13 @@ variables:
         something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
         unsupported_tt_integration: "Your travel time integration is not supported !"
         valid_config: "Your configuration seems valid"
-        invalid_translations: "Your custom translations are not valid !"
-        invalid_per_person_sensors: "You have not entered a consistent number of sensors between each input in the 'Per Person Sensors' category"
-        invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service"
-        per_person_sensors_mismatch: "You do not appear to have entered all your per person sensors in the same order"
-        no_notification_method: "You have not entered any method for receiving notifications"
+        more_info: "More info"
+        invalid_translations: "Your custom translations are not valid (#1)"
+        invalid_per_person_sensors: "You have not entered a consistent number of sensors in the per person sensor inputs (#11)"
+        invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service (#16)"
+        per_person_sensors_mismatch: "These persons: '{data}' appear to have mixed up per person sensors (#12)"
+        no_notification_method: "You have not entered any method for receiving notifications (#17)"
+        night_mode_missing_bound: "A bound for the speakers' night mode schedule is missing (#18)"
     fr:
       title:
         valid_config: "{{blueprint_name}}: Configuration valide 🛠️✅"
@@ -324,25 +332,33 @@ variables:
         something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
         unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
         valid_config: "Votre configuration semble valide"
-        invalid_translations: "Vos traductions personnalisées ne sont pas valides !"
-        invalid_per_person_sensors: "Vous n'avez pas entré un nombre de capteurs cohérent entre chaque champ de la category 'Per Person Sensors'"
-        invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS"
-        per_person_sensors_mismatch: "Vous ne semblez pas avoir entré tous vos capteurs par personne dans le même ordre"
-        no_notification_method: "Vous n'avez entré aucune méthode pour recevoir les notifications"
+        more_info: "Plus d'infos"
+        invalid_translations: "Vos traductions personnalisées ne sont pas valides (#1)"
+        invalid_per_person_sensors: "Vous n'avez pas entré le bon nombre de capteurs dans les champs de capteurs par personne (#11)"
+        invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS (#16)"
+        per_person_sensors_mismatch: "Ces personnes: '{data}' semblent avoir des capteurs par personne mélangés (#12)"
+        no_notification_method: "Vous n'avez entré aucune méthode pour recevoir les notifications (#17)"
+        night_mode_missing_bound: "Il manque une borne des horaires du mode nuit des enceintes (#18)"
 
 triggers:
   - trigger: state
+    id: vehicle_started
     entity_id: !input driving_sensors
     from: "off"
     to: "on"
+  - alias: Trigger when the blueprint the user added the blueprint, updated inputs, or HA started
+    trigger: template
+    id: blueprint_enabled
+    value_template: "{{ is_state(this.entity_id, 'on') }}"
+    enabled: !input run_checks_when_enabled
 
 conditions: []
 
 actions:
-  - alias: If the blueprint was not triggered manually
+  - alias: If the blueprint was triggered by a driving sensor
     if:
-      - condition: template
-        value_template: "{{ trigger.platform is not none }}"
+      - condition: trigger
+        id: vehicle_started
     then:
       - alias: Set variables containing data related to the driver
         variables:
@@ -394,21 +410,28 @@ actions:
     if:
       - condition: or
         conditions:
-          - alias: If checks should always be run
-            condition: template
-            value_template: !input always_run_checks
           - alias: If the blueprint was executed manually
             condition: template
             value_template: "{{ trigger.platform is none }}"
+          - alias: If checks should be run when triggered by a driving sensor
+            condition: and
+            conditions:
+              - condition: trigger
+                id: vehicle_started
+              - condition: template
+                value_template: !input always_run_checks
+          - alias: If the user added the blueprint, updated inputs, or HA started
+            condition: trigger
+            id: blueprint_enabled
     then:
       - alias: Check for errors
         repeat:
           for_each:
             - alias: Check custom translations
-              condition: "{{ custom_translations_error }}"
+              error: "{{ custom_translations_error }}"
               message_id: "invalid_translations"
             - alias: Check that all per person sensors have been entered
-              condition: |-
+              error: |-
                 {{
                   not(
                     travel_time_sensors | length
@@ -418,16 +441,16 @@ actions:
                 }}
               message_id: "invalid_per_person_sensors"
             - alias: Check for tts and media player sensors presence
-              condition: "{{ (speaker_tts_devices | length > 0) != (speaker_tts_service | length > 0) }}"
+              error: "{{ (speaker_tts_devices | length > 0) != (speaker_tts_service | length > 0) }}"
               message_id: "invalid_speakers"
             - alias: Check that per person sensors are in the right order
-              condition: |-
+              error: |-
                 {%
                   set per_person_phone_sensors = [
                     driving_sensors
                   ]
                 %}
-                {% set data = namespace(error=false, entities_to_check=[]) %}
+                {% set data = namespace(invalid=[], entities_to_check=[]) %}
                 {% for device_idx in range(notify_devices | length) %}
                   {% set data.entities_to_check = [] %}
                   {% set related_entities = device_entities(
@@ -461,37 +484,49 @@ actions:
                     {% endfor %}
                   {% endfor %}
 
-                  {# Check if sensors from the list belong to another user #}
-                  {%
-                    if (
-                      data.entities_to_check
-                      | select('in', related_entities)
-                      | list
-                      | length
-                      != 0
-                    )
-                  %}
-                    {% set data.error = true %}
-                    {% break %}
-                  {% endif %}
+                  {# Append sensors belonging to the wrong users #}
+                    {%
+                      if (
+                        data.entities_to_check
+                        | select('in', related_entities)
+                        | list
+                        | length
+                        != 0
+                      )
+                    %}
+                      {% set data.invalid = data.invalid + [persons[device_idx]] %}
+                    {% endif %}
                 {% endfor %}
-                {{ data.error }}
+                {{
+                  data.invalid
+                  | map('state_attr', 'friendly_name')
+                  | list
+                }}
               message_id: "per_person_sensors_mismatch"
             - alias: Check that there is a way to notify the user
-              condition: |-
+              error: |-
                 {{
                   notify_devices | length == 0
                   and speaker_tts_devices | length == 0
                   and not persistent_active
                 }}
               message_id: "no_notification_method"
+            - alias: Check that both or neither night time end and start have been entered
+              error: |-
+                {{
+                  (tts_volume_night_time_start == '')
+                  | bitwise_xor(tts_volume_night_time_end == '')
+                }}
+              message_id: "night_mode_missing_bound"
           sequence:
             - alias: If a check failed
               if:
                 - condition: template
-                  value_template: "{{ repeat.item.condition }}"
+                  value_template: |-
+                    {% set error = repeat.item.error %}
+                    {{ error != [] if error is list else error }}
               then:
-                - alias: Append the error message to the list
+                - alias: Get notification translation
                   variables:
                     message_id: "{{ repeat.item.message_id }}"
                     message: &get_message |-
@@ -500,35 +535,33 @@ actions:
                         if 'message' in custom_translations_json
                         and message_id in custom_translations_json['message']
                       %}
-                        {%
-                          set message_string = (
-                            custom_translations_json['message'][message_id]
-                          )
-                        %}
+                        {{ custom_translations_json['message'][message_id] }}
 
                       {# Selected language #}
                       {% elif message_id in strings[language]['message'] %}
-                        {%
-                          set message_string = (
-                            strings[language]['message'][message_id]
-                          )
-                        %}
+                        {{ strings[language]['message'][message_id] }}
 
                       {# Fallback to english #}
                       {% else %}
-                        {%
-                          set message_string = (
-                            strings['en']['message'][message_id]
-                          )
-                        %}
+                        {{ strings['en']['message'][message_id] }}
                       {% endif %}
-                      {{
-                        message_string.format(
-                          driver_name=driver_name,
-                          arrival=arrival,
-                          remaining_minutes=remaining_minutes
-                        )
-                      }}
+                - alias: If the error variable contains a list
+                  if:
+                    - condition: template
+                      value_template: "{{ repeat.item.error is list }}"
+                  then:
+                    - alias: Format the string with error data
+                      variables:
+                        message: |-
+                          {{
+                            message.format(
+                              data=(
+                                ', '.join(repeat.item.error)
+                              )
+                            )
+                          }}
+                - alias: Append the error message to the list
+                  variables:
                     messages: "{{ messages | union([message]) }}"
       - alias: If the config is valid
         if:
@@ -579,12 +612,18 @@ actions:
             variables:
               title_id: "invalid_config"
               title: *get_title
-              message: "{{ '• ' ~ '\n· '.join(messages) }}"
+              message: "{{ '• ' ~ '\n• '.join(messages) }}"
+          - alias: Build the more info link
+            variables:
+              message_id: "more_info"
+              more_info: *get_message
+              link: "https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/README.md#error-codes-table-%EF%B8%8F"
+              more_info_md: "[{{more_info}}]({{link}})"
           - alias: Notify all users on the dashboard that the config is invalid
             action: persistent_notification.create
             data:
               title: "{{ title }}"
-              message: "{{ message }}"
+              message: "{{ message ~ '\n\n' ~ more_info_md }}"
               notification_id: "{{ config_checker_tag }}"
       - alias: Confirm that no error occured while the config checker was running
         variables:
@@ -614,11 +653,13 @@ actions:
       - stop: Config checker failed
         error: true
 
-  - alias: Only continue if the blueprint was not triggered manually
+  - alias: Only continue if the blueprint was triggered by a driving sensor
     condition: template
     value_template: |-
       {{
-        trigger.platform is not none and (
+        trigger.platform is not none
+        and trigger.id == 'vehicle_started'
+        and (
           successful_check
           or not stop_check_failed
         )
@@ -631,6 +672,9 @@ actions:
     variables:
       message_id: "itinerary_started"
       message: *get_message
+  - alias: Format the notification message
+    variables:
+      message: "{{ message.format(driver_name=driver_name) }}"
   - alias: Notify each user except the driver about itinerary start
     repeat:
       for_each: "{{ active_notify_services }}"
@@ -881,6 +925,15 @@ actions:
                   variables:
                     message_id: "nearly_arrived"
                     message: *get_message
+                - alias: Format the notification message
+                  variables:
+                    message: |-
+                      {{
+                        message.format(
+                          driver_name=driver_name,
+                          remaining_minutes=remaining_minutes
+                        )
+                      }}
                 - sequence: *play_speaker_tts
                 - alias: Mark nearly arrived TTS as already sent
                   variables:
@@ -967,6 +1020,15 @@ actions:
               variables:
                 message_id: "itinerary_ongoing"
                 message: *get_message
+            - alias: Format the notification message
+              variables:
+                message: |-
+                  {{
+                    message.format(
+                      arrival=arrival,
+                      driver_name=driver_name
+                    )
+                  }}
             - alias: Send ETA notification to each user
               repeat:
                 for_each: "{{ active_notify_services }}"
@@ -1012,6 +1074,9 @@ actions:
         variables:
           message_id: "driver_arrived"
           message: *get_message
+      - alias: Format the notification message
+        variables:
+          message: "{{ message.format(driver_name=driver_name) }}"
       - alias: Send arrival notification to each user
         repeat:
           for_each: "{{ active_notify_services }}"
