@@ -1884,6 +1884,34 @@ actions:
                   - condition: template
                     value_template: "{{ opening_behavior in ['timer', 'notif'] }}"
                 then:
+                  - alias: Get button translation
+                    variables: &get_button_translations
+                      button_ids:
+                        - "open"
+                        - "cancel"
+                      buttons: |-
+                        {% set data = namespace(buttons=[]) %}
+                        {% for button_id in button_ids %}
+                          {# Custom translation #}
+                          {%
+                            if 'button' in custom_translations_json
+                            and button_id in custom_translations_json['button']
+                          %}
+                            {% set translation = custom_translations_json['button'][button_id] %}
+
+                          {# Selected language #}
+                          {% elif button_id in strings[language]['button'] %}
+                            {% set translation = strings[language]['button'][button_id] %}
+
+                          {# Fallback to english #}
+                          {% else %}
+                            {% set translation = strings['en']['button'][button_id] %}
+                          {% endif %}
+
+                          {% set data.buttons = data.buttons + [translation] %}
+
+                        {% endfor %}
+                        {{ data.buttons }}
                   - choose:
                       - alias: If opening behavior is set to notification request
                         conditions:
@@ -1896,34 +1924,6 @@ actions:
                               title_id: "open_gate"
                           - alias: Get notification translation
                             variables: *get_translation
-                          - alias: Get button translation
-                            variables: &get_button_translations
-                              button_ids:
-                                - "open"
-                                - "cancel"
-                              buttons: |-
-                                {% set data = namespace(buttons=[]) %}
-                                {% for button_id in button_ids %}
-                                  {# Custom translation #}
-                                  {%
-                                    if 'button' in custom_translations_json
-                                    and button_id in custom_translations_json['button']
-                                  %}
-                                    {% set translation = custom_translations_json['button'][button_id] %}
-
-                                  {# Selected language #}
-                                  {% elif button_id in strings[language]['button'] %}
-                                    {% set translation = strings[language]['button'][button_id] %}
-
-                                  {# Fallback to english #}
-                                  {% else %}
-                                    {% set translation = strings['en']['button'][button_id] %}
-                                  {% endif %}
-
-                                  {% set data.buttons = data.buttons + [translation] %}
-
-                                {% endfor %}
-                                {{ data.buttons }}
                           - alias: Ask the user if he wants to open the gate
                             action: "{{ notify_service }}"
                             data:
@@ -1953,12 +1953,6 @@ actions:
                               title_id: "timer_opening"
                           - alias: Get notification translation
                             variables: *get_translation
-                          - alias: Get button translation
-                            variables:
-                              button_ids:
-                                - "cancel"
-                                - "open"
-                              <<: *get_button_translations
                           - alias: Send the cancelable timer notification to the user
                             action: "{{ notify_service }}"
                             data:
@@ -1976,18 +1970,24 @@ actions:
                                 when_relative: true
                                 actions:
                                   - action: "{{ canceling_order_id }}"
-                                    title: "{{ buttons[0] }}"
+                                    title: "{{ buttons[1] }}"
                                     icon: sfsymbols:xmark
                                   - action: "{{ opening_order_id }}"
-                                    title: "{{ buttons[1] }}"
+                                    title: "{{ buttons[0] }}"
                                     icon: sfsymbols:lock.open
                   - sequence: *tts
+                  - alias: By default, the notification sent is not silent
+                    variables:
+                      silent_notif: false
                   - alias: Listen for events a second time if the first event was a notification received confirmation
                     repeat:
                       until:
                         - condition: template
-                          value_template: "{{ wait.trigger.id != 'notification_received' }}"
+                          value_template: "{{ break }}"
                       sequence:
+                        - alias: Do not loop again by default
+                          variables:
+                            break: true
                         - alias: Wait for events before opening the gate or canceling the itinerary
                           wait_for_trigger:
                             - alias: Manual opening
@@ -2063,16 +2063,65 @@ actions:
                                 - alias: Stop waiting for notification reception
                                   variables:
                                     wait_notif_reception: false
+                                    break: false
+                            - alias: If the cancel button was pressed in timer mode
+                              conditions:
+                                - condition: template
+                                  value_template: |-
+                                    {{
+                                      opening_behavior == 'timer'
+                                      and wait.trigger.id == 'canceling_order'
+                                    }}
+                              sequence:
+                                - alias: Change the opening behavior to notification request
+                                  variables:
+                                    opening_behavior: notif
+                                    silent_notif: true
+                                    break: false
+                                - alias: Set notification ids
+                                  variables:
+                                    message_id: "{{ opening_message }}"
+                                    title_id: "open_gate"
+                                - alias: Get notification translation
+                                  variables: *get_translation
+                                - alias: Silently ask the user if he wants to open the gate
+                                  action: "{{ notify_service }}"
+                                  data:
+                                    title: "{{ title }}"
+                                    message: "{{ message }}"
+                                    data:
+                                      channel: Itinerary status
+                                      importance: low
+                                      push:
+                                        interruption-level: passive
+                                      tag: itinerary-status
+                                      notification_icon: mdi:lock-question
+                                      sticky: true
+                                      persistent: true
+                                      alert_once: true
+                                      actions:
+                                        - action: "{{ opening_order_id }}"
+                                          title: "{{ buttons[0] }}"
+                                          icon: sfsymbols:lock.open
+                                        - action: "{{ canceling_order_id }}"
+                                          title: "{{ buttons[1] }}"
+                                          icon: sfsymbols:xmark
+                                - sequence: *tts
                             - alias: If an error needs to be raised
                               conditions:
                                 - condition: template
                                   value_template: "{{ wait.trigger.id in ['vehicle_stopped', 'vehicle_away', 'forbidden_zone', 'canceling_order'] }}"
                               sequence:
-                                - alias: Set error id
-                                  variables:
-                                    message_id: "{{ wait.trigger.id }}"
-                                - alias: Create error
-                                  sequence: *create_error
+                                - alias: If the last notification sent was not silent
+                                  if:
+                                    - condition: template
+                                      value_template: "{{ not silent_notif }}"
+                                  then:
+                                    - alias: Set error id
+                                      variables:
+                                        message_id: "{{ wait.trigger.id }}"
+                                    - alias: Create error
+                                      sequence: *create_error
                                 - stop: Opening canceled
                           default:
                             - alias: Remove opening notification
