@@ -222,9 +222,15 @@ blueprint:
       icon: mdi:shield-check
       collapsed: true
       input:
+        run_checks_when_enabled:
+          name: 🧪 Run tests when blueprint enabled
+          description: Run tests after adding the blueprint, updating inputs, and after HA startup
+          default: true
+          selector:
+            boolean:
         always_run_checks:
-          name: 🧪 Always run tests
-          description: Always run tests even if the blueprint was not triggered manually
+          name: 🧪 Run tests when triggered
+          description: Run tests when the blueprint is triggered by a driving sensor
           default: true
           selector:
             boolean:
@@ -286,10 +292,12 @@ variables:
         offline: The gate has been offline for {{notification_delay}} minutes
         something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
         valid_config: "Your configuration seems valid"
-        invalid_translations: "Your custom translations are not valid !"
-        missing_error_sensor: "You have not entered the sensor containing gate error codes"
-        invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service"
-        no_notification_method: "You have not entered any method for receiving notifications"
+        more_info: "More info"
+        invalid_translations: "Your custom translations are not valid (#1)"
+        missing_error_sensor: "You have not entered the sensor containing gate error codes (#15)"
+        invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service (#16)"
+        no_notification_method: "You have not entered any method for receiving notifications (#17)"
+        night_mode_missing_bound: "A bound for the speakers' night mode schedule is missing (#18)"
       button:
         close: Close 🔐
     fr:
@@ -311,10 +319,12 @@ variables:
         offline: Le portail est hors ligne depuis {{notification_delay}} minutes
         something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
         valid_config: "Votre configuration semble valide"
-        invalid_translations: "Vos traductions personnalisées ne sont pas valides !"
-        missing_error_sensor: "Vous n'avez pas entré le capteur contenant les codes d'erreur du portail"
-        invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS"
-        no_notification_method: "Vous n'avez entré aucune méthode pour recevoir les notifications"
+        more_info: "Plus d'infos"
+        invalid_translations: "Vos traductions personnalisées ne sont pas valides (#1)"
+        missing_error_sensor: "Vous n'avez pas entré le capteur contenant les codes d'erreur du portail (#15)"
+        invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS (#16)"
+        no_notification_method: "Vous n'avez entré aucune méthode pour recevoir les notifications (#17)"
+        night_mode_missing_bound: "Il manque une borne des horaires du mode nuit des enceintes (#18)"
       button:
         close: Refermer 🔐
 
@@ -325,6 +335,7 @@ trigger_variables:
 triggers:
   - alias: Wait for gate opening or fully open
     trigger: state
+    id: open
     entity_id: !input gate
     to:
       - "on"
@@ -339,6 +350,7 @@ triggers:
 
   - alias: Wait for gate closing
     trigger: state
+    id: close
     entity_id: !input gate
     to:
       - "off"
@@ -353,6 +365,7 @@ triggers:
 
   - alias: Wait for error
     trigger: state
+    id: error
     entity_id: !input error_message_sensor
     not_to:
       - "unknown"
@@ -362,16 +375,29 @@ triggers:
 
   - alias: Wait for gate unavailable for duration
     trigger: state
+    id: offline
     entity_id: !input gate
     to: "unavailable"
     for:
       minutes: !input notification_delay
     enabled: "{{ notification_type == 'offline' }}"
 
+  - alias: Trigger when the blueprint the user added the blueprint, updated inputs, or HA started
+    trigger: template
+    id: blueprint_enabled
+    value_template: "{{ is_state(this.entity_id, 'on') }}"
+    enabled: !input run_checks_when_enabled
+
 conditions:
   - alias: If triggered by gate fully closed, only continue if it does not support position tracking
     condition: template
-    value_template: "{{ notification_type != 'close' or not is_state(gate, 'closed') or state_attr(gate, 'supported_features') | bitwise_and(4) == 0 }}"
+    value_template: |-
+      {{
+        trigger.id == 'blueprint_enabled'
+        or notification_type != 'close'
+        or not is_state(gate, 'closed')
+        or state_attr(gate, 'supported_features') | bitwise_and(4) == 0
+      }}
 
 actions:
   - alias: Initialize variables for the error checker
@@ -391,12 +417,19 @@ actions:
     if:
       - condition: or
         conditions:
-          - alias: If checks should always be run
-            condition: template
-            value_template: !input always_run_checks
           - alias: If the blueprint was executed manually
             condition: template
             value_template: "{{ trigger.platform is none }}"
+          - alias: If checks should be run when triggered by a driving sensor
+            condition: and
+            conditions:
+              - condition: trigger
+                id: vehicle_started
+              - condition: template
+                value_template: !input always_run_checks
+          - alias: If the user added the blueprint, updated inputs, or HA started
+            condition: trigger
+            id: blueprint_enabled
     then:
       - alias: Check for errors
         repeat:
@@ -418,6 +451,13 @@ actions:
                   and not persistent_notification
                 }}
               message_id: "no_notification_method"
+            - alias: Check that both or neither night time end and start have been entered
+              condition: |-
+                {{
+                  (tts_volume_night_time_start == '')
+                  | bitwise_xor(tts_volume_night_time_end == '')
+                }}
+              message_id: "night_mode_missing_bound"
           sequence:
             - alias: If a check failed
               if:
@@ -511,12 +551,18 @@ actions:
             variables:
               title_id: "invalid_config"
               title: *get_title
-              message: "{{ '• ' ~ '\n· '.join(messages) }}"
+              message: "{{ '• ' ~ '\n• '.join(messages) }}"
+          - alias: Build the more info link
+            variables:
+              message_id: "more_info"
+              more_info: *get_message
+              link: "https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/README.md#error-codes-table-%EF%B8%8F"
+              more_info_md: "[{{more_info}}]({{link}})"
           - alias: Notify all users on the dashboard that the config is invalid
             action: persistent_notification.create
             data:
               title: "{{ title }}"
-              message: "{{ message }}"
+              message: "{{ message ~ '\n\n' ~ more_info_md }}"
               notification_id: "{{ config_checker_tag }}"
       - alias: Confirm that no error occured while the config checker was running
         variables:
@@ -546,11 +592,13 @@ actions:
       - stop: Config checker failed
         error: true
 
-  - alias: Only continue if the blueprint was not triggered manually
+  - alias: Only continue if the blueprint was triggered by a driving sensor
     condition: template
     value_template: |-
       {{
-        trigger.platform is not none and (
+        trigger.platform is not none
+        and trigger.id != 'blueprint_enabled'
+        and (
           successful_check
           or not stop_check_failed
         )
