@@ -1506,15 +1506,11 @@ actions:
               entity_id: "{{ itinerary_sensor }}"
             data:
               value: "{{ itinerary_value | to_json }}"
-  - alias: If driver at gate location
+  - alias: If the driver is at the gate location
     if:
       - condition: template
         value_template: "{{ is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id]) }}"
     then:
-      #####################
-      # OPEN GATE ON EXIT #
-      #####################
-
       - alias: If the gate opening behavior is not set to off and one of the gates is closed
         if:
           - condition: template
@@ -1763,6 +1759,15 @@ actions:
                             target:
                               entity_id: "{{ ble_scanner_switch }}"
                   - stop: Opening canceled
+  - alias: If driver at gate location
+    if:
+      - condition: template
+        value_template: "{{ is_state(person, [state_attr(gate_location, 'friendly_name'), states[gate_location].object_id]) }}"
+    then:
+      #####################
+      # OPEN GATE ON EXIT #
+      #####################
+
       - alias: Set the itinerary status to "leaving"
         variables:
           update:
