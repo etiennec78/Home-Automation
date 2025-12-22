@@ -931,7 +931,12 @@ actions:
                       {{
                         message.format(
                           driver_name=driver_name,
-                          remaining_minutes=remaining_minutes
+                          remaining_minutes=(
+                            (
+                              arrival_timestamp
+                              - now() | as_timestamp
+                            ) / 60
+                          ) | round
                         )
                       }}
                 - sequence: *play_speaker_tts
@@ -979,7 +984,6 @@ actions:
                 next_refresh: "{{ now() | as_timestamp + cooldown }}"
             - alias: Convert ETA to needed types
               variables:
-                remaining_minutes: "{{ (remaining/60) | round }}"
                 arrival_timestamp: "{{ as_timestamp(now()) + remaining }}"
                 arrival: "{{ arrival_timestamp | timestamp_custom('%H:%M') }}"
             - alias: If the nearly arrived tts has not been triggered yet
