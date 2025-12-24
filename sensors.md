@@ -66,6 +66,12 @@ Less frequent location updates can impact ETA accuracy
   | Minimal precision | *If your position seems off, please decrease this value* |
   | Location sent | `Exact` |
 
+  #### Extra: Requesting manual GPS updates 🧭
+
+  Some blueprint inputs can be enabled to request manual GPS updates from the mobile app.
+
+  To make this work, you need to enable the "Single accurate location" sensor : Settings > Companion app > Manage sensors > Single accurate location ✔
+
   #### Notes 📌
 
   * If high precision mode does not trigger, please increase its range or check its conditions
