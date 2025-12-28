@@ -1578,15 +1578,50 @@ actions:
           - condition: template
             value_template: "{{ wait_for_gps and not gps_confirmed }}"
         then:
-          - alias: Update the driver's location
-            action: "{{ notify_service }}"
-            data:
-              message: request_location_update
-              data:
-                tag: "gps-request-{{this.attributes.id}}"
-                priority: high
-                importance: high
-                confirmation: true
+          - alias: If the GPS entity is provided by the companion app
+            if:
+              - condition: template
+                value_template: |-
+                  {% set data = namespace(mobile=false) %}
+                  {% set trackers = state_attr(person, 'device_trackers') %}
+                  {% if trackers is none %}
+                    {% set trackers = [person] %}
+                  {% endif %}
+                  {% for tracker in trackers %}
+                    {% set ids = device_attr(tracker, 'identifiers') %}
+                    {%
+                      if ids is not none
+                      and ids | first | first == 'mobile_app'
+                    %}
+                      {% set data.mobile = true %}
+                    {% endif %}
+                  {% endfor %}
+                  {{ data.mobile }}
+            then:
+              - alias: Update the driver's location with a mobile app location request
+                action: "{{ notify_service }}"
+                data:
+                  message: request_location_update
+                  data:
+                    tag: "gps-request-{{this.attributes.id}}"
+                    priority: high
+                    importance: high
+                    confirmation: true
+            else:
+              - alias: Update the driver's location by refreshing his gps device trackers
+                action: homeassistant.update_entity
+                data:
+                  entity_id: |-
+                    {% set trackers = state_attr(person, 'device_trackers') %}
+                    {% if trackers is none %}
+                      {{ person }}
+                    {% else %}
+                      {{
+                        trackers
+                        | select('is_state_attr', 'source_type', 'gps')
+                        | list
+                      }}
+                    {% endif %}
       - alias: Repeat while the location has not been confirmed
         repeat:
           while:
