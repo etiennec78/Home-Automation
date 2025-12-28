@@ -1622,6 +1622,24 @@ actions:
                         | list
                       }}
                     {% endif %}
+      - alias: If an iBeacon sensor has been provided
+        if:
+          - condition: template
+            value_template: "{{ wait_for_ble }}"
+        then:
+          - alias: Update the iBeacon sensor
+            action: homeassistant.update_entity
+            data:
+              entity_id: "{{ ble_entities[idx] }}"
+      - alias: If a wifi tracker has been provided
+        if:
+          - condition: template
+            value_template: "{{ wait_for_wifi }}"
+        then:
+          - alias: Update the Wi-Fi device tracker
+            action: homeassistant.update_entity
+            data:
+              entity_id: "{{ wifi_devices[idx] }}"
       - alias: Repeat while the location has not been confirmed
         repeat:
           while:
