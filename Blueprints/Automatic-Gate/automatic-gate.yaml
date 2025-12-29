@@ -1528,7 +1528,7 @@ actions:
     variables:
       wait_for_wifi: "{{ 'wifi' in only_open_near and wifi_devices | length > idx }}"
       wait_for_ble: "{{ 'ble' in only_open_near and ble_entities | length > idx }}"
-      wait_for_gps: "{{ 'gps' in only_open_near and notify_service is not none }}"
+      wait_for_gps: "{{ 'gps' in only_open_near }}"
       ibeacon_started: "{{ false }}"
   - alias: Get wheter the user is leaving or arriving
     variables: &get_itinerary_mode
