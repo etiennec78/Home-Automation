@@ -1808,7 +1808,7 @@ actions:
               {% for gate_entity in gate %}
                 {%
                   if (
-                    is_state(gate_entity, ['off', 'closed', 'closing']
+                    is_state(gate_entity, ['off', 'closed', 'closing'])
                     and states[gate_entity].last_updated
                       + timedelta(minutes=2)
                       > now()
