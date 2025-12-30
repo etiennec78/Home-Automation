@@ -1535,8 +1535,9 @@ actions:
       wait_for_wifi: "{{ 'wifi' in only_open_near and wifi_devices | length > idx }}"
       wait_for_ble: "{{ 'ble' in only_open_near and ble_entities | length > idx }}"
       wait_for_gps: "{{ 'gps' in only_open_near }}"
+      old_location_id: "{{ states[person].context.id }}"
       ibeacon_started: "{{ false }}"
-  - alias: Get wheter the user is leaving or arriving
+  - alias: Get whether the user is leaving or arriving
     variables: &get_itinerary_mode
       departure: |-
         {{
@@ -1838,8 +1839,23 @@ actions:
                   + start_timestamp
                   - now() | as_timestamp
                 }}
-            - alias: Get wheter the user is leaving or arriving
+            - alias: Save the previous location
+              variables:
+                was_departure: "{{ departure }}"
+            - alias: Get whether the user is leaving or arriving
               variables: *get_itinerary_mode
+            - alias: Get whether the user has entered the activation zone
+              variables:
+                entered_activation_zone: |-
+                  {{
+                    gps_confirmed and (
+                      eta_zone and not departure
+                      or (
+                        wait.trigger.from_state.context.id != old_location_id
+                        and arrival and was_departure
+                      )
+                    )
+                  }}
             - choose:
                 - alias: If the blueprint needs to stop
                   conditions:
@@ -1848,7 +1864,7 @@ actions:
                         {{
                           wait.remaining == 0
                           or wait.trigger.id == 'vehicle_stopped'
-                          or gps_confirmed and eta_zone and not departure
+                          or entered_activation_zone
                         }}
                   sequence:
                     - alias: Set the error id
@@ -1874,7 +1890,7 @@ actions:
                                 location_not_confirmed
                               {% endif %}
                             {% endif %}
-                          {% elif eta_zone and not departure %}
+                          {% elif entered_activation_zone %}
                             too_close
                           {% else %}
                             {{ wait.trigger.id }}
