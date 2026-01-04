@@ -923,7 +923,10 @@ actions:
                   {% if states[tracker].domain == 'person' %}
                     {% set tracker = state_attr(tracker, 'source') %}
                   {% endif %}
-                  {% if not is_state_attr(tracker, 'source_type', 'gps') %}
+                  {%
+                    if tracker is none
+                    or not is_state_attr(tracker, 'source_type', 'gps')
+                  %}
                     {% set data.invalid = data.invalid + [original_entity] %}
                   {% endif %}
                 {% endfor %}
