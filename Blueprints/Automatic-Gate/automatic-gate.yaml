@@ -1823,14 +1823,14 @@ actions:
                   event_data:
                     tag: "gps-request-{{this.attributes.id}}"
                   enabled: "{{ not ios_device }}"
-                - alias: WiFi out of range
+                - alias: WiFi in range
                   trigger: template
-                  id: wifi_out_of_range
+                  id: wifi_in_range
                   value_template: "{{ is_state(wifi_devices[idx], 'home') }}"
                   enabled: "{{ departure and wait_for_wifi }}"
-                - alias: iBeacon out of range
+                - alias: iBeacon in range
                   trigger: template
-                  id: ble_in_of_range
+                  id: ble_in_range
                   value_template: "{{ states(ble_entities[idx]) | is_number }}"
                   enabled: "{{ departure and wait_for_ble }}"
                 - alias: Vehicle stopped
