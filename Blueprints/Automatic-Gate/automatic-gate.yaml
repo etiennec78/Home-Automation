@@ -678,6 +678,7 @@ variables:
         not_home: "You were not detected at home"
         location_not_confirmed: "Your location could not be confirmed"
         got_no_gps_data: "Your phone is reachable, but is not sending back its location ! Check that the 'Single Accurate Location' sensor is enabled."
+        gate_closed: "The gate has been closed manually"
         triggered_frequently: "The blueprint is being triggered repeatedly !"
         disabled_triggered_frequently: |-
           The blueprint has been triggered {quick_triggers} times in a row
@@ -742,6 +743,7 @@ variables:
         not_home: "Le véhicule n'est pas à la maison"
         location_not_confirmed: "Votre localisation n'a pas pu être confirmée"
         got_no_gps_data: "Votre téléphone est joignable, mais ne renvoie pas sa localisation ! Vérifiez que le capteur 'Emplacement précis unique' est activé."
+        gate_closed: "Le portail a été fermé manuellement"
         triggered_frequently: "L'automatisation se déclenche à répétition !"
         disabled_triggered_frequently: |-
           L'automation s'est déclenchée {quick_triggers} fois d'affilée
@@ -1535,7 +1537,6 @@ actions:
       wait_for_wifi: "{{ 'wifi' in only_open_near and wifi_devices | length > idx }}"
       wait_for_ble: "{{ 'ble' in only_open_near and ble_entities | length > idx }}"
       wait_for_gps: "{{ 'gps' in only_open_near }}"
-      old_location_id: "{{ states[person].context.id }}"
       ibeacon_started: "{{ false }}"
   - alias: Get whether the user is leaving or arriving
     variables: &get_itinerary_mode
@@ -1558,12 +1559,6 @@ actions:
 
         {{ gate_distance < activation_zone }}
       arrival: "{{ not eta_zone }}"
-      gps_confirmed: |-
-        {{
-          states[person].last_updated
-          + timedelta(seconds=gps_outdated_delay)
-          >= now()
-        }}
   - alias: If the user wants to confirm his presence before starting the blueprint
     if:
       - condition: template
@@ -1580,6 +1575,15 @@ actions:
         variables:
           start_timestamp: "{{ now() | as_timestamp }}"
           received_timestamp: "{{ none }}"
+          old_location_id: "{{ states[person].context.id }}"
+          gates_were_opened: "{{ gate | select('is_state', ['on', 'open', 'opening']) | list == gate }}"
+          lock_departure: false
+          gps_confirmed: |-
+            {{
+              states[person].last_updated
+              + timedelta(seconds=gps_outdated_delay)
+              >= now()
+            }}
       - alias: If the GPS request on startup is enabled and the location is outdated
         if:
           - condition: template
@@ -1833,29 +1837,75 @@ actions:
                   id: vehicle_stopped
                   trigger: template
                   value_template: "{{ is_state(driving_sensor, 'off') }}"
+                - alias: Gates opened
+                  trigger: template
+                  id: gate_opened
+                  value_template: "{{ gate | select('is_state', ['on', 'open', 'opening']) | list == gate }}"
+                  enabled: "{{ not gates_were_opened }}"
+                - alias: Gates closed
+                  trigger: template
+                  id: gate_closed
+                  value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list == gate }}"
+                  enabled: "{{ gates_were_opened }}"
               timeout: |-
                 {{
                   only_open_near_timeout
                   + start_timestamp
                   - now() | as_timestamp
                 }}
-            - alias: Save the previous location
-              variables:
-                was_departure: "{{ departure }}"
-            - alias: Get whether the user is leaving or arriving
-              variables: *get_itinerary_mode
-            - alias: Get whether the user has entered the activation zone
-              variables:
-                entered_activation_zone: |-
-                  {{
-                    gps_confirmed and (
-                      eta_zone and not departure
-                      or (
-                        wait.trigger.from_state.context.id != old_location_id
-                        and arrival and was_departure
-                      )
-                    )
-                  }}
+            - alias: Refresh variables depending on the trigger
+              choose:
+                - alias: Triggered by a new GPS location
+                  conditions:
+                    - condition: template
+                      value_template: "{{ wait.trigger.id == 'position' }}"
+                  sequence:
+                    - alias: Save the previous location
+                      variables:
+                        was_departure: "{{ departure }}"
+                    - alias: Get whether the user is leaving or arriving
+                      variables: *get_itinerary_mode
+                    - alias: Get whether the user has entered the activation zone
+                      variables:
+                        entered_activation_zone: |-
+                          {{
+                            eta_zone and not departure
+                            or (
+                              wait.trigger.event.data.old_state.context.id != old_location_id
+                              and arrival and was_departure
+                            )
+                          }}
+                        gps_confirmed: true
+                - alias: Triggered by the gate closing
+                  conditions:
+                    - condition: template
+                      value_template: "{{ wait.trigger.id == 'gate_closed' }}"
+                  sequence:
+                    - alias: Get whether the gate was automatically closed
+                      variables:
+                        auto_closed: |-
+                          {% set data = namespace(auto_closed=false) %}
+                          {% for sensor in itinerary_sensors %}
+                            {%
+                              set value = (
+                                states(sensor)
+                                | from_json(default_itinerary_sensor_value)
+                              )
+                            %}
+                            {%
+                              if (
+                                value.last_closed
+                                | as_datetime
+                                + timedelta(seconds=10)
+                                > now()
+                              )
+                              and value.auto_closed
+                            %}
+                              {% set data.auto_closed = true %}
+                              {% break %}
+                            {% endif %}
+                          {% endfor %}
+                          {{ data.recently_closed and not data.auto_closed }}
             - choose:
                 - alias: If the blueprint needs to stop
                   conditions:
@@ -1864,7 +1914,13 @@ actions:
                         {{
                           wait.remaining == 0
                           or wait.trigger.id == 'vehicle_stopped'
-                          or entered_activation_zone
+                          or wait.trigger.id == 'position' and entered_activation_zone
+                          or (
+                            departure and (
+                              wait.trigger.id == 'gate_closed' and not auto_closed
+                              or lock_departure
+                            )
+                          )
                         }}
                   sequence:
                     - alias: Set the error id
@@ -1892,6 +1948,8 @@ actions:
                             {% endif %}
                           {% elif entered_activation_zone %}
                             too_close
+                          {% elif departure and lock_departure %}
+                            gate_closed
                           {% else %}
                             {{ wait.trigger.id }}
                           {% endif %}
@@ -1986,7 +2044,7 @@ actions:
                         - alias: Reset the ibeacon_started variable
                           variables:
                             ibeacon_started: false
-                    - stop: Vehicle stopped or location not confirmed
+                    - stop: The location was not confirmed
                 - alias: If the notification was received
                   conditions:
                     - condition: template
@@ -1995,6 +2053,22 @@ actions:
                     - alias: Save the timestamp of when the notification was received
                       variables:
                         received_timestamp: "{{ now() | as_timestamp }}"
+                - alias: If someone opened all gates
+                  conditions:
+                    - condition: template
+                      value_template: "{{ wait.trigger.id == 'gate_opened' }}"
+                  sequence:
+                    - alias: Now fait for the gates closing
+                      variables:
+                        gates_were_opened: true
+                - alias: If someone manually closed all gate
+                  conditions:
+                    - condition: template
+                      value_template: "{{ wait.trigger.id == 'gate_closed' and not auto_closed }}"
+                  sequence:
+                    - alias: Do not let the gates open on departure
+                      variables:
+                        lock_departure: true
   - alias: If the iBeacon was started but is not needed anymore
     if:
       - condition: template
