@@ -2402,6 +2402,8 @@ actions:
                                     message_id: "{{ wait.trigger.id }}"
                                 - alias: Create error
                                   sequence: *create_error
+                                - alias: Restore iBeacons
+                                  sequence: *restore_ibeacons
                                 - stop: Opening canceled
                           default:
                             - alias: Remove opening notification
