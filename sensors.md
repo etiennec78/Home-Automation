@@ -384,6 +384,9 @@ Each input text helper stores user itinerary states and serves as a trigger for 
 | `invalid_travel_time_sensor` | The travel time sensor provided does not exist |
 | `unsupported_tt_integration` | The travel time sensor provided is not compatible with this blueprint |
 | `too_close` | The driver started his vehicle in the activation zone, but outside his home |
+| `gate_closed` | While waiting for the driver's location to be confirmed, the gate was manually opened and then closed |
+| `location_not_confirmed` | The driver enabled the location request input, but the phone did not receive the request |
+| `got_no_gps_data` | The phone received the location request but did not send back any GPS coordinates |
 
 </details>
 
