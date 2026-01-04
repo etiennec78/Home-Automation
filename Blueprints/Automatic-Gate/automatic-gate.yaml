@@ -1636,7 +1636,7 @@ actions:
       - alias: If an iBeacon sensor has been provided
         if:
           - condition: template
-            value_template: "{{ wait_for_ble }}"
+            value_template: "{{ departure and wait_for_ble }}"
         then:
           - alias: Update the iBeacon sensor
             action: homeassistant.update_entity
@@ -1645,7 +1645,7 @@ actions:
       - alias: If a wifi tracker has been provided
         if:
           - condition: template
-            value_template: "{{ wait_for_wifi }}"
+            value_template: "{{ departure and wait_for_wifi }}"
         then:
           - alias: Update the Wi-Fi device tracker
             action: homeassistant.update_entity
