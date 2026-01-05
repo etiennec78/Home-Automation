@@ -428,7 +428,9 @@ blueprint:
       input:
         language:
           name: Notification language
-          description: The **language** in which **notifications** will be sent to you
+          description: |-
+            The **language** in which **notifications** will be sent to you
+            *Note : If your language is not supported by this blueprint, could you please [open a pull request](https://github.com/etiennec78/Home-Automation/pulls) ?*
           default: "en"
           selector:
             language:
