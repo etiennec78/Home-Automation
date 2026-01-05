@@ -75,7 +75,7 @@ blueprint:
           name: ⚠️ Error Message Sensor
           description: |-
             Sensor that provides gate error messages
-            *Note: Only needed for error notification type*
+            > *Only needed for error notification type*
           default: []
           selector:
             entity:
@@ -84,7 +84,7 @@ blueprint:
           name: 💬 Notify devices
           description: |-
             Mobile **[devices](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#notify-services-)** to **notify**
-            *Note: Optional*
+            > *Optional*
           default: []
           selector:
             device:
@@ -99,7 +99,9 @@ blueprint:
       input:
         language:
           name: Notification language
-          description: The **language** in which **notifications** will be sent to you
+          description: |-
+            The **language** in which **notifications** will be sent to you
+            > *If your language is not supported by this blueprint, could you please [open a pull request](https://github.com/etiennec78/Home-Automation/pulls) ?*
           default: "en"
           selector:
             language:
@@ -110,7 +112,7 @@ blueprint:
           name: Custom translations
           description: |-
             A **yaml** dictionary to change the default **notifications translations**
-            *Note : You can find the translation keys in the strings['en'] variable in the code or in your traces*
+            > You can find the translation keys in the strings['en'] variable in the code or in your traces*
           default:
             title: {}
             message: {}
@@ -157,7 +159,7 @@ blueprint:
           name: 🔊 TTS speakers
           description: |-
             **Speakers** for **text-to-speech** announcements
-            *Note: Optional*
+            > *Optional*
           default: []
           selector:
             entity:
@@ -167,7 +169,7 @@ blueprint:
           name: 🎙️ TTS service
           description: |-
             **TTS service** you want to use for your speakers
-            *Note: Optional*
+            > *Optional*
           default: ""
           selector:
             entity:
@@ -176,7 +178,7 @@ blueprint:
           name: 🌙 TTS night time start
           description: |-
             The time at which the volume of the TTS will start being lowered
-            *Note: Optional*
+            > *Optional*
           default: ""
           selector:
             time:
@@ -184,7 +186,7 @@ blueprint:
           name: ☀️ TTS night time end
           description: |-
             The time at which the volume of the TTS will stop being lowered
-            *Note: Optional*
+            > *Optional*
           default: ""
           selector:
             time:
@@ -208,7 +210,7 @@ blueprint:
           name: ➕ Extra Actions
           description: |-
             Additional **actions** to execute when **triggered**
-            *Note: Optional*
+            > *Optional*
           default: []
           selector:
             action:

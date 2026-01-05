@@ -102,10 +102,12 @@ blueprint:
           name: 👤 Persons / GPS trackers
           description: |-
             Each **user** which should be **[tracked](https://github.com/etiennec78/Home-Automation/blob/master/sensors.gps-location-trackers--persons-)** for **position updates**
-            *Notes :*
-            *⚠️ Use high precision while driving in your ETA zone or you could time out*
-            *If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving, your gate could open thinking you are still there*
-            *You can only enter one device tracker for multiple users if it is provided by your vehicle*
+            > [!WARNING]
+            > Use high precision while driving in your ETA zone or you could time out
+
+            > *If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving, your gate could open thinking you are still there*
+
+            > *You can only enter one device tracker for multiple users if it is provided by your vehicle*
           selector:
             entity:
               multiple: true
@@ -127,8 +129,10 @@ blueprint:
           name: ✈️ Travel time sensors
           description: |-
             Each **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#travel-time-sensors-%EF%B8%8F)** per person/trackers, monitoring their **time left before arrival**
-            *⚠️ Please set a [custom polling interval](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval) if using an external service (Waze, Maps, Here, ...)*
-            *Note: Optional if open when connected to BLE is true*
+            > [!WARNING]
+            > Please set a [custom polling interval](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval) if using an external service (Waze, Maps, Here, ...)
+
+            > *Optional if open when connected to BLE is true*
           default: []
           selector:
             entity:
@@ -142,9 +146,9 @@ blueprint:
           name: 💬 Notify devices
           description: |-
             Each [**device** to **notify**](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#notify-services-)
-            *Notes:*
-            *Optional but highly recommended*
-            *If the driver does not have a notify devices, gate behaviors will be limited to fully auto or disabled*
+            > *Optional but highly recommended*
+
+            > *If the driver does not have a notify devices, gate behaviors will be limited to fully auto or disabled*
           default: []
           selector:
             device:
@@ -155,9 +159,11 @@ blueprint:
           name: 🗺️ Itinerary sensors
           description: |-
             Each empty **[itinerary input text](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#itinerary-sensors-%EF%B8%8F)** helper to store each user **itinerary state**
-            *Notes:*
-            *⚠️ The maximum length needs to be set to 255*
-            *You can use these sensors to sync multiple instances of the Automatic Gate with different configurations by adding sensors from the others at the end of this list*
+            > [!WARNING]
+            > The maximum length needs to be set to 255
+
+            > [!TIP]
+            > You can use these sensors to sync multiple instances of the Automatic Gate with different configurations by adding sensors from the others at the end of this list
           selector:
             entity:
               multiple: true
@@ -173,7 +179,7 @@ blueprint:
           name: 🔒 Gate activation zone
           description: |-
             At which **distance** from the gate should the automation start estimating when to **open your gate** ?
-            Note: It will automatically **close** if you **leave** this zone
+            > *The gate will **close** if you **leave** this zone*
           default: 500
           selector:
             number:
@@ -392,7 +398,7 @@ blueprint:
           name: ⌛ Timeout delay
           description: |-
             The time the automation will wait before **stopping** if your phone **times out** and doesn't send new position updates, while being in the activation zone
-            *Note : If your position provider doesn't let you use a high accuracy mode (like iOS), please increase this value*
+            > *If your position provider doesn't let you use a high accuracy mode (like iOS), please increase this value*
           default: 2
           selector:
             number:
@@ -430,7 +436,7 @@ blueprint:
           name: Notification language
           description: |-
             The **language** in which **notifications** will be sent to you
-            *Note : If your language is not supported by this blueprint, could you please [open a pull request](https://github.com/etiennec78/Home-Automation/pulls) ?*
+            > *If your language is not supported by this blueprint, could you please [open a pull request](https://github.com/etiennec78/Home-Automation/pulls) ?*
           default: "en"
           selector:
             language:
@@ -441,7 +447,7 @@ blueprint:
           name: Custom translations
           description: |-
             A **yaml** dictionary to change the default **notifications translations**
-            *Note : You can find the translation keys in the strings['en'] variable in the code or in your traces*
+            > *You can find the translation keys in the strings['en'] variable in the code or in your traces*
           default:
             title: {}
             message: {}
@@ -483,7 +489,7 @@ blueprint:
           name: 🏠 WiFi devices
           description: |-
             Each driver's WiFi device tracker
-            *Note : Please place user sensors in the same order*
+            > *Please place user sensors in the same order*
           default: []
           selector:
             entity:
@@ -498,7 +504,7 @@ blueprint:
           name: 🔎 BLE tracker entities
           description: |-
             Each **[BLE tracker entity](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-entities-)** to monitor your distance from the gate
-            *Note : Please place user sensors in the same order*
+            > *Please place user sensors in the same order*
           default: []
           selector:
             entity:
@@ -524,8 +530,8 @@ blueprint:
         ble_transmitter_entities:
           name: 📡 iBeacon transmitter entities
           description: |-
-            Each **[iBeacon transmitter entity](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-transmitter-)** to restore previous iBeacon transmitter power settings when iBeacon is not needed anymore
-            *Notes : Let empty if you use iOS, or only use iBeacon for this automation*
+            Each **[BLE transmitter entity](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-transmitter-)** to restore previous iBeacon transmitter power settings when iBeacon is not needed anymore
+            > *Let empty if you use iOS, or only use iBeacon for this automation*
           default: []
           selector:
             entity:
@@ -538,7 +544,7 @@ blueprint:
           name: ⏯️ BLE scanner activator switch
           description: |-
             The **[switch](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-scanner-switch-)** to automatically **start and stop BLE scanning** when needed
-            *Note : Leave empty if you want your BLE scanner to be always on*
+            > *Leave empty if you want your BLE scanner to be always on*
           default: ""
           selector:
             entity:
@@ -549,9 +555,10 @@ blueprint:
           description: |-
             Wait for a sensor to confirm your location before starting this blueprint
             Useful in case your vehicle is parked near your house, and you don't want your gate to open, or if your phone is too slow to update its gps and could report you home even though you already left
-            *Notes :*
-            *⚠️ GPS needs the "[Single accurate location](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#extra-requesting-manual-gps-updates-)" sensor turned on in the companion app*
-            *WiFi can be slow to report new states*
+            > [!WARNING]
+            > ⚠️ GPS needs the "[Single accurate location](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#extra-requesting-manual-gps-updates-)" sensor turned on in the companion app
+
+            > *WiFi can be slow to report new states*
           default: []
           selector:
             select:
@@ -619,6 +626,7 @@ blueprint:
           name: 🔐 Locks
           description: |-
             The **locks** that open your home's **doors**
+            > *They will lock on exit once the gate is closed, and unlock once the vehicle has arrived and been turned off*
           default: []
           selector:
             entity:
@@ -655,7 +663,7 @@ blueprint:
           name: 🏠 Do not lock if there are still people home
           description: |-
             Avoid locking locks and activating the alarm if some person entities are still in the gate zone besides yourself
-            Note : if you drive away with multiple people, they might still be detected home and prevent locking
+            > *If you drive away with multiple people, they might still be detected home and prevent locking*
           default: false
           selector:
             boolean:
