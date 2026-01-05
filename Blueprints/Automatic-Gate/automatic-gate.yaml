@@ -1534,9 +1534,58 @@ actions:
               value: "{{ itinerary_value | to_json }}"
   - alias: Get which sensor the blueprint should wait to confirm the driver's presence
     variables:
+      gps_trackers: |-
+        {% if states[person].domain == 'person' %}
+          {% set trackers = state_attr(person, 'device_trackers') %}
+          {% if trackers is none %}
+            {% set trackers = [] %}
+          {% endif %}
+        {% else %}
+          {% set trackers = [person] %}
+        {% endif %}
+        {{
+          trackers
+          | select('is_state_attr', 'source_type', 'gps')
+          | list
+        }}
+      wait_for_mobile_gps: |-
+        {{
+          notify_service is not none
+          and (
+            gps_trackers
+            | select(
+              'in',
+              device_entities(
+                notify_devices[idx]
+              )
+            )
+            | list
+            | length
+            > 0
+          )
+        }}
+      other_gps_to_wait_for: |-
+        {% set data = namespace(not_mobile=[]) %}
+        {% for tracker in gps_trackers %}
+          {% set ids = device_attr(tracker, 'identifiers') %}
+          {%
+            if ids is none
+            or ids | first | first != 'mobile_app'
+          %}
+            {% set data.not_mobile = data.not_mobile + [tracker] %}
+          {% endif %}
+        {% endfor %}
+        {{ data.not_mobile }}
+      wait_for_gps: |-
+        {{
+          'gps' in only_open_near
+          and (
+            wait_for_mobile_gps
+            or other_gps_to_wait_for | length > 0
+          )
+        }}
       wait_for_wifi: "{{ 'wifi' in only_open_near and wifi_devices | length > idx }}"
       wait_for_ble: "{{ 'ble' in only_open_near and ble_entities | length > idx }}"
-      wait_for_gps: "{{ 'gps' in only_open_near }}"
       ibeacon_started: "{{ false }}"
   - alias: Get whether the user is leaving or arriving
     variables: &get_itinerary_mode
@@ -1589,56 +1638,24 @@ actions:
           - condition: template
             value_template: "{{ wait_for_gps and not gps_confirmed }}"
         then:
-          - alias: For each GPS device_tracker related to the driver
-            repeat:
-              for_each: |-
-                {% if states[person].domain == 'person' %}
-                  {% set trackers = state_attr(person, 'device_trackers') %}
-                  {% if trackers is none %}
-                    {% set trackers = [] %}
-                  {% endif %}
-                {% else %}
-                  {% set trackers = [person] %}
-                {% endif %}
-                {{
-                  trackers
-                  | select('is_state_attr', 'source_type', 'gps')
-                  | list
-                }}
-              sequence:
-                - alias: If the GPS entity is provided by the companion app
-                  if:
-                    - condition: template
-                      value_template: |-
-                        {% set ids = device_attr(repeat.item, 'identifiers') %}
-                        {{
-                          ids is not none
-                          and ids | first | first == 'mobile_app'
-                        }}
-                  then:
-                    - alias: Only continue if the gps sensor is provided by the mobile app used for notifications
-                      condition: template
-                      value_template: |-
-                        {{
-                          idx < notify_devices | length
-                          and repeat.item in device_entities(
-                            notify_devices[idx]
-                          )
-                        }}
-                    - alias: Update the driver's location with a mobile app location request
-                      action: "{{ notify_service }}"
-                      data:
-                        message: request_location_update
-                        data:
-                          tag: "gps-request-{{this.attributes.id}}"
-                          priority: high
-                          importance: high
-                          confirmation: true
-                  else:
-                    - alias: Update the driver's location by refreshing his gps device trackers
-                      action: homeassistant.update_entity
-                      data:
-                        entity_id: "{{ repeat.item }}"
+          - alias: If one of the device trackers related to the driver is his phone
+            if:
+              - condition: template
+                value_template: "{{ wait_for_mobile_gps }}"
+            then:
+              - alias: Update the driver's location with a mobile app location request
+                action: "{{ notify_service }}"
+                data:
+                  message: request_location_update
+                  data:
+                    tag: "gps-request-{{this.attributes.id}}"
+                    priority: high
+                    importance: high
+                    confirmation: true
+          - alias: Update the driver's location by refreshing his gps device trackers
+            action: homeassistant.update_entity
+            data:
+              entity_id: "{{ other_gps_to_wait_for }}"
       - alias: If an iBeacon sensor has been provided
         if:
           - condition: template
