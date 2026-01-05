@@ -60,7 +60,7 @@ light:
   # Fake light component to simulate a led strip
   - platform: partition
     id: livingcolors
-    name: Philips LivingColors
+    name: None
     segments:
       - single_light_id: base_light
     effects:
