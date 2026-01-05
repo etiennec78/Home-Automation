@@ -1736,7 +1736,7 @@ actions:
                               {{
                                 is_state(
                                   ble_transmitter_entity,
-                                  'Stopped'
+                                  ['Stopped', 'Bluetooth is turned off']
                                 )
                               }}
                             message: command_ble_transmitter
