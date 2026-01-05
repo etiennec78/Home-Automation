@@ -1127,9 +1127,9 @@ actions:
               error: |-
                 {{
                   ble_transmitter_entities
-                  | map('state_attr', 'options')
-                  | reject('contains', 'Transmitting')
-                  | map('state_attr', 'friendly_name')
+                  | expand
+                  | rejectattr('attributes.options', 'contains', 'Transmitting')
+                  | map(attribute='attributes.friendly_name')
                   | list
                 }}
               message_id: "invalid_ibeacon_transmitter"
