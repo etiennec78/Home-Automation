@@ -473,29 +473,41 @@ blueprint:
               filter:
                 domain: switch
         only_open_near:
-          name: 🏠 Only open on departure while connected to
+          name: 🧭 Confirm the location on startup
           description: |-
-            Should your gate only open if you are connected to WiFi/iBeacon while leaving ?
+            Wait for a sensor to confirm your location before starting this blueprint
+            Useful in case your vehicle is parked near your house, and you don't want your gate to open, or if your phone is too slow to update its gps and could report you home even though you already left
             *Notes :*
-            *Useful for preventing your gate from opening if you are parked in front of your house*
+            *⚠️ GPS needs the "[Single accurate location](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#extra-requesting-manual-gps-updates-)" sensor turned on in the companion app*
             *WiFi can be slow to report new states*
           default: []
           selector:
             select:
               multiple: true
               options:
-                - label: WiFi
+                - label: GPS
+                  value: gps
+                - label: Wi-Fi (departure)
                   value: wifi
-                - label: iBeacon
+                - label: iBeacon (departure)
                   value: ble
         only_open_near_timeout:
-          name: ⌛ 'Only open while connected to' timeout
-          description: The time the gate will wait for you to connect to WiFi/iBeacon before canceling the departure
-          default: 10
+          name: ⌛ Location confirmation timeout
+          description: The time the blueprint will wait for a sensor to confirm your location before canceling the sequence
+          default: 60
           selector:
             number:
               min: 0
               max: 1800
+              unit_of_measurement: seconds
+        gps_outdated_delay:
+          name: ⌛ GPS outdated delay
+          description: The timeframe after which the GPS will be considered outdated and a request will be made to update it
+          default: 10
+          selector:
+            number:
+              min: 0
+              max: 300
               unit_of_measurement: seconds
         close_when_disconnected_from:
           name: 📡 Close on departure when disconnected from
@@ -596,6 +608,8 @@ variables:
   ble_scanner_switch: !input ble_scanner_switch
   ble_transmitter_entities: !input ble_transmitter_entities
   only_open_near: !input only_open_near
+  only_open_near_timeout: !input only_open_near_timeout
+  gps_outdated_delay: !input gps_outdated_delay
   close_when_disconnected_from: !input close_when_disconnected_from
   itinerary_started_notif: !input itinerary_started_notif
   wifi_devices: !input wifi_devices
@@ -662,6 +676,9 @@ variables:
         vehicle_away: "The vehicle is not in the activation zone"
         travel_time_did_not_respond: "Your travel time integration did not respond during your itinerary"
         not_home: "You were not detected at home"
+        location_not_confirmed: "Your location could not be confirmed"
+        got_no_gps_data: "Your phone is reachable, but is not sending back its location ! Check that the 'Single Accurate Location' sensor is enabled."
+        gate_closed: "The gate has been closed manually"
         triggered_frequently: "The blueprint is being triggered repeatedly !"
         disabled_triggered_frequently: |-
           The blueprint has been triggered {quick_triggers} times in a row
@@ -690,6 +707,7 @@ variables:
         ble_trackers_mismatch: "These iBeacon trackers: '{data}' come from a different device than the others (#13)"
         wifi_tracker_is_gps: "These trackers: '{data}' are GPS-based, not router-based (#14)"
         invalid_ibeacon_transmitter: "These iBeacon transmitters: '{data}' are invalid (#19)"
+        no_compatible_gps_tracker: "These persons cannot be tracked by GPS: '{data}' because they do not have GPS trackers, or they come from a different mobile app than the notification device (#20)"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -724,6 +742,9 @@ variables:
         vehicle_away: "Le véhicule n'est pas dans la zone d'ouverture"
         travel_time_did_not_respond: "Votre intégration de temps de trajet n'a pas renvoyé de valeur"
         not_home: "Le véhicule n'est pas à la maison"
+        location_not_confirmed: "Votre localisation n'a pas pu être confirmée"
+        got_no_gps_data: "Votre téléphone est joignable, mais ne renvoie pas sa localisation ! Vérifiez que le capteur 'Emplacement précis unique' est activé."
+        gate_closed: "Le portail a été fermé manuellement"
         triggered_frequently: "L'automatisation se déclenche à répétition !"
         disabled_triggered_frequently: |-
           L'automation s'est déclenchée {quick_triggers} fois d'affilée
@@ -752,6 +773,7 @@ variables:
         ble_trackers_mismatch: "Ces traceurs iBeacon: '{data}' proviennent d'un appareil différent des autres (#13)"
         wifi_tracker_is_gps: "Ces traceurs: '{data}' sont de type GPS au lieu de Routeur (#14)"
         invalid_ibeacon_transmitter: "Ces transmetteurs iBeacon: '{data}' sont invalides (#19)"
+        no_compatible_gps_tracker: "Ces personnes ne pourront pas être attendue en GPS: '{data}' car elle n'ont pas de traceurs gps, ou ils proviennent d'une application différente de celle de l'appareil de notification (#20)"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -815,6 +837,12 @@ actions:
             {% else %}
               {{ default_itinerary_sensor_value }}
             {% endif %}
+          ble_transmitter_entity: |-
+            {{
+              ble_transmitter_entities[idx]
+              if ble_transmitter_entities | length > idx
+              else none
+            }}
   - alias: Initialize variables for the error checker
     variables:
       messages: []
@@ -1105,6 +1133,69 @@ actions:
                   | list
                 }}
               message_id: "invalid_ibeacon_transmitter"
+            - alias: Check that gps trackers are compatible if the location must be confirmed with gps
+              error: |-
+                {% if 'gps' in only_open_near %}
+                  {% set data = namespace(invalid=[]) %}
+                  {% for person_idx in range(persons | length) %}
+                    {% if states[persons[person_idx]].domain == 'person' %}
+                      {% set trackers = state_attr(persons[person_idx], 'device_trackers') %}
+                      {% if trackers is none %}
+                        {% set trackers = [] %}
+                      {% endif %}
+                    {% else %}
+                      {% set trackers = [persons[person_idx]] %}
+                    {% endif %}
+                    {%
+                      set gps_trackers = (
+                        trackers
+                        | select('is_state_attr', 'source_type', 'gps')
+                        | list
+                      )
+                    %}
+                    {%
+                      set wait_for_mobile_gps = (
+                        person_idx < notify_devices | length
+                        and (
+                          gps_trackers
+                          | select(
+                            'in',
+                            device_entities(
+                              notify_devices[person_idx]
+                            )
+                          )
+                          | list
+                          | length
+                          > 0
+                        )
+                      )
+                    %}
+                    {% set gps = namespace(not_mobile=[]) %}
+                    {% for tracker in gps_trackers %}
+                      {% set ids = device_attr(tracker, 'identifiers') %}
+                      {%
+                        if ids is none
+                        or ids | first | first != 'mobile_app'
+                      %}
+                        {% set gps.not_mobile = gps.not_mobile + [tracker] %}
+                      {% endif %}
+                    {% endfor %}
+                    {%
+                      if gps.not_mobile | length < 1
+                      and not wait_for_mobile_gps
+                    %}
+                      {% set data.invalid = data.invalid + [persons[person_idx]] %}
+                    {% endif %}
+                  {% endfor %}
+                  {{
+                    data.invalid
+                    | map('state_attr', 'friendly_name')
+                    | list
+                  }}
+                {% else %}
+                  {{ false }}
+                {% endif %}
+              message_id: "no_compatible_gps_tracker"
           sequence:
             - alias: If a check failed
               if:
@@ -1509,6 +1600,601 @@ actions:
               entity_id: "{{ itinerary_sensor }}"
             data:
               value: "{{ itinerary_value | to_json }}"
+  - alias: Get which sensor the blueprint should wait to confirm the driver's presence
+    variables:
+      gps_trackers: |-
+        {% if states[person].domain == 'person' %}
+          {% set trackers = state_attr(person, 'device_trackers') %}
+          {% if trackers is none %}
+            {% set trackers = [] %}
+          {% endif %}
+        {% else %}
+          {% set trackers = [person] %}
+        {% endif %}
+        {{
+          trackers
+          | select('is_state_attr', 'source_type', 'gps')
+          | list
+        }}
+      wait_for_mobile_gps: |-
+        {{
+          notify_service is not none
+          and (
+            gps_trackers
+            | select(
+              'in',
+              device_entities(
+                notify_devices[idx]
+              )
+            )
+            | list
+            | length
+            > 0
+          )
+        }}
+      other_gps_to_wait_for: |-
+        {% set data = namespace(not_mobile=[]) %}
+        {% for tracker in gps_trackers %}
+          {% set ids = device_attr(tracker, 'identifiers') %}
+          {%
+            if ids is none
+            or ids | first | first != 'mobile_app'
+          %}
+            {% set data.not_mobile = data.not_mobile + [tracker] %}
+          {% endif %}
+        {% endfor %}
+        {{ data.not_mobile }}
+      wait_for_gps: |-
+        {{
+          'gps' in only_open_near
+          and (
+            wait_for_mobile_gps
+            or other_gps_to_wait_for | length > 0
+          )
+        }}
+      wait_for_wifi: "{{ 'wifi' in only_open_near and wifi_devices | length > idx }}"
+      wait_for_ble: "{{ 'ble' in only_open_near and ble_entities | length > idx }}"
+      ibeacon_started: "{{ false }}"
+  - alias: Get whether the user is leaving or arriving
+    variables: &get_itinerary_mode
+      departure: |-
+        {{
+          is_state(
+            person, [
+              state_attr(gate_location, 'friendly_name'),
+              states[gate_location].object_id
+            ]
+          )
+        }}
+      eta_zone: &activation_zone_in_condition |-
+        {% if state_attr(person, 'gps_accuracy') is none %}
+          {% set accuracy = 100 %}
+        {% else %}
+          {% set accuracy = state_attr(person, 'gps_accuracy') %}
+        {% endif %}
+        {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
+
+        {{ gate_distance < activation_zone }}
+      arrival: "{{ not eta_zone }}"
+  - alias: If the user wants to confirm his presence before starting the blueprint
+    if:
+      - condition: template
+        value_template: |-
+          {{
+            wait_for_gps
+            or departure and (
+              wait_for_wifi
+              or wait_for_ble
+            )
+          }}
+    then:
+      - alias: Store values for the next sequence
+        variables:
+          start_timestamp: "{{ now() | as_timestamp }}"
+          received_timestamp: "{{ none }}"
+          old_location_id: "{{ states[person].context.id }}"
+          gates_were_opened: "{{ gate | select('is_state', ['on', 'open', 'opening']) | list == gate }}"
+          lock_departure: false
+          gps_confirmed: |-
+            {{
+              states[person].last_updated
+              + timedelta(seconds=gps_outdated_delay)
+              >= now()
+            }}
+      - alias: If the GPS request on startup is enabled and the location is outdated
+        if:
+          - condition: template
+            value_template: "{{ wait_for_gps and not gps_confirmed }}"
+        then:
+          - alias: If one of the device trackers related to the driver is his phone
+            if:
+              - condition: template
+                value_template: "{{ wait_for_mobile_gps }}"
+            then:
+              - alias: Update the driver's location with a mobile app location request
+                action: "{{ notify_service }}"
+                data:
+                  message: request_location_update
+                  data:
+                    tag: "gps-request-{{this.attributes.id}}"
+                    priority: high
+                    importance: high
+                    confirmation: true
+          - alias: Update the driver's location by refreshing his gps device trackers
+            action: homeassistant.update_entity
+            data:
+              entity_id: "{{ other_gps_to_wait_for }}"
+      - alias: If an iBeacon sensor has been provided
+        if:
+          - condition: template
+            value_template: "{{ departure and wait_for_ble }}"
+        then:
+          - alias: Update the iBeacon sensor
+            action: homeassistant.update_entity
+            data:
+              entity_id: "{{ ble_entities[idx] }}"
+      - alias: If a wifi tracker has been provided
+        if:
+          - condition: template
+            value_template: "{{ departure and wait_for_wifi }}"
+        then:
+          - alias: Update the Wi-Fi device tracker
+            action: homeassistant.update_entity
+            data:
+              entity_id: "{{ wifi_devices[idx] }}"
+      - alias: Repeat while the location has not been confirmed
+        repeat:
+          while:
+            - condition: template
+              value_template: |-
+                {{
+                  not (
+                    gps_confirmed and (
+                      arrival
+                      or not wait_for_wifi and not wait_for_ble
+                    )
+                    or departure
+                    and (
+                      wait_for_ble and states(ble_entities[idx]) | is_number
+                      or wait_for_wifi and is_state(wifi_devices[idx], 'home')
+                    )
+                  )
+                }}
+          sequence:
+            - alias: If the user is on departure and the iBeacon should turn on
+              if:
+                - condition: template
+                  value_template: "{{ departure and wait_for_ble }}"
+              then: &start_ibeacons
+                - alias: Only continue if iBeacons were not already started
+                  condition: template
+                  value_template: "{{ not ibeacon_started }}"
+                - alias: Initialize iBeacon related variables
+                  variables:
+                    ibeacon_started: true
+                    ibeacon_restore_messages: []
+                    scanner_turned_on: false
+                - alias: If the driver has a transmitter entity and a notification device set
+                  if:
+                    - condition: template
+                      value_template: |-
+                        {{
+                          notify_service is not none
+                          and ble_transmitter_entity is not none
+                        }}
+                  then:
+                    - alias: Check for incorrect iBeacon transmitter states
+                      repeat:
+                        for_each:
+                          - alias: Check that bluetooth is on
+                            condition: |-
+                              {{
+                                is_state(
+                                  ble_transmitter_entity,
+                                  'Bluetooth is turned off'
+                                )
+                              }}
+                            message: command_bluetooth
+                            message_data:
+                              command: turn_on
+                            restore_message_data:
+                              command: turn_off
+                          - alias: Check that the iBeacon transmitter is on
+                            condition: |-
+                              {{
+                                is_state(
+                                  ble_transmitter_entity,
+                                  ['Stopped', 'Bluetooth is turned off']
+                                )
+                              }}
+                            message: command_ble_transmitter
+                            message_data:
+                              command: turn_on
+                            restore_message_data:
+                              command: turn_off
+                          - alias: Check for the transmitting power
+                            condition: |-
+                              {{
+                                not is_state_attr(
+                                  ble_transmitter_entity,
+                                  'Transmitting power',
+                                  'high'
+                                )
+                              }}
+                            message: command_ble_transmitter
+                            message_data:
+                              command: ble_set_transmit_power
+                              ble_transmit: ble_transmit_high
+                            restore_message_data:
+                              command: ble_set_transmit_power
+                              ble_transmit: |-
+                                {{
+                                  'ble_transmit_' ~ (
+                                    state_attr(
+                                      ble_transmitter_entity,
+                                      'Transmitting power'
+                                    )
+                                    | regex_replace('([a-z])([A-Z])', '\\1_\\2')
+                                    | lower
+                                  )
+                                }}
+                          - alias: Check for the advertising mode
+                            condition: |-
+                              {{
+                                not is_state_attr(
+                                  ble_transmitter_entity,
+                                  'Advertise mode',
+                                  'lowLatency'
+                                )
+                              }}
+                            message: command_ble_transmitter
+                            message_data:
+                              command: ble_set_advertise_mode
+                              ble_advertise: ble_advertise_low_latency
+                            restore_message_data:
+                              command: ble_set_advertise_mode
+                              ble_advertise: |-
+                                {{
+                                  'ble_advertise_' ~ (
+                                    state_attr(
+                                      ble_transmitter_entity,
+                                      'Advertise mode'
+                                    )
+                                    | regex_replace('([a-z])([A-Z])', '\\1_\\2')
+                                    | lower
+                                  )
+                                }}
+                        sequence:
+                          - alias: Only continue if the state is incorrect
+                            condition: template
+                            value_template: "{{ repeat.item.condition }}"
+                          - alias: Send a request to the phone to fix its iBeacon state
+                            action: "{{ notify_service }}"
+                            data:
+                              message: "{{ repeat.item.message }}"
+                              data: |-
+                                {{
+                                  repeat.item.message_data
+                                  | combine(
+                                    {
+                                      'importance': 'high',
+                                      'priority':'high'
+                                    }
+                                  )
+                                }}
+                          - alias: Add a message to send to the phone when the iBeacon states need to be restored
+                            variables:
+                              ibeacon_restore_messages: |-
+                                {{
+                                  ibeacon_restore_messages
+                                  + [{
+                                    'message': repeat.item.message,
+                                    'data': repeat.item.restore_message_data
+                                  }]
+                                }}
+                - alias: If the iBeacon scanner is off
+                  if:
+                    - condition: template
+                      value_template: |-
+                        {{
+                          ble_scanner_switch != ''
+                          and is_state(ble_scanner_switch, 'off')
+                        }}
+                  then:
+                    - alias: Turn on the iBeacon scanner
+                      action: switch.turn_on
+                      target:
+                        entity_id: "{{ ble_scanner_switch }}"
+                    - alias: Remember that the blueprint turned on the scanner
+                      variables:
+                        scanner_turned_on: true
+            - alias: Wait for the location to be confirmed, the notification to be received, and the vehicle to be stopped
+              wait_for_trigger:
+                - alias: New position
+                  id: position
+                  trigger: event
+                  event_type: state_changed
+                  event_data:
+                    entity_id: "{{ person }}"
+                - alias: Notification received
+                  trigger: event
+                  id: notification_received
+                  event_type: mobile_app_notification_received
+                  event_data:
+                    tag: "gps-request-{{this.attributes.id}}"
+                  enabled: "{{ not ios_device }}"
+                - alias: WiFi in range
+                  trigger: template
+                  id: wifi_in_range
+                  value_template: "{{ is_state(wifi_devices[idx], 'home') }}"
+                  enabled: "{{ departure and wait_for_wifi }}"
+                - alias: iBeacon in range
+                  trigger: template
+                  id: ble_in_range
+                  value_template: "{{ states(ble_entities[idx]) | is_number }}"
+                  enabled: "{{ departure and wait_for_ble }}"
+                - alias: Vehicle stopped
+                  id: vehicle_stopped
+                  trigger: template
+                  value_template: "{{ is_state(driving_sensor, 'off') }}"
+                - alias: Gates opened
+                  trigger: template
+                  id: gate_opened
+                  value_template: "{{ gate | select('is_state', ['on', 'open', 'opening']) | list == gate }}"
+                  enabled: "{{ not gates_were_opened }}"
+                - alias: Gates closed
+                  trigger: template
+                  id: gate_closed
+                  value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list == gate }}"
+                  enabled: "{{ gates_were_opened }}"
+              timeout: |-
+                {{
+                  only_open_near_timeout
+                  + start_timestamp
+                  - now() | as_timestamp
+                }}
+            - alias: Refresh variables depending on the trigger
+              choose:
+                - alias: Triggered by a new GPS location
+                  conditions:
+                    - condition: template
+                      value_template: "{{ wait.trigger.id == 'position' }}"
+                  sequence:
+                    - alias: Save the previous location
+                      variables:
+                        was_departure: "{{ departure }}"
+                    - alias: Get whether the user is leaving or arriving
+                      variables: *get_itinerary_mode
+                    - alias: Get whether the user has entered the activation zone
+                      variables:
+                        entered_activation_zone: |-
+                          {{
+                            eta_zone and not departure
+                            or (
+                              wait.trigger.event.data.old_state.context.id != old_location_id
+                              and arrival and was_departure
+                            )
+                          }}
+                        gps_confirmed: true
+                - alias: Triggered by the gate closing
+                  conditions:
+                    - condition: template
+                      value_template: "{{ wait.trigger.id == 'gate_closed' }}"
+                  sequence:
+                    - alias: Get whether the gate was automatically closed
+                      variables:
+                        auto_closed: |-
+                          {% set data = namespace(auto_closed=false) %}
+                          {% for sensor in itinerary_sensors %}
+                            {%
+                              set value = (
+                                states(sensor)
+                                | from_json(default_itinerary_sensor_value)
+                              )
+                            %}
+                            {%
+                              if (
+                                value.last_closed
+                                | as_datetime
+                                + timedelta(seconds=10)
+                                > now()
+                              )
+                              and value.auto_closed
+                            %}
+                              {% set data.auto_closed = true %}
+                              {% break %}
+                            {% endif %}
+                          {% endfor %}
+                          {{ data.recently_closed and not data.auto_closed }}
+            - choose:
+                - alias: If the blueprint needs to stop
+                  conditions:
+                    - condition: template
+                      value_template: |-
+                        {{
+                          wait.remaining == 0
+                          or wait.trigger.id == 'vehicle_stopped'
+                          or wait.trigger.id == 'position' and entered_activation_zone
+                          or (
+                            departure and (
+                              wait.trigger.id == 'gate_closed' and not auto_closed
+                              or lock_departure
+                            )
+                          )
+                        }}
+                  sequence:
+                    - alias: Set the error id
+                      variables:
+                        message_id: |-
+                          {% if wait.remaining == 0 %}
+                            {%
+                              if (
+                                wait_for_gps
+                                and not ios_device
+                                and received_timestamp is not none
+                                and (
+                                  arrival
+                                  or not wait_for_wifi and not wait_for_ble
+                                )
+                              )
+                            %}
+                              got_no_gps_data
+                            {% else %}
+                              {% if departure %}
+                                not_home
+                              {% else %}
+                                location_not_confirmed
+                              {% endif %}
+                            {% endif %}
+                          {% elif entered_activation_zone %}
+                            too_close
+                          {% elif departure and lock_departure %}
+                            gate_closed
+                          {% else %}
+                            {{ wait.trigger.id }}
+                          {% endif %}
+                    - alias: Create error
+                      sequence: &create_error
+                        - alias: Set title id
+                          variables:
+                            title_id: "itinerary_canceled"
+                        - alias: If a notify service exists
+                          if:
+                            - condition: template
+                              value_template: "{{ notify_service is not none }}"
+                          then:
+                            - alias: Get notification translation
+                              variables: *get_translation
+                            - alias: Notify driver of itinerary cancelation
+                              action: "{{ notify_service }}"
+                              data:
+                                title: "{{ title }}"
+                                message: "{{ message }}"
+                                data: *notification_data
+                            - sequence: *tts
+                        - alias: Mark error in driver itinerary sensor
+                          variables:
+                            update:
+                              status: "{{ none }}"
+                              error: "{{ message_id }}"
+                            itinerary_value: "{{ dict(itinerary_value, **update) }}"
+                        - alias: Save the itinerary status
+                          action: input_text.set_value
+                          target:
+                            entity_id: "{{ itinerary_sensor }}"
+                          data:
+                            value: "{{ itinerary_value | to_json }}"
+                    - alias: Restore iBeacons
+                      sequence: &restore_ibeacons
+                        - alias: If the iBeacon was needed
+                          if:
+                            - condition: template
+                              value_template: "{{ ibeacon_started }}"
+                          then:
+                            - alias: Restore iBeacon transmitter states
+                              repeat:
+                                for_each: "{{ ibeacon_restore_messages }}"
+                                sequence:
+                                  - alias: Send a notification to restore the iBeacon previous state
+                                    action: "{{ notify_service }}"
+                                    data: |-
+                                      {{
+                                        repeat.item
+                                        | combine(
+                                          {
+                                            'data': {
+                                              'importance': 'high',
+                                              'priority':'high'
+                                            }
+                                          },
+                                          recursive=True
+                                        )
+                                      }}
+                            - alias: If the iBeacon scanner was turned on by the blueprint
+                              if:
+                                - condition: template
+                                  value_template: "{{ scanner_turned_on }}"
+                              then:
+                                - alias: Turn off the iBeacon scanner
+                                  action: switch.turn_off
+                                  target:
+                                    entity_id: "{{ ble_scanner_switch }}"
+                        - alias: Check if there is another driver near the gate
+                          variables:
+                            someone_near_gate: |-
+                              {% set data = namespace(result=false) %}
+                              {% for sensor_idx in range(itinerary_sensors | length) %}
+                                {% if sensor_idx != idx %}
+                                  {%
+                                    set value = (
+                                      states(
+                                        itinerary_sensors[sensor_idx]
+                                      )
+                                      | from_json(default_itinerary_sensor_value)
+                                    )
+                                  %}
+                                  {% if value.status in ['on_approach', 'leaving'] %}
+                                    {% set data.result = true %}
+                                    {% break %}
+                                  {% endif %}
+                                {% endif %}
+                              {% endfor %}
+                              {{ data.result }}
+                        - alias: If iBeacon switch set, and doesn't need to stay on
+                          if:
+                            - condition: template
+                              value_template: |-
+                                {{
+                                  ble_scanner_switch != ''
+                                  and not someone_near_gate
+                                }}
+                          then:
+                            - alias: Deactivate iBeacon scanner
+                              action: switch.turn_off
+                              target:
+                                entity_id: "{{ ble_scanner_switch }}"
+                        - alias: Reset the ibeacon_started variable
+                          variables:
+                            ibeacon_started: false
+                    - stop: The location was not confirmed
+                - alias: If the notification was received
+                  conditions:
+                    - condition: template
+                      value_template: "{{ wait.trigger.id == 'notification_received' }}"
+                  sequence:
+                    - alias: Save the timestamp of when the notification was received
+                      variables:
+                        received_timestamp: "{{ now() | as_timestamp }}"
+                - alias: If someone opened all gates
+                  conditions:
+                    - condition: template
+                      value_template: "{{ wait.trigger.id == 'gate_opened' }}"
+                  sequence:
+                    - alias: Now fait for the gates closing
+                      variables:
+                        gates_were_opened: true
+                - alias: If someone manually closed all gate
+                  conditions:
+                    - condition: template
+                      value_template: "{{ wait.trigger.id == 'gate_closed' and not auto_closed }}"
+                  sequence:
+                    - alias: Do not let the gates open on departure
+                      variables:
+                        lock_departure: true
+  - alias: If the iBeacon was started but is not needed anymore
+    if:
+      - condition: template
+        value_template: |-
+          {{
+            ibeacon_started and not (
+              departure
+              and 'ble' in close_when_disconnected_from
+              and ble_entities | length > idx
+            )
+          }}
+    then:
+      - alias: Restore iBeacons
+        sequence: *restore_ibeacons
   - alias: If driver at gate location
     if:
       - condition: template
@@ -1518,254 +2204,6 @@ actions:
       # OPEN GATE ON EXIT #
       #####################
 
-      - alias: If the gate opening behavior is not set to off and one of the gates is closed
-        if:
-          - condition: template
-            value_template: |-
-              {{
-                departure_opening_behavior != 'off'
-                and gate | select('is_state', ['off', 'closed', 'closing']) | list != []
-              }}
-        then:
-          - sequence: &start_ibeacons
-              - alias: If driver has iBeacon entity set for auto-closing
-                if:
-                  - condition: template
-                    value_template: |-
-                      {{
-                        notify_service is not none
-                        and idx < ble_entities | length
-                      }}
-                then:
-                  - alias: Save iBeacon states
-                    variables:
-                      old_ibeacon_transmitter_states: |-
-                        {% if (ble_transmitter_entities | length) - 1 >= idx %}
-                          {{ {
-                            'state': states(ble_transmitter_entities[idx])
-                              if states(ble_transmitter_entities[idx]) in ['Stopped', 'Bluetooth is turned off'] else none,
-                            'transmit_power': (state_attr(ble_transmitter_entities[idx], 'Transmitting power') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
-                              if state_attr(ble_transmitter_entities[idx], 'Transmitting power') != 'high' else none,
-                            'advertise_mode': (state_attr(ble_transmitter_entities[idx], 'Advertise mode') | regex_replace('([a-z])([A-Z])', '\\1_\\2') | lower)
-                              if state_attr(ble_transmitter_entities[idx], 'Advertise mode') != 'lowLatency' else none
-                          } }}
-                        {% else %}
-                          {{ none }}
-                        {% endif %}
-                  - alias: If driver has a saved iBeacon transmitter state
-                    if:
-                      - condition: template
-                        value_template: "{{ old_ibeacon_transmitter_states != none }}"
-                    then:
-                      - alias: Change iBeacon state if needed
-                        if:
-                          - condition: template
-                            value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
-                        then:
-                          - alias: If bluetooth is off
-                            if:
-                              - condition: template
-                                value_template: "{{ old_ibeacon_transmitter_states['state'] == 'Bluetooth is turned off' }}"
-                            then:
-                              - alias: Turn on bluetooth
-                                action: "{{ notify_service }}"
-                                data:
-                                  message: command_bluetooth
-                                  data:
-                                    command: turn_on
-                          - alias: Start the iBeacon transmitter
-                            action: "{{ notify_service }}"
-                            data:
-                              message: command_ble_transmitter
-                              data:
-                                command: turn_on
-                      - alias: Change iBeacon transmitting power if needed
-                        if:
-                          - condition: template
-                            value_template: "{{ old_ibeacon_transmitter_states['transmit_power'] != none }}"
-                        then:
-                          - action: "{{ notify_service }}"
-                            data:
-                              message: command_ble_transmitter
-                              data:
-                                command: ble_set_transmit_power
-                                ble_transmit: ble_transmit_high
-                      - alias: Change iBeacon advertise mode if needed
-                        if:
-                          - condition: template
-                            value_template: "{{ old_ibeacon_transmitter_states['advertise_mode'] != none }}"
-                        then:
-                          - action: "{{ notify_service }}"
-                            data:
-                              message: command_ble_transmitter
-                              data:
-                                command: ble_set_advertise_mode
-                                ble_advertise: ble_advertise_low_latency
-                  - alias: Activate iBeacon scanner if switch set
-                    if:
-                    - condition: template
-                      value_template: "{{ ble_scanner_switch != '' and is_state(ble_scanner_switch, 'off') }}"
-                    then:
-                      - action: switch.turn_on
-                        target:
-                          entity_id: "{{ ble_scanner_switch }}"
-          - alias: If driver chose to wait for iBeacon or WiFi before opening to ensure that vehicle is not parked outside
-            if:
-              - condition: template
-                value_template: |-
-                  {{
-                    'wifi' in only_open_near and (wifi_devices | length) - 1 >= idx
-                    or 'ble' in only_open_near and (ble_entities | length) - 1 >= idx
-                  }}
-            then:
-              - alias: Wait for iBeacon or WiFi to report home
-                wait_template: |-
-                  {{
-                    not is_state(ble_entities[idx], 'unknown')
-                    or is_state(wifi_devices[idx], 'home')
-                    or is_state(driving_sensor, 'off')
-                  }}
-                continue_on_timeout: true
-                timeout: !input only_open_near_timeout
-              - alias: If an error occured
-                if:
-                  - condition: template
-                    value_template: |-
-                      {{
-                        wait.remaining == 0
-                        or is_state(driving_sensor, 'off')
-                      }}
-                then:
-                  - alias: Set error id
-                    variables:
-                      message_id: |-
-                        {{ wait.remaining == 0 | iif('not_home', 'vehicle_stopped') }}
-                  - alias: Create error
-                    sequence: &create_error
-                      - alias: Set title id
-                        variables:
-                          title_id: "itinerary_canceled"
-                      - alias: If a notify service exists
-                        if:
-                          - condition: template
-                            value_template: "{{ notify_service is not none }}"
-                        then:
-                          - alias: Get notification translation
-                            variables: *get_translation
-                          - alias: Notify driver of itinerary cancelation
-                            action: "{{ notify_service }}"
-                            data:
-                              title: "{{ title }}"
-                              message: "{{ message }}"
-                              data: *notification_data
-                          - sequence: *tts
-                      - alias: Mark error in driver itinerary sensor
-                        variables:
-                          update:
-                            status: "{{ none }}"
-                            error: "{{ message_id }}"
-                          itinerary_value: "{{ dict(itinerary_value, **update) }}"
-                      - alias: Save the itinerary status
-                        action: input_text.set_value
-                        target:
-                          entity_id: "{{ itinerary_sensor }}"
-                        data:
-                          value: "{{ itinerary_value | to_json }}"
-                  - alias: Restore iBeacon states
-                    sequence: &restore_ibeacons
-                      - alias: If driver has an iBeacon entity set for auto-closing
-                        if:
-                          - condition: template
-                            value_template: |-
-                              {{
-                                notify_service is not none
-                                and idx < ble_entities | length
-                              }}
-                        then:
-                          - alias: If driver has a saved iBeacon transmitter state
-                            if:
-                              - condition: template
-                                value_template: "{{ old_ibeacon_transmitter_states != none }}"
-                            then:
-                              - alias: If iBeacon transmitter was stopped
-                                if:
-                                  - condition: template
-                                    value_template: "{{ old_ibeacon_transmitter_states['state'] != none }}"
-                                then:
-                                  - alias: If bluetooth was off
-                                    if:
-                                      - condition: template
-                                        value_template: "{{ old_ibeacon_transmitter_states['state'] == 'Bluetooth is turned off' }}"
-                                    then:
-                                      - alias: Turn off bluetooth
-                                        action: "{{ notify_service }}"
-                                        data:
-                                          message: command_bluetooth
-                                          data:
-                                            command: turn_off
-                                  - alias: Stop the iBeacon transmitter
-                                    action: "{{ notify_service }}"
-                                    data:
-                                      message: command_ble_transmitter
-                                      data:
-                                        command: turn_off
-                              - alias: If iBeacon transmitting power was not set to high, restore it
-                                if:
-                                  - condition: template
-                                    value_template: "{{ old_ibeacon_transmitter_states['transmit_power'] != none }}"
-                                then:
-                                  - action: "{{ notify_service }}"
-                                    data:
-                                      message: command_ble_transmitter
-                                      data:
-                                        command: ble_set_transmit_power
-                                        ble_transmit: "ble_transmit_{{ old_ibeacon_transmitter_states['transmit_power'] }}"
-                              - alias: If iBeacon transmitter advertise power was not set to low latency, restore it
-                                if:
-                                  - condition: template
-                                    value_template: "{{ old_ibeacon_transmitter_states['advertise_mode'] != none }}"
-                                then:
-                                  - action: "{{ notify_service }}"
-                                    data:
-                                      message: command_ble_transmitter
-                                      data:
-                                        command: ble_set_advertise_mode
-                                        ble_advertise: "ble_advertise_{{ old_ibeacon_transmitter_states['advertise_mode'] }}"
-                      - alias: Check if there is another driver near the gate
-                        variables:
-                          someone_near_gate: |-
-                            {% set data = namespace(result=false) %}
-                            {% for sensor_idx in range(itinerary_sensors | length) %}
-                              {% if sensor_idx != idx %}
-                                {%
-                                  set value = (
-                                    states(
-                                      itinerary_sensors[sensor_idx]
-                                    )
-                                    | from_json(default_itinerary_sensor_value)
-                                  )
-                                %}
-                                {% if value.status in ['on_approach', 'leaving'] %}
-                                  {% set data.result = true %}
-                                  {% break %}
-                                {% endif %}
-                              {% endif %}
-                            {% endfor %}
-                            {{ data.result }}
-                      - alias: If iBeacon switch set, and doesn't need to stay on
-                        if:
-                          - condition: template
-                            value_template: |-
-                              {{
-                                ble_scanner_switch != ''
-                                and not someone_near_gate
-                              }}
-                        then:
-                          - alias: Deactivate iBeacon scanner
-                            action: switch.turn_off
-                            target:
-                              entity_id: "{{ ble_scanner_switch }}"
-                  - stop: Opening canceled
       - alias: Set the itinerary status to "leaving"
         variables:
           update:
@@ -2077,6 +2515,8 @@ actions:
                                     message_id: "{{ wait.trigger.id }}"
                                 - alias: Create error
                                   sequence: *create_error
+                                - alias: Restore iBeacons
+                                  sequence: *restore_ibeacons
                                 - stop: Opening canceled
                           default:
                             - alias: Remove opening notification
@@ -2616,15 +3056,7 @@ actions:
       - alias: Stop if driver started driving in activation zone
         if:
           - condition: template
-            value_template: &activation_zone_in_condition |-
-              {% if state_attr(person, 'gps_accuracy') is none %}
-                {% set accuracy = 100 %}
-              {% else %}
-                {% set accuracy = state_attr(person, 'gps_accuracy') %}
-              {% endif %}
-              {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
-
-              {{ gate_distance < activation_zone }}
+            value_template: *activation_zone_in_condition
         then:
           - alias: Set error id
             variables:
@@ -2816,10 +3248,10 @@ actions:
                         condition: template
                         value_template: "{{ wait.trigger.id != 'ble_in_reach' }}"
                     sequence:
-                      - alias: If this is the first loop
+                      - alias: If this is the first loop and the driver has an iBeacon transmitter
                         if:
                           - condition: template
-                            value_template: "{{ repeat.first }}"
+                            value_template: "{{ repeat.first and ble_entities | length > idx }}"
                         then: *start_ibeacons
                       - alias: Wait for new position, vehicle left, or iBeacon reachable
                         wait_for_trigger:
