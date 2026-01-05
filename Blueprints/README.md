@@ -53,5 +53,6 @@ Refer to the table below to fix the errors
   | #17 | You have not entered any method for receiving notifications | Either use dashboard notifications, speakers, or mobile devices |
   | #18 | A bound for the speakers' night mode schedule is missing | Either fill both night start and night end inputs, or clear both |
   | #19 | These iBeacon transmitters: '...' are invalid | Please check that the iBeacon transmitter entities mentionned come from the android mobile app, and are transmitters, not monitors. Also, these sensors are not needed on iOS |
+  | #20 | These persons cannot be tracked by GPS: '...' because they do not have GPS trackers, or they come from a different mobile app than the notification device | Either untick the 'gps' in the 'Confirm the location on startup' input, or check that your person entity has at least one gps device tracker, and that if it is provided by a mobile app, ensure that it is the same one as your notification device |
   
 </details>
