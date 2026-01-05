@@ -1804,7 +1804,16 @@ actions:
                             action: "{{ notify_service }}"
                             data:
                               message: "{{ repeat.item.message }}"
-                              data: "{{ repeat.item.message_data }}"
+                              data: |-
+                                {{
+                                  repeat.item.message_data
+                                  | combine(
+                                    {
+                                      'importance': 'high',
+                                      'priority':'high'
+                                    }
+                                  )
+                                }}
                           - alias: Add a message to send to the phone when the iBeacon states need to be restored
                             variables:
                               ibeacon_restore_messages: |-
@@ -2020,7 +2029,19 @@ actions:
                                 sequence:
                                   - alias: Send a notification to restore the iBeacon previous state
                                     action: "{{ notify_service }}"
-                                    data: "{{ repeat.item }}"
+                                    data: |-
+                                      {{
+                                        repeat.item
+                                        | combine(
+                                          {
+                                            'data': {
+                                              'importance': 'high',
+                                              'priority':'high'
+                                            }
+                                          },
+                                          recursive=True
+                                        )
+                                      }}
                             - alias: If the iBeacon scanner was turned on by the blueprint
                               if:
                                 - condition: template
