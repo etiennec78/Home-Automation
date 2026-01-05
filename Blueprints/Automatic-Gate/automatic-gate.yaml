@@ -848,6 +848,7 @@ actions:
       messages: []
       custom_translations_error: "{{ custom_translations_json is none }}"
       successful_check: false
+      error_level: 0
   - alias: If custom translations failed to be parsed as json
     if:
       - condition: template
@@ -884,6 +885,7 @@ actions:
             - alias: Check custom translations
               error: "{{ custom_translations_error }}"
               message_id: "invalid_translations"
+              level: 1
             - alias: Check missing ble sensors
               error: |-
                 {{
@@ -899,6 +901,7 @@ actions:
                   and ble_entities | length == 0
                 }}
               message_id: "missing_ble_entities"
+              level: 2
             - alias: Check that ble is used if a device is set
               error: |-
                 {%
@@ -919,6 +922,7 @@ actions:
                   {{ false }}
                 {% endif %}
               message_id: "ble_not_used"
+              level: 0
             - alias: Check missing wifi sensors
               error: |-
                 {{
@@ -926,6 +930,7 @@ actions:
                   and wifi_devices | length == 0
                 }}
               message_id: "missing_wifi_trackers"
+              level: 1
             - alias: Check that wifi is used if a device is set
               error: |-
                 {%
@@ -943,6 +948,7 @@ actions:
                   {{ false }}
                 {% endif %}
               message_id: "wifi_not_used"
+              level: 0
             - alias: Check that device trackers contain GPS data
               error: |-
                 {% set data = namespace(invalid=[]) %}
@@ -964,6 +970,7 @@ actions:
                   | list
                 }}
               message_id: "missing_gps_data"
+              level: 2
             - alias: Check that iBeacons report unknown by default
               error: |-
                 {% if trigger.platform is none %}
@@ -977,6 +984,7 @@ actions:
                   {{ false }}
                 {% endif %}
               message_id: "ibeacon_not_unknown"
+              level: 1
             - alias: Check that the user entered a sensor to detect his arrival
               error: |-
                 {{
@@ -984,13 +992,15 @@ actions:
                   and 'ble' not in open_when_connected_to
                 }}
               message_id: "missing_arrival_opening_method"
-            - alias: Check that the user entered a sensor to detect his arrival
+              level: 2
+            - alias: Check that the user uses only one way to detect his arrival
               error: |-
                 {{
                   travel_time_sensors | length > 0
                   and 'ble' in open_when_connected_to
                 }}
               message_id: "too_many_arrival_opening_method"
+              level: 0
             - alias: Check that itinerary sensors have a valid maximum length
               error: |-
                 {{
@@ -1001,6 +1011,7 @@ actions:
                   | list
                 }}
               message_id: "invalid_itinerary_sensor_length"
+              level: 2
             - alias: Check that all per person sensors have been entered
               error: |-
                 {% set persons_len = persons | length %}
@@ -1019,6 +1030,7 @@ actions:
                   )
                 }}
               message_id: "invalid_per_person_sensors"
+              level: 2
             - alias: Check that per person sensors are in the right order
               error: |-
                 {%
@@ -1081,6 +1093,7 @@ actions:
                   | list
                 }}
               message_id: "per_person_sensors_mismatch"
+              level: 2
             - alias: Check that all ble tracker entities come from the same device
               error: |-
                 {% if ble_entities | length > 1 %}
@@ -1113,6 +1126,7 @@ actions:
                   {{ false }}
                 {% endif %}
               message_id: "ble_trackers_mismatch"
+              level: 2
             - alias: Check that Wi-Fi device trackers does not contain GPS data
               error: |-
                 {{
@@ -1123,6 +1137,7 @@ actions:
                   | list
                 }}
               message_id: "wifi_tracker_is_gps"
+              level: 1
             - alias: Check that iBeacon transmitters are valid
               error: |-
                 {{
@@ -1133,6 +1148,7 @@ actions:
                   | list
                 }}
               message_id: "invalid_ibeacon_transmitter"
+              level: 2
             - alias: Check that gps trackers are compatible if the location must be confirmed with gps
               error: |-
                 {% if 'gps' in only_open_near %}
@@ -1196,6 +1212,7 @@ actions:
                   {{ false }}
                 {% endif %}
               message_id: "no_compatible_gps_tracker"
+              level: 1
           sequence:
             - alias: If a check failed
               if:
@@ -1204,6 +1221,14 @@ actions:
                     {% set error = repeat.item.error %}
                     {{ error != [] if error is list else error }}
               then:
+                - alias: If the error level is higher than the current highest
+                  if:
+                    - condition: template
+                      value_template: "{{ repeat.item.level > error_level }}"
+                  then:
+                    - alias: Save the new highest error level
+                      variables:
+                        error_level: "{{ repeat.item.level }}"
                 - alias: Get notification translation
                   variables:
                     message_id: "{{ repeat.item.message_id }}"
@@ -1406,7 +1431,7 @@ actions:
         trigger.platform is not none
         and trigger.id == 'vehicle_started'
         and (
-          successful_check
+          error_level < 2
           or not stop_check_failed
         )
       }}
