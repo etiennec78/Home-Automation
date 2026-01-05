@@ -173,9 +173,8 @@ blueprint:
             *Note: Optional*
           default: ""
           selector:
-            target:
-              entity:
-                domain: tts
+            entity:
+              domain: tts
         tts_volume_night_time_start:
           name: 🌙 TTS night time start
           description: |-
@@ -441,7 +440,7 @@ actions:
               condition: "{{ notification_type == 'error' and not error_message_sensor }}"
               message_id: "missing_error_sensor"
             - alias: Check for tts and media player sensors presence
-              condition: "{{ (speaker_tts_devices | length > 0) != (speaker_tts_service | length > 0) }}"
+              condition: "{{ (speaker_tts_devices | length < 1) != (speaker_tts_service == '') }}"
               message_id: "invalid_speakers"
             - alias: Check that there is a way to notify the user
               condition: |-
@@ -824,7 +823,8 @@ actions:
                     cache: true
                     media_player_entity_id: "{{ repeat.item }}"
                     message: "{{ message }}"
-                  target: "{{ speaker_tts_service }}"
+                  target:
+                    entity_id: "{{ speaker_tts_service }}"
 
                 - alias: If the old volume could be saved
                   if:
