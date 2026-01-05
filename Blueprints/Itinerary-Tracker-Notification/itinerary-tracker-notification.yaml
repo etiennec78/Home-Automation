@@ -184,9 +184,8 @@ blueprint:
             *Note : Optional*
           default: ""
           selector:
-            target:
-              entity:
-                domain: tts
+            entity:
+              domain: tts
         drive_start_tts:
           name: 🚀 Drive start TTS
           description: Notify over TTS when someone starts driving
@@ -441,7 +440,7 @@ actions:
                 }}
               message_id: "invalid_per_person_sensors"
             - alias: Check for tts and media player sensors presence
-              error: "{{ (speaker_tts_devices | length > 0) != (speaker_tts_service | length > 0) }}"
+              error: "{{ (speaker_tts_devices | length < 1) != (speaker_tts_service == '') }}"
               message_id: "invalid_speakers"
             - alias: Check that per person sensors are in the right order
               error: |-
@@ -774,7 +773,8 @@ actions:
                 cache: true
                 media_player_entity_id: "{{ repeat.item }}"
                 message: "{{ message }}"
-              target: "{{ speaker_tts_service }}"
+              target:
+                entity_id: "{{ speaker_tts_service }}"
             - alias: If the old volume could be saved
               if:
                 - condition: template
