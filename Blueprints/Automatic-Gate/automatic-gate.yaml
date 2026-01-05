@@ -2582,6 +2582,15 @@ actions:
                         value_template: "{{ wait.trigger.id != 'manual' }}"
                     then:
                       - stop: Closing canceled
+          - alias: If the iBeacon is needed to close the gate
+            if:
+              - condition: template
+                value_template: |-
+                  {{
+                    'ble' in close_when_disconnected_from
+                    and ble_entities | length > idx
+                  }}
+            then: *start_ibeacons
           - alias: Set variables for the following repeat sequence
             variables:
               break: "{{ closing_behavior in ['auto', 'off'] }}"
