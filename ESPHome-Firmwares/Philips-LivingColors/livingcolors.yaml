@@ -1,8 +1,11 @@
 esphome:
   name: philips-livingcolors
   friendly_name: Philips LivingColors
-  platform: esp32
-  board: esp32dev #ESP32-WROOM-32 (version printed on the chip)
+
+esp32:
+  board: esp32dev #ESP32-WROOM-32E (version printed on the chip)
+  framework:
+    type: esp-idf
 
 # Enable logging
 logger:
