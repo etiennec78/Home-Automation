@@ -257,12 +257,6 @@ blueprint:
           default: true
           selector:
             boolean:
-        stop_check_failed:
-          name: ✋🏻 Stop if tests failed
-          description: Stop the blueprint if at least one test has failed
-          default: false
-          selector:
-            boolean:
 
 variables:
   persons: !input persons
@@ -674,10 +668,7 @@ actions:
         trigger.platform is not none
         and trigger.id == 'vehicle_started'
         and successful_check
-        and (
-          error_level < 2
-          or not stop_check_failed
-        )
+        and error_level < 2
       }}
 
   - alias: Only continue if driver not home
