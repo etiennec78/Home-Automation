@@ -1132,62 +1132,66 @@ actions:
               message_id: "invalid_ibeacon_transmitter"
             - alias: Check that gps trackers are compatible if the location must be confirmed with gps
               error: |-
-                {% set data = namespace(invalid=[]) %}
-                {% for person_idx in range(persons | length) %}
-                  {% if states[persons[person_idx]].domain == 'person' %}
-                    {% set trackers = state_attr(persons[person_idx], 'device_trackers') %}
-                    {% if trackers is none %}
-                      {% set trackers = [] %}
+                {% if 'gps' in only_open_near %}
+                  {% set data = namespace(invalid=[]) %}
+                  {% for person_idx in range(persons | length) %}
+                    {% if states[persons[person_idx]].domain == 'person' %}
+                      {% set trackers = state_attr(persons[person_idx], 'device_trackers') %}
+                      {% if trackers is none %}
+                        {% set trackers = [] %}
+                      {% endif %}
+                    {% else %}
+                      {% set trackers = [persons[person_idx]] %}
                     {% endif %}
-                  {% else %}
-                    {% set trackers = [persons[person_idx]] %}
-                  {% endif %}
-                  {%
-                    set gps_trackers = (
-                      trackers
-                      | select('is_state_attr', 'source_type', 'gps')
-                      | list
-                    )
-                  %}
-                  {%
-                    set wait_for_mobile_gps = (
-                      person_idx < notify_devices | length
-                      and (
-                        gps_trackers
-                        | select(
-                          'in',
-                          device_entities(
-                            notify_devices[person_idx]
-                          )
-                        )
-                        | list
-                        | length
-                        > 0
-                      )
-                    )
-                  %}
-                  {% set gps = namespace(not_mobile=[]) %}
-                  {% for tracker in gps_trackers %}
-                    {% set ids = device_attr(tracker, 'identifiers') %}
                     {%
-                      if ids is none
-                      or ids | first | first != 'mobile_app'
+                      set gps_trackers = (
+                        trackers
+                        | select('is_state_attr', 'source_type', 'gps')
+                        | list
+                      )
                     %}
-                      {% set gps.not_mobile = gps.not_mobile + [tracker] %}
+                    {%
+                      set wait_for_mobile_gps = (
+                        person_idx < notify_devices | length
+                        and (
+                          gps_trackers
+                          | select(
+                            'in',
+                            device_entities(
+                              notify_devices[person_idx]
+                            )
+                          )
+                          | list
+                          | length
+                          > 0
+                        )
+                      )
+                    %}
+                    {% set gps = namespace(not_mobile=[]) %}
+                    {% for tracker in gps_trackers %}
+                      {% set ids = device_attr(tracker, 'identifiers') %}
+                      {%
+                        if ids is none
+                        or ids | first | first != 'mobile_app'
+                      %}
+                        {% set gps.not_mobile = gps.not_mobile + [tracker] %}
+                      {% endif %}
+                    {% endfor %}
+                    {%
+                      if gps.not_mobile | length < 1
+                      and not wait_for_mobile_gps
+                    %}
+                      {% set data.invalid = data.invalid + [persons[person_idx]] %}
                     {% endif %}
                   {% endfor %}
-                  {%
-                    if gps.not_mobile | length < 1
-                    and not wait_for_mobile_gps
-                  %}
-                    {% set data.invalid = data.invalid + [persons[person_idx]] %}
-                  {% endif %}
-                {% endfor %}
-                {{
-                  data.invalid
-                  | map('state_attr', 'friendly_name')
-                  | list
-                }}
+                  {{
+                    data.invalid
+                    | map('state_attr', 'friendly_name')
+                    | list
+                  }}
+                {% else %}
+                  {{ false }}
+                {% endif %}
               message_id: "no_compatible_gps_tracker"
           sequence:
             - alias: If a check failed
