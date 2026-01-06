@@ -696,7 +696,7 @@ actions:
       {% else %}
         {% set accuracy = state_attr(driver, 'gps_accuracy') %}
       {% endif %}
-      {% set home_distance = distance(driver, dead_zone)*1000 - accuracy %}
+      {% set home_distance = distance(driver, 'zone.home')*1000 - accuracy %}
       {{ home_distance >= dead_zone }}
   - alias: Get notification translation
     variables:
