@@ -592,6 +592,7 @@ variables:
   travel_time_rate: !input travel_time_rate
   continuously_refresh_interval: !input continuously_refresh_interval
   departure_opening_behavior: !input departure_opening_behavior
+  departure_closing_behavior: !input departure_closing_behavior
   activation_zone: !input activation_zone
   suggest_closing_after: !input suggest_closing_after
   timer_opening: !input timer_opening
