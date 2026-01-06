@@ -591,8 +591,13 @@ variables:
   itinerary_sensors: !input itinerary_sensors
   travel_time_rate: !input travel_time_rate
   continuously_refresh_interval: !input continuously_refresh_interval
-  departure_opening_behavior: !input departure_opening_behavior
-  departure_closing_behavior: !input departure_closing_behavior
+  behavior:
+    departure:
+      opening: !input departure_opening_behavior
+      closing: !input departure_closing_behavior
+    arrival:
+      opening: !input arrival_opening_behavior
+      closing: !input arrival_closing_behavior
   activation_zone: !input activation_zone
   suggest_closing_after: !input suggest_closing_after
   timer_opening: !input timer_opening
@@ -1618,6 +1623,25 @@ actions:
               entity_id: "{{ itinerary_sensor }}"
             data:
               value: "{{ itinerary_value | to_json }}"
+  - alias: If there is no notification service
+    if:
+      - condition: template
+        value_template: "{{ notify_service is none }}"
+    then:
+      alias: Change behaviors needing a notification service to auto
+      variables:
+        behavior: |-
+          {% set data = namespace(behaviors={}) %}
+          {% for key, val in behavior.items() %}
+            {% set inner = namespace(value={}) %}
+            {% for subkey, subval in val.items() %}
+              {% set inner.value = inner.value | combine({
+                subkey: 'auto' if subval in ['notif', 'timer'] else subval
+              }) %}
+            {% endfor %}
+            {% set data.behaviors = data.behaviors | combine({ key: inner.value }) %}
+          {% endfor %}
+          {{ data.behaviors }}
   - alias: Get which sensor the blueprint should wait to confirm the driver's presence
     variables:
       gps_trackers: |-
@@ -2077,8 +2101,8 @@ actions:
                           value_template: |-
                             {{
                               not departure
-                              or departure_opening_behavior != 'off'
-                              or departure_closing_behavior != 'off'
+                              or behavior.departure.opening != 'off'
+                              or behavior.departure.closing != 'off'
                             }}
                       then:
                         - alias: Create error
@@ -2247,8 +2271,6 @@ actions:
       - alias: Set departure variables for the following sequence block
         variables:
           itinerary_mode: "departure"
-          opening_behavior: !input departure_opening_behavior
-          closing_behavior: !input departure_closing_behavior
           opening_message: "leaving_home"
           timeout_messages: |-
             {{
@@ -2264,7 +2286,7 @@ actions:
             value_template: !input ask_reopen_manually_closed
           - alias: If the opening behavior is automatic
             condition: template
-            value_template: "{{ opening_behavior in ['timer', 'auto'] }}"
+            value_template: "{{ behavior.departure.opening in ['timer', 'auto'] }}"
           - alias: If the gate was recently closed manually
             condition: template
             value_template: |-
@@ -2311,32 +2333,22 @@ actions:
               {% endif %}
               {{ data.recently_closed and not data.auto_closed }}
         then:
-          - alias: Change the opening behavior to notificaiton request
+          - alias: Change the departure opening behavior to notificaiton request
             variables:
-              opening_behavior: notif
+              behavior: |-
+                {{
+                  behavior
+                  | combine(
+                    {'departure': {'opening': 'notif'}},
+                    recursive=True
+                  )
+                }}
       - alias: Open and close gate by following behaviors set by the user
         sequence: &open_close_behavior
-          - alias: If there is no notification service
-            if:
-              - condition: template
-                value_template: "{{ notify_service is none }}"
-            then:
-              - alias: If the opening behavior uses a notification service
-                if:
-                  - condition: template
-                    value_template: "{{ opening_behavior in ['timer', 'notif'] }}"
-                then:
-                  - alias: Change the opening behavior to full auto
-                    variables:
-                      opening_behavior: auto
-              - alias: If the closing behavior uses a notification service
-                if:
-                  - condition: template
-                    value_template: "{{ closing_behavior in ['timer', 'notif'] }}"
-                then:
-                  - alias: Change the closing behavior to full auto
-                    variables:
-                      closing_behavior: auto
+          - alias: Get the opening/closing behaviors
+            variables:
+              opening_behavior: "{{ behavior[itinerary_mode].opening }}"
+              closing_behavior: "{{ behavior[itinerary_mode].closing }}"
           - alias: If the gate opening behavior is not set to off and one of the gates is closed
             if:
               - condition: template
@@ -2566,7 +2578,7 @@ actions:
                   - condition: template
                     value_template: |-
                       {{
-                        departure_opening_behavior == 'off'
+                        behavior.departure.opening == 'off'
                         and gate | select('is_state', ['on', 'open', 'opening']) | list == []
                       }}
                 then:
@@ -3407,7 +3419,7 @@ actions:
                               states[travel_time_sensor].last_updated | as_timestamp
                                 + travel_time_duration
                                 - lead_time
-                                - (timer_opening if arrival_opening_behavior == 'timer' else 0)
+                                - (timer_opening if behavior.arrival.opening == 'timer' else 0)
                             }}
                     else:
                       - alias: Add 1 to the failed updates counter
@@ -3494,8 +3506,6 @@ actions:
         - alias: Set arrival variables for the following sequence block
           variables:
             itinerary_mode: "arrival"
-            opening_behavior: !input arrival_opening_behavior
-            closing_behavior: !input arrival_closing_behavior
             opening_message: "soon_arrived"
             timeout_messages: |-
               dict(
