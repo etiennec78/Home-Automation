@@ -1418,12 +1418,13 @@ actions:
           notification_id: "{{ config_checker_tag }}"
       - stop: Config checker failed
         error: true
-  - alias: Only continue if the blueprint was triggered by a driving sensor
+  - alias: Only continue if the blueprint was triggered by a driving sensor and tests passed
     condition: template
     value_template: |-
       {{
         trigger.platform is not none
         and trigger.id == 'vehicle_started'
+        and successful_check
         and error_level < 2
       }}
   - alias: If last automation iteration ended less than 5s ago
