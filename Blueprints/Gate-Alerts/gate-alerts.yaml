@@ -233,12 +233,6 @@ blueprint:
           default: true
           selector:
             boolean:
-        stop_check_failed:
-          name: ✋🏻 Stop if tests failed
-          description: Stop the blueprint if at least one test has failed
-          default: false
-          selector:
-            boolean:
 
 variables:
   gate: !input gate
@@ -404,6 +398,7 @@ actions:
       messages: []
       custom_translations_error: "{{ custom_translations_json is none }}"
       successfull_check: false
+      error_level: 0
   - alias: If custom translations failed to be parsed as json
     if:
       - condition: template
@@ -436,12 +431,15 @@ actions:
             - alias: Check custom translations
               condition: "{{ custom_translations_error }}"
               message_id: "invalid_translations"
+              level: 1
             - alias: Check gate error sensor presence
               condition: "{{ notification_type == 'error' and not error_message_sensor }}"
               message_id: "missing_error_sensor"
+              level: 2
             - alias: Check for tts and media player sensors presence
               condition: "{{ (speaker_tts_devices | length < 1) != (speaker_tts_service == '') }}"
               message_id: "invalid_speakers"
+              level: 1
             - alias: Check that there is a way to notify the user
               condition: |-
                 {{
@@ -450,6 +448,7 @@ actions:
                   and not persistent_notification
                 }}
               message_id: "no_notification_method"
+              level: 2
             - alias: Check that both or neither night time end and start have been entered
               condition: |-
                 {{
@@ -457,12 +456,21 @@ actions:
                   | bitwise_xor(tts_volume_night_time_end == '')
                 }}
               message_id: "night_mode_missing_bound"
+              level: 1
           sequence:
             - alias: If a check failed
               if:
                 - condition: template
                   value_template: "{{ repeat.item.condition }}"
               then:
+                - alias: If the error level is higher than the current highest
+                  if:
+                    - condition: template
+                      value_template: "{{ repeat.item.level > error_level }}"
+                  then:
+                    - alias: Save the new highest error level
+                      variables:
+                        error_level: "{{ repeat.item.level }}"
                 - alias: Append the error message to the list
                   variables:
                     message_id: "{{ repeat.item.message_id }}"
@@ -591,16 +599,14 @@ actions:
       - stop: Config checker failed
         error: true
 
-  - alias: Only continue if the blueprint was triggered by a driving sensor
+  - alias: Only continue if the blueprint was triggered by an alert and tests passed
     condition: template
     value_template: |-
       {{
         trigger.platform is not none
         and trigger.id != 'blueprint_enabled'
-        and (
-          successful_check
-          or not stop_check_failed
-        )
+        and successful_check
+        and error_level < 2
       }}
 
   - alias: If gate paused or fully open, and supporting position
