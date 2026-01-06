@@ -4,7 +4,7 @@
 
 A simple ESPHome configuration to hack a Philips LivingColors Mini with an ESP32
 
-Has both E1.31 and WLED protocols enabled by default for lighting software control (e.g.: [Artemis](https://github.com/Artemis-RGB/Artemis))
+Has the E1.31 protocol enabled by default for lighting software control (e.g.: [Artemis](https://github.com/Artemis-RGB/Artemis))
 
 
 ## Buy Me a Coffee ☕

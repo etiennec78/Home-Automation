@@ -33,9 +33,6 @@ wifi:
 e131:
   method: unicast
 
-# Enable wled lighting protocol
-wled:
-
 # Each led GPIO address
 output:
   - platform: ledc
@@ -71,4 +68,3 @@ light:
       - e131:
           universe: 1
           channels: RGB
-      - wled:
