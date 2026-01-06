@@ -79,6 +79,22 @@ blueprint:
                 domain: sensor
                 device_class: duration
 
+    dead_zone:
+      name: Dead zone
+      icon: mdi:map-marker-radius
+      collapsed: true
+      input:
+        dead_zone:
+          name: 📍 Dead zone
+          description: |-
+            **Minimum distance** between the driver and home to trigger the automation
+          default: 500
+          selector:
+            number:
+              min: 300
+              max: 5000
+              unit_of_measurement: meters
+
     persons_to_notify:
       name: Persons to notify
       icon: mdi:bell-ring
@@ -259,6 +275,7 @@ blueprint:
             boolean:
 
 variables:
+  dead_zone: !input dead_zone
   persons: !input persons
   notify_devices: !input notify_devices
   notify_services: "{{ notify_devices | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}"
@@ -671,9 +688,16 @@ actions:
         and error_level < 2
       }}
 
-  - alias: Only continue if driver not home
+  - alias: Only continue if driver not in the dead zone
     condition: template
-    value_template: "{{ not is_state(driver, 'home') }}"
+    value_template: |-
+      {% if state_attr(driver, 'gps_accuracy') is none %}
+        {% set accuracy = 100 %}
+      {% else %}
+        {% set accuracy = state_attr(driver, 'gps_accuracy') %}
+      {% endif %}
+      {% set home_distance = distance(driver, dead_zone)*1000 - accuracy %}
+      {{ home_distance >= dead_zone }}
   - alias: Get notification translation
     variables:
       message_id: "itinerary_started"
