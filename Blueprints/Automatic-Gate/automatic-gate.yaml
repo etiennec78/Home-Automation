@@ -2070,37 +2070,47 @@ actions:
                           {% else %}
                             {{ wait.trigger.id }}
                           {% endif %}
-                    - alias: Create error
-                      sequence: &create_error
-                        - alias: Set title id
-                          variables:
-                            title_id: "itinerary_canceled"
-                        - alias: If a notify service exists
-                          if:
-                            - condition: template
-                              value_template: "{{ notify_service is not none }}"
-                          then:
-                            - alias: Get notification translation
-                              variables: *get_translation
-                            - alias: Notify driver of itinerary cancelation
-                              action: "{{ notify_service }}"
+                    - alias: If an error should be raised
+                      if:
+                        - condition: template
+                          value_template: |-
+                            {{
+                              not departure
+                              or departure_opening_behavior != 'off'
+                              or departure_closing_behavior != 'off'
+                            }}
+                      then:
+                        - alias: Create error
+                          sequence: &create_error
+                            - alias: Set title id
+                              variables:
+                                title_id: "itinerary_canceled"
+                            - alias: If a notify service exists
+                              if:
+                                - condition: template
+                                  value_template: "{{ notify_service is not none }}"
+                              then:
+                                - alias: Get notification translation
+                                  variables: *get_translation
+                                - alias: Notify driver of itinerary cancelation
+                                  action: "{{ notify_service }}"
+                                  data:
+                                    title: "{{ title }}"
+                                    message: "{{ message }}"
+                                    data: *notification_data
+                                - sequence: *tts
+                            - alias: Mark error in driver itinerary sensor
+                              variables:
+                                update:
+                                  status: "{{ none }}"
+                                  error: "{{ message_id }}"
+                                itinerary_value: "{{ dict(itinerary_value, **update) }}"
+                            - alias: Save the itinerary status
+                              action: input_text.set_value
+                              target:
+                                entity_id: "{{ itinerary_sensor }}"
                               data:
-                                title: "{{ title }}"
-                                message: "{{ message }}"
-                                data: *notification_data
-                            - sequence: *tts
-                        - alias: Mark error in driver itinerary sensor
-                          variables:
-                            update:
-                              status: "{{ none }}"
-                              error: "{{ message_id }}"
-                            itinerary_value: "{{ dict(itinerary_value, **update) }}"
-                        - alias: Save the itinerary status
-                          action: input_text.set_value
-                          target:
-                            entity_id: "{{ itinerary_sensor }}"
-                          data:
-                            value: "{{ itinerary_value | to_json }}"
+                                value: "{{ itinerary_value | to_json }}"
                     - alias: Restore iBeacons
                       sequence: &restore_ibeacons
                         - alias: If the iBeacon was needed
