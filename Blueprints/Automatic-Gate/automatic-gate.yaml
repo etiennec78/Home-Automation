@@ -2629,6 +2629,17 @@ actions:
                       - condition: template
                         value_template: "{{ wait.trigger.id != 'manual' }}"
                     then:
+                      - alias: Reset the itinerary status
+                        variables:
+                          update:
+                            status: "{{ none }}"
+                          itinerary_value: "{{ dict(itinerary_value, **update) }}"
+                      - alias: Save the itinerary status
+                        action: input_text.set_value
+                        target:
+                          entity_id: "{{ itinerary_sensor }}"
+                        data:
+                          value: "{{ itinerary_value | to_json }}"
                       - stop: Closing canceled
           - alias: If the iBeacon is needed to close the gate
             if:
