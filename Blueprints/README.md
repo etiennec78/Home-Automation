@@ -35,14 +35,14 @@ Refer to the table below to fix the errors
   | Error code | Error | Fix |
   | :---: | :--- | :--- |
   | #1 | Your custom translations are not valid | Check that your custom translations input contains a [valid json dictionary](https://jsonformatter.curiousconcept.com/) and that your strings are located in 'message', 'title' or 'button' keys, with a subkey for each message id |
-  | #2 | You have not entered any iBeacon scanners | Either untick all iBeacon opening/closing inputs and remove all iBeacon related sensors in the 'Presence sensors' category, or add some iBeacon tracker entities |
-  | #3 | You have entered these iBeacon scanners: '...' but are not using them | Either tick some iBeacon opening/closing inputs, or remove all iBeacon related sensors in the 'Presence sensors' category |
+  | #2 | You have not entered any BLE scanners | Either untick all Bluetooth LE opening/closing inputs and remove all BLE related sensors in the 'Presence sensors' category, or add some BLE tracker entities |
+  | #3 | You have entered these BLE scanners: '...' but are not using them | Either tick some Bluetooth LE opening/closing inputs, or remove all BLE related sensors in the 'Presence sensors' category |
   | #4 | You have not entered any Wi-Fi trackers | Either untick the Wi-Fi opening input in the 'Presence sensors' category, or add some Wi-Fi trackers |
   | #5 | You have entered these Wi-Fi trackers: '...' but are not using them | Either tick the Wi-Fi opening input, or remove your Wi-Fi trackers in the 'Presence sensors' category |
   | #6 | These trackers/persons: '...' do not support GPS tracking | Replace Wi-Fi device trackers by GPS trackers in the 'Persons' input |
-  | #7 | These iBeacon trackers: '...' are currently not reporting an 'unknown' state | Check that these iBeacon trackers go back to their 'unknown' state after losing signal for some seconds |
-  | #8 | You do not have any way to detect your arrival | Please add a travel time sensor or use an iBeacon for opening on arrival |
-  | #9 | You are using several methods to detect your arrival | Either untick 'Open on arrival when connected to: iBeacon' or remove your travel time sensors |
+  | #7 | These BLE trackers: '...' are currently not reporting an 'unknown' state | Check that these BLE trackers go back to their 'unknown' state after losing signal for some seconds |
+  | #8 | You do not have any way to detect your arrival | Please add a travel time sensor or use an Bluetooth LE tracker for opening on arrival |
+  | #9 | You are using several methods to detect your arrival | Either untick 'Open on arrival when connected to: Bluetooth LE' or remove your travel time sensors |
   | #10 | These itinerary sensors: '...' have a maximum length of less than 255 | Read [this part](https://github.com/etiennec78/Home-Automation/blob/dev/sensors.md#itinerary-sensors-%EF%B8%8F) of the wiki to change the maximum length of these helpers |
   | #11 | You have not entered a consistent number of sensors in the per person sensor inputs | Some fields must have exactly (or at most) one sensor per person. Make sure you comply with these conditions. |
   | #12 | These persons: '...' appear to have mixed up per person sensors | Each person must have all their 'per person sensors' at the same index |
