@@ -453,6 +453,17 @@ blueprint:
                     - signal_strength
                     - distance
                 - domain: device_tracker
+        ble_away_timeout:
+          name: ⌛ BLE away timeout
+          description: |-
+            Timeout period without receiving updates after which the BLE device will be considered away
+            *Note : Some trackers have a built-in away timeout. In this case, this value can be set to 0.*
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              unit_of_measurement: seconds
         ble_transmitter_entities:
           name: 📡 iBeacon transmitter entities
           description: |-
@@ -2686,6 +2697,7 @@ actions:
                           'ble' in close_when_disconnected_from
                           and idx < ble_entities | length
                         }}
+                      for: !input ble_away_timeout
                     - alias: Vehicle left
                       trigger: template
                       id: vehicle_stopped
