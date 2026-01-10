@@ -46,7 +46,6 @@ Refer to the table below to fix the errors
   | #10 | These itinerary sensors: '...' have a maximum length of less than 255 | Read [this part](https://github.com/etiennec78/Home-Automation/blob/dev/sensors.md#itinerary-sensors-%EF%B8%8F) of the wiki to change the maximum length of these helpers |
   | #11 | You have not entered a consistent number of sensors in the per person sensor inputs | Some fields must have exactly (or at most) one sensor per person. Make sure you comply with these conditions. |
   | #12 | These persons: '...' appear to have mixed up per person sensors | Each person must have all their 'per person sensors' at the same index |
-  | #13 | These iBeacon trackers: '...' come from a different device than the others | Replace the wrong iBeacon tracker entities with ones near your gate |
   | #14 | These trackers: '...' are GPS-based, not router-based | Replace GPS device trackers by Wi-Fi trackers in the 'Wi-Fi devices' input |
   | #15 | You have not entered the sensor containing gate error codes | The 'error' notification type of this blueprint relies on a sensor providing error codes. Please ensure you have entered this sensor in the 'Error Message Sensor' input |
   | #16 | You need at least a speaker and a TTS service | Either remove your speakers and TTS service, or fill both of these inputs |
