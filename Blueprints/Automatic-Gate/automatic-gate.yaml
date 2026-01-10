@@ -449,7 +449,9 @@ blueprint:
               multiple: true
               filter:
                 - domain: sensor
-                  device_class: signal_strength
+                  device_class:
+                    - signal_strength
+                    - distance
                 - domain: device_tracker
         ble_transmitter_entities:
           name: 📡 iBeacon transmitter entities
@@ -983,7 +985,7 @@ actions:
                 {% if trigger.platform is none %}
                   {{
                     ble_entities
-                    | select('is_state_attr', 'device_class', 'signal_strength')
+                    | select('is_state_attr', 'device_class', ['signal_strength', 'distance'])
                     | reject('is_state', 'unknown')
                     | map('state_attr', 'friendly_name')
                     | list
