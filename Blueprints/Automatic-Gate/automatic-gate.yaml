@@ -594,7 +594,7 @@ blueprint:
 variables:
   gate: !input gate
   gate_location: !input gate_location
-  gate_areas: "{{ gate | map('area_id') | list }}"
+  gate_areas: "{{ gate | map('area_id') | difference([none]) | list }}"
   lead_time: !input lead_time
   security_notif_override: !input security_notif_override
   safety_delay: !input safety_delay
