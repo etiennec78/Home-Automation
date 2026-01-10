@@ -441,15 +441,16 @@ blueprint:
         ble_entities:
           name: 🔎 iBeacon tracker entities
           description: |-
-            Each **[BLE rssi tracker entity](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-entities-)** to monitor your distance from the gate
+            Each **[BLE tracker entity](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-entities-)** to monitor your distance from the gate
             *Note : Please place user sensors in the same order*
           default: []
           selector:
             entity:
               multiple: true
               filter:
-                domain: sensor
-                device_class: signal_strength
+                - domain: sensor
+                  device_class: signal_strength
+                - domain: device_tracker
         ble_transmitter_entities:
           name: 📡 iBeacon transmitter entities
           description: |-
@@ -979,11 +980,12 @@ actions:
                 }}
               message_id: "missing_gps_data"
               level: 2
-            - alias: Check that iBeacons report unknown by default
+            - alias: Check that signal strength iBeacons report unknown by default
               error: |-
                 {% if trigger.platform is none %}
                   {{
                     ble_entities
+                    | select('is_state_attr', 'device_class', 'signal_strength')
                     | reject('is_state', 'unknown')
                     | map('state_attr', 'friendly_name')
                     | list
@@ -1821,7 +1823,10 @@ actions:
                     )
                     or departure
                     and (
-                      wait_for_ble and states(ble_entities[idx]) | is_number
+                      wait_for_ble and (
+                        states(ble_entities[idx]) | is_number
+                        or is_state(ble_entities[idx], 'home')
+                      )
                       or wait_for_wifi and is_state(wifi_devices[idx], 'home')
                     )
                   )
@@ -1997,7 +2002,11 @@ actions:
                 - alias: iBeacon in range
                   trigger: template
                   id: ble_in_range
-                  value_template: "{{ states(ble_entities[idx]) | is_number }}"
+                  value_template: |-
+                    {{
+                      states(ble_entities[idx]) | is_number
+                      or is_state(ble_entities[idx], 'home')
+                    }}
                   enabled: "{{ departure and wait_for_ble }}"
                 - alias: Vehicle stopped
                   id: vehicle_stopped
@@ -2704,8 +2713,12 @@ actions:
                     - alias: iBeacon out of reach
                       trigger: template
                       id: ble_out_of_range
-                      value_template: "{{ (ble_entities | length) - 1 >= idx and is_state(ble_entities[idx], 'unknown') }}"
-                      enabled: "{{ 'ble' in close_when_disconnected_from }}"
+                      value_template: "{{ is_state(ble_entities[idx], ['unknown', 'not_home']) }}"
+                      enabled: |-
+                        {{
+                          'ble' in close_when_disconnected_from
+                          and idx < ble_entities | length
+                        }}
                     - alias: Vehicle left
                       trigger: template
                       id: vehicle_stopped
@@ -3341,7 +3354,11 @@ actions:
                           - alias: iBeacon reachable
                             trigger: template
                             id: ble_in_reach
-                            value_template: "{{ states(ble_entities[idx]) | is_number }}"
+                            value_template: |-
+                              {{
+                                states(ble_entities[idx]) | is_number
+                                or is_state(ble_entities[idx], 'home')
+                              }}
                       - alias: If the iBeacon won't need to stay on
                         if:
                           - condition: or
