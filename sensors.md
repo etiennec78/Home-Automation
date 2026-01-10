@@ -466,7 +466,7 @@ Each BLE tracker entity to monitor your distance from the gate while leaving, an
 
 Could be from my [ESPHome firmware](ESPHome-Firmwares/Gate) or any other bluetooth iBeacon scanner near your gate
 
-Supported types: device_tracker, rssi sensor
+Supported types: device_tracker, rssi sensor, distance sensor, bermuda area sensor
 
 
 ## Bluetooth scanner switch ⏻

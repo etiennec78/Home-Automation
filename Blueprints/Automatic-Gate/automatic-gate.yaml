@@ -452,6 +452,7 @@ blueprint:
                   device_class:
                     - signal_strength
                     - distance
+                    - bermuda__custom_device_class
                 - domain: device_tracker
         ble_away_timeout:
           name: ⌛ BLE away timeout
@@ -593,6 +594,7 @@ blueprint:
 variables:
   gate: !input gate
   gate_location: !input gate_location
+  gate_areas: "{{ gate | map('area_id') | list }}"
   lead_time: !input lead_time
   security_notif_override: !input security_notif_override
   safety_delay: !input safety_delay
@@ -1804,6 +1806,7 @@ actions:
                       wait_for_ble and (
                         states(ble_entities[idx]) | is_number
                         or is_state(ble_entities[idx], 'home')
+                        or state_attr(ble_entities[idx], 'area_id') in gate_areas
                       )
                       or wait_for_wifi and is_state(wifi_devices[idx], 'home')
                     )
@@ -1984,6 +1987,7 @@ actions:
                     {{
                       states(ble_entities[idx]) | is_number
                       or is_state(ble_entities[idx], 'home')
+                      or state_attr(ble_entities[idx], 'area_id') in gate_areas
                     }}
                   enabled: "{{ departure and wait_for_ble }}"
                 - alias: Vehicle stopped
@@ -2691,7 +2695,15 @@ actions:
                     - alias: BLE out of reach
                       trigger: template
                       id: ble_out_of_range
-                      value_template: "{{ is_state(ble_entities[idx], ['unknown', 'not_home']) }}"
+                      value_template: |-
+                        {{
+                          is_state(ble_entities[idx], ['unknown', 'not_home'])
+                          or (
+                            ble_entities[idx] in states
+                            and 'area_id' in states[ble_entities[idx]].attributes
+                            and state_attr(ble_entities[idx], 'area_id') is none
+                          )
+                        }}
                       enabled: |-
                         {{
                           'ble' in close_when_disconnected_from
@@ -3337,6 +3349,7 @@ actions:
                               {{
                                 states(ble_entities[idx]) | is_number
                                 or is_state(ble_entities[idx], 'home')
+                                or state_attr(ble_entities[idx], 'area_id') in gate_areas
                               }}
                       - alias: If BLE devices won't need to stay on
                         if:
