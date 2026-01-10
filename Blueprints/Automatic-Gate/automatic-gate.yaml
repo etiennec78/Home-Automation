@@ -998,8 +998,14 @@ actions:
                 {% if trigger.platform is none %}
                   {{
                     ble_entities
-                    | select('is_state_attr', 'device_class', ['signal_strength', 'distance'])
-                    | reject('is_state', 'unknown')
+                    | expand
+                    | selectattr(
+                      'attributes.device_class',
+                      'in',
+                      ['signal_strength', 'distance']
+                    )
+                    | map(attribute='entity_id')
+                    | select('is_state', 'unknown')
                     | map('state_attr', 'friendly_name')
                     | list
                   }}
