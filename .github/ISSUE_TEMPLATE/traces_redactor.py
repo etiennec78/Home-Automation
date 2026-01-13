@@ -184,19 +184,26 @@ class Redactor:
         except IOError:
             print(f"Could not write to the file '{output_file}'")
 
-    def redact_json_file(self, input_file: str, output_file: str) -> None:
+    def redact_json_file(self, input_file: str, output_file: str) -> bool:
         """
         Redacts sensitive information from a JSON file and saves the result.
 
         Args:
             input_file (str): Path to the input JSON file.
             output_file (str): Path to the output JSON file.
+
+        Returns:
+            bool: Whereas the file redacting was successfull
         """
         if data := self.get_trace(input_file):
             redacted = {
                 key: self.get_replacement(key, value) for key, value in data.items()
             }
             self.save_trace(redacted, output_file)
+
+            return True
+
+        return False
 
 
 class ArgumentsManager:
@@ -319,7 +326,7 @@ if __name__ == "__main__":
     if file_location := args_manager.get_file_location():
         config = args_manager.get_config()
         redactor = Redactor(config)
-        redactor.redact_json_file(file_location, SAVE_LOCATION)
-        print(
-            f"The file '{file_location}' has been successfuly redacted and saved in '{SAVE_LOCATION}'."
-        )
+        if redactor.redact_json_file(file_location, SAVE_LOCATION):
+            print(
+                f"The file '{file_location}' has been successfuly redacted and saved in '{SAVE_LOCATION}'."
+            )
