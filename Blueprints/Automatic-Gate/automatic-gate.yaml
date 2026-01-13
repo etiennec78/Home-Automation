@@ -3545,11 +3545,11 @@ actions:
             itinerary_mode: "arrival"
             opening_message: "soon_arrived"
             timeout_messages: |-
-              dict(
-                timeout_messages, **{
+              {{
+                timeout_messages | combine({
                   'safety_delay': 'did_not_arrive'
-                }
-              )
+                })
+              }}
         - alias: Open and close gate by following behaviors set by the user
           sequence: *open_close_behavior
         - alias: Stop whole script as successful
