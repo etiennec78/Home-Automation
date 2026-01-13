@@ -162,8 +162,9 @@ class Redactor:
                 try:
                     return json.load(f)
                 except json.decoder.JSONDecodeError:
+                    f.seek(0)
                     print(
-                        f"Error: the file '{input_file}' does not contain valid json: {f.read()}"
+                        f"Error: the file '{input_file}' does not contain valid json"
                     )
         except FileNotFoundError:
             print(f"Error: The file '{input_file}' does not exist")
