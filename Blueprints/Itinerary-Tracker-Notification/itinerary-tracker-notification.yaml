@@ -146,15 +146,13 @@ blueprint:
         custom_translations:
           name: Custom translations
           description: |-
-            A **json** dictionary to change the default **notifications translations**
+            A **yaml** dictionary to change the default **notifications translations**
             *Note : You can find the translation keys in the strings['en'] variable in the code or in your traces*
-          default: |-
-            {
-              "message": {}
-            }
+          default:
+            title: {}
+            message: {}
           selector:
-            text:
-              multiline: true
+            object:
         notif_refresh_rate_ftn:
           name: 🔁 Notification refresh rate function
           description: |-
@@ -306,10 +304,6 @@ variables:
   nearly_arrived_sent: false
   last_arrival_timestamp: 0
   blueprint_name: "{{ state_attr(this.entity_id, 'friendly_name') }}"
-  custom_translations_json: "{{ custom_translations | from_json(none) }}"
-  default_custom_translations:
-    title: {}
-    message: {}
   strings:
     en:
       title:
@@ -406,17 +400,8 @@ actions:
   - alias: Initialize variables for the error checker
     variables:
       messages: []
-      custom_translations_error: "{{ custom_translations_json is none }}"
       successfull_check: false
       error_level: 0
-  - alias: If custom translations failed to be parsed as json
-    if:
-      - condition: template
-        value_template: "{{ custom_translations_error }}"
-    then:
-      - alias: Reset custom translations
-        variables:
-          custom_translations_json: "{{ default_custom_translations }}"
   - alias: If the config checker should run checks
     if:
       - condition: or
@@ -439,7 +424,7 @@ actions:
         repeat:
           for_each:
             - alias: Check custom translations
-              error: "{{ custom_translations_error }}"
+              error: "{{ false }}"
               message_id: "invalid_translations"
               level: 1
             - alias: Check that all per person sensors have been entered
@@ -557,10 +542,10 @@ actions:
                     message: &get_message |-
                       {# Custom translation #}
                       {%
-                        if 'message' in custom_translations_json
-                        and message_id in custom_translations_json['message']
+                        if 'message' in custom_translations
+                        and message_id in custom_translations['message']
                       %}
-                        {{ custom_translations_json['message'][message_id] }}
+                        {{ custom_translations['message'][message_id] }}
 
                       {# Selected language #}
                       {% elif message_id in strings[language]['message'] %}
@@ -608,10 +593,10 @@ actions:
                   title: &get_title |-
                     {# Custom translation #}
                     {%
-                      if 'title' in custom_translations_json
-                      and title_id in custom_translations_json['title']
+                      if 'title' in custom_translations
+                      and title_id in custom_translations['title']
                     %}
-                      {{ custom_translations_json['title'][title_id] }}
+                      {{ custom_translations['title'][title_id] }}
 
                     {# Selected language #}
                     {% elif title_id in strings[language]['title'] %}
