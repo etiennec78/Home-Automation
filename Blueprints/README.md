@@ -34,7 +34,7 @@ Refer to the table below to fix the errors
 
   | Error code | Error | Fix |
   | :---: | :--- | :--- |
-  | #1 | Your custom translations are not valid | Check that your custom translations input contains a [valid json dictionary](https://jsonformatter.curiousconcept.com/) and that your strings are located in 'message', 'title' or 'button' keys, with a subkey for each message id |
+  | #1 | Your custom translations are not valid. Check the following keys: '...'. | Check that your custom translations input contains a dictionnary with the same keys and subkeys as in the strings\['en'\] variable and with strings as values |
   | #2 | You have not entered any iBeacon scanners | Either untick all iBeacon opening/closing inputs and remove all iBeacon related sensors in the 'Presence sensors' category, or add some iBeacon tracker entities |
   | #3 | You have entered these iBeacon scanners: '...' but are not using them | Either tick some iBeacon opening/closing inputs, or remove all iBeacon related sensors in the 'Presence sensors' category |
   | #4 | You have not entered any Wi-Fi trackers | Either untick the Wi-Fi opening input in the 'Presence sensors' category, or add some Wi-Fi trackers |

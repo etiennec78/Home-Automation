@@ -278,7 +278,7 @@ variables:
         something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
         valid_config: "Your configuration seems valid"
         more_info: "More info"
-        invalid_translations: "Your custom translations are not valid (#1)"
+        invalid_translations: "Your custom translations are not valid. Check the following keys: '{data}'. (#1)"
         missing_error_sensor: "You have not entered the sensor containing gate error codes (#15)"
         invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service (#16)"
         no_notification_method: "You have not entered any method for receiving notifications (#17)"
@@ -305,7 +305,7 @@ variables:
         something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
         valid_config: "Votre configuration semble valide"
         more_info: "Plus d'infos"
-        invalid_translations: "Vos traductions personnalisées ne sont pas valides (#1)"
+        invalid_translations: "Vos traductions personnalisées ne sont pas valides. Vérifiez les valeurs suivantes: '{data}'. (#1)"
         missing_error_sensor: "Vous n'avez pas entré le capteur contenant les codes d'erreur du portail (#15)"
         invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS (#16)"
         no_notification_method: "Vous n'avez entré aucune méthode pour recevoir les notifications (#17)"
@@ -412,7 +412,23 @@ actions:
         repeat:
           for_each:
             - alias: Check custom translations
-              condition: "{{ false }}"
+              condition: |-
+                {% set data = namespace(invalid=[]) %}
+                {% for key, sub_items in custom_translations.items() %}
+                  {% if key not in strings['en'] %}
+                    {% set data.invalid = data.invalid + [key] %}
+                  {% else %}
+                    {% for subkey, value in sub_items.items() %}
+                      {%
+                        if value is not string
+                        or subkey not in strings['en'][key]
+                      %}
+                        {% set data.invalid = data.invalid + [subkey] %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                {% endfor %}
+                {{ data.invalid }}
               message_id: "invalid_translations"
               level: 1
             - alias: Check gate error sensor presence

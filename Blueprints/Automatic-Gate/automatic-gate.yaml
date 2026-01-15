@@ -685,7 +685,7 @@ variables:
         too_close: "You have started driving too close to the gate zone"
         valid_config: "Your configuration seems valid"
         more_info: "More info"
-        invalid_translations: "Your custom translations are not valid (#1)"
+        invalid_translations: "Your custom translations are not valid. Check the following keys: '{data}'. (#1)"
         missing_ble_entities: "You have not entered any iBeacon scanners (#2)"
         ble_not_used: "You have entered these iBeacon scanners: '{data}' but are not using them (#3)"
         missing_wifi_trackers: "You have not entered any Wi-Fi trackers (#4)"
@@ -751,7 +751,7 @@ variables:
         too_close: "Vous avez démarré trop près de la zone du portail"
         valid_config: "Votre configuration semble valide"
         more_info: "Plus d'infos"
-        invalid_translations: "Vos traductions personnalisées ne sont pas valides (#1)"
+        invalid_translations: "Vos traductions personnalisées ne sont pas valides. Vérifiez les valeurs suivantes: '{data}'. (#1)"
         missing_ble_entities: "Vous n'avez pas entré de scanner iBeacon (#2)"
         ble_not_used: "Vous avez entré ces scanners iBeacon: '{data}' mais ne les utilisez pas (#3)"
         missing_wifi_trackers: "Vous n'avez pas entré de traceurs Wi-Fi (#4)"
@@ -874,7 +874,23 @@ actions:
         repeat:
           for_each:
             - alias: Check custom translations
-              error: "{{ false }}"
+              error: |-
+                {% set data = namespace(invalid=[]) %}
+                {% for key, sub_items in custom_translations.items() %}
+                  {% if key not in strings['en'] %}
+                    {% set data.invalid = data.invalid + [key] %}
+                  {% else %}
+                    {% for subkey, value in sub_items.items() %}
+                      {%
+                        if value is not string
+                        or subkey not in strings['en'][key]
+                      %}
+                        {% set data.invalid = data.invalid + [subkey] %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                {% endfor %}
+                {{ data.invalid }}
               message_id: "invalid_translations"
               level: 1
             - alias: Check missing ble sensors
