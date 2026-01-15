@@ -324,6 +324,7 @@ variables:
         per_person_sensors_mismatch: "These persons: '{data}' appear to have mixed up per person sensors (#12)"
         no_notification_method: "You have not entered any method for receiving notifications (#17)"
         night_mode_missing_bound: "A bound for the speakers' night mode schedule is missing (#18)"
+        deprecated_translations: "Custom translations now use a yaml dictionnary instead of json. Please update your old config. (#21)"
     fr:
       title:
         valid_config: "{{blueprint_name}}: Configuration valide 🛠️✅"
@@ -343,6 +344,7 @@ variables:
         per_person_sensors_mismatch: "Ces personnes: '{data}' semblent avoir des capteurs par personne mélangés (#12)"
         no_notification_method: "Vous n'avez entré aucune méthode pour recevoir les notifications (#17)"
         night_mode_missing_bound: "Il manque une borne des horaires du mode nuit des enceintes (#18)"
+        deprecated_translations: "Les traductions personnalisés utilisent maintenant un dictionnaire yaml au lieu de json. Mettez à jour votre configuration svp. (#21)"
 
 triggers:
   - trigger: state
@@ -400,8 +402,17 @@ actions:
   - alias: Initialize variables for the error checker
     variables:
       messages: []
+      custom_translations_error: "{{ custom_translations is not mapping }}"
       successfull_check: false
       error_level: 0
+  - alias: If the custom translations is not a mapping
+    if:
+      - condition: template
+        value_template: "{{ custom_translations_error }}"
+    then:
+      - alias: Reset the custom translations
+        variables:
+          custom_translations: {}
   - alias: If the config checker should run checks
     if:
       - condition: or
@@ -536,6 +547,10 @@ actions:
                 }}
               message_id: "night_mode_missing_bound"
               level: 1
+            - alias: Check custom translations depreciation
+              error: "{{ custom_translations_error }}"
+              message_id: "deprecated_translations"
+              level: 0
           sequence:
             - alias: If a check failed
               if:
