@@ -434,7 +434,11 @@ blueprint:
             entity:
               multiple: true
               filter:
-                domain: device_tracker
+                - domain: sensor
+                  device_class:
+                    - signal_strength
+                    - distance
+                - domain: device_tracker
         ble_entities:
           name: 🔎 iBeacon tracker entities
           description: |-
@@ -1836,7 +1840,10 @@ actions:
                     or departure
                     and (
                       wait_for_ble and states(ble_entities[idx]) | is_number
-                      or wait_for_wifi and is_state(wifi_devices[idx], 'home')
+                      or wait_for_wifi and (
+                        states(wifi_devices[idx]) | is_number
+                        or is_state(wifi_devices[idx], 'home')
+                      )
                     )
                   )
                 }}
@@ -2006,7 +2013,11 @@ actions:
                 - alias: WiFi in range
                   trigger: template
                   id: wifi_in_range
-                  value_template: "{{ is_state(wifi_devices[idx], 'home') }}"
+                  value_template: |-
+                    {{
+                      states(wifi_devices[idx]) | is_number
+                      or is_state(wifi_devices[idx], 'home')
+                    }}
                   enabled: "{{ departure and wait_for_wifi }}"
                 - alias: iBeacon in range
                   trigger: template
