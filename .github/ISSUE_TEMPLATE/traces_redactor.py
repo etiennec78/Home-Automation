@@ -25,6 +25,7 @@ SENSITIVE_KEYS = {
         "driver_name",
         "confirmation",
         "alarm_code"
+        "awaited_persons",
     },
 }
 
@@ -50,12 +51,16 @@ SENSITIVE_IDS = {
     "active_notify_services",
     "itinerary_sensor",
     "itinerary_sensors",
-    "ble_entitie",
+    "ble_entity",
     "ble_entities",
     "ble_transmitter_entity",
     "ble_transmitter_entities",
     "ble_scanner_switch",
     "speaker_tts_devices",
+    "gate_areas",
+    "gps_trackers",
+    "other_gps_to_wait_for",
+    "drivers_near_gate",
 }
 
 SAVE_LOCATION = "trace_redacted.json"
