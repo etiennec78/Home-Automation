@@ -3052,7 +3052,7 @@ actions:
                         else:
                           - alias: Set prefix
                             variables:
-                              prefix: "{{ itinerary_mode == 'departure' | iif('', 'un') }}"
+                              prefix: "{{ '' if itinerary_mode == 'departure' else 'un' }}"
                           - alias: Do not lock if dont_lock_if_people_remaining is true and someone else is home
                             if:
                               - condition: template
