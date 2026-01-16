@@ -1777,12 +1777,20 @@ actions:
         variables:
           start_timestamp: "{{ now() | as_timestamp }}"
           received_timestamp: "{{ none }}"
-          old_location_id: "{{ states[person].context.id }}"
+          last_tracker_updated: |-
+            {% set data = namespace(max=gps_trackers | first) %}
+            {% for tracker in gps_trackers[1:] %}
+              {% if states[tracker].last_updated > states[data.max].last_updated %}
+                {% set data.max = tracker %}
+              {% endif %}
+            {% endfor %}
+            {{ data.max }}
+          old_location_id: "{{ states[last_tracker_updated].context.id }}"
           gates_were_opened: "{{ gate | select('is_state', ['on', 'open', 'opening']) | list == gate }}"
           lock_departure: false
           gps_confirmed: |-
             {{
-              states[person].last_updated
+              states[last_tracker_updated].last_updated
               + timedelta(seconds=gps_outdated_delay)
               >= now()
             }}
@@ -2000,7 +2008,7 @@ actions:
                   trigger: event
                   event_type: state_changed
                   event_data:
-                    entity_id: "{{ person }}"
+                    entity_id: "{{ gps_trackers }}"
                 - alias: Notification received
                   trigger: event
                   id: notification_received
@@ -3312,7 +3320,7 @@ actions:
             - trigger: event
               event_type: state_changed
               event_data:
-                entity_id: "{{ person }}"
+                entity_id: "{{ gps_trackers }}"
             - trigger: template
               value_template: "{{ is_state(driving_sensor, 'off') }}"
         - alias: Stop if the user is in a forbidden zone
@@ -3361,7 +3369,7 @@ actions:
                             trigger: event
                             event_type: state_changed
                             event_data:
-                              entity_id: "{{ person }}"
+                              entity_id: "{{ gps_trackers }}"
                           - alias: Vehicle stopped
                             id: vehicle_stopped
                             trigger: template
@@ -3495,7 +3503,7 @@ actions:
                           - trigger: event
                             event_type: state_changed
                             event_data:
-                              entity_id: "{{ person }}"
+                              entity_id: "{{ gps_trackers }}"
                           - trigger: event
                             event_type: state_changed
                             event_data:
