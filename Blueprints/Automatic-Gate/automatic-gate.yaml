@@ -1559,7 +1559,6 @@ actions:
                             name: "default"
                             critical: 1
                         tag: itinerary-status
-                        timeout: 300
                   - sequence: *tts
               - stop: Blueprint triggered closing on the user
                 error: true
@@ -2454,7 +2453,6 @@ actions:
                                 notification_icon: mdi:lock-question
                                 sticky: true
                                 persistent: true
-                                timeout: ""
                                 actions:
                                   - action: "{{ opening_order_id }}"
                                     title: "{{ buttons[0] }}"
@@ -2913,7 +2911,6 @@ actions:
                                           notification_icon: mdi:lock-question
                                           sticky: true
                                           persistent: true
-                                          timeout: ""
                                           actions:
                                             - action: "{{ closing_order_id }}"
                                               title: "{{ buttons[0] }}"
@@ -3036,7 +3033,6 @@ actions:
                               data:
                                 <<: *notification_data
                                 notification_icon: mdi:sleep
-                                timeout: ""
                           - sequence: *tts
                       - alias: Wait for gate closed
                         wait_for_trigger:
@@ -3204,7 +3200,6 @@ actions:
           data:
             <<: *notification_data
             notification_icon: mdi:map-check
-            timeout: ""
       - sequence: *tts
   - alias: Repeat while driver still driving
     repeat:

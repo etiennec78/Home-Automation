@@ -899,7 +899,7 @@ actions:
               timeout:
                 # Wait for the end of the cooldown, or for the nearly arrived TTS, or indefinitely
                 seconds: |-
-                  {% set values = [43200] %}
+                  {% set values = [2147483647] %}
 
                   {# End of cooldown #}
                   {% if next_refresh > now() | as_timestamp %}
