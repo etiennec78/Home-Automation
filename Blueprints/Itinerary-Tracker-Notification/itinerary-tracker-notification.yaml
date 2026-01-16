@@ -308,6 +308,7 @@ variables:
         itinerary_started: "{driver_name} just got into their car"
         itinerary_ongoing: "{driver_name} will arrive arround {arrival}"
         nearly_arrived: "{driver_name} will arrive in {remaining_minutes} minutes"
+        soon_arrived: "{driver_name} will arrive soon"
         driver_arrived: "{driver_name} just arrived home"
         something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
         unsupported_tt_integration: "Your travel time integration is not supported !"
@@ -328,6 +329,7 @@ variables:
         itinerary_started: "{driver_name} vient de monter dans sa voiture"
         itinerary_ongoing: "{driver_name} arrivera vers {arrival}"
         nearly_arrived: "{driver_name} arrivera dans {remaining_minutes} minutes"
+        soon_arrived: "{driver_name} arrivera bientôt"
         driver_arrived: "{driver_name} vient d'arriver à la maison"
         something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
         unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
@@ -721,7 +723,7 @@ actions:
       for_each: "{{ active_notify_services }}"
       sequence:
         - action: "{{ repeat.item }}"
-          data:
+          data: &notification_data
             message: "{{ message }}"
             data:
               notification_icon: mdi:car
@@ -840,6 +842,8 @@ actions:
           nearly_arrived_sent: false
           last_arrival_timestamp: 0
           nearly_arrived_timestamp: "{{ none }}"
+          arrival_timestamp: "{{ none }}"
+          timer_removed: false
       - alias: Repeat while driver still driving
         repeat:
           while:
@@ -916,6 +920,17 @@ actions:
                       set values = values | union(
                         [
                           nearly_arrived_timestamp - now() | as_timestamp
+                        ]
+                      )
+                    %}
+                  {% endif %}
+
+                  {# Remaining time reached zero #}
+                  {% if arrival_timestamp is not none and not timer_removed %}
+                    {%
+                      set values = values | union(
+                        [
+                          arrival_timestamp - now() | as_timestamp
                         ]
                       )
                     %}
@@ -1091,16 +1106,8 @@ actions:
                             data:
                               message: "{{ message }}"
                               data:
+                                <<: *notification_data
                                 notification_icon: mdi:map-marker-account
-                                tag: "{{ notification_tag }}"
-                                channel: Itinerary status
-                                sticky: true
-                                # Hack to retrieve notification service when dismissed
-                                confirmation: "{{ repeat.item }}"
-                                url: !input on_tap_link
-                                clickAction: !input on_tap_link
-                                alert_once: true
-                                timeout: "{{ remaining | int }}"
                                 chronometer: true
                                 when: "{{ arrival_timestamp | int }}"
                     - alias: If persistent notifications are still active
@@ -1113,6 +1120,34 @@ actions:
                           data:
                             message: "{{ message }}"
                             notification_id: "{{ persistent_id }}"
+                - alias: If the timer needs to be removed from the notification
+                  conditions: |-
+                    {{
+                      arrival_timestamp is not none
+                      and arrival_timestamp <= now() | as_timestamp
+                      and not timer_removed
+                    }}
+                  sequence:
+                    - alias: Get notification translation
+                      variables:
+                        message_id: "soon_arrived"
+                        message: *get_message
+                    - alias: Format the notification message
+                      variables:
+                        message: "{{ message.format(driver_name=driver_name) }}"
+                    - alias: Send soon arrived notification to each user
+                      repeat:
+                        for_each: "{{ active_notify_services }}"
+                        sequence:
+                          - action: "{{ repeat.item }}"
+                            data:
+                              message: "{{ message }}"
+                              data:
+                                <<: *notification_data
+                                notification_icon: mdi:map-marker-account
+                    - alias: Remember that the timer was removed
+                      variables:
+                        timer_removed: true
     else:
       - alias: Wait for user to leave vehicle
         wait_for_trigger:
