@@ -973,11 +973,18 @@ actions:
                 {% for tracker in persons %}
                   {% set original_entity = tracker %}
                   {% if states[tracker].domain == 'person' %}
-                    {% set tracker = state_attr(tracker, 'source') %}
+                    {% set trackers = state_attr(tracker, 'device_trackers') %}
+                  {% else %}
+                    {% set trackers = [tracker] %}
                   {% endif %}
                   {%
                     if tracker is none
-                    or not is_state_attr(tracker, 'source_type', 'gps')
+                    or (
+                      trackers
+                      | select('is_state_attr', 'source_type', 'gps')
+                      | list
+                      == []
+                    )
                   %}
                     {% set data.invalid = data.invalid + [original_entity] %}
                   {% endif %}
