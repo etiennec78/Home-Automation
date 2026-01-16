@@ -1172,9 +1172,8 @@ actions:
               error: |-
                 {{
                   wifi_devices
-                  | expand
-                  | selectattr('attributes.source_type', 'equalto', 'gps')
-                  | map(attribute='name')
+                  | select('is_state_attr', 'source_type', 'gps')
+                  | map('state_attr', 'friendly_name')
                   | list
                 }}
               message_id: "wifi_tracker_is_gps"
