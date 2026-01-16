@@ -549,6 +549,13 @@ blueprint:
               multiple: true
               filter:
                 domain: lock
+        unlatch_doors:
+          name: 🚪 Unlatch doors
+          description: |-
+            Open all doors with locks that support unlatching
+          default: false
+          selector:
+            boolean:
         dont_lock_if_people_remaining:
           name: 🏠 Do not lock if there are still people home
           description: |-
@@ -3066,13 +3073,32 @@ actions:
                                       | difference([person])
                                   }}
                             then:
-                              - alias: Unlock or lock all locks
+                              - alias: For each lock
                                 repeat:
                                   for_each: !input locks
                                   sequence:
-                                    - action: "lock.{{ prefix }}lock"
+                                    - alias: Unlock or lock the lock
+                                      action: "lock.{{ prefix }}lock"
                                       target:
                                         entity_id: "{{ repeat.item }}"
+                                    - alias: If the door should unlatch
+                                      if:
+                                        - condition: template
+                                          value_template: !input unlatch_doors
+                                        - condition: template
+                                          value_template: |-
+                                            {{
+                                              prefix == 'un'
+                                              and (
+                                                state_attr(repeat.item, 'supported_features')
+                                                | bitwise_and(1) == 1
+                                              )
+                                            }}
+                                      then:
+                                        - alias: Unlatch the door
+                                          action: lock.open
+                                          target:
+                                            entity_id: "{{ repeat.item }}"
                       - alias: Close all gates
                         repeat:
                           for_each: !input gate
