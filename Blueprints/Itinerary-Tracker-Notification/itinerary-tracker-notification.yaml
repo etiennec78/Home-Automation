@@ -723,9 +723,9 @@ actions:
       for_each: "{{ active_notify_services }}"
       sequence:
         - action: "{{ repeat.item }}"
-          data: &notification_data
+          data:
             message: "{{ message }}"
-            data:
+            data: &notification_data
               notification_icon: mdi:car
               tag: "{{ notification_tag }}"
               channel: Itinerary status
