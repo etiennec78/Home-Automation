@@ -1532,7 +1532,7 @@ actions:
                 value_template: &gate_open |-
                   {{
                     gate
-                    | select('is_state', ['off', 'closed', 'closing'])
+                    | select('is_state', ['on', 'open', 'opening'])
                     | list
                     != []
                   }}
