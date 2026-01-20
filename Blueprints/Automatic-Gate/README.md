@@ -29,7 +29,7 @@ Makes managing your gate while driving easier: You won't ever have to use your r
   * Customizable travel time refresh rate 🔁
   * Read notifications aloud on Android 🗣️
   * Multiple gate support ⛩️
-  * Open/Close with iBeacon 📡
+  * Open/Close with BLE trackers 📡
   * House locks support 🔐
   * Avoid opening when parked near house 🅿️
 
