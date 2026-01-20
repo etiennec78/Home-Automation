@@ -2667,6 +2667,11 @@ actions:
                 then:
                   - alias: Open each gate because driver is leaving
                     repeat: *open_gates
+          - alias: Set an empty trigger id
+            variables: &reset_trigger_id
+              wait:
+                trigger:
+                  id: "{{ none }}"
           - alias: If one of the gates is open
             if:
               - condition: template
@@ -2986,16 +2991,9 @@ actions:
               - alias: Update the last closed variable
                 variables:
                   update:
-                    status: "{{ none }}"
                     last_closed: "{{ now() | as_timestamp | int }}"
                     auto_closed: "{{ wait.trigger.id != 'closing_order' }}"
                   itinerary_value: "{{ dict(itinerary_value, **update) }}"
-              - alias: Save the last closed variable
-                action: input_text.set_value
-                target:
-                  entity_id: "{{ itinerary_sensor }}"
-                data:
-                  value: "{{ itinerary_value | to_json }}"
               - alias: If gate closing is enabled
                 if:
                   - condition: template
@@ -3078,7 +3076,7 @@ actions:
                           - condition: template
                             value_template: |-
                               {{
-                                closing_behavior in ['auto', 'off']
+                                closing_behavior == 'auto'
                                 and message_id is not none
                                 and message_id != 'arrived'
                               }}
@@ -3153,12 +3151,11 @@ actions:
                               action: lock.open
                               target:
                                 entity_id: "{{ repeat.item }}"
-            else:
-            - alias: Reset the itinerary status
-              variables:
-                update:
-                  status: "{{ none }}"
-                itinerary_value: "{{ dict(itinerary_value, **update) }}"
+          - alias: Reset the itinerary status
+            variables:
+              update:
+                status: "{{ none }}"
+              itinerary_value: "{{ dict(itinerary_value, **update) }}"
           - alias: Save the itinerary status
             action: input_text.set_value
             target:
@@ -3385,10 +3382,7 @@ actions:
                   value_template: "{{ 'ble' in open_when_connected_to }}"
               sequence:
                 - alias: Set an empty trigger id
-                  variables:
-                    wait:
-                      trigger:
-                        id: "{{ none }}"
+                  variables: *reset_trigger_id
                 - repeat:
                     while:
                       - alias: Still in the activation zone
