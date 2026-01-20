@@ -2645,14 +2645,10 @@ actions:
                                 - alias: Restore BLE devices
                                   sequence: *restore_ble
                                 - stop: Opening canceled
-                            - alias: Remove the notification sent by the timer/notif if no other notification will be sent
+                            - alias: If the opening behavior is set to notif or timer
                               conditions:
                                 - condition: template
-                                  value_template: |-
-                                    {{
-                                      opening_behavior in ['timer', 'notif']
-                                      and closing_behavior not in ['timer', 'notif']
-                                    }}
+                                  value_template: "{{ opening_behavior in ['timer', 'notif'] }}"
                               sequence:
                                 - alias: Remove opening notification
                                   action: "{{ notify_service }}"
@@ -2968,16 +2964,17 @@ actions:
                                   value_template: "{{ wait.trigger.id == 'vehicle_restarted' }}"
                               sequence:
                                 - stop: Letting the new instance take over
-          - alias: If itinerary started or departure gate closing notification was sent
+          - alias: If a notification needs to be cleared
             if:
               - condition: template
                 value_template: |-
                   {{
-                    (
+                    closing_behavior in ['timer', 'notif']
+                    or (
                       itinerary_mode == 'arrival'
                       and itinerary_started_notif
+                      and opening_behavior not in ['timer', 'notif']
                     )
-                    or closing_behavior in ['timer', 'notif']
                   }}
             then:
               - alias: Remove closing notification
