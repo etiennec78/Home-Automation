@@ -113,7 +113,7 @@ blueprint:
           name: ✈️ Travel time sensors
           description: |-
             Each **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#travel-time-sensors-%EF%B8%8F)** per person/trackers, monitoring their **time left before arrival**
-            *⚠️ Please set a [custom polling interval](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)*
+            *⚠️ Please set a [custom polling interval](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval) if using an external service (Waze, Maps, Here, ...)*
             *Note: Optional if open when connected to BLE is true*
           default: []
           selector:
@@ -121,7 +121,9 @@ blueprint:
               multiple: true
               filter:
                 domain: sensor
-                device_class: duration
+                device_class:
+                  - duration
+                  - timestamp
         notify_devices:
           name: 💬 Notify devices
           description: |-
@@ -3473,12 +3475,17 @@ actions:
                       - alias: Convert travel time to seconds
                         variables:
                           travel_time_duration: |-
-                            {% if (state_attr(travel_time_sensor, 'duration') != none) %}
+                            {% if state_attr(travel_time_sensor, 'duration') is none %}
                               {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
-                            {% elif (state_attr(travel_time_sensor, 'unit_of_measurement') == "min") %}
+                            {% elif is_state_attr(travel_time_sensor, 'unit_of_measurement', 'min') %}
                               {{ states(travel_time_sensor) | float * 60 }}
-                            {% elif (state_attr(travel_time_sensor, 'unit_of_measurement') == "s") %}
+                            {% elif is_state_attr(travel_time_sensor, 'unit_of_measurement', 's') %}
                               {{ states(travel_time_sensor) | float }}
+                            {% elif is_state_attr(travel_time_sensor, 'device_class', 'timestamp') %}
+                              {{
+                                states(travel_time_sensor) | as_timestamp
+                                - states[travel_time_sensor].last_updated | as_timestamp
+                              }}
                             {% else %}
                               unknown
                             {% endif %}
@@ -3500,6 +3507,9 @@ actions:
                               logger: blueprints.etiennec78.automatic_gate
                           - stop: Travel time integration not supported
                             error: true
+                      - alias: Only continue if the duration is positive
+                        condition: template
+                        value_template: "{{ travel_time_duration >= 0 }}"
                       - alias: Set the opening time
                         variables:
                           opening_time: |-
