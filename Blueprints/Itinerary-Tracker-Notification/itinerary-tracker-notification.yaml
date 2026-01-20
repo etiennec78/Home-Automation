@@ -146,15 +146,13 @@ blueprint:
         custom_translations:
           name: Custom translations
           description: |-
-            A **json** dictionary to change the default **notifications translations**
+            A **yaml** dictionary to change the default **notifications translations**
             *Note : You can find the translation keys in the strings['en'] variable in the code or in your traces*
-          default: |-
-            {
-              "message": {}
-            }
+          default:
+            title: {}
+            message: {}
           selector:
-            text:
-              multiline: true
+            object:
         notif_refresh_rate_ftn:
           name: 🔁 Notification refresh rate function
           description: |-
@@ -306,10 +304,6 @@ variables:
   nearly_arrived_sent: false
   last_arrival_timestamp: 0
   blueprint_name: "{{ state_attr(this.entity_id, 'friendly_name') }}"
-  custom_translations_json: "{{ custom_translations | from_json(none) }}"
-  default_custom_translations:
-    title: {}
-    message: {}
   strings:
     en:
       title:
@@ -324,12 +318,13 @@ variables:
         unsupported_tt_integration: "Your travel time integration is not supported !"
         valid_config: "Your configuration seems valid"
         more_info: "More info"
-        invalid_translations: "Your custom translations are not valid (#1)"
+        invalid_translations: "Your custom translations are not valid. Check the following keys: '{data}'. (#1)"
         invalid_per_person_sensors: "You have not entered a consistent number of sensors in the per person sensor inputs (#11)"
         invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service (#16)"
         per_person_sensors_mismatch: "These persons: '{data}' appear to have mixed up per person sensors (#12)"
         no_notification_method: "You have not entered any method for receiving notifications (#17)"
         night_mode_missing_bound: "A bound for the speakers' night mode schedule is missing (#18)"
+        deprecated_translations: "Custom translations now use a yaml dictionnary instead of json. Please update your old config. (#21)"
     fr:
       title:
         valid_config: "{{blueprint_name}}: Configuration valide 🛠️✅"
@@ -343,12 +338,13 @@ variables:
         unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
         valid_config: "Votre configuration semble valide"
         more_info: "Plus d'infos"
-        invalid_translations: "Vos traductions personnalisées ne sont pas valides (#1)"
+        invalid_translations: "Vos traductions personnalisées ne sont pas valides. Vérifiez les valeurs suivantes: '{data}'. (#1)"
         invalid_per_person_sensors: "Vous n'avez pas entré le bon nombre de capteurs dans les champs de capteurs par personne (#11)"
         invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS (#16)"
         per_person_sensors_mismatch: "Ces personnes: '{data}' semblent avoir des capteurs par personne mélangés (#12)"
         no_notification_method: "Vous n'avez entré aucune méthode pour recevoir les notifications (#17)"
         night_mode_missing_bound: "Il manque une borne des horaires du mode nuit des enceintes (#18)"
+        deprecated_translations: "Les traductions personnalisés utilisent maintenant un dictionnaire yaml au lieu de json. Mettez à jour votre configuration svp. (#21)"
 
 triggers:
   - trigger: state
@@ -406,17 +402,17 @@ actions:
   - alias: Initialize variables for the error checker
     variables:
       messages: []
-      custom_translations_error: "{{ custom_translations_json is none }}"
+      custom_translations_error: "{{ custom_translations is not mapping }}"
       successfull_check: false
       error_level: 0
-  - alias: If custom translations failed to be parsed as json
+  - alias: If the custom translations is not a mapping
     if:
       - condition: template
         value_template: "{{ custom_translations_error }}"
     then:
-      - alias: Reset custom translations
+      - alias: Reset the custom translations
         variables:
-          custom_translations_json: "{{ default_custom_translations }}"
+          custom_translations: {}
   - alias: If the config checker should run checks
     if:
       - condition: or
@@ -439,7 +435,23 @@ actions:
         repeat:
           for_each:
             - alias: Check custom translations
-              error: "{{ custom_translations_error }}"
+              error: |-
+                {% set data = namespace(invalid=[]) %}
+                {% for key, sub_items in custom_translations.items() %}
+                  {% if key not in strings['en'] %}
+                    {% set data.invalid = data.invalid + [key] %}
+                  {% else %}
+                    {% for subkey, value in sub_items.items() %}
+                      {%
+                        if value is not string
+                        or subkey not in strings['en'][key]
+                      %}
+                        {% set data.invalid = data.invalid + [subkey] %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                {% endfor %}
+                {{ data.invalid }}
               message_id: "invalid_translations"
               level: 1
             - alias: Check that all per person sensors have been entered
@@ -535,6 +547,10 @@ actions:
                 }}
               message_id: "night_mode_missing_bound"
               level: 1
+            - alias: Check custom translations depreciation
+              error: "{{ custom_translations_error }}"
+              message_id: "deprecated_translations"
+              level: 0
           sequence:
             - alias: If a check failed
               if:
@@ -557,10 +573,10 @@ actions:
                     message: &get_message |-
                       {# Custom translation #}
                       {%
-                        if 'message' in custom_translations_json
-                        and message_id in custom_translations_json['message']
+                        if 'message' in custom_translations
+                        and message_id in custom_translations['message']
                       %}
-                        {{ custom_translations_json['message'][message_id] }}
+                        {{ custom_translations['message'][message_id] }}
 
                       {# Selected language #}
                       {% elif message_id in strings[language]['message'] %}
@@ -608,10 +624,10 @@ actions:
                   title: &get_title |-
                     {# Custom translation #}
                     {%
-                      if 'title' in custom_translations_json
-                      and title_id in custom_translations_json['title']
+                      if 'title' in custom_translations
+                      and title_id in custom_translations['title']
                     %}
-                      {{ custom_translations_json['title'][title_id] }}
+                      {{ custom_translations['title'][title_id] }}
 
                     {# Selected language #}
                     {% elif title_id in strings[language]['title'] %}
@@ -883,7 +899,7 @@ actions:
               timeout:
                 # Wait for the end of the cooldown, or for the nearly arrived TTS, or indefinitely
                 seconds: |-
-                  {% set values = [43200] %}
+                  {% set values = [2147483647] %}
 
                   {# End of cooldown #}
                   {% if next_refresh > now() | as_timestamp %}

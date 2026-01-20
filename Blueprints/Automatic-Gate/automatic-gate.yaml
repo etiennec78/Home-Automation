@@ -385,17 +385,14 @@ blueprint:
         custom_translations:
           name: Custom translations
           description: |-
-            A **json** dictionary to change the default **notifications translations**
+            A **yaml** dictionary to change the default **notifications translations**
             *Note : You can find the translation keys in the strings['en'] variable in the code or in your traces*
-          default: |-
-            {
-              "title": {},
-              "message": {},
-              "button": {}
-            }
+          default:
+            title: {}
+            message: {}
+            button: {}
           selector:
-            text:
-              multiline: true
+            object:
         itinerary_started_notif:
           name: 🏁 Itinerary started notification
           description: Whether or not to send a notification informing the user that his itinerary has been started
@@ -646,11 +643,6 @@ variables:
     quick_triggers: 0
     last_closed: 0
     auto_closed: false
-  default_custom_translations:
-    title: {}
-    message: {}
-    button: {}
-  custom_translations_json: "{{ custom_translations | from_json(none) }}"
   timeouts:
     closing_suggestion: !input suggest_closing_after
     safety_delay: "{{ safety_delay * 60 }}"
@@ -709,7 +701,7 @@ variables:
         too_close: "You have started driving too close to the gate zone"
         valid_config: "Your configuration seems valid"
         more_info: "More info"
-        invalid_translations: "Your custom translations are not valid (#1)"
+        invalid_translations: "Your custom translations are not valid. Check the following keys: '{data}'. (#1)"
         missing_ble_entities: "You have not entered any BLE scanners (#2)"
         ble_not_used: "You have entered these BLE scanners: '{data}' but are not using them (#3)"
         missing_wifi_trackers: "You have not entered any Wi-Fi trackers (#4)"
@@ -725,6 +717,7 @@ variables:
         wifi_tracker_is_gps: "These trackers: '{data}' are GPS-based, not router-based (#14)"
         invalid_ibeacon_transmitter: "These iBeacon transmitters: '{data}' are invalid (#19)"
         no_compatible_gps_tracker: "These persons cannot be tracked by GPS: '{data}' because they do not have GPS trackers, or they come from a different mobile app than the notification device (#20)"
+        deprecated_translations: "Custom translations now use a yaml dictionnary instead of json. Please update your old config. (#21)"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -775,7 +768,7 @@ variables:
         too_close: "Vous avez démarré trop près de la zone du portail"
         valid_config: "Votre configuration semble valide"
         more_info: "Plus d'infos"
-        invalid_translations: "Vos traductions personnalisées ne sont pas valides (#1)"
+        invalid_translations: "Vos traductions personnalisées ne sont pas valides. Vérifiez les valeurs suivantes: '{data}'
         missing_ble_entities: "Vous n'avez pas entré de scanner BLE (#2)"
         ble_not_used: "Vous avez entré ces scanners BLE: '{data}' mais ne les utilisez pas (#3)"
         missing_wifi_trackers: "Vous n'avez pas entré de traceurs Wi-Fi (#4)"
@@ -791,6 +784,7 @@ variables:
         wifi_tracker_is_gps: "Ces traceurs: '{data}' sont de type GPS au lieu de Routeur (#14)"
         invalid_ibeacon_transmitter: "Ces transmetteurs iBeacon: '{data}' sont invalides (#19)"
         no_compatible_gps_tracker: "Ces personnes ne pourront pas être attendue en GPS: '{data}' car elle n'ont pas de traceurs gps, ou ils proviennent d'une application différente de celle de l'appareil de notification (#20)"
+        deprecated_translations: "Les traductions personnalisés utilisent maintenant un dictionnaire yaml au lieu de json. Mettez à jour votre configuration svp. (#21)"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -870,17 +864,17 @@ actions:
   - alias: Initialize variables for the error checker
     variables:
       messages: []
-      custom_translations_error: "{{ custom_translations_json is none }}"
+      custom_translations_error: "{{ custom_translations is not mapping }}"
       successful_check: false
       error_level: 0
-  - alias: If custom translations failed to be parsed as json
+  - alias: If the custom translations is not a mapping
     if:
       - condition: template
         value_template: "{{ custom_translations_error }}"
     then:
-      - alias: Reset custom translations
+      - alias: Reset the custom translations
         variables:
-          custom_translations_json: "{{ default_custom_translations }}"
+          custom_translations: {}
 
     ##################
     # ERROR CHECKING #
@@ -907,7 +901,23 @@ actions:
         repeat:
           for_each:
             - alias: Check custom translations
-              error: "{{ custom_translations_error }}"
+              error: |-
+                {% set data = namespace(invalid=[]) %}
+                {% for key, sub_items in custom_translations.items() %}
+                  {% if key not in strings['en'] %}
+                    {% set data.invalid = data.invalid + [key] %}
+                  {% else %}
+                    {% for subkey, value in sub_items.items() %}
+                      {%
+                        if value is not string
+                        or subkey not in strings['en'][key]
+                      %}
+                        {% set data.invalid = data.invalid + [subkey] %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                {% endfor %}
+                {{ data.invalid }}
               message_id: "invalid_translations"
               level: 1
             - alias: Check missing ble sensors
@@ -1241,6 +1251,10 @@ actions:
                 {% endif %}
               message_id: "no_compatible_gps_tracker"
               level: 1
+            - alias: Check custom translations depreciation
+              error: "{{ custom_translations_error }}"
+              message_id: "deprecated_translations"
+              level: 0
           sequence:
             - alias: If a check failed
               if:
@@ -1263,10 +1277,10 @@ actions:
                     message: &get_message |-
                       {# Custom translation #}
                       {%
-                        if 'message' in custom_translations_json
-                        and message_id in custom_translations_json['message']
+                        if 'message' in custom_translations
+                        and message_id in custom_translations['message']
                       %}
-                        {{ custom_translations_json['message'][message_id] }}
+                        {{ custom_translations['message'][message_id] }}
 
                       {# Selected language #}
                       {% elif message_id in strings[language]['message'] %}
@@ -1314,12 +1328,12 @@ actions:
                   title: &get_title |-
                     {# Custom translation #}
                     {%
-                      if 'title' in custom_translations_json
-                      and title_id in custom_translations_json['title']
+                      if 'title' in custom_translations
+                      and title_id in custom_translations['title']
                     %}
                       {%
                         set title_string = (
-                          custom_translations_json['title'][title_id]
+                          custom_translations['title'][title_id]
                         )
                       %}
 
@@ -1549,7 +1563,6 @@ actions:
                             name: "default"
                             critical: 1
                         tag: itinerary-status
-                        timeout: 300
                   - sequence: *tts
               - stop: Blueprint triggered closing on the user
                 error: true
@@ -2425,10 +2438,10 @@ actions:
                                 {% for button_id in button_ids %}
                                   {# Custom translation #}
                                   {%
-                                    if 'button' in custom_translations_json
-                                    and button_id in custom_translations_json['button']
+                                    if 'button' in custom_translations
+                                    and button_id in custom_translations['button']
                                   %}
-                                    {% set translation = custom_translations_json['button'][button_id] %}
+                                    {% set translation = custom_translations['button'][button_id] %}
 
                                   {# Selected language #}
                                   {% elif button_id in strings[language]['button'] %}
@@ -2453,7 +2466,6 @@ actions:
                                 notification_icon: mdi:lock-question
                                 sticky: true
                                 persistent: true
-                                timeout: ""
                                 actions:
                                   - action: "{{ opening_order_id }}"
                                     title: "{{ buttons[0] }}"
@@ -2642,6 +2654,17 @@ actions:
                       - condition: template
                         value_template: "{{ wait.trigger.id != 'manual' }}"
                     then:
+                      - alias: Reset the itinerary status
+                        variables:
+                          update:
+                            status: "{{ none }}"
+                          itinerary_value: "{{ dict(itinerary_value, **update) }}"
+                      - alias: Save the itinerary status
+                        action: input_text.set_value
+                        target:
+                          entity_id: "{{ itinerary_sensor }}"
+                        data:
+                          value: "{{ itinerary_value | to_json }}"
                       - stop: Closing canceled
           - alias: If BLE devices are needed to close the gate
             if:
@@ -2914,7 +2937,6 @@ actions:
                                           notification_icon: mdi:lock-question
                                           sticky: true
                                           persistent: true
-                                          timeout: ""
                                           actions:
                                             - action: "{{ closing_order_id }}"
                                               title: "{{ buttons[0] }}"
@@ -2954,17 +2976,6 @@ actions:
               - alias: Remove closing notification
                 action: "{{ notify_service }}"
                 data: *clear_notification
-          - alias: Reset the itinerary status
-            variables:
-              update:
-                status: "{{ none }}"
-              itinerary_value: "{{ dict(itinerary_value, **update) }}"
-          - alias: Save the itinerary status
-            action: input_text.set_value
-            target:
-              entity_id: "{{ itinerary_sensor }}"
-            data:
-              value: "{{ itinerary_value | to_json }}"
           - alias: If gate not closed manually
             if:
               - condition: template
@@ -2973,6 +2984,7 @@ actions:
               - alias: Update the last closed variable
                 variables:
                   update:
+                    status: "{{ none }}"
                     last_closed: "{{ now() | as_timestamp | int }}"
                     auto_closed: "{{ wait.trigger.id != 'closing_order' }}"
                   itinerary_value: "{{ dict(itinerary_value, **update) }}"
@@ -3047,7 +3059,6 @@ actions:
                               data:
                                 <<: *notification_data
                                 notification_icon: mdi:sleep
-                                timeout: ""
                           - sequence: *tts
                       - alias: Wait for gate closed
                         wait_for_trigger:
@@ -3110,6 +3121,18 @@ actions:
                                 {% endif %}
                               target:
                                 entity_id: "{{ repeat.item }}"
+            else:
+            - alias: Reset the itinerary status
+              variables:
+                update:
+                  status: "{{ none }}"
+                itinerary_value: "{{ dict(itinerary_value, **update) }}"
+          - alias: Save the itinerary status
+            action: input_text.set_value
+            target:
+              entity_id: "{{ itinerary_sensor }}"
+            data:
+              value: "{{ itinerary_value | to_json }}"
       - alias: If the driver is not driving anyomore
         if:
           - condition: template
@@ -3203,7 +3226,6 @@ actions:
           data:
             <<: *notification_data
             notification_icon: mdi:map-check
-            timeout: ""
       - sequence: *tts
   - alias: Repeat while driver still driving
     repeat:
@@ -3563,11 +3585,11 @@ actions:
             itinerary_mode: "arrival"
             opening_message: "soon_arrived"
             timeout_messages: |-
-              dict(
-                timeout_messages, **{
+              {{
+                timeout_messages | combine({
                   'safety_delay': 'did_not_arrive'
-                }
-              )
+                })
+              }}
         - alias: Open and close gate by following behaviors set by the user
           sequence: *open_close_behavior
         - alias: Stop whole script as successful
