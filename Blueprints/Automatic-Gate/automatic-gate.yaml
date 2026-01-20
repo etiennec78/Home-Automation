@@ -3068,19 +3068,14 @@ actions:
                                 {% endif %}
                               target:
                                 entity_id: "{{ repeat.item }}"
-          - alias: If the locks should be triggered
+          - alias: If the driver is leaving or has arrived home
             if:
-              - condition: template
-                value_template: |-
-                  {{
-                    itinerary_mode == 'departure'
-                    or wait.remaining == 0 and timeout_type == 'timer'
-                    or wait.trigger.id in [
-                      'manual',
-                      'vehicle_stopped',
-                      'closing_order'
-                    ]
-                  }}
+              - condition: or
+                conditions:
+                  - condition: template
+                    value_template: "{{ itinerary_mode == 'departure' }}"
+                  - condition: template
+                    value_template: *activation_zone_in_condition
             then:
               - alias: Set lock action prefix
                 variables:
