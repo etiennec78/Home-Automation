@@ -109,16 +109,13 @@ blueprint:
         custom_translations:
           name: Custom translations
           description: |-
-            A **json** dictionary to change the default **notifications translations**
+            A **yaml** dictionary to change the default **notifications translations**
             *Note : You can find the translation keys in the strings['en'] variable in the code or in your traces*
-          default: |-
-            {
-              "title": {},
-              "message": {}
-            }
+          default:
+            title: {}
+            message: {}
           selector:
-            text:
-              multiline: true
+            object:
         car_visible:
           name: 🚗 Visible in Android Auto/CarPlay
           description: Show notifications on your **car's dashboard**
@@ -256,11 +253,6 @@ variables:
   car_visible: !input car_visible
   language: !input language
   custom_translations: !input custom_translations
-  default_custom_translations:
-    title: {}
-    message: {}
-    button: {}
-  custom_translations_json: "{{ custom_translations | from_json(none) }}"
   notification_tag: "gate-{{ notification_type }}"
   config_checker_tag: "{{ 'config-checker-' ~ this.attributes.id }}"
   closing_order_id: "{{ 'closing_order_' ~ this.context.id }}"
@@ -286,11 +278,12 @@ variables:
         something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
         valid_config: "Your configuration seems valid"
         more_info: "More info"
-        invalid_translations: "Your custom translations are not valid (#1)"
+        invalid_translations: "Your custom translations are not valid. Check the following keys: '{data}'. (#1)"
         missing_error_sensor: "You have not entered the sensor containing gate error codes (#15)"
         invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service (#16)"
         no_notification_method: "You have not entered any method for receiving notifications (#17)"
         night_mode_missing_bound: "A bound for the speakers' night mode schedule is missing (#18)"
+        deprecated_translations: "Custom translations now use a yaml dictionnary instead of json. Please update your old config. (#21)"
       button:
         close: Close 🔐
     fr:
@@ -313,11 +306,12 @@ variables:
         something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
         valid_config: "Votre configuration semble valide"
         more_info: "Plus d'infos"
-        invalid_translations: "Vos traductions personnalisées ne sont pas valides (#1)"
+        invalid_translations: "Vos traductions personnalisées ne sont pas valides. Vérifiez les valeurs suivantes: '{data}'. (#1)"
         missing_error_sensor: "Vous n'avez pas entré le capteur contenant les codes d'erreur du portail (#15)"
         invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS (#16)"
         no_notification_method: "Vous n'avez entré aucune méthode pour recevoir les notifications (#17)"
         night_mode_missing_bound: "Il manque une borne des horaires du mode nuit des enceintes (#18)"
+        deprecated_translations: "Les traductions personnalisés utilisent maintenant un dictionnaire yaml au lieu de json. Mettez à jour votre configuration svp. (#21)"
       button:
         close: Refermer 🔐
 
@@ -396,17 +390,17 @@ actions:
   - alias: Initialize variables for the error checker
     variables:
       messages: []
-      custom_translations_error: "{{ custom_translations_json is none }}"
+      custom_translations_error: "{{ custom_translations is not mapping }}"
       successfull_check: false
       error_level: 0
-  - alias: If custom translations failed to be parsed as json
+  - alias: If the custom translations is not a mapping
     if:
       - condition: template
         value_template: "{{ custom_translations_error }}"
     then:
-      - alias: Reset custom translations
+      - alias: Reset the custom translations
         variables:
-          custom_translations_json: "{{ default_custom_translations }}"
+          custom_translations: {}
   - alias: If the config checker should run checks
     if:
       - condition: or
@@ -429,19 +423,35 @@ actions:
         repeat:
           for_each:
             - alias: Check custom translations
-              condition: "{{ custom_translations_error }}"
+              error: |-
+                {% set data = namespace(invalid=[]) %}
+                {% for key, sub_items in custom_translations.items() %}
+                  {% if key not in strings['en'] %}
+                    {% set data.invalid = data.invalid + [key] %}
+                  {% else %}
+                    {% for subkey, value in sub_items.items() %}
+                      {%
+                        if value is not string
+                        or subkey not in strings['en'][key]
+                      %}
+                        {% set data.invalid = data.invalid + [subkey] %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                {% endfor %}
+                {{ data.invalid }}
               message_id: "invalid_translations"
               level: 1
             - alias: Check gate error sensor presence
-              condition: "{{ notification_type == 'error' and not error_message_sensor }}"
+              error: "{{ notification_type == 'error' and not error_message_sensor }}"
               message_id: "missing_error_sensor"
               level: 2
             - alias: Check for tts and media player sensors presence
-              condition: "{{ (speaker_tts_devices | length < 1) != (speaker_tts_service == '') }}"
+              error: "{{ (speaker_tts_devices | length < 1) != (speaker_tts_service == '') }}"
               message_id: "invalid_speakers"
               level: 1
             - alias: Check that there is a way to notify the user
-              condition: |-
+              error: |-
                 {{
                   notify_devices | length == 0
                   and speaker_tts_devices | length == 0
@@ -450,18 +460,24 @@ actions:
               message_id: "no_notification_method"
               level: 2
             - alias: Check that both or neither night time end and start have been entered
-              condition: |-
+              error: |-
                 {{
                   (tts_volume_night_time_start == '')
                   | bitwise_xor(tts_volume_night_time_end == '')
                 }}
               message_id: "night_mode_missing_bound"
               level: 1
+            - alias: Check custom translations depreciation
+              error: "{{ custom_translations_error }}"
+              message_id: "deprecated_translations"
+              level: 0
           sequence:
             - alias: If a check failed
               if:
                 - condition: template
-                  value_template: "{{ repeat.item.condition }}"
+                  value_template: |-
+                    {% set error = repeat.item.error %}
+                    {{ error != [] if error is list else error }}
               then:
                 - alias: If the error level is higher than the current highest
                   if:
@@ -477,37 +493,36 @@ actions:
                     message: &get_message |-
                       {# Custom translation #}
                       {%
-                        if 'message' in custom_translations_json
-                        and message_id in custom_translations_json['message']
+                        if 'message' in custom_translations
+                        and message_id in custom_translations['message']
                       %}
-                        {%
-                          set message_string = (
-                            custom_translations_json['message'][message_id]
-                          )
-                        %}
+                        {{ custom_translations['message'][message_id] }}
 
                       {# Selected language #}
                       {% elif message_id in strings[language]['message'] %}
-                        {%
-                          set message_string = (
-                            strings[language]['message'][message_id]
-                          )
-                        %}
+                        {{ strings[language]['message'][message_id] }}
 
                       {# Fallback to english #}
                       {% else %}
-                        {%
-                          set message_string = (
-                            strings['en']['message'][message_id]
-                          )
-                        %}
+                        {{ strings['en']['message'][message_id] }}
                       {% endif %}
-                      {{
-                        message_string.format(
-                          notification_delay=notification_delay,
-                          error=error
-                        )
-                      }}
+                - alias: If the error variable contains a list
+                  if:
+                    - condition: template
+                      value_template: "{{ repeat.item.error is list }}"
+                  then:
+                    - alias: Format the string with error data
+                      variables:
+                        message: |-
+                          {{
+                            message.format(
+                              data=(
+                                ', '.join(repeat.item.error)
+                              )
+                            )
+                          }}
+                - alias: Append the error message to the list
+                  variables:
                     messages: "{{ messages | union([message]) }}"
       - alias: If the config is valid
         if:
@@ -529,10 +544,10 @@ actions:
                   title: &get_title |-
                     {# Custom translation #}
                     {%
-                      if 'title' in custom_translations_json
-                      and title_id in custom_translations_json['title']
+                      if 'title' in custom_translations
+                      and title_id in custom_translations['title']
                     %}
-                      {{ custom_translations_json['title'][title_id] }}
+                      {{ custom_translations['title'][title_id] }}
 
                     {# Selected language #}
                     {% elif title_id in strings[language]['title'] %}
@@ -626,10 +641,10 @@ actions:
           button_text: |-
             {# Custom translation #}
             {%
-              if 'button' in custom_translations_json
-              and button_id in custom_translations_json['button']
+              if 'button' in custom_translations
+              and button_id in custom_translations['button']
             %}
-              {{ custom_translations_json['button'][button_id] }}
+              {{ custom_translations['button'][button_id] }}
 
             {# Selected language #}
             {% elif button_id in strings[language]['button'] %}
@@ -656,7 +671,6 @@ actions:
                   sticky: true
                   persistent: true
                   tag: "{{ notification_tag }}"
-                  timeout: 43200
                   alert_once: true
                   actions:
                     - action: "{{ closing_order_id }}"
@@ -691,6 +705,14 @@ actions:
         variables: *get_translation
       - alias: Get button translation
         variables: *get_translation_button
+      - alias: If the notification type is 'error'
+        if:
+          - condition: template
+            value_template: "{{ notification_type == 'error' }}"
+        then:
+          - alias: Format the notification message
+            variables:
+              message: "{{ message.format(error=error) }}"
       - alias: Notify each user
         repeat:
           for_each: "{{ notify_services }}"
@@ -717,7 +739,7 @@ actions:
                     {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
                       30
                     {% else %}
-                      43200
+                      2147483647
                     {% endif %}
                   chronometer: "{{ notification_delay != 0 }}"
                   when: "{{ (utcnow() - timedelta(minutes=notification_delay)) | as_timestamp | int }}"
@@ -884,12 +906,12 @@ actions:
         action: "{{ closing_order_id }}"
       enabled: "{{ notification_type == 'open' }}"
 
-    # Don't wait more than 12h, or remove notification after 30s in case of an error or gate closing without position tracking
+    # Remove notification after 30s in case of an error or gate closing without position tracking
     timeout: |-
       {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
         30
       {% else %}
-        43200
+        2147483647
       {% endif %}
 
   - alias: Stop if timer ran out but problem still present

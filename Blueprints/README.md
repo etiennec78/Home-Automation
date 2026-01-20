@@ -34,19 +34,19 @@ Refer to the table below to fix the errors
 
   | Error code | Error | Fix |
   | :---: | :--- | :--- |
-  | #1 | Your custom translations are not valid | Check that your custom translations input contains a [valid json dictionary](https://jsonformatter.curiousconcept.com/) and that your strings are located in 'message', 'title' or 'button' keys, with a subkey for each message id |
-  | #2 | You have not entered any iBeacon scanners | Either untick all iBeacon opening/closing inputs and remove all iBeacon related sensors in the 'Presence sensors' category, or add some iBeacon tracker entities |
-  | #3 | You have entered these iBeacon scanners: '...' but are not using them | Either tick some iBeacon opening/closing inputs, or remove all iBeacon related sensors in the 'Presence sensors' category |
+  | #1 | Your custom translations are not valid. Check the following keys: '...'. | Check that your custom translations input contains a dictionnary with the same keys and subkeys as in the strings\['en'\] variable and with strings as values |
+  | #2 | You have not entered any BLE scanners | Either untick all Bluetooth LE opening/closing inputs and remove all BLE related sensors in the 'Presence sensors' category, or add some BLE tracker entities |
+  | #3 | You have entered these BLE scanners: '...' but are not using them | Either tick some Bluetooth LE opening/closing inputs, or remove all BLE related sensors in the 'Presence sensors' category |
   | #4 | You have not entered any Wi-Fi trackers | Either untick the Wi-Fi opening input in the 'Presence sensors' category, or add some Wi-Fi trackers |
   | #5 | You have entered these Wi-Fi trackers: '...' but are not using them | Either tick the Wi-Fi opening input, or remove your Wi-Fi trackers in the 'Presence sensors' category |
   | #6 | These trackers/persons: '...' do not support GPS tracking | Replace Wi-Fi device trackers by GPS trackers in the 'Persons' input |
-  | #7 | These iBeacon trackers: '...' are currently not reporting an 'unknown' state | Check that these iBeacon trackers go back to their 'unknown' state after losing signal for some seconds |
-  | #8 | You do not have any way to detect your arrival | Please add a travel time sensor or use an iBeacon for opening on arrival |
-  | #9 | You are using several methods to detect your arrival | Either untick 'Open on arrival when connected to: iBeacon' or remove your travel time sensors |
+  | #7 | These BLE trackers: '...' are currently not reporting an 'unknown' state | Check that these BLE trackers go back to their 'unknown' state after losing signal for some seconds |
+  | #8 | You do not have any way to detect your arrival | Please add a travel time sensor or use an Bluetooth LE tracker for opening on arrival |
+  | #9 | You are using several methods to detect your arrival | Either untick 'Open on arrival when connected to: Bluetooth LE' or remove your travel time sensors |
   | #10 | These itinerary sensors: '...' have a maximum length of less than 255 | Read [this part](https://github.com/etiennec78/Home-Automation/blob/dev/sensors.md#itinerary-sensors-%EF%B8%8F) of the wiki to change the maximum length of these helpers |
   | #11 | You have not entered a consistent number of sensors in the per person sensor inputs | Some fields must have exactly (or at most) one sensor per person. Make sure you comply with these conditions. |
   | #12 | These persons: '...' appear to have mixed up per person sensors | Each person must have all their 'per person sensors' at the same index |
-  | #13 | These iBeacon trackers: '...' come from a different device than the others | Replace the wrong iBeacon tracker entities with ones near your gate |
+  | #13 | You are using area BLE trackers: '...', but your gate has not been placed in an area | Go to your [devices dashboard](https://my.home-assistant.io/redirect/devices/), then select your gate, and press the pen in the upper-right corner. Finally, add your gate to its area. |
   | #14 | These trackers: '...' are GPS-based, not router-based | Replace GPS device trackers by Wi-Fi trackers in the 'Wi-Fi devices' input |
   | #15 | You have not entered the sensor containing gate error codes | The 'error' notification type of this blueprint relies on a sensor providing error codes. Please ensure you have entered this sensor in the 'Error Message Sensor' input |
   | #16 | You need at least a speaker and a TTS service | Either remove your speakers and TTS service, or fill both of these inputs |
@@ -54,5 +54,6 @@ Refer to the table below to fix the errors
   | #18 | A bound for the speakers' night mode schedule is missing | Either fill both night start and night end inputs, or clear both |
   | #19 | These iBeacon transmitters: '...' are invalid | Please check that the iBeacon transmitter entities mentionned come from the android mobile app, and are transmitters, not monitors. Also, these sensors are not needed on iOS |
   | #20 | These persons cannot be tracked by GPS: '...' because they do not have GPS trackers, or they come from a different mobile app than the notification device | Either untick the 'gps' in the 'Confirm the location on startup' input, or check that your person entity has at least one gps device tracker, and that if it is provided by a mobile app, ensure that it is the same one as your notification device |
+  | #21 | Custom translations now use a yaml dictionnary instead of json. Please update your old config. | If you want to migrate your old translations, simply remove the '\|-' and save your automation |
   
 </details>

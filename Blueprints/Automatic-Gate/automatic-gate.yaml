@@ -31,7 +31,7 @@ blueprint:
       * Customizable travel time refresh rate 🔁
       * Read notifications aloud on Android 🗣️
       * Multiple gate support ⛩️
-      * Open/Close with iBeacon 📡
+      * Open/Close with BLE trackers 📡
       * House locks support 🔐
       * Avoid opening when parked near house 🅿️
 
@@ -387,17 +387,14 @@ blueprint:
         custom_translations:
           name: Custom translations
           description: |-
-            A **json** dictionary to change the default **notifications translations**
+            A **yaml** dictionary to change the default **notifications translations**
             *Note : You can find the translation keys in the strings['en'] variable in the code or in your traces*
-          default: |-
-            {
-              "title": {},
-              "message": {},
-              "button": {}
-            }
+          default:
+            title: {}
+            message: {}
+            button: {}
           selector:
-            text:
-              multiline: true
+            object:
         itinerary_started_notif:
           name: 🏁 Itinerary started notification
           description: Whether or not to send a notification informing the user that his itinerary has been started
@@ -439,23 +436,42 @@ blueprint:
             entity:
               multiple: true
               filter:
-                domain: device_tracker
+                - domain: sensor
+                  device_class:
+                    - signal_strength
+                    - distance
+                - domain: device_tracker
         ble_entities:
-          name: 🔎 iBeacon tracker entities
+          name: 🔎 BLE tracker entities
           description: |-
-            Each **[BLE rssi tracker entity](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-entities-)** to monitor your distance from the gate
+            Each **[BLE tracker entity](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-entities-)** to monitor your distance from the gate
             *Note : Please place user sensors in the same order*
           default: []
           selector:
             entity:
               multiple: true
               filter:
-                domain: sensor
-                device_class: signal_strength
+                - domain: sensor
+                  device_class:
+                    - signal_strength
+                    - distance
+                    - bermuda__custom_device_class
+                - domain: device_tracker
+        ble_away_timeout:
+          name: ⌛ BLE away timeout
+          description: |-
+            Timeout period without receiving updates after which the BLE device will be considered away
+            *Note : Some trackers have a built-in away timeout. In this case, this value can be set to 0.*
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 300
+              unit_of_measurement: seconds
         ble_transmitter_entities:
           name: 📡 iBeacon transmitter entities
           description: |-
-            Each **[BLE transmitter entity](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-transmitter-)** to restore previous iBeacon transmitter power settings when iBeacon is not needed anymore
+            Each **[iBeacon transmitter entity](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-transmitter-)** to restore previous iBeacon transmitter power settings when iBeacon is not needed anymore
             *Notes : Let empty if you use iOS, or only use iBeacon for this automation*
           default: []
           selector:
@@ -466,10 +482,10 @@ blueprint:
                 domain: sensor
                 device_class: enum
         ble_scanner_switch:
-          name: ⏯️ iBeacon scanner activator switch
+          name: ⏯️ BLE scanner activator switch
           description: |-
-            The **[switch](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-scanner-switch-)** to automatically **start and stop iBeacon scanning** when needed
-            *Note : Leave empty if you want your iBeacon scanner to be always on*
+            The **[switch](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-scanner-switch-)** to automatically **start and stop BLE scanning** when needed
+            *Note : Leave empty if you want your BLE scanner to be always on*
           default: ""
           selector:
             entity:
@@ -492,7 +508,7 @@ blueprint:
                   value: gps
                 - label: Wi-Fi (departure)
                   value: wifi
-                - label: iBeacon (departure)
+                - label: Bluetooth LE (departure)
                   value: ble
         only_open_near_timeout:
           name: ⌛ Location confirmation timeout
@@ -514,25 +530,25 @@ blueprint:
               unit_of_measurement: seconds
         close_when_disconnected_from:
           name: 📡 Close on departure when disconnected from
-          description: Close the gate if driver's iBeacon is out of range
+          description: Close the gate if driver's BLE device is out of range
           default: []
           selector:
             select:
               multiple: true
               options:
-                - label: iBeacon
+                - label: Bluetooth LE
                   value: ble
         open_when_connected_to:
           name: 📡 Open on arrival when connected to
           description: |-
-            Open the gate when driver's iBeacon is reachable
+            Open the gate when driver's BLE is reachable
             Enabling this will remove the need of a travel time sensor
           default: []
           selector:
             select:
               multiple: true
               options:
-                - label: iBeacon
+                - label: Bluetooth LE
                   value: ble
 
     locks:
@@ -581,6 +597,7 @@ blueprint:
 variables:
   gate: !input gate
   gate_location: !input gate_location
+  gate_areas: "{{ gate | map('area_id') | difference([none]) | list }}"
   lead_time: !input lead_time
   security_notif_override: !input security_notif_override
   safety_delay: !input safety_delay
@@ -632,11 +649,6 @@ variables:
     quick_triggers: 0
     last_closed: 0
     auto_closed: false
-  default_custom_translations:
-    title: {}
-    message: {}
-    button: {}
-  custom_translations_json: "{{ custom_translations | from_json(none) }}"
   timeouts:
     closing_suggestion: !input suggest_closing_after
     safety_delay: "{{ safety_delay * 60 }}"
@@ -668,7 +680,7 @@ variables:
         soon_arrived: "You will arrive soon"
         arrived: "You have arrived"
         closing_suggestion: "{{suggest_closing_after}} seconds have passed"
-        ble_out_of_range: "Your iBeacon is out of range"
+        ble_out_of_range: "Your BLE device is out of range"
         awaiting: "The gate will close once all users have entered/exited"
         something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
         vehicle_stopped: "You have left your vehicle"
@@ -695,22 +707,23 @@ variables:
         too_close: "You have started driving too close to the gate zone"
         valid_config: "Your configuration seems valid"
         more_info: "More info"
-        invalid_translations: "Your custom translations are not valid (#1)"
-        missing_ble_entities: "You have not entered any iBeacon scanners (#2)"
-        ble_not_used: "You have entered these iBeacon scanners: '{data}' but are not using them (#3)"
+        invalid_translations: "Your custom translations are not valid. Check the following keys: '{data}'. (#1)"
+        missing_ble_entities: "You have not entered any BLE scanners (#2)"
+        ble_not_used: "You have entered these BLE scanners: '{data}' but are not using them (#3)"
         missing_wifi_trackers: "You have not entered any Wi-Fi trackers (#4)"
         wifi_not_used: "You have entered these Wi-Fi trackers: '{data}' but are not using them (#5)"
         missing_gps_data: "These trackers/persons: '{data}' do not support GPS tracking (#6)"
-        ibeacon_not_unknown: "These iBeacon trackers: '{data}' are currently not reporting an 'unknown' state. If you are currently near them, you can ignore this error. (#7)"
-        missing_arrival_opening_method: "You don not have any way to detect your arrival. Please add a travel time sensor or use an iBeacon. (#8)"
+        ble_not_unknown: "These BLE trackers: '{data}' are currently not reporting an 'unknown' state. If you are currently near them, you can ignore this error. (#7)"
+        missing_arrival_opening_method: "You do not have any way to detect your arrival. Please add a travel time sensor or use a BLE tracker. (#8)"
         too_many_arrival_opening_method: "You are using several methods to detect your arrival. One is enough. (#9)"
         invalid_itinerary_sensor_length: "These itinerary sensors: '{data}' have a maximum length of less than 255 (#10)"
         invalid_per_person_sensors: "You have not entered a consistent number of sensors in the per person sensor inputs (#11)"
         per_person_sensors_mismatch: "These persons: '{data}' appear to have mixed up per person sensors (#12)"
-        ble_trackers_mismatch: "These iBeacon trackers: '{data}' come from a different device than the others (#13)"
+        no_gate_area: "You are using area BLE trackers: '{data}', but your gate has not been placed in an area (#13)"
         wifi_tracker_is_gps: "These trackers: '{data}' are GPS-based, not router-based (#14)"
         invalid_ibeacon_transmitter: "These iBeacon transmitters: '{data}' are invalid (#19)"
         no_compatible_gps_tracker: "These persons cannot be tracked by GPS: '{data}' because they do not have GPS trackers, or they come from a different mobile app than the notification device (#20)"
+        deprecated_translations: "Custom translations now use a yaml dictionnary instead of json. Please update your old config. (#21)"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -734,7 +747,7 @@ variables:
         soon_arrived: "Vous arrivez bientôt"
         arrived: "Vous êtes arrivé"
         closing_suggestion: "{{suggest_closing_after}} secondes se sont écoulées"
-        ble_out_of_range: "Votre iBeacon est hors de portée"
+        ble_out_of_range: "Votre appareil BLE est hors de portée"
         awaiting: "Le portail se refermera une fois tous les conducteurs entrés/sortis"
         something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
         vehicle_stopped: "Le véhicule a été arrêté"
@@ -761,22 +774,23 @@ variables:
         too_close: "Vous avez démarré trop près de la zone du portail"
         valid_config: "Votre configuration semble valide"
         more_info: "Plus d'infos"
-        invalid_translations: "Vos traductions personnalisées ne sont pas valides (#1)"
-        missing_ble_entities: "Vous n'avez pas entré de scanner iBeacon (#2)"
-        ble_not_used: "Vous avez entré ces scanners iBeacon: '{data}' mais ne les utilisez pas (#3)"
+        invalid_translations: "Vos traductions personnalisées ne sont pas valides. Vérifiez les valeurs suivantes: '{data}'
+        missing_ble_entities: "Vous n'avez pas entré de scanner BLE (#2)"
+        ble_not_used: "Vous avez entré ces scanners BLE: '{data}' mais ne les utilisez pas (#3)"
         missing_wifi_trackers: "Vous n'avez pas entré de traceurs Wi-Fi (#4)"
         wifi_not_used: "Vous avez entré ces traceurs Wi-Fi: '{data}' mais ne les utilisez pas (#5)"
         missing_gps_data: "Ces traceurs/personnes: '{data}' ne prend pas en charge le suivi GPS (#6)"
-        ibeacon_not_unknown: "Ces traceurs iBeacon: '{data}' sont actuellement dans un état différent de 'unknown'. Si vous vous trouvez actuellement à proximité, vous pouvez ignorer cette erreur. (#7)"
-        missing_arrival_opening_method: "Vous n'avez aucune méthode pour détecter votre arrivée. Ajoutez un capteur de temps de trajet ou utilisez un iBeacon. (#8)"
+        ble_not_unknown: "Ces traceurs BLE: '{data}' sont actuellement dans un état différent de 'unknown'. Si vous vous trouvez actuellement à proximité, vous pouvez ignorer cette erreur. (#7)"
+        missing_arrival_opening_method: "Vous n'avez aucune méthode pour détecter votre arrivée. Ajoutez un capteur de temps de trajet ou utilisez un traceur BLE. (#8)"
         too_many_arrival_opening_method: "Vous utilisez plusieurs méthodes pour détecter votre arrivée. Une seule suffit. (#9)"
         invalid_itinerary_sensor_length: "Ces capteurs d'itinéraire: '{data}' ont une longueur maximale inférieure à 255 (#10)"
         invalid_per_person_sensors: "Vous n'avez pas entré le bon nombre de capteurs dans les champs de capteurs par personne (#11)"
         per_person_sensors_mismatch: "Ces personnes: '{data}' semblent avoir des capteurs par personne mélangés (#12)"
-        ble_trackers_mismatch: "Ces traceurs iBeacon: '{data}' proviennent d'un appareil différent des autres (#13)"
+        no_gate_area: "Vous utilisez des traceurs BLE par pièce de maison: '{data}' mais votre portail n'a pas été placé dans une pièce (#13)"
         wifi_tracker_is_gps: "Ces traceurs: '{data}' sont de type GPS au lieu de Routeur (#14)"
         invalid_ibeacon_transmitter: "Ces transmetteurs iBeacon: '{data}' sont invalides (#19)"
         no_compatible_gps_tracker: "Ces personnes ne pourront pas être attendue en GPS: '{data}' car elle n'ont pas de traceurs gps, ou ils proviennent d'une application différente de celle de l'appareil de notification (#20)"
+        deprecated_translations: "Les traductions personnalisés utilisent maintenant un dictionnaire yaml au lieu de json. Mettez à jour votre configuration svp. (#21)"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -856,17 +870,17 @@ actions:
   - alias: Initialize variables for the error checker
     variables:
       messages: []
-      custom_translations_error: "{{ custom_translations_json is none }}"
+      custom_translations_error: "{{ custom_translations is not mapping }}"
       successful_check: false
       error_level: 0
-  - alias: If custom translations failed to be parsed as json
+  - alias: If the custom translations is not a mapping
     if:
       - condition: template
         value_template: "{{ custom_translations_error }}"
     then:
-      - alias: Reset custom translations
+      - alias: Reset the custom translations
         variables:
-          custom_translations_json: "{{ default_custom_translations }}"
+          custom_translations: {}
 
     ##################
     # ERROR CHECKING #
@@ -893,7 +907,23 @@ actions:
         repeat:
           for_each:
             - alias: Check custom translations
-              error: "{{ custom_translations_error }}"
+              error: |-
+                {% set data = namespace(invalid=[]) %}
+                {% for key, sub_items in custom_translations.items() %}
+                  {% if key not in strings['en'] %}
+                    {% set data.invalid = data.invalid + [key] %}
+                  {% else %}
+                    {% for subkey, value in sub_items.items() %}
+                      {%
+                        if value is not string
+                        or subkey not in strings['en'][key]
+                      %}
+                        {% set data.invalid = data.invalid + [subkey] %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                {% endfor %}
+                {{ data.invalid }}
               message_id: "invalid_translations"
               level: 1
             - alias: Check missing ble sensors
@@ -981,19 +1011,26 @@ actions:
                 }}
               message_id: "missing_gps_data"
               level: 2
-            - alias: Check that iBeacons report unknown by default
+            - alias: Check that signal strength BLE devices report unknown by default
               error: |-
                 {% if trigger.platform is none %}
                   {{
                     ble_entities
-                    | reject('is_state', 'unknown')
+                    | expand
+                    | selectattr(
+                      'attributes.device_class',
+                      'in',
+                      ['signal_strength', 'distance']
+                    )
+                    | map(attribute='entity_id')
+                    | select('is_state', 'unknown')
                     | map('state_attr', 'friendly_name')
                     | list
                   }}
                 {% else %}
                   {{ false }}
                 {% endif %}
-              message_id: "ibeacon_not_unknown"
+              message_id: "ble_not_unknown"
               level: 1
             - alias: Check that the user entered a sensor to detect his arrival
               error: |-
@@ -1120,38 +1157,19 @@ actions:
                 }}
               message_id: "per_person_sensors_mismatch"
               level: 2
-            - alias: Check that all ble tracker entities come from the same device
+            - alias: Check that at least one gate has an area attached if a ble tracker uses area tracking
               error: |-
-                {% if ble_entities | length > 1 %}
-                  {% set data = namespace(appearances={}) %}
-                  {% for entity in ble_entities %}
-                    {% set id = device_id(entity) %}
-                    {% if id in data.appearances %}
-                      {% set data_update = data.appearances[id] + 1 %}
-                    {% else %}
-                      {% set data_update = 1 %}
-                    {% endif %}
-                    {%
-                      set data.appearances = (
-                        data.appearances
-                        | combine({id: data_update})
-                      )
-                    %}
-                  {% endfor %}
+                {% if gate_areas | length < 1 %}
                   {{
                     ble_entities
-                    | reject(
-                      'in', device_entities(
-                        data.appearances.items() | max(attribute=1) | first
-                      )
-                    )
+                    | select('is_state_attr', 'device_class', 'bermuda__custom_device_class')
                     | map('state_attr', 'friendly_name')
                     | list
                   }}
                 {% else %}
                   {{ false }}
                 {% endif %}
-              message_id: "ble_trackers_mismatch"
+              message_id: "no_gate_area"
               level: 2
             - alias: Check that Wi-Fi device trackers does not contain GPS data
               error: |-
@@ -1239,6 +1257,10 @@ actions:
                 {% endif %}
               message_id: "no_compatible_gps_tracker"
               level: 1
+            - alias: Check custom translations depreciation
+              error: "{{ custom_translations_error }}"
+              message_id: "deprecated_translations"
+              level: 0
           sequence:
             - alias: If a check failed
               if:
@@ -1261,10 +1283,10 @@ actions:
                     message: &get_message |-
                       {# Custom translation #}
                       {%
-                        if 'message' in custom_translations_json
-                        and message_id in custom_translations_json['message']
+                        if 'message' in custom_translations
+                        and message_id in custom_translations['message']
                       %}
-                        {{ custom_translations_json['message'][message_id] }}
+                        {{ custom_translations['message'][message_id] }}
 
                       {# Selected language #}
                       {% elif message_id in strings[language]['message'] %}
@@ -1312,12 +1334,12 @@ actions:
                   title: &get_title |-
                     {# Custom translation #}
                     {%
-                      if 'title' in custom_translations_json
-                      and title_id in custom_translations_json['title']
+                      if 'title' in custom_translations
+                      and title_id in custom_translations['title']
                     %}
                       {%
                         set title_string = (
-                          custom_translations_json['title'][title_id]
+                          custom_translations['title'][title_id]
                         )
                       %}
 
@@ -1547,7 +1569,6 @@ actions:
                             name: "default"
                             critical: 1
                         tag: itinerary-status
-                        timeout: 300
                   - sequence: *tts
               - stop: Blueprint triggered closing on the user
                 error: true
@@ -1722,7 +1743,7 @@ actions:
         }}
       wait_for_wifi: "{{ 'wifi' in only_open_near and wifi_devices | length > idx }}"
       wait_for_ble: "{{ 'ble' in only_open_near and ble_entities | length > idx }}"
-      ibeacon_started: "{{ false }}"
+      ble_started: "{{ false }}"
   - alias: Get whether the user is leaving or arriving
     variables: &get_itinerary_mode
       departure: |-
@@ -1792,12 +1813,12 @@ actions:
             action: homeassistant.update_entity
             data:
               entity_id: "{{ other_gps_to_wait_for }}"
-      - alias: If an iBeacon sensor has been provided
+      - alias: If a BLE tracker has been provided
         if:
           - condition: template
             value_template: "{{ departure and wait_for_ble }}"
         then:
-          - alias: Update the iBeacon sensor
+          - alias: Update the BLE tracker
             action: homeassistant.update_entity
             data:
               entity_id: "{{ ble_entities[idx] }}"
@@ -1823,23 +1844,30 @@ actions:
                     )
                     or departure
                     and (
-                      wait_for_ble and states(ble_entities[idx]) | is_number
-                      or wait_for_wifi and is_state(wifi_devices[idx], 'home')
+                      wait_for_ble and (
+                        states(ble_entities[idx]) | is_number
+                        or is_state(ble_entities[idx], 'home')
+                        or state_attr(ble_entities[idx], 'area_id') in gate_areas
+                      )
+                      or wait_for_wifi and (
+                        states(wifi_devices[idx]) | is_number
+                        or is_state(wifi_devices[idx], 'home')
+                      )
                     )
                   )
                 }}
           sequence:
-            - alias: If the user is on departure and the iBeacon should turn on
+            - alias: If the user is on departure and BLE devices should turn on
               if:
                 - condition: template
                   value_template: "{{ departure and wait_for_ble }}"
-              then: &start_ibeacons
-                - alias: Only continue if iBeacons were not already started
+              then: &start_ble
+                - alias: Only continue if BLE devices were not already started
                   condition: template
-                  value_template: "{{ not ibeacon_started }}"
-                - alias: Initialize iBeacon related variables
+                  value_template: "{{ not ble_started }}"
+                - alias: Initialize BLE related variables
                   variables:
-                    ibeacon_started: true
+                    ble_started: true
                     ibeacon_restore_messages: []
                     scanner_turned_on: false
                 - alias: If the driver has a transmitter entity and a notification device set
@@ -1960,7 +1988,7 @@ actions:
                                     'data': repeat.item.restore_message_data
                                   }]
                                 }}
-                - alias: If the iBeacon scanner is off
+                - alias: If the BLE scanner is off
                   if:
                     - condition: template
                       value_template: |-
@@ -1969,7 +1997,7 @@ actions:
                           and is_state(ble_scanner_switch, 'off')
                         }}
                   then:
-                    - alias: Turn on the iBeacon scanner
+                    - alias: Turn on the BLE scanner
                       action: switch.turn_on
                       target:
                         entity_id: "{{ ble_scanner_switch }}"
@@ -1994,12 +2022,21 @@ actions:
                 - alias: WiFi in range
                   trigger: template
                   id: wifi_in_range
-                  value_template: "{{ is_state(wifi_devices[idx], 'home') }}"
+                  value_template: |-
+                    {{
+                      states(wifi_devices[idx]) | is_number
+                      or is_state(wifi_devices[idx], 'home')
+                    }}
                   enabled: "{{ departure and wait_for_wifi }}"
-                - alias: iBeacon in range
+                - alias: BLE in range
                   trigger: template
                   id: ble_in_range
-                  value_template: "{{ states(ble_entities[idx]) | is_number }}"
+                  value_template: |-
+                    {{
+                      states(ble_entities[idx]) | is_number
+                      or is_state(ble_entities[idx], 'home')
+                      or state_attr(ble_entities[idx], 'area_id') in gate_areas
+                    }}
                   enabled: "{{ departure and wait_for_ble }}"
                 - alias: Vehicle stopped
                   id: vehicle_stopped
@@ -2162,12 +2199,12 @@ actions:
                                 entity_id: "{{ itinerary_sensor }}"
                               data:
                                 value: "{{ itinerary_value | to_json }}"
-                    - alias: Restore iBeacons
-                      sequence: &restore_ibeacons
-                        - alias: If the iBeacon was needed
+                    - alias: Restore BLE devices
+                      sequence: &restore_ble
+                        - alias: If BLE devices were started
                           if:
                             - condition: template
-                              value_template: "{{ ibeacon_started }}"
+                              value_template: "{{ ble_started }}"
                           then:
                             - alias: Restore iBeacon transmitter states
                               repeat:
@@ -2188,12 +2225,12 @@ actions:
                                           recursive=True
                                         )
                                       }}
-                            - alias: If the iBeacon scanner was turned on by the blueprint
+                            - alias: If the BLE scanner was turned on by the blueprint
                               if:
                                 - condition: template
                                   value_template: "{{ scanner_turned_on }}"
                               then:
-                                - alias: Turn off the iBeacon scanner
+                                - alias: Turn off the BLE scanner
                                   action: switch.turn_off
                                   target:
                                     entity_id: "{{ ble_scanner_switch }}"
@@ -2218,7 +2255,7 @@ actions:
                                 {% endif %}
                               {% endfor %}
                               {{ data.result }}
-                        - alias: If iBeacon switch set, and doesn't need to stay on
+                        - alias: If BLE scanner switch set, and doesn't need to stay on
                           if:
                             - condition: template
                               value_template: |-
@@ -2227,13 +2264,13 @@ actions:
                                   and not someone_near_gate
                                 }}
                           then:
-                            - alias: Deactivate iBeacon scanner
+                            - alias: Turn off BLE scanner
                               action: switch.turn_off
                               target:
                                 entity_id: "{{ ble_scanner_switch }}"
-                        - alias: Reset the ibeacon_started variable
+                        - alias: Reset the ble_started variable
                           variables:
-                            ibeacon_started: false
+                            ble_started: false
                     - stop: The location was not confirmed
                 - alias: If the notification was received
                   conditions:
@@ -2259,20 +2296,20 @@ actions:
                     - alias: Do not let the gates open on departure
                       variables:
                         lock_departure: true
-  - alias: If the iBeacon was started but is not needed anymore
+  - alias: If BLE devices were started but are not needed anymore
     if:
       - condition: template
         value_template: |-
           {{
-            ibeacon_started and not (
+            ble_started and not (
               departure
               and 'ble' in close_when_disconnected_from
               and ble_entities | length > idx
             )
           }}
     then:
-      - alias: Restore iBeacons
-        sequence: *restore_ibeacons
+      - alias: Restore BLE devices
+        sequence: *restore_ble
   - alias: If driver at gate location
     if:
       - condition: template
@@ -2414,10 +2451,10 @@ actions:
                                 {% for button_id in button_ids %}
                                   {# Custom translation #}
                                   {%
-                                    if 'button' in custom_translations_json
-                                    and button_id in custom_translations_json['button']
+                                    if 'button' in custom_translations
+                                    and button_id in custom_translations['button']
                                   %}
-                                    {% set translation = custom_translations_json['button'][button_id] %}
+                                    {% set translation = custom_translations['button'][button_id] %}
 
                                   {# Selected language #}
                                   {% elif button_id in strings[language]['button'] %}
@@ -2442,7 +2479,6 @@ actions:
                                 notification_icon: mdi:lock-question
                                 sticky: true
                                 persistent: true
-                                timeout: ""
                                 actions:
                                   - action: "{{ opening_order_id }}"
                                     title: "{{ buttons[0] }}"
@@ -2581,8 +2617,8 @@ actions:
                                     message_id: "{{ wait.trigger.id }}"
                                 - alias: Create error
                                   sequence: *create_error
-                                - alias: Restore iBeacons
-                                  sequence: *restore_ibeacons
+                                - alias: Restore BLE devices
+                                  sequence: *restore_ble
                                 - stop: Opening canceled
                           default:
                             - alias: Remove opening notification
@@ -2643,7 +2679,7 @@ actions:
                         data:
                           value: "{{ itinerary_value | to_json }}"
                       - stop: Closing canceled
-          - alias: If the iBeacon is needed to close the gate
+          - alias: If BLE devices are needed to close the gate
             if:
               - condition: template
                 value_template: |-
@@ -2651,7 +2687,7 @@ actions:
                     'ble' in close_when_disconnected_from
                     and ble_entities | length > idx
                   }}
-            then: *start_ibeacons
+            then: *start_ble
           - alias: Set variables for the following repeat sequence
             variables:
               break: "{{ closing_behavior in ['auto', 'off'] }}"
@@ -2714,11 +2750,24 @@ actions:
                       trigger: template
                       id: manual
                       value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list != [] }}"
-                    - alias: iBeacon out of reach
+                    - alias: BLE out of reach
                       trigger: template
                       id: ble_out_of_range
-                      value_template: "{{ (ble_entities | length) - 1 >= idx and is_state(ble_entities[idx], 'unknown') }}"
-                      enabled: "{{ 'ble' in close_when_disconnected_from }}"
+                      value_template: |-
+                        {{
+                          is_state(ble_entities[idx], ['unknown', 'not_home'])
+                          or (
+                            ble_entities[idx] in states
+                            and 'area_id' in states[ble_entities[idx]].attributes
+                            and state_attr(ble_entities[idx], 'area_id') is none
+                          )
+                        }}
+                      enabled: |-
+                        {{
+                          'ble' in close_when_disconnected_from
+                          and idx < ble_entities | length
+                        }}
+                      for: !input ble_away_timeout
                     - alias: Vehicle left
                       trigger: template
                       id: vehicle_stopped
@@ -2814,8 +2863,8 @@ actions:
                             - condition: template
                               value_template: "{{ itinerary_mode == 'departure' }}"
                           then:
-                            - alias: Restore iBeacon states
-                              sequence: *restore_ibeacons
+                            - alias: Restore BLE devices
+                              sequence: *restore_ble
                         - alias: Set message id
                           variables:
                             message_id: |-
@@ -2901,7 +2950,6 @@ actions:
                                           notification_icon: mdi:lock-question
                                           sticky: true
                                           persistent: true
-                                          timeout: ""
                                           actions:
                                             - action: "{{ closing_order_id }}"
                                               title: "{{ buttons[0] }}"
@@ -3024,7 +3072,6 @@ actions:
                               data:
                                 <<: *notification_data
                                 notification_icon: mdi:sleep
-                                timeout: ""
                           - sequence: *tts
                       - alias: Wait for gate closed
                         wait_for_trigger:
@@ -3192,7 +3239,6 @@ actions:
           data:
             <<: *notification_data
             notification_icon: mdi:map-check
-            timeout: ""
       - sequence: *tts
   - alias: Repeat while driver still driving
     repeat:
@@ -3336,12 +3382,12 @@ actions:
                         condition: template
                         value_template: "{{ wait.trigger.id != 'ble_in_reach' }}"
                     sequence:
-                      - alias: If this is the first loop and the driver has an iBeacon transmitter
+                      - alias: If this is the first loop and the driver has a BLE tracker
                         if:
                           - condition: template
                             value_template: "{{ repeat.first and ble_entities | length > idx }}"
-                        then: *start_ibeacons
-                      - alias: Wait for new position, vehicle left, or iBeacon reachable
+                        then: *start_ble
+                      - alias: Wait for new position, vehicle left, or reachable BLE device
                         wait_for_trigger:
                           - alias: New position
                             id: position
@@ -3353,15 +3399,20 @@ actions:
                             id: vehicle_stopped
                             trigger: template
                             value_template: "{{ is_state(driving_sensor, 'off') }}"
-                          - alias: iBeacon reachable
+                          - alias: reachable BLE device
                             trigger: template
                             id: ble_in_reach
-                            value_template: "{{ states(ble_entities[idx]) | is_number }}"
-                      - alias: If the iBeacon won't need to stay on
+                            value_template: |-
+                              {{
+                                states(ble_entities[idx]) | is_number
+                                or is_state(ble_entities[idx], 'home')
+                                or state_attr(ble_entities[idx], 'area_id') in gate_areas
+                              }}
+                      - alias: If BLE devices won't need to stay on
                         if:
                           - condition: or
                             conditions:
-                              - alias: Triggered by vehicle stopped or iBeacon reachable
+                              - alias: Triggered by vehicle stopped or reachable BLE device
                                 condition: template
                                 value_template: "{{ wait.trigger.id != 'position' }}"
                               - alias: Not in the activation zone
@@ -3373,7 +3424,7 @@ actions:
                                 condition: template
                                 value_template: "{{ person in expand(forbidden_zones) | map(attribute='entity_id') | list }}"
                         then:
-                          - sequence: *restore_ibeacons
+                          - sequence: *restore_ble
                           - alias: Stop if the user is in a forbidden zone
                             if:
                               - condition: template
@@ -3555,11 +3606,11 @@ actions:
             itinerary_mode: "arrival"
             opening_message: "soon_arrived"
             timeout_messages: |-
-              dict(
-                timeout_messages, **{
+              {{
+                timeout_messages | combine({
                   'safety_delay': 'did_not_arrive'
-                }
-              )
+                })
+              }}
         - alias: Open and close gate by following behaviors set by the user
           sequence: *open_close_behavior
         - alias: Stop whole script as successful
