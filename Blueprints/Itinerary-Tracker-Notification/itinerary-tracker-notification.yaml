@@ -298,11 +298,6 @@ variables:
   config_checker_tag: "{{ 'config-checker-' ~ this.attributes.id }}"
   persistent_id: "{{ 'persistent_' ~ this.context.id }}"
   persistent_active: !input persistent_notification
-  next_refresh: 0
-  remaining: 0
-  nearly_arrived_timestamp: "{{ none }}"
-  nearly_arrived_sent: false
-  last_arrival_timestamp: 0
   blueprint_name: "{{ state_attr(this.entity_id, 'friendly_name') }}"
   strings:
     en:
@@ -313,6 +308,7 @@ variables:
         itinerary_started: "{driver_name} just got into their car"
         itinerary_ongoing: "{driver_name} will arrive arround {arrival}"
         nearly_arrived: "{driver_name} will arrive in {remaining_minutes} minutes"
+        soon_arrived: "{driver_name} will arrive soon"
         driver_arrived: "{driver_name} just arrived home"
         something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
         unsupported_tt_integration: "Your travel time integration is not supported !"
@@ -333,6 +329,7 @@ variables:
         itinerary_started: "{driver_name} vient de monter dans sa voiture"
         itinerary_ongoing: "{driver_name} arrivera vers {arrival}"
         nearly_arrived: "{driver_name} arrivera dans {remaining_minutes} minutes"
+        soon_arrived: "{driver_name} arrivera bientôt"
         driver_arrived: "{driver_name} vient d'arriver à la maison"
         something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
         unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
@@ -728,7 +725,7 @@ actions:
         - action: "{{ repeat.item }}"
           data:
             message: "{{ message }}"
-            data:
+            data: &notification_data
               notification_icon: mdi:car
               tag: "{{ notification_tag }}"
               channel: Itinerary status
@@ -838,8 +835,15 @@ actions:
       condition: template
       value_template: "{{ travel_time_sensors != [] }}"
     then:
-      - variables:
+      - alias: Initialize variables for the following sequence
+        variables:
           travel_time_sensor: "{{ travel_time_sensors[idx] }}"
+          next_refresh: 0
+          nearly_arrived_sent: false
+          last_arrival_timestamp: 0
+          nearly_arrived_timestamp: "{{ none }}"
+          arrival_timestamp: "{{ none }}"
+          timer_removed: false
       - alias: Repeat while driver still driving
         repeat:
           while:
@@ -921,6 +925,17 @@ actions:
                     %}
                   {% endif %}
 
+                  {# Remaining time reached zero #}
+                  {% if arrival_timestamp is not none and not timer_removed %}
+                    {%
+                      set values = values | union(
+                        [
+                          arrival_timestamp - now() | as_timestamp
+                        ]
+                      )
+                    %}
+                  {% endif %}
+
                   {{ max(min(values), 0) }}
             - choose:
                 - alias: If triggered by a mobile notification cleared
@@ -950,166 +965,189 @@ actions:
                     alias: Disable persistent notifications
                     variables:
                       persistent_active: false
-            - alias: If triggered by a notify condition change
-              if:
-                - condition: template
-                  value_template: "{{ wait.trigger.id == 'conditions_changed' }}"
-              then:
-                - variables:
-                    active_notify_services: *get_active_services
-            - alias: If travel time remaining needs to trigger nearly arrived TTS
-              if:
-                - condition: template
-                  value_template: |-
-                    {{ nearly_arrived_tts
-                      and not nearly_arrived_sent
-                      and nearly_arrived_timestamp is not none
-                      and nearly_arrived_timestamp <= now() | as_timestamp
-                      and speaker_tts_service != ''
-                    }}
-              then:
-                - alias: Get TTS translation
-                  variables:
-                    message_id: "nearly_arrived"
-                    message: *get_message
-                - alias: Format the notification message
-                  variables:
-                    message: |-
-                      {{
-                        message.format(
-                          driver_name=driver_name,
-                          remaining_minutes=(
+                - alias: If triggered by a notify condition change
+                  conditions:
+                    - condition: template
+                      value_template: "{{ wait.trigger.id == 'conditions_changed' }}"
+                  sequence:
+                    - variables:
+                        active_notify_services: *get_active_services
+                - alias: If travel time remaining needs to trigger nearly arrived TTS
+                  conditions:
+                    - condition: template
+                      value_template: |-
+                        {{ nearly_arrived_tts
+                          and not nearly_arrived_sent
+                          and nearly_arrived_timestamp is not none
+                          and nearly_arrived_timestamp <= now() | as_timestamp
+                          and speaker_tts_service != ''
+                        }}
+                  sequence:
+                    - alias: Get TTS translation
+                      variables:
+                        message_id: "nearly_arrived"
+                        message: *get_message
+                    - alias: Format the notification message
+                      variables:
+                        message: |-
+                          {{
+                            message.format(
+                              driver_name=driver_name,
+                              remaining_minutes=(
+                                (
+                                  arrival_timestamp
+                                  - now() | as_timestamp
+                                ) / 60
+                              ) | round
+                            )
+                          }}
+                    - sequence: *play_speaker_tts
+                    - alias: Mark nearly arrived TTS as already sent
+                      variables:
+                        nearly_arrived_sent: true
+                - alias: If triggered by travel time update and notifications are not on cooldown
+                  conditions:
+                    - condition: template
+                      value_template: |-
+                        {{
+                          wait.trigger.id == 'travel_time'
+                          and next_refresh <= now() | as_timestamp
+                        }}
+                  sequence:
+                    - alias: Calculate ETA
+                      variables:
+                        remaining: |-
+                            {% if state_attr(travel_time_sensor, 'duration') != none %}
+                              {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
+                            {% elif state_attr(travel_time_sensor, 'unit_of_measurement') == "min" %}
+                              {{ states(travel_time_sensor) | float * 60 }}
+                            {% elif state_attr(travel_time_sensor, 'unit_of_measurement') == "s" %}
+                              {{ states(travel_time_sensor) | float }}
+                            {% else %}
+                              {{ none }}
+                            {% endif %}
+                    - alias: Stop if travel time integration is not supported
+                      if:
+                        - condition: template
+                          value_template: "{{ remaining is none }}"
+                      then:
+                        - alias: Get notification translation
+                          variables:
+                            message_id: "unsupported_tt_integration"
+                            message: *get_message
+                        - alias: Notify all users on the dashboard that the integration is unsupported
+                          action: persistent_notification.create
+                          data:
+                            title: "{{ title }}"
+                            message: "{{ message }}"
+                            notification_id: "{{ persistent_id }}"
+                        - stop: Travel time integration not supported
+                          error: true
+                    - alias: Calculate next refresh
+                      variables:
+                        cooldown: !input notif_refresh_rate_ftn
+                        next_refresh: "{{ now() | as_timestamp + cooldown }}"
+                    - alias: Convert ETA to needed types
+                      variables:
+                        arrival_timestamp: "{{ as_timestamp(now()) + remaining }}"
+                        arrival: "{{ arrival_timestamp | timestamp_custom('%H:%M') }}"
+                    - alias: If the nearly arrived tts has not been triggered yet
+                      if:
+                        - condition: template
+                          value_template: |-
+                            {{
+                              nearly_arrived_tts
+                              and not nearly_arrived_sent
+                            }}
+                      then:
+                        - alias: Calculate the timestamp for the nearly arrived tts trigger
+                          variables:
+                            nearly_arrived_timestamp: "{{ arrival_timestamp - nearly_arrived_time*60 }}"
+                    - alias: Do not send notification if the time of arrival did not change
+                      condition: template
+                      value_template: |-
+                        {# If the next notification will be sent near the arrival #}
+                        {% if arrival_timestamp - next_refresh < 120 %}
+                          {# Refresh notification if eta differs by at least 5s #}
+                          {{
                             (
-                              arrival_timestamp
-                              - now() | as_timestamp
-                            ) / 60
-                          ) | round
-                        )
-                      }}
-                - sequence: *play_speaker_tts
-                - alias: Mark nearly arrived TTS as already sent
-                  variables:
-                    nearly_arrived_sent: true
-            - alias: Only continue loop if triggered by travel time update
-              condition: template
-              value_template: "{{ wait.trigger.id == 'travel_time' }}"
-            - alias: Only continue loop if notifications not on cooldown
-              condition: template
-              value_template: "{{ next_refresh <= now() | as_timestamp }}"
-            - alias: Calculate ETA
-              variables:
-                remaining: |-
-                    {% if state_attr(travel_time_sensor, 'duration') != none %}
-                      {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
-                    {% elif state_attr(travel_time_sensor, 'unit_of_measurement') == "min" %}
-                      {{ states(travel_time_sensor) | float * 60 }}
-                    {% elif state_attr(travel_time_sensor, 'unit_of_measurement') == "s" %}
-                      {{ states(travel_time_sensor) | float }}
-                    {% else %}
-                      {{ none }}
-                    {% endif %}
-            - alias: Stop if travel time integration is not supported
-              if:
-                - condition: template
-                  value_template: "{{ remaining is none }}"
-              then:
-                - alias: Get notification translation
-                  variables:
-                    message_id: "unsupported_tt_integration"
-                    message: *get_message
-                - alias: Notify all users on the dashboard that the integration is unsupported
-                  action: persistent_notification.create
-                  data:
-                    title: "{{ title }}"
-                    message: "{{ message }}"
-                    notification_id: "{{ persistent_id }}"
-                - stop: Travel time integration not supported
-                  error: true
-            - alias: Calculate next refresh
-              variables:
-                cooldown: !input notif_refresh_rate_ftn
-                next_refresh: "{{ now() | as_timestamp + cooldown }}"
-            - alias: Convert ETA to needed types
-              variables:
-                arrival_timestamp: "{{ as_timestamp(now()) + remaining }}"
-                arrival: "{{ arrival_timestamp | timestamp_custom('%H:%M') }}"
-            - alias: If the nearly arrived tts has not been triggered yet
-              if:
-                - condition: template
-                  value_template: |-
+                              last_arrival_timestamp | int
+                              - arrival_timestamp | int
+                            ) | abs > 5
+                          }}
+                        {% else %}
+                          {# Refresh notification if eta differs by at least 1min #}
+                          {{
+                            (last_arrival_timestamp / 60) | int
+                            != (arrival_timestamp / 60) | int
+                          }}
+                        {% endif %}
+                    - alias: Save the current time of arrival
+                      variables:
+                        last_arrival_timestamp: "{{ arrival_timestamp }}"
+                    - alias: Get notification translation
+                      variables:
+                        message_id: "itinerary_ongoing"
+                        message: *get_message
+                    - alias: Format the notification message
+                      variables:
+                        message: |-
+                          {{
+                            message.format(
+                              arrival=arrival,
+                              driver_name=driver_name
+                            )
+                          }}
+                    - alias: Send ETA notification to each user
+                      repeat:
+                        for_each: "{{ active_notify_services }}"
+                        sequence:
+                          - action: "{{ repeat.item }}"
+                            data:
+                              message: "{{ message }}"
+                              data:
+                                <<: *notification_data
+                                notification_icon: mdi:map-marker-account
+                                chronometer: true
+                                when: "{{ arrival_timestamp | int }}"
+                    - alias: If persistent notifications are still active
+                      if:
+                        - condition: template
+                          value_template: "{{ persistent_active }}"
+                      then:
+                        - alias: Update the persistent notification
+                          action: persistent_notification.create
+                          data:
+                            message: "{{ message }}"
+                            notification_id: "{{ persistent_id }}"
+                - alias: If the timer needs to be removed from the notification
+                  conditions: |-
                     {{
-                      nearly_arrived_tts
-                      and not nearly_arrived_sent
+                      arrival_timestamp is not none
+                      and arrival_timestamp <= now() | as_timestamp
+                      and not timer_removed
                     }}
-              then:
-                - alias: Calculate the timestamp for the nearly arrived tts trigger
-                  variables:
-                    nearly_arrived_timestamp: "{{ arrival_timestamp - nearly_arrived_time*60 }}"
-            - alias: Do not send notification if the time of arrival did not change
-              condition: template
-              value_template: |-
-                {# If the next notification will be sent near the arrival #}
-                {% if arrival_timestamp - next_refresh < 120 %}
-                  {# Refresh notification if eta differs by at least 5s #}
-                  {{
-                    (
-                      last_arrival_timestamp | int
-                      - arrival_timestamp | int
-                    ) | abs > 5
-                  }}
-                {% else %}
-                  {# Refresh notification if eta differs by at least 1min #}
-                  {{
-                    (last_arrival_timestamp / 60) | int
-                    != (arrival_timestamp / 60) | int
-                  }}
-                {% endif %}
-            - alias: Save the current time of arrival
-              variables:
-                last_arrival_timestamp: "{{ arrival_timestamp }}"
-            - alias: Get notification translation
-              variables:
-                message_id: "itinerary_ongoing"
-                message: *get_message
-            - alias: Format the notification message
-              variables:
-                message: |-
-                  {{
-                    message.format(
-                      arrival=arrival,
-                      driver_name=driver_name
-                    )
-                  }}
-            - alias: Send ETA notification to each user
-              repeat:
-                for_each: "{{ active_notify_services }}"
-                sequence:
-                  - action: "{{ repeat.item }}"
-                    data:
-                      message: "{{ message }}"
-                      data:
-                        notification_icon: mdi:map-marker-account
-                        tag: "{{ notification_tag }}"
-                        channel: Itinerary status
-                        sticky: true
-                        # Hack to retrieve notification service when dismissed
-                        confirmation: "{{ repeat.item }}"
-                        url: !input on_tap_link
-                        clickAction: !input on_tap_link
-                        alert_once: true
-                        timeout: "{{ remaining | int }}"
-                        chronometer: true
-                        when: "{{ arrival_timestamp | int }}"
-            - alias: If persistent notifications are still active
-              if:
-                - condition: template
-                  value_template: "{{ persistent_active }}"
-              then:
-                - alias: Update the persistent notification
-                  action: persistent_notification.create
-                  data:
-                    message: "{{ message }}"
-                    notification_id: "{{ persistent_id }}"
+                  sequence:
+                    - alias: Get notification translation
+                      variables:
+                        message_id: "soon_arrived"
+                        message: *get_message
+                    - alias: Format the notification message
+                      variables:
+                        message: "{{ message.format(driver_name=driver_name) }}"
+                    - alias: Send soon arrived notification to each user
+                      repeat:
+                        for_each: "{{ active_notify_services }}"
+                        sequence:
+                          - action: "{{ repeat.item }}"
+                            data:
+                              message: "{{ message }}"
+                              data:
+                                <<: *notification_data
+                                notification_icon: mdi:map-marker-account
+                    - alias: Remember that the timer was removed
+                      variables:
+                        timer_removed: true
     else:
       - alias: Wait for user to leave vehicle
         wait_for_trigger:
