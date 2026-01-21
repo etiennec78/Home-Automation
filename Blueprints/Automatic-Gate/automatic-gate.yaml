@@ -727,6 +727,7 @@ variables:
         missing_gps_data: "These trackers/persons: '{data}' do not support GPS tracking (#6)"
         ble_not_unknown: "These BLE trackers: '{data}' are currently not reporting an 'unknown' state. If you are currently near them, you can ignore this error. (#7)"
         missing_travel_time_sensors: "Your opening method on arrival is set to 'Travel Time' but you have not provided enough travel time sensors (#8)"
+        zone_too_large: "Your activation zone is too large for the 'Zone' arrival opening method (#9)"
         invalid_itinerary_sensor_length: "These itinerary sensors: '{data}' have a maximum length of less than 255 (#10)"
         invalid_per_person_sensors: "You have not entered a consistent number of sensors in the per person sensor inputs (#11)"
         per_person_sensors_mismatch: "These persons: '{data}' appear to have mixed up per person sensors (#12)"
@@ -793,6 +794,7 @@ variables:
         missing_gps_data: "Ces traceurs/personnes: '{data}' ne prend pas en charge le suivi GPS (#6)"
         ble_not_unknown: "Ces traceurs BLE: '{data}' sont actuellement dans un état différent de 'unknown'. Si vous vous trouvez actuellement à proximité, vous pouvez ignorer cette erreur. (#7)"
         missing_travel_time_sensors: "Votre méthode d'ouverture à l'arrvée est réglée sur 'Travel Time' mais vous n'avez pas fourni assez de capteurs de temps de trajet (#8)"
+        zone_too_large: "Votre zone d'activation est trop grande pour la méthode d'ouverture à l'arrivée 'Zone' (#9)"
         invalid_itinerary_sensor_length: "Ces capteurs d'itinéraire: '{data}' ont une longueur maximale inférieure à 255 (#10)"
         invalid_per_person_sensors: "Vous n'avez pas entré le bon nombre de capteurs dans les champs de capteurs par personne (#11)"
         per_person_sensors_mismatch: "Ces personnes: '{data}' semblent avoir des capteurs par personne mélangés (#12)"
@@ -1049,6 +1051,14 @@ actions:
                   and travel_time_sensors | length != persons | length
                 }}
               message_id: "missing_travel_time_sensors"
+              level: 2
+            - alias: Check that the activation zone is not too large
+              error: |-
+                {{
+                  open_when_connected_to == 'zone'
+                  and activation_zone > 400
+                }}
+              message_id: "zone_too_large"
               level: 2
             - alias: Check that itinerary sensors have a valid maximum length
               error: |-
