@@ -2758,6 +2758,7 @@ actions:
                             }}
                           enabled: |-
                             {{
+                              itinerary_mode == 'departure'
                               'ble' in close_when_disconnected_from
                               and idx < ble_entities | length
                             }}
