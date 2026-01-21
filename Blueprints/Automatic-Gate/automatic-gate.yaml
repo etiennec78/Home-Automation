@@ -598,13 +598,30 @@ blueprint:
               multiple: true
               filter:
                 domain: lock
-        unlatch_doors:
-          name: 🚪 Unlatch doors
+        security_features:
+          name: 🛡️ Security features
           description: |-
-            Open all doors with locks that support unlatching
-          default: false
+            The **security features** that the blueprint must manage
+          default:
+            - "arm"
+            - "disarm"
+            - "lock"
+            - "unlock"
+            - "unlatch"
           selector:
-            boolean:
+            select:
+              multiple: true
+              options:
+                - label: Arm alarm
+                  value: "arm"
+                - label: Disarm alarm
+                  value: "disarm"
+                - label: Lock doors
+                  value: "lock"
+                - label: Unlock doors
+                  value: "unlock"
+                - label: Unlatch doors
+                  value: "unlatch"
         dont_lock_if_people_remaining:
           name: 🏠 Do not lock if there are still people home
           description: |-
@@ -675,6 +692,7 @@ variables:
   forbidden_zones: !input forbidden_zones
   open_when_connected_to: !input open_when_connected_to
   alarm: !input alarm
+  security_features: !input security_features
   dont_lock_if_people_remaining: !input dont_lock_if_people_remaining
   quick_tt_updates: 0
   last_quick_tt_update: "{{ none }}"
@@ -3169,17 +3187,20 @@ actions:
                 variables:
                   prefix: "{{ '' if itinerary_mode == 'departure' else 'un' }}"
               - alias: Do not lock if dont_lock_if_people_remaining is true and someone else is home
+                condition: template
+                value_template: |-
+                  {{
+                    prefix == 'un'
+                    or not dont_lock_if_people_remaining
+                    or not expand(gate_location)
+                      | map(attribute='entity_id')
+                      | list
+                      | difference([person])
+                  }}
+              - alias: If locking action is enabled
                 if:
                   - condition: template
-                    value_template: |-
-                      {{
-                        prefix == 'un'
-                        or not dont_lock_if_people_remaining
-                        or not expand(gate_location)
-                          | map(attribute='entity_id')
-                          | list
-                          | difference([person])
-                      }}
+                    value_template: "{{ prefix ~ 'lock' in security_features }}"
                 then:
                   - alias: For each lock
                     repeat:
@@ -3189,84 +3210,88 @@ actions:
                           action: "lock.{{ prefix }}lock"
                           target:
                             entity_id: "{{ repeat.item }}"
-                        - alias: If the door should unlatch
+              - alias: If door unlatching is enabled
+                if:
+                  - condition: template
+                    value_template: "{{ prefix == 'un' and 'unlatch' in security_features }}"
+                then:
+                  - alias: For each lock
+                    repeat:
+                      for_each: !input locks
+                      sequence:
+                        - alias: If the door supports unlatching
                           if:
-                            - condition: template
-                              value_template: !input unlatch_doors
                             - condition: template
                               value_template: |-
                                 {{
-                                  prefix == 'un'
-                                  and (
-                                    state_attr(repeat.item, 'supported_features')
-                                    | bitwise_and(1) == 1
-                                  )
+                                  state_attr(repeat.item, 'supported_features')
+                                  | bitwise_and(1) == 1
                                 }}
                           then:
                             - alias: Unlatch the door
                               action: lock.open
                               target:
                                 entity_id: "{{ repeat.item }}"
-                  - alias: Set the alarm action
-                    variables:
-                      action: |-
-                        {% if alarm != '' %}
+              - alias: Set the alarm action
+                variables:
+                  action: |-
+                    {% if alarm != '' %}
+                      {%
+                        set features = (
+                          state_attr(alarm, 'supported_features')
+                        )
+                      %}
+                      {% set state = states(alarm) %}
+                      {% if prefix == '' and 'arm' in security_features %}
+                        {%
+                          if state not in ['armed_away', 'armed_vacation']
+                          and features | bitwise_and(2) == 2
+                        %}
+                          alarm_arm_away
+                        {% else %}
+                          {{ none }}
+                        {% endif %}
+                      {% elif 'unarm' in security_features %}
+                        {%
+                          if state not in [
+                            'disarmed',
+                            'armed_home',
+                            'armed_night',
+                            'armed_custom_bypass'
+                          ]
+                        %}
+                          {% set start = today_at('20:00') %}
+                          {% set end = today_at('4:00') %}
+                          {% set time = now() %}
                           {%
-                            set features = (
-                              state_attr(alarm, 'supported_features')
+                            if features | bitwise_and(4) == 4
+                            and (
+                              start <= end and start <= time <= end
+                              or start > end and (time >= start or time <= end)
                             )
                           %}
-                          {% set state = states(alarm) %}
-                          {% if prefix == '' %}
-                            {%
-                              if state not in ['armed_away', 'armed_vacation']
-                              and features | bitwise_and(2) == 2
-                            %}
-                              alarm_arm_away
-                            {% else %}
-                              {{ none }}
-                            {% endif %}
+                            alarm_arm_night
+                          {% elif features | bitwise_and(1) == 1 %}
+                            alarm_arm_home
                           {% else %}
-                            {%
-                              if state not in [
-                                'disarmed',
-                                'armed_home',
-                                'armed_night',
-                                'armed_custom_bypass'
-                              ]
-                            %}
-                              {% set start = today_at('20:00') %}
-                              {% set end = today_at('4:00') %}
-                              {% set time = now() %}
-                              {%
-                                if features | bitwise_and(4) == 4
-                                and (
-                                  start <= end and start <= time <= end
-                                  or start > end and (time >= start or time <= end)
-                                )
-                              %}
-                                alarm_arm_night
-                              {% elif features | bitwise_and(1) == 1 %}
-                                alarm_arm_home
-                              {% else %}
-                                alarm_disarm
-                              {% endif %}
-                            {% else %}
-                              {{ none }}
-                            {% endif %}
+                            alarm_disarm
                           {% endif %}
                         {% else %}
                           {{ none }}
                         {% endif %}
-                  - alias: Only continue if the alarm needs to be called
-                    condition: template
-                    value_template: "{{ action is not none }}"
-                  - alias: (Un)arm the alarm
-                    action: "alarm_control_panel.{{ action }}"
-                    target:
-                      entity_id: "{{ alarm }}"
-                    data: |-
-                      {{ {} if alarm_code == '' else {'code': alarm_code} }}
+                      {% endif %}
+                    {% else %}
+                      {{ none }}
+                    {% endif %}
+              - alias: Only continue if the alarm needs to be called
+                condition: template
+                value_template: "{{ action is not none }}"
+              - alias: (Un)arm the alarm
+                action: "alarm_control_panel.{{ action }}"
+                target:
+                  entity_id: "{{ alarm }}"
+                data: |-
+                  {{ {} if alarm_code == '' else {'code': alarm_code} }}
           - alias: Reset the itinerary status
             variables:
               update:
