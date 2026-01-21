@@ -567,6 +567,13 @@ blueprint:
               multiple: true
               filter:
                 domain: lock
+        unlatch_doors:
+          name: 🚪 Unlatch doors
+          description: |-
+            Open all doors with locks that support unlatching
+          default: false
+          selector:
+            boolean:
         dont_lock_if_people_remaining:
           name: 🏠 Do not lock if there are still people home
           description: |-
@@ -3099,30 +3106,6 @@ actions:
                         then:
                           - alias: Create error
                             sequence: *create_error
-                        else:
-                          - alias: Set prefix
-                            variables:
-                              prefix: "{{ itinerary_mode == 'departure' | iif('', 'un') }}"
-                          - alias: Do not lock if dont_lock_if_people_remaining is true and someone else is home
-                            if:
-                              - condition: template
-                                value_template: |-
-                                  {{
-                                    prefix == 'un'
-                                    or not dont_lock_if_people_remaining
-                                    or not expand(gate_location)
-                                      | map(attribute='entity_id')
-                                      | list
-                                      | difference([person])
-                                  }}
-                            then:
-                              - alias: Unlock or lock all locks
-                                repeat:
-                                  for_each: !input locks
-                                  sequence:
-                                    - action: "lock.{{ prefix }}lock"
-                                      target:
-                                        entity_id: "{{ repeat.item }}"
                       - alias: Close all gates
                         repeat:
                           for_each: !input gate
@@ -3133,6 +3116,57 @@ actions:
                                 {% elif states[repeat.item].domain == 'cover' %}
                                   cover.close_cover
                                 {% endif %}
+                              target:
+                                entity_id: "{{ repeat.item }}"
+          - alias: If the driver is leaving or has arrived home
+            if:
+              - condition: or
+                conditions:
+                  - condition: template
+                    value_template: "{{ itinerary_mode == 'departure' }}"
+                  - condition: template
+                    value_template: *activation_zone_in_condition
+            then:
+              - alias: Set lock action prefix
+                variables:
+                  prefix: "{{ '' if itinerary_mode == 'departure' else 'un' }}"
+              - alias: Do not lock if dont_lock_if_people_remaining is true and someone else is home
+                if:
+                  - condition: template
+                    value_template: |-
+                      {{
+                        prefix == 'un'
+                        or not dont_lock_if_people_remaining
+                        or not expand(gate_location)
+                          | map(attribute='entity_id')
+                          | list
+                          | difference([person])
+                      }}
+                then:
+                  - alias: For each lock
+                    repeat:
+                      for_each: !input locks
+                      sequence:
+                        - alias: Unlock or lock the lock
+                          action: "lock.{{ prefix }}lock"
+                          target:
+                            entity_id: "{{ repeat.item }}"
+                        - alias: If the door should unlatch
+                          if:
+                            - condition: template
+                              value_template: !input unlatch_doors
+                            - condition: template
+                              value_template: |-
+                                {{
+                                  prefix == 'un'
+                                  and (
+                                    state_attr(repeat.item, 'supported_features')
+                                    | bitwise_and(1) == 1
+                                  )
+                                }}
+                          then:
+                            - alias: Unlatch the door
+                              action: lock.open
                               target:
                                 entity_id: "{{ repeat.item }}"
             else:
