@@ -94,15 +94,19 @@ Use Android Auto, Apple CarPlay, Bluetooth, or a combination of these
 
 If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack adapter](https://amzn.to/3G0vOCT), a [Bluetooth-to-radio adapter](https://amzn.to/4jVEoRp), or use an [ESP32 emulating a Bluetooth keyboard](./Extra/ESP-Bluetooth-Dummie)
 
+
+
 #### Summary 📝
 
-| Service | Wireless | Compatibility |
-| :--- | :---: | :---: |
-| Android Bluetooth 🍏🛜 | ✅ | Android 5+ |
-| iOS Bluetooth 🍎🛜 | ✅ | iOS 15+ |
-| Android Auto 🍏🔌 | ❓ | Android 9+ |
-| Apple CarPlay 🍎🔌 | ❓ | iOS 15+ |
-| Smart vehicle 🌐 | ✅ | - |
+| Service | Wireless | Reliability | Compatibility |
+| :--- | :---: | :---: | :---: |
+| Android Bluetooth 🍏🛜 | ✅ | 🟩 | Android 5+ |
+| iOS Bluetooth 🍎🛜 | ✅ | 🟩 | iOS 15+ |
+| Android Auto 🍏🔌 | ❓ | 🟩 | Android 9+ |
+| Apple CarPlay 🍎🔌 | ❓ | 🟩 | iOS 15+ |
+| Cycling (Android) 🍏🚲 | ✅ | 🟧 | Android 10+, with Google Services |
+| Cycling (iOS) 🍎🚲 | ✅ | 🟧 | ❓ |
+| Smart vehicle 🌐 | ✅ | ❓ | - |
 
 <details>
   <summary>Option 1: Android Bluetooth 🍏🛜</summary>
@@ -189,7 +193,65 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
 </details>
 
 <details>
-  <summary>Option 5: Smart vehicle 🌐</summary>
+  <summary>Option 5: Cycling (Android) 🍏🚲</summary>
+  
+  It is recommended to use a travel time supporting cycling mode, or a BLE tracker
+  
+  Both opening and closing behaviors on departure should be disabled, as cycling sensors are not reliable
+  
+  If you are using this blueprint both for cycling and for your vehicles, please use 2 distinct automations running this blueprint, and don't forget to share all of your itinerary sensors in both
+
+  #### Setup 🛠️
+
+  1. Install through the [companion app](https://companion.home-assistant.io/docs/core/location/) settings: Settings > Companion app > Manage sensors > Detected Activity ✔
+  2. Install a [template helper](https://www.home-assistant.io/integrations/template/) through the UI: [Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Template > Binary sensor
+  3. Apply the settings from below
+  4. Repeat steps 1-3 for each cyclist
+
+  #### Settings 🔧
+
+  | Setting | Parameter |
+  | :--- | :---: |
+  | Name | `User0 cycling` |
+  | State template | `{% set s = state_attr('sensor.user0_detected_activity', 'on_bicycle') %}{{ s | is_number and s > 80 }}` |
+  | Device class | `Moving` |
+  | Device | *Your phone* |
+
+  > Replace `sensor.user0_detected_activity` with your own sensor entity id, and change `80` if the confidence is too high and the condition is never triggered
+
+</details>
+
+<details>
+  <summary>Option 6: Cycling (iOS) 🍎🚲</summary>
+  
+  It is recommended to use a travel time supporting cycling mode, or a BLE tracker
+  
+  Both opening and closing behaviors on departure should be disabled, as cycling sensors are not reliable
+  
+  If you are using this blueprint both for cycling and for your vehicles, please use 2 distinct automations running this blueprint, and don't forget to share all of your itinerary sensors in both
+
+  #### Setup 🛠️
+
+  1. Install through the [companion app](https://companion.home-assistant.io/docs/core/location/) settings: Settings > Companion app > Manage sensors > Activity Sensor ✔
+  2. Install a [template helper](https://www.home-assistant.io/integrations/template/) through the UI: [Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Template > Binary sensor
+  3. Apply the settings from below
+  4. Repeat steps 1-3 for each cyclist
+
+  #### Settings 🔧
+
+  | Setting | Parameter |
+  | :--- | :---: |
+  | Name | `User0 cycling` |
+  | State template | `{% set s = 'sensor.user0_detected_activity' %}{{ is_state(s, 'Cycling') and is_state_attr(s, 'confidence', 'High') }}` |
+  | Device class | `Moving` |
+  | Device | *Your phone* |
+
+  > Replace `sensor.user0_detected_activity` with your own sensor entity id, and change `High` to Medium or Low if the confidence is too high and the condition is never triggered
+  
+</details>
+
+<details>
+  <summary>Option 7: Smart vehicle 🌐</summary>
 
   Some Home Assistant vehicle integrations or add-ons create a binary_sensor that reports when your vehicle is being driven
 
@@ -199,6 +261,8 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
   <summary>Combining these sensors 🔗</summary>
 
   If some people drive several cars, combine their sensors so there is only one per person
+  
+  You can also improve the reliability and reactivity of some sensors by combining them (e.g.: bluetooth connects first, but Android Auto is plugged and more stable)
 
   #### Setup 🛠️
 
