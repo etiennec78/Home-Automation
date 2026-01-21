@@ -9,15 +9,19 @@ blueprint:
     ## Description 📝
     A blueprint that notifies all selected users when another one is driving home
 
-    ## Key Features 🌟
-    * Travel time and ETA notification updates 🔁
-    * Companion app notifications 🔔
-    * Custom link on notification tap 👆
-    * Dashboard persistent notifications 📢
-    * Media players TTS support 🔊
-    * Notification limiter ⌛
-    * Built-in translations 🌍
-    * State-based notification filtering 📍
+    <details>
+      <summary><h2>Key Features 🌟</h2></summary>
+
+      * Travel time and ETA notification updates 🔁
+      * Companion app notifications 🔔
+      * Custom link on notification tap 👆
+      * Dashboard persistent notifications 📢
+      * Media players TTS support 🔊
+      * Notification limiter ⌛
+      * Built-in translations 🌍
+      * State-based notification filtering 📍
+
+    </details>
 
     ## More info ℹ️
     * Version: 2.0.0
