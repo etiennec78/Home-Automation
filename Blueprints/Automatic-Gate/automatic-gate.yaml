@@ -175,7 +175,7 @@ blueprint:
           default: 500
           selector:
             number:
-              min: 300
+              min: 150
               max: 5000
               unit_of_measurement: meters
         travel_time_rate:
