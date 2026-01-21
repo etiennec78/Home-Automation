@@ -614,6 +614,8 @@ blueprint:
               options:
                 - label: Arm alarm
                   value: "arm"
+                - label: Night mode arming
+                  value: "night"
                 - label: Disarm alarm
                   value: "disarm"
                 - label: Lock doors
@@ -3265,6 +3267,7 @@ actions:
                           {% set time = now() %}
                           {%
                             if features | bitwise_and(4) == 4
+                            and 'night' in security_features
                             and (
                               start <= end and start <= time <= end
                               or start > end and (time >= start or time <= end)
