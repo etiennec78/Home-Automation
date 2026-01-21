@@ -565,16 +565,26 @@ blueprint:
                 - label: Bluetooth LE
                   value: ble
 
-    locks:
-      name: Door locks
-      icon: mdi:door-closed-lock
+    house_security:
+      name: House security
+      description: |-
+        The alarm and locks will be armed/locked on departure once your gate is closing, and unarmed/unlocked on arrival after your vehicle has been stopped
+      icon: mdi:shield-home
       collapsed: true
       input:
+        alarm:
+          name: 🛡️ Alarm
+          description: |-
+            Your home **alarm**
+          default: ""
+          selector:
+            entity:
+              filter:
+                domain: alarm_control_panel
         locks:
           name: 🔐 Locks
           description: |-
             The **locks** that open your home's **doors**
-            *Note : They will lock on exit once the gate is closed, and unlock once the vehicle has arrived and been turned off*
           default: []
           selector:
             entity:
@@ -591,7 +601,7 @@ blueprint:
         dont_lock_if_people_remaining:
           name: 🏠 Do not lock if there are still people home
           description: |-
-            Avoid locking locks if some person entities are still in the gate zone besides yourself
+            Avoid locking locks and activating the alarm if some person entities are still in the gate zone besides yourself
             Note : if you drive away with multiple people, they might still be detected home and prevent locking
           default: false
           selector:
@@ -657,6 +667,7 @@ variables:
   wifi_devices: !input wifi_devices
   forbidden_zones: !input forbidden_zones
   open_when_connected_to: !input open_when_connected_to
+  alarm: !input alarm
   dont_lock_if_people_remaining: !input dont_lock_if_people_remaining
   quick_tt_updates: 0
   last_quick_tt_update: "{{ none }}"
@@ -3189,6 +3200,25 @@ actions:
                               action: lock.open
                               target:
                                 entity_id: "{{ repeat.item }}"
+                  - choose:
+                      - alias: If the alarm needs to be armed
+                        conditions:
+                          - condition: template
+                            value_template: "{{ prefix == '' }}"
+                        sequence:
+                          - alias: Arm the alarm
+                            action: alarm_control_panel.alarm_arm_away
+                            target:
+                              entity_id: "{{ alarm }}"
+                      - alias: If the alarm needs to be unarmed
+                        conditions:
+                          - condition: template
+                            value_template: "{{ prefix == 'un' }}"
+                        sequence:
+                          - alias: Unarm the alarm
+                            action: alarm_control_panel.alarm_disarm
+                            target:
+                              entity_id: "{{ alarm }}"
           - alias: Reset the itinerary status
             variables:
               update:
