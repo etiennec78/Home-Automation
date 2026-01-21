@@ -3207,14 +3207,62 @@ actions:
                               action: lock.open
                               target:
                                 entity_id: "{{ repeat.item }}"
+                  - alias: Set the alarm action
+                    variables:
+                      action: |-
+                        {% if alarm != '' %}
+                          {%
+                            set features = (
+                              state_attr(alarm, 'supported_features')
+                            )
+                          %}
+                          {% set state = states(alarm) %}
+                          {% if prefix == '' %}
+                            {%
+                              if state not in ['armed_away', 'armed_vacation']
+                              and features | bitwise_and(2) == 2
+                            %}
+                              alarm_arm_away
+                            {% else %}
+                              {{ none }}
+                            {% endif %}
+                          {% else %}
+                            {%
+                              if state not in [
+                                'disarmed',
+                                'armed_home',
+                                'armed_night',
+                                'armed_custom_bypass'
+                              ]
+                            %}
+                              {% set start = today_at('20:00') %}
+                              {% set end = today_at('4:00') %}
+                              {% set time = now() %}
+                              {%
+                                if features | bitwise_and(4) == 4
+                                and (
+                                  start <= end and start <= time <= end
+                                  or start > end and (time >= start or time <= end)
+                                )
+                              %}
+                                alarm_arm_night
+                              {% elif features | bitwise_and(1) == 1 %}
+                                alarm_arm_home
+                              {% else %}
+                                alarm_disarm
+                              {% endif %}
+                            {% else %}
+                              {{ none }}
+                            {% endif %}
+                          {% endif %}
+                        {% else %}
+                          {{ none }}
+                        {% endif %}
+                  - alias: Only continue if the alarm needs to be called
+                    condition: template
+                    value_template: "{{ action is not none }}"
                   - alias: (Un)arm the alarm
-                    action: |-
-                      alarm_control_panel.
-                      {%- if prefix == '' -%}
-                        alarm_arm_away
-                      {%- else -%}
-                        alarm_disarm
-                      {%- endif -%}
+                    action: "alarm_control_panel.{{ action }}"
                     target:
                       entity_id: "{{ alarm }}"
                     data: |-
