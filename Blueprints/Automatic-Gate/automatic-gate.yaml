@@ -67,6 +67,18 @@ blueprint:
             entity:
               filter:
                 domain: zone
+        open_when_connected_to:
+          name: 🔓 Gate opening method on arrival
+          description: |-
+            The sensor you want to use do detect your arrival and open your gate
+          default: "time"
+          selector:
+            select:
+              options:
+                - label: Travel time (recommended)
+                  value: time
+                - label: Bluetooth LE
+                  value: ble
         lead_time:
           name: 🕓 Lead time
           description: The **lead time** to open the gate **before your arrival** (take your gate movement time & a margin into account)
@@ -538,18 +550,6 @@ blueprint:
               options:
                 - label: Bluetooth LE
                   value: ble
-        open_when_connected_to:
-          name: 📡 Open on arrival when connected to
-          description: |-
-            Open the gate when driver's BLE is reachable
-            Enabling this will remove the need of a travel time sensor
-          default: []
-          selector:
-            select:
-              multiple: true
-              options:
-                - label: Bluetooth LE
-                  value: ble
 
     locks:
       name: Door locks
@@ -940,7 +940,7 @@ actions:
                   (
                     'ble' in (
                       only_open_near
-                      + open_when_connected_to
+                      + [open_when_connected_to]
                       + close_when_disconnected_from
                     )
                     or ble_transmitter_entities | length > 0
@@ -956,7 +956,7 @@ actions:
                   if ble_entities | length > 0 and (
                     'ble' not in (
                       only_open_near
-                      + open_when_connected_to
+                      + [open_when_connected_to]
                       + close_when_disconnected_from
                     )
                   )
@@ -1044,7 +1044,7 @@ actions:
               error: |-
                 {{
                   travel_time_sensors | length == 0
-                  and 'ble' not in open_when_connected_to
+                  and open_when_connected_to != 'ble'
                 }}
               message_id: "missing_arrival_opening_method"
               level: 2
@@ -1052,7 +1052,7 @@ actions:
               error: |-
                 {{
                   travel_time_sensors | length > 0
-                  and 'ble' in open_when_connected_to
+                  and open_when_connected_to == 'ble'
                 }}
               message_id: "too_many_arrival_opening_method"
               level: 0
@@ -1083,7 +1083,7 @@ actions:
                     )
                     and (
                       persons_len == travel_time_sensors | length
-                      or 'ble' in open_when_connected_to
+                      or open_when_connected_to == 'ble'
                     )
                     and wifi_devices | length <= driving_len
                     and ble_entities | length <= driving_len
@@ -3377,7 +3377,7 @@ actions:
         - choose:
             - conditions:
                 - condition: template
-                  value_template: "{{ 'ble' in open_when_connected_to }}"
+                  value_template: "{{ open_when_connected_to == 'ble' }}"
               sequence:
                 - alias: Set an empty trigger id
                   variables: *reset_trigger_id
@@ -3593,7 +3593,7 @@ actions:
           condition: template
           value_template: |-
             {{
-              'ble' in open_when_connected_to
+              open_when_connected_to == 'ble'
                 and wait.trigger.id == 'ble_in_reach'
               or opening_time is not none
                 and opening_time <= as_timestamp(now())
