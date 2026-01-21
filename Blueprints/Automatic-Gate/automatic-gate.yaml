@@ -3258,9 +3258,10 @@ actions:
                           if state not in [
                             'disarmed',
                             'armed_home',
-                            'armed_night',
                             'armed_custom_bypass'
-                          ]
+                          ] + (
+                            ['armed_night'] if 'night' in security_features else []
+                          )
                         %}
                           {% set start = today_at('20:00') %}
                           {% set end = today_at('4:00') %}
