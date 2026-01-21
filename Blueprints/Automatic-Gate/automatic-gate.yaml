@@ -3486,7 +3486,7 @@ actions:
                       - alias: Convert travel time to seconds
                         variables:
                           travel_time_duration: |-
-                            {% if state_attr(travel_time_sensor, 'duration') is none %}
+                            {% if state_attr(travel_time_sensor, 'duration') is not none %}
                               {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
                             {% elif is_state_attr(travel_time_sensor, 'unit_of_measurement', 'min') %}
                               {{ states(travel_time_sensor) | float * 60 }}
