@@ -581,6 +581,13 @@ blueprint:
             entity:
               filter:
                 domain: alarm_control_panel
+        alarm_code:
+          name: 🔑 Alarm code
+          description: |-
+            The code that will be used to unlock your alarm
+          default: ""
+          selector:
+            text:
         locks:
           name: 🔐 Locks
           description: |-
@@ -3200,25 +3207,18 @@ actions:
                               action: lock.open
                               target:
                                 entity_id: "{{ repeat.item }}"
-                  - choose:
-                      - alias: If the alarm needs to be armed
-                        conditions:
-                          - condition: template
-                            value_template: "{{ prefix == '' }}"
-                        sequence:
-                          - alias: Arm the alarm
-                            action: alarm_control_panel.alarm_arm_away
-                            target:
-                              entity_id: "{{ alarm }}"
-                      - alias: If the alarm needs to be unarmed
-                        conditions:
-                          - condition: template
-                            value_template: "{{ prefix == 'un' }}"
-                        sequence:
-                          - alias: Unarm the alarm
-                            action: alarm_control_panel.alarm_disarm
-                            target:
-                              entity_id: "{{ alarm }}"
+                  - alias: (Un)arm the alarm
+                    action: |-
+                      alarm_control_panel.
+                      {%- if prefix == '' -%}
+                        alarm_arm_away
+                      {%- else -%}
+                        alarm_disarm
+                      {%- endif -%}
+                    target:
+                      entity_id: "{{ alarm }}"
+                    data: |-
+                      {{ {} if alarm_code == '' else {'code': alarm_code} }}
           - alias: Reset the itinerary status
             variables:
               update:
