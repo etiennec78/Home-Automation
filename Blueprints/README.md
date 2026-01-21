@@ -41,8 +41,7 @@ Refer to the table below to fix the errors
   | #5 | You have entered these Wi-Fi trackers: '...' but are not using them | Either tick the Wi-Fi opening input, or remove your Wi-Fi trackers in the 'Presence sensors' category |
   | #6 | These trackers/persons: '...' do not support GPS tracking | Replace Wi-Fi device trackers by GPS trackers in the 'Persons' input |
   | #7 | These BLE trackers: '...' are currently not reporting an 'unknown' state | Check that these BLE trackers go back to their 'unknown' state after losing signal for some seconds |
-  | #8 | You do not have any way to detect your arrival | Please add a travel time sensor or use an Bluetooth LE tracker for opening on arrival |
-  | #9 | You are using several methods to detect your arrival | Either untick 'Open on arrival when connected to: Bluetooth LE' or remove your travel time sensors |
+  | #8 | Your opening method on arrival is set to 'Travel Time' but you have not provided enough travel time sensors | Either change your gate opening method on arrival, or add travel time sensors (one per person/device tracker) |
   | #10 | These itinerary sensors: '...' have a maximum length of less than 255 | Read [this part](https://github.com/etiennec78/Home-Automation/blob/dev/sensors.md#itinerary-sensors-%EF%B8%8F) of the wiki to change the maximum length of these helpers |
   | #11 | You have not entered a consistent number of sensors in the per person sensor inputs | Some fields must have exactly (or at most) one sensor per person. Make sure you comply with these conditions. |
   | #12 | These persons: '...' appear to have mixed up per person sensors | Each person must have all their 'per person sensors' at the same index |
