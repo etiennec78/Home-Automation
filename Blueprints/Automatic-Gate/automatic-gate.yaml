@@ -694,6 +694,7 @@ variables:
   forbidden_zones: !input forbidden_zones
   open_when_connected_to: !input open_when_connected_to
   alarm: !input alarm
+  alarm_code: !input alarm_code
   security_features: !input security_features
   dont_lock_if_people_remaining: !input dont_lock_if_people_remaining
   quick_tt_updates: 0
