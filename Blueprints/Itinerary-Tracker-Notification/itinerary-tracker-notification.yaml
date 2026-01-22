@@ -971,16 +971,53 @@ actions:
                       value_template: "{{ wait.trigger.id == 'conditions_changed' }}"
                   sequence:
                     - variables:
+                        old_notify_services: "{{ active_notify_services }}"
                         active_notify_services: *get_active_services
-                    - alias: Remove itinerary notification for each user
-                      repeat: &clear_notification
-                        for_each: "{{ active_notify_services }}"
-                        sequence:
-                          - action: "{{ repeat.item }}"
-                            data:
-                              message: clear_notification
-                              data:
-                                tag: "{{ notification_tag }}"
+                    - choose:
+                        - alias: If a user needs to be removed from the list
+                          conditions:
+                            - condition: template
+                              value_template: "{{ old_notify_services | length > active_notify_services | length }}"
+                          sequence:
+                            - alias: Remove itinerary notification for each removed user
+                              repeat:
+                                for_each: "{{ active_notify_services | difference(old_notify_services) }}"
+                                sequence: &clear_notification
+                                  - action: "{{ repeat.item }}"
+                                    data:
+                                      message: clear_notification
+                                      data:
+                                        tag: "{{ notification_tag }}"
+                        - alias: If a user has been added back and arrival values exist
+                          conditions:
+                            - condition: template
+                              value_template: "{{ arrival_timestamp is not none }}"
+                          sequence: &send_eta
+                            - alias: Get notification translation
+                              variables:
+                                message_id: "itinerary_ongoing"
+                                message: *get_message
+                            - alias: Format the notification message
+                              variables:
+                                message: |-
+                                  {{
+                                    message.format(
+                                      arrival=arrival,
+                                      driver_name=driver_name
+                                    )
+                                  }}
+                            - alias: Send ETA notification to each user
+                              repeat:
+                                for_each: "{{ active_notify_services }}"
+                                sequence:
+                                  - action: "{{ repeat.item }}"
+                                    data:
+                                      message: "{{ message }}"
+                                      data:
+                                        <<: *notification_data
+                                        notification_icon: mdi:map-marker-account
+                                        chronometer: true
+                                        when: "{{ arrival_timestamp | int }}"
                 - alias: If travel time remaining needs to trigger nearly arrived TTS
                   conditions:
                     - condition: template
@@ -1094,31 +1131,8 @@ actions:
                     - alias: Save the current time of arrival
                       variables:
                         last_arrival_timestamp: "{{ arrival_timestamp }}"
-                    - alias: Get notification translation
-                      variables:
-                        message_id: "itinerary_ongoing"
-                        message: *get_message
-                    - alias: Format the notification message
-                      variables:
-                        message: |-
-                          {{
-                            message.format(
-                              arrival=arrival,
-                              driver_name=driver_name
-                            )
-                          }}
-                    - alias: Send ETA notification to each user
-                      repeat:
-                        for_each: "{{ active_notify_services }}"
-                        sequence:
-                          - action: "{{ repeat.item }}"
-                            data:
-                              message: "{{ message }}"
-                              data:
-                                <<: *notification_data
-                                notification_icon: mdi:map-marker-account
-                                chronometer: true
-                                when: "{{ arrival_timestamp | int }}"
+                    - alias: Send an ETA notification
+                      sequence: *send_eta
                     - alias: If persistent notifications are still active
                       if:
                         - condition: template
@@ -1207,5 +1221,7 @@ actions:
         then: *play_speaker_tts
     else:
       - alias: Remove itinerary notification for each user
-        repeat: *clear_notification
+        repeat:
+          for_each: "{{ active_notify_services }}"
+          sequence: *clear_notification
 mode: parallel
