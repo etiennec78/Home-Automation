@@ -972,6 +972,15 @@ actions:
                   sequence:
                     - variables:
                         active_notify_services: *get_active_services
+                    - alias: Remove itinerary notification for each user
+                      repeat: &clear_notification
+                        for_each: "{{ active_notify_services }}"
+                        sequence:
+                          - action: "{{ repeat.item }}"
+                            data:
+                              message: clear_notification
+                              data:
+                                tag: "{{ notification_tag }}"
                 - alias: If travel time remaining needs to trigger nearly arrived TTS
                   conditions:
                     - condition: template
@@ -1198,12 +1207,5 @@ actions:
         then: *play_speaker_tts
     else:
       - alias: Remove itinerary notification for each user
-        repeat:
-          for_each: "{{ active_notify_services }}"
-          sequence:
-            - action: "{{ repeat.item }}"
-              data:
-                message: clear_notification
-                data:
-                  tag: "{{ notification_tag }}"
+        repeat: *clear_notification
 mode: parallel
