@@ -261,8 +261,6 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
   <summary>Combining these sensors 🔗</summary>
 
   If some people drive several cars, combine their sensors so there is only one per person
-  
-  You can also improve the reliability and reactivity of some sensors by combining them (e.g.: bluetooth connects first, but Android Auto is plugged and more stable)
 
   #### Setup 🛠️
 
