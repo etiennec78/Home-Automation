@@ -10,7 +10,7 @@ Makes managing your gate while driving easier: You won't ever have to use your r
 ## Key Features 🌟
 
 * **Multi-User Support**: Manages up to 10 drivers simultaneously 🚗
-* **Broad Compatibility**: This blueprint is compatible with most vehicles and most travel time providers (Waze, Here, smart vehicles) 🔗
+* **Broad Compatibility**: This blueprint is compatible with most vehicles, travel time providers (Waze, Here, smart vehicles) and even bikes 🔗
 * **Notification Translations**: This blueprint ships with built-in and custom translations 🌍
 * **Security & Reliability**:
   * Precise ETA calculations to have your gate fully open exactly when you arrive home 🎯
