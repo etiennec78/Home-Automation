@@ -316,6 +316,18 @@ blueprint:
               min: 1
               max: 120
               unit_of_measurement: seconds
+        partial_open_position:
+          name: ↔️ Gate partial opening
+          description: |-
+            Define the target position for partial opening (e.g., for bicylces)
+            > This feature only works with covers that support setting position
+          default: 100
+          selector:
+            number:
+              min: 1
+              max: 100
+              step: 1
+              unit_of_measurement: "%"
 
     security_features:
       name: Security features
@@ -606,6 +618,7 @@ variables:
   gate_location: !input gate_location
   gate_areas: "{{ gate | map('area_id') | difference([none]) | list }}"
   lead_time: !input lead_time
+  partial_open_position: !input partial_open_position
   security_notif_override: !input security_notif_override
   safety_delay: !input safety_delay
   timeout_delay: !input timeout_delay
@@ -1541,12 +1554,31 @@ actions:
                 repeat: &open_gates
                   for_each: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list }}"
                   sequence:
-                    - action: |-
-                        {% if states[repeat.item].domain == 'switch' %}
-                          switch.turn_on
-                        {% elif states[repeat.item].domain == 'cover' %}
-                          cover.open_cover
-                        {% endif %}
+                    - alias: Get the action to call
+                      variables:
+                        action: |-
+                          {% if states[repeat.item].domain == 'switch' %}
+                            turn_on
+                          {% elif states[repeat.item].domain == 'cover' %}
+                            {%
+                              if partial_open_position != 100
+                              and (
+                                state_attr(repeat.item, 'supported_features')
+                                | bitwise_and(4) == 4
+                              )
+                            %}
+                              set_cover_position
+                            {% else %}
+                              open_cover
+                            {% endif %}
+                          {% endif %}
+                        data: |-
+                          {{
+                            {'position': partial_open_position}
+                            if action == 'set_cover_position'
+                            else {}
+                          }}
+                    - action: "{{ states[repeat.item].domain ~ '.' ~ action }}"
                       target:
                         entity_id: "{{ repeat.item }}"
               - alias: Set notification ids
