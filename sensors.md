@@ -94,8 +94,6 @@ Use Android Auto, Apple CarPlay, Bluetooth, or a combination of these
 
 If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack adapter](https://amzn.to/3G0vOCT), a [Bluetooth-to-radio adapter](https://amzn.to/4jVEoRp), or use an [ESP32 emulating a Bluetooth keyboard](./Extra/ESP-Bluetooth-Dummie)
 
-
-
 #### Summary 📝
 
 | Service | Wireless | Reliability | Compatibility |
