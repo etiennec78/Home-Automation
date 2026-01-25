@@ -792,6 +792,7 @@ variables:
         invalid_ibeacon_transmitter: "These iBeacon transmitters: '{data}' are invalid (#19)"
         no_compatible_gps_tracker: "These persons cannot be tracked by GPS: '{data}' because they do not have GPS trackers, or they come from a different mobile app than the notification device (#20)"
         deprecated_translations: "Custom translations now use a yaml dictionnary instead of json. Please update your old config. (#21)"
+        quick_refresh_function: "Your travel time refresh function makes too many calls to the API: 120+ for a 2-hour trip (#22)"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -859,6 +860,7 @@ variables:
         invalid_ibeacon_transmitter: "Ces transmetteurs iBeacon: '{data}' sont invalides (#19)"
         no_compatible_gps_tracker: "Ces personnes ne pourront pas être attendue en GPS: '{data}' car elle n'ont pas de traceurs gps, ou ils proviennent d'une application différente de celle de l'appareil de notification (#20)"
         deprecated_translations: "Les traductions personnalisés utilisent maintenant un dictionnaire yaml au lieu de json. Mettez à jour votre configuration svp. (#21)"
+        quick_refresh_function: "Votre fonction d'actualisation du temps de trajet effectue trop d'appels à l'API: 120+ pour un trajet de 2 heures (#22)"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -937,7 +939,6 @@ actions:
             }}
   - alias: Initialize variables for the error checker
     variables:
-      messages: []
       custom_translations_error: "{{ custom_translations is not mapping }}"
       successful_check: false
       error_level: 0
@@ -971,6 +972,40 @@ actions:
             condition: trigger
             id: blueprint_enabled
     then:
+      - alias: Initialize variables for the next loop
+        variables:
+          messages: []
+          api_calls: 0
+          remaining: 7200
+          seconds_before_opening: |-
+            {{
+              remaining
+              - lead_time
+              - (5 if behavior.arrival.opening == "timer" else 0)
+            }}
+          in_activation_zone: false
+      - alias: If the arrival opening method is set to 'Travel time'
+        if:
+          - condition: template
+            value_template: "{{ 'time' in open_when_connected_to }}"
+        then:
+          - alias: Get how many times the travel time API would have been called in a 2h trip
+            repeat:
+              while:
+                - alias: The travel time wouldn't have reached 0 yet
+                  condition: template
+                  value_template: "{{ seconds_before_opening > 0 }}"
+                - alias: The amount of api calls would be below 120
+                  condition: template
+                  value_template: "{{ api_calls < 120 }}"
+              sequence:
+                - alias: Update the fake travel time
+                  variables:
+                    old_activation_zone: "{{ in_activation_zone }}"
+                    in_activation_zone: "{{ seconds_before_opening < activation_zone/50*3.6 }}"  # Estimated based on a 50hm/h speed
+                    next_refresh: !input refresh_function
+                    remaining: "{{ remaining - next_refresh }}"
+                    api_calls: "{{ repeat.index }}"
       - alias: Check for errors
         repeat:
           for_each:
@@ -1334,6 +1369,10 @@ actions:
               error: "{{ custom_translations_error }}"
               message_id: "deprecated_translations"
               level: 0
+            - alias: Check that the travel time refresh function gives slow enough delays
+              error: "{{ api_calls >= 120 }}"
+              message_id: "quick_refresh_function"
+              level: 2
           sequence:
             - alias: If a check failed
               if:
