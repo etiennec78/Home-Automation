@@ -55,6 +55,6 @@ Refer to the table below to fix the errors
   | #19 | These iBeacon transmitters: '...' are invalid | Please check that the iBeacon transmitter entities mentionned come from the android mobile app, and are transmitters, not monitors. Also, these sensors are not needed on iOS |
   | #20 | These persons cannot be tracked by GPS: '...' because they do not have GPS trackers, or they come from a different mobile app than the notification device | Either untick the 'gps' in the 'Confirm the location on startup' input, or check that your person entity has at least one gps device tracker, and that if it is provided by a mobile app, ensure that it is the same one as your notification device |
   | #21 | Custom translations now use a yaml dictionnary instead of json. Please update your old config. | If you want to migrate your old translations, simply remove the '\|-' and save your automation |
-  | #22 | Your travel time refresh function makes too many calls to the API: 120+ for a 2-hour trip | Make sure your refresh function returns longer intervals |
+  | #22 | Your travel time refresh function makes too many calls to the API: ... for a 2-hour trip | Make sure your refresh function returns longer intervals. It should call the API less than 120 times per 2-hour trip. |
   
 </details>

@@ -792,7 +792,7 @@ variables:
         invalid_ibeacon_transmitter: "These iBeacon transmitters: '{data}' are invalid (#19)"
         no_compatible_gps_tracker: "These persons cannot be tracked by GPS: '{data}' because they do not have GPS trackers, or they come from a different mobile app than the notification device (#20)"
         deprecated_translations: "Custom translations now use a yaml dictionnary instead of json. Please update your old config. (#21)"
-        quick_refresh_function: "Your travel time refresh function makes too many calls to the API: 120+ for a 2-hour trip (#22)"
+        quick_refresh_function: "Your travel time refresh function makes too many calls to the API: {data} for a 2-hour trip (#22)"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -860,7 +860,7 @@ variables:
         invalid_ibeacon_transmitter: "Ces transmetteurs iBeacon: '{data}' sont invalides (#19)"
         no_compatible_gps_tracker: "Ces personnes ne pourront pas être attendue en GPS: '{data}' car elle n'ont pas de traceurs gps, ou ils proviennent d'une application différente de celle de l'appareil de notification (#20)"
         deprecated_translations: "Les traductions personnalisés utilisent maintenant un dictionnaire yaml au lieu de json. Mettez à jour votre configuration svp. (#21)"
-        quick_refresh_function: "Votre fonction d'actualisation du temps de trajet effectue trop d'appels à l'API: 120+ pour un trajet de 2 heures (#22)"
+        quick_refresh_function: "Votre fonction d'actualisation du temps de trajet effectue trop d'appels à l'API: {data} pour un trajet de 2 heures (#22)"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -995,9 +995,9 @@ actions:
                 - alias: The travel time wouldn't have reached 0 yet
                   condition: template
                   value_template: "{{ seconds_before_opening > 0 }}"
-                - alias: The amount of api calls would be below 120
+                - alias: The amount of api calls would be below 300
                   condition: template
-                  value_template: "{{ api_calls < 120 }}"
+                  value_template: "{{ api_calls < 300 }}"
               sequence:
                 - alias: Update the fake travel time
                   variables:
@@ -1370,7 +1370,12 @@ actions:
               message_id: "deprecated_translations"
               level: 0
             - alias: Check that the travel time refresh function gives slow enough delays
-              error: "{{ api_calls >= 120 }}"
+              error: |-
+                {{
+                  [api_calls ~ '+'] if api_calls == 300
+                  else [api_calls] if api_calls >= 120
+                  else false
+                }}
               message_id: "quick_refresh_function"
               level: 2
           sequence:
