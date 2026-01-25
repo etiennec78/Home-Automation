@@ -3518,8 +3518,8 @@ actions:
                       action: homeassistant.update_entity
                       target:
                         entity_id: "{{ travel_time_sensor }}"
-                    - alias: &get_travel_time
-                      sequence:
+                    - alias: Get the travel time
+                      sequence: &get_travel_time
                         - alias: If the travel time sensor is not unknown or unavailable
                           if:
                             - condition: template
