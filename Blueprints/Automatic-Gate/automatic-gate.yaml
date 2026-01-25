@@ -3440,10 +3440,6 @@ actions:
                   )
                 }}
           then:
-            - alias: Set variables for the following sequence
-              variables:
-                quick_update_trigger: "{{ continuously_refresh_interval * 60 - 30 }}"
-                reset_after: "{{ continuously_refresh_interval * 120 }}"
             - sequence: &update_travel_time
                 - alias: Stop if travel time sensor does not exist
                   if:
@@ -3466,7 +3462,7 @@ actions:
                 - alias: Only update the travel time if it has not already been updated recently
                   if:
                     - condition: template
-                      value_template: "{{ now() - states[travel_time_sensor].last_updated > timedelta(seconds=quick_update_trigger) }}"
+                      value_template: "{{ now() - states[travel_time_sensor].last_updated > timedelta(seconds=2) }}"
                   then:
                     - alias: Update travel time
                       action: homeassistant.update_entity
@@ -3479,7 +3475,7 @@ actions:
                           value_template: |-
                             {{
                               last_quick_tt_update is not none
-                              and last_quick_tt_update + timedelta(seconds=reset_after) > now()
+                              and last_quick_tt_update + timedelta(seconds=5) > now()
                             }}
                       then:
                         - alias: Note that the travel time sensor tried to update too quickly
@@ -3615,10 +3611,6 @@ actions:
                         condition: not
                         conditions: *in_forbidden_zone
                     sequence:
-                      - alias: Set variables for the following sequence
-                        variables:
-                          quick_update_trigger: 1
-                          reset_after: 20
                       - alias: If the travel time needs to be updated
                         if:
                           - condition: template
