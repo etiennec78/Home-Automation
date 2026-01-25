@@ -204,15 +204,19 @@ blueprint:
                   value: "once"
                 - label: Listen for updates
                   value: "listen"
-        continuously_refresh_interval:
-          name: ⏳ Continuously refresh interval
-          description: Your travel time **refresh interval** while away. Only active with a refresh rate set to **"Continuously"**
-          default: 5
+        refresh_function:
+          name: ⏳ Refresh function
+          description: |-
+            Your travel time **refresh function** to get the delay between two travel time API calls, while taking into account the remaining time
+            *Note: Only active with a refresh rate set to **"Continuously"** or **"While near home"***
+          default: |-
+            {{
+              max(seconds_before_opening / 5, 5)
+              if in_activation_zone
+              else max(seconds_before_opening / 3, 60)
+            }}
           selector:
-            number:
-              min: 1
-              max: 60
-              unit_of_measurement: minutes
+            template:
 
     gate_behavior:
       name: Gate behavior
@@ -668,7 +672,7 @@ variables:
   notify_service: "{{ none }}"
   itinerary_sensors: !input itinerary_sensors
   travel_time_rate: !input travel_time_rate
-  continuously_refresh_interval: !input continuously_refresh_interval
+  refresh_function: !input refresh_function
   behavior:
     departure:
       opening: !input departure_opening_behavior
@@ -3376,6 +3380,11 @@ actions:
   # START ITINERARY #
   ###################
 
+  - alias: Initialize travel time variables
+    variables:
+      last_refresh_timestamp: 0
+      next_refresh: 0
+      seconds_before_opening: 2147483647
   - alias: Set the itinerary status to "arriving"
     variables:
       update:
@@ -3432,12 +3441,6 @@ actions:
                 {{
                   travel_time_rate == 'continuous'
                   and travel_time_sensor is not none
-                  and (
-                    (
-                      states[travel_time_sensor].last_updated
-                      + timedelta(minutes=continuously_refresh_interval)
-                    ) < now()
-                  )
                 }}
           then:
             - sequence: &update_travel_time
@@ -3459,6 +3462,9 @@ actions:
                         logger: blueprints.etiennec78.automatic_gate
                     - stop: Travel time sensor does not exist
                       error: true
+                - alias: Only continue if the travel time should be updated
+                  condition: template
+                  value_template: "{{ last_refresh_timestamp + next_refresh < now() | as_timestamp }}"
                 - alias: Only update the travel time if it has not already been updated recently
                   if:
                     - condition: template
@@ -3468,6 +3474,75 @@ actions:
                       action: homeassistant.update_entity
                       target:
                         entity_id: "{{ travel_time_sensor }}"
+                    - alias: &get_travel_time
+                      sequence:
+                        - alias: If the travel time sensor is not unknown or unavailable
+                          if:
+                            - condition: template
+                              value_template: "{{ states(travel_time_sensor) not in ['unknown', 'unavailable'] }}"
+                          then:
+                            - alias: Convert travel time to seconds
+                              variables:
+                                travel_time_duration: |-
+                                  {% if state_attr(travel_time_sensor, 'duration') | is_number %}
+                                    {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
+                                  {% elif is_state_attr(travel_time_sensor, 'unit_of_measurement', 'min') %}
+                                    {{ states(travel_time_sensor) | float * 60 }}
+                                  {% elif is_state_attr(travel_time_sensor, 'unit_of_measurement', 's') %}
+                                    {{ states(travel_time_sensor) | float }}
+                                  {% elif is_state_attr(travel_time_sensor, 'device_class', 'timestamp') %}
+                                    {{
+                                      states(travel_time_sensor) | as_timestamp
+                                      - states[travel_time_sensor].last_updated | as_timestamp
+                                    }}
+                                  {% else %}
+                                    unknown
+                                  {% endif %}
+                            - alias: Stop if travel time integration is not supported
+                              if:
+                                - condition: template
+                                  value_template: "{{ travel_time_duration == 'unknown' }}"
+                              then:
+                                - alias: Set error id
+                                  variables:
+                                    message_id: "unsupported_tt_integration"
+                                - alias: Create error
+                                  sequence: *create_error
+                                - alias: Log error
+                                  action: system_log.write
+                                  data:
+                                    level: error
+                                    message: "{{ message }}"
+                                    logger: blueprints.etiennec78.automatic_gate
+                                - stop: Travel time integration not supported
+                                  error: true
+                            - alias: Only continue if the duration is positive
+                              condition: template
+                              value_template: "{{ travel_time_duration >= 0 }}"
+                            - alias: Set the opening time
+                              variables:
+                                opening_time: |-
+                                  {{
+                                    states[travel_time_sensor].last_updated | as_timestamp
+                                      + travel_time_duration
+                                      - lead_time
+                                      - (timer_opening if behavior.arrival.opening == 'timer' else 0)
+                                  }}
+                          else:
+                            - alias: Add 1 to the failed updates counter
+                              variables:
+                                failed_updates: "{{ failed_updates + 1 }}"
+                        - alias: Only continue if the opening time exists
+                          condition: template
+                          value_template: "{{ opening_time is not none }}"
+                        - alias: Set a timer for the gate opening (or max int value if travel time sensor is unknown and no previous eta was stored)
+                          variables:
+                            seconds_before_opening: "{{ opening_time - now() | as_timestamp }}"
+                        - alias: Set the next refresh timestamp
+                          variables:
+                            in_activation_zone: *activation_zone_in_condition
+                            next_refresh: !input refresh_function
+                            last_refresh_timestamp: "{{ now() | as_timestamp }}"
                   else:
                     - alias: If the last quick update was a long time ago
                       if:
@@ -3624,70 +3699,8 @@ actions:
                         then:
                           - alias: Update travel time
                             sequence: *update_travel_time
-                      - alias: If the travel time sensor is not unknown or unavailable
-                        if:
-                          - condition: template
-                            value_template: "{{ states(travel_time_sensor) not in ['unknown', 'unavailable'] }}"
-                        then:
-                          - alias: Convert travel time to seconds
-                            variables:
-                              travel_time_duration: |-
-                                {% if state_attr(travel_time_sensor, 'duration') | is_number %}
-                                  {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
-                                {% elif is_state_attr(travel_time_sensor, 'unit_of_measurement', 'min') %}
-                                  {{ states(travel_time_sensor) | float * 60 }}
-                                {% elif is_state_attr(travel_time_sensor, 'unit_of_measurement', 's') %}
-                                  {{ states(travel_time_sensor) | float }}
-                                {% elif is_state_attr(travel_time_sensor, 'device_class', 'timestamp') %}
-                                  {{
-                                    states(travel_time_sensor) | as_timestamp
-                                    - states[travel_time_sensor].last_updated | as_timestamp
-                                  }}
-                                {% else %}
-                                  unknown
-                                {% endif %}
-                          - alias: Stop if travel time integration is not supported
-                            if:
-                              - condition: template
-                                value_template: "{{ travel_time_duration == 'unknown' }}"
-                            then:
-                              - alias: Set error id
-                                variables:
-                                  message_id: "unsupported_tt_integration"
-                              - alias: Create error
-                                sequence: *create_error
-                              - alias: Log error
-                                action: system_log.write
-                                data:
-                                  level: error
-                                  message: "{{ message }}"
-                                  logger: blueprints.etiennec78.automatic_gate
-                              - stop: Travel time integration not supported
-                                error: true
-                          - alias: Only continue if the duration is positive
-                            condition: template
-                            value_template: "{{ travel_time_duration >= 0 }}"
-                          - alias: Set the opening time
-                            variables:
-                              opening_time: |-
-                                {{
-                                  states[travel_time_sensor].last_updated | as_timestamp
-                                    + travel_time_duration
-                                    - lead_time
-                                    - (timer_opening if behavior.arrival.opening == 'timer' else 0)
-                                }}
-                        else:
-                          - alias: Add 1 to the failed updates counter
-                            variables:
-                              failed_updates: "{{ failed_updates + 1 }}"
-                      - alias: Set a timer for the gate opening (or max int value if travel time sensor is unknown and no previous eta was stored)
-                        variables:
-                          seconds_before_opening: |-
-                            {% if opening_time is none %}
-                              2147483647
-                            {% else %}
-                              {{ opening_time - now() | as_timestamp }}
-                            {% endif %}
+                      - alias: Get the travel time
+                        sequence: *get_travel_time
                       - alias: If ETA in the future or no opening time could be set
                         if:
                           - condition: template
