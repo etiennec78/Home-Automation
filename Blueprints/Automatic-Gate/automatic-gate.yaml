@@ -3521,21 +3521,21 @@ actions:
                         then:
                           - alias: Convert travel time to seconds
                             variables:
-                            travel_time_duration: |-
-                              {% if state_attr(travel_time_sensor, 'duration') is not none %}
-                                {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
-                              {% elif is_state_attr(travel_time_sensor, 'unit_of_measurement', 'min') %}
-                                {{ states(travel_time_sensor) | float * 60 }}
-                              {% elif is_state_attr(travel_time_sensor, 'unit_of_measurement', 's') %}
-                                {{ states(travel_time_sensor) | float }}
-                              {% elif is_state_attr(travel_time_sensor, 'device_class', 'timestamp') %}
-                                {{
-                                  states(travel_time_sensor) | as_timestamp
-                                  - states[travel_time_sensor].last_updated | as_timestamp
-                                }}
-                              {% else %}
-                                unknown
-                              {% endif %}
+                              travel_time_duration: |-
+                                {% if state_attr(travel_time_sensor, 'duration') is not none %}
+                                  {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
+                                {% elif is_state_attr(travel_time_sensor, 'unit_of_measurement', 'min') %}
+                                  {{ states(travel_time_sensor) | float * 60 }}
+                                {% elif is_state_attr(travel_time_sensor, 'unit_of_measurement', 's') %}
+                                  {{ states(travel_time_sensor) | float }}
+                                {% elif is_state_attr(travel_time_sensor, 'device_class', 'timestamp') %}
+                                  {{
+                                    states(travel_time_sensor) | as_timestamp
+                                    - states[travel_time_sensor].last_updated | as_timestamp
+                                  }}
+                                {% else %}
+                                  unknown
+                                {% endif %}
                           - alias: Stop if travel time integration is not supported
                             if:
                               - condition: template
