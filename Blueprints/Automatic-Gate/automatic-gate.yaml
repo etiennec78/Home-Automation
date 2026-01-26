@@ -987,7 +987,7 @@ actions:
       - alias: If the arrival opening method is set to 'Travel time'
         if:
           - condition: template
-            value_template: "{{ 'time' in open_when_connected_to }}"
+            value_template: "{{ arrival_opening_method == 'time' }}"
         then:
           - alias: Get how many times the travel time API would have been called in a 2h trip
             repeat:
@@ -3843,7 +3843,7 @@ actions:
               states[gate_location].object_id
             ]
           )
-          and 'time' in arrival_opening_method
+          and arrival_opening_method == 'time'
           and opening_time is none
         %}
           travel_time_did_not_respond
