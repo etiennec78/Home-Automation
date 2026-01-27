@@ -24,6 +24,7 @@ SENSITIVE_KEYS = {
         "trigger",
         "driver_name",
         "confirmation",
+        "alarm_code"
     },
 }
 
