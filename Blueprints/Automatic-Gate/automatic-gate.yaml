@@ -672,7 +672,6 @@ variables:
   notify_service: "{{ none }}"
   itinerary_sensors: !input itinerary_sensors
   travel_time_rate: !input travel_time_rate
-  refresh_function: !input refresh_function
   behavior:
     departure:
       opening: !input departure_opening_behavior
@@ -972,23 +971,27 @@ actions:
             condition: trigger
             id: blueprint_enabled
     then:
-      - alias: Initialize variables for the next loop
+      - alias: Initialize variables for the error checker
         variables:
           messages: []
           api_calls: 0
-          remaining: 7200
-          seconds_before_opening: |-
-            {{
-              remaining
-              - lead_time
-              - (5 if behavior.arrival.opening == "timer" else 0)
-            }}
-          in_activation_zone: false
       - alias: If the arrival opening method is set to 'Travel time'
         if:
           - condition: template
             value_template: "{{ arrival_opening_method == 'time' }}"
         then:
+          - alias: Initialize variables for the next loop
+            variables:
+              remaining: 7200
+              seconds_before_opening: |-
+                {{
+                  remaining
+                  - lead_time
+                  - (5 if behavior.arrival.opening == "timer" else 0)
+                }}
+              activation_zone_duration: "{{ activation_zone/50*3.6 }}"
+              in_activation_zone: false
+              first_time_in: true
           - alias: Get how many times the travel time API would have been called in a 2h trip
             repeat:
               while:
@@ -999,12 +1002,33 @@ actions:
                   condition: template
                   value_template: "{{ api_calls < 300 }}"
               sequence:
+                - alias: Set the estimated time until the activation zone and the next refresh
+                  variables:
+                    time_until_activation_zone: "{{ remaining - activation_zone_duration }}"
+                    in_activation_zone: "{{ time_until_activation_zone < 0 }}"
+                    next_refresh: !input refresh_function
+                - alias: If the user would have entered the activation sooner than the next refresh
+                  if:
+                    - condition: template
+                      value_template: |-
+                        {{
+                          time_until_activation_zone < next_refresh
+                          and first_time_in
+                        }}
+                  then:
+                    - alias: Force a travel time timeout re-evaluation
+                      variables:
+                        first_time_in: false
+                        next_refresh: "{{ time_until_activation_zone }}"
                 - alias: Update the fake travel time
                   variables:
-                    old_activation_zone: "{{ in_activation_zone }}"
-                    in_activation_zone: "{{ seconds_before_opening < activation_zone/50*3.6 }}"  # Estimated based on a 50hm/h speed
-                    next_refresh: !input refresh_function
                     remaining: "{{ remaining - next_refresh }}"
+                    seconds_before_opening: |-
+                      {{
+                        remaining
+                        - lead_time
+                        - (5 if behavior.arrival.opening == "timer" else 0)
+                      }}
                     api_calls: "{{ repeat.index }}"
       - alias: Check for errors
         repeat:
@@ -3478,159 +3502,174 @@ actions:
         - alias: Reset opening time variable
           variables:
             opening_time: "{{ none }}"
-        - alias: Update travel time if expired and refresh rate set to "Continuously"
+        - alias: If the travel time refresh rate is set to "Continuously"
           if:
             - condition: template
-              value_template: |-
-                {{
-                  travel_time_rate == 'continuous'
-                  and travel_time_sensor is not none
-                }}
+              value_template: "{{ travel_time_rate == 'continuous' }}"
           then:
-            - sequence: &update_travel_time
-                - alias: Stop if travel time sensor does not exist
-                  if:
-                    - condition: template
-                      value_template: "{{ states[travel_time_sensor] is none }}"
-                  then:
-                    - alias: Set error id
-                      variables:
-                        message_id: "invalid_travel_time_sensor"
-                    - alias: Create error
-                      sequence: *create_error
-                    - alias: Log error
-                      action: system_log.write
-                      data:
-                        level: error
-                        message: "{{ message }}"
-                        logger: blueprints.etiennec78.automatic_gate
-                    - stop: Travel time sensor does not exist
-                      error: true
-                - alias: Only continue if the travel time should be updated
+            - alias: Store a variable for the following sequence
+              variables:
+                in_activation_zone: false
+            - alias: Update travel time
+              sequence: &update_travel_time
+                - alias: Only continue if a travel time sensor was given
                   condition: template
-                  value_template: "{{ last_refresh_timestamp + next_refresh < now() | as_timestamp }}"
-                - alias: Only update the travel time if it has not already been updated recently
+                  value_template: "{{ travel_time_sensor is not none }}"
+                - alias: If the refresh rate is not set to 'Listen'
                   if:
                     - condition: template
-                      value_template: "{{ now() - states[travel_time_sensor].last_updated > timedelta(seconds=2) }}"
+                      value_template: "{{ travel_time_rate != 'listen' }}"
                   then:
-                    - alias: Update travel time
-                      action: homeassistant.update_entity
-                      target:
-                        entity_id: "{{ travel_time_sensor }}"
-                    - alias: Get the travel time
-                      sequence: &get_travel_time
-                        - alias: If the travel time sensor is not unknown or unavailable
+                    - alias: Only continue if the travel time should be updated
+                      condition: template
+                      value_template: "{{ last_refresh_timestamp + next_refresh < now() | as_timestamp }}"
+                    - alias: Stop if travel time sensor does not exist
+                      if:
+                        - condition: template
+                          value_template: "{{ states[travel_time_sensor] is none }}"
+                      then:
+                        - alias: Set error id
+                          variables:
+                            message_id: "invalid_travel_time_sensor"
+                        - alias: Create error
+                          sequence: *create_error
+                        - alias: Log error
+                          action: system_log.write
+                          data:
+                            level: error
+                            message: "{{ message }}"
+                            logger: blueprints.etiennec78.automatic_gate
+                        - stop: Travel time sensor does not exist
+                          error: true
+                    - alias: If the travel time sensor was updated more than 2s ago
+                      if:
+                        - condition: template
+                          value_template: "{{ now() - states[travel_time_sensor].last_updated > timedelta(seconds=2) }}"
+                      then:
+                        - alias: Update travel time
+                          action: homeassistant.update_entity
+                          target:
+                            entity_id: "{{ travel_time_sensor }}"
+                      else:
+                        - alias: If the last quick update was a long time ago
                           if:
                             - condition: template
-                              value_template: "{{ states(travel_time_sensor) not in ['unknown', 'unavailable'] }}"
+                              value_template: |-
+                                {{
+                                  last_quick_tt_update is not none
+                                  and last_quick_tt_update + timedelta(seconds=5) > now()
+                                }}
                           then:
-                            - alias: Convert travel time to seconds
+                            - alias: Note that the travel time sensor tried to update too quickly
                               variables:
-                                travel_time_duration: |-
-                                  {% if state_attr(travel_time_sensor, 'duration') | is_number %}
-                                    {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
-                                  {% elif is_state_attr(travel_time_sensor, 'unit_of_measurement', 'min') %}
-                                    {{ states(travel_time_sensor) | float * 60 }}
-                                  {% elif is_state_attr(travel_time_sensor, 'unit_of_measurement', 's') %}
-                                    {{ states(travel_time_sensor) | float }}
-                                  {% elif is_state_attr(travel_time_sensor, 'device_class', 'timestamp') %}
-                                    {{
-                                      states(travel_time_sensor) | as_timestamp
-                                      - states[travel_time_sensor].last_updated | as_timestamp
-                                    }}
-                                  {% else %}
-                                    unknown
-                                  {% endif %}
-                            - alias: Stop if travel time integration is not supported
-                              if:
-                                - condition: template
-                                  value_template: "{{ travel_time_duration == 'unknown' }}"
-                              then:
-                                - alias: Set error id
-                                  variables:
-                                    message_id: "unsupported_tt_integration"
-                                - alias: Create error
-                                  sequence: *create_error
-                                - alias: Log error
-                                  action: system_log.write
-                                  data:
-                                    level: error
-                                    message: "{{ message }}"
-                                    logger: blueprints.etiennec78.automatic_gate
-                                - stop: Travel time integration not supported
-                                  error: true
-                            - alias: Only continue if the duration is positive
-                              condition: template
-                              value_template: "{{ travel_time_duration >= 0 }}"
-                            - alias: Set the opening time
-                              variables:
-                                opening_time: |-
-                                  {{
-                                    states[travel_time_sensor].last_updated | as_timestamp
-                                      + travel_time_duration
-                                      - lead_time
-                                      - (timer_opening if behavior.arrival.opening == 'timer' else 0)
-                                  }}
+                                quick_tt_updates: "{{ quick_tt_updates + 1 }}"
                           else:
-                            - alias: Add 1 to the failed updates counter
+                            - alias: Reset the quick travel time updates counter
                               variables:
-                                failed_updates: "{{ failed_updates + 1 }}"
-                        - alias: Only continue if the opening time exists
+                                quick_tt_updates: 1
+                        - alias: Reset the last quick update variable
+                          variables:
+                            last_quick_tt_update: "{{ now() }}"
+                        - alias: If 20 travel time updates were too quick
+                          if:
+                            - condition: template
+                              value_template: "{{ quick_tt_updates > 20 }}"
+                          then:
+                            - alias: Mark error in driver itinerary sensor
+                              variables:
+                                update:
+                                  status: "{{ none }}"
+                                  error: updated_frequently
+                                itinerary_value: "{{ dict(itinerary_value, **update) }}"
+                            - alias: Save the itinerary status
+                              action: input_text.set_value
+                              target:
+                                entity_id: "{{ itinerary_sensor }}"
+                              data:
+                                value: "{{ itinerary_value | to_json }}"
+                            - alias: Set error id
+                              variables:
+                                message_id: "disabled_updated_frequently"
+                            - alias: Get notification translation
+                              variables: *get_translation
+                            - alias: Disable the blueprint
+                              sequence: *disable_blueprint
+                - alias: If travel time just got updated
+                  if:
+                    - condition: template
+                      value_template: |-
+                        {{
+                          now()
+                          - states[travel_time_sensor].last_updated
+                          < timedelta(seconds=2)
+                        }}
+                  then:
+                    - alias: If the travel time sensor is not unknown or unavailable
+                      if:
+                        - condition: template
+                          value_template: "{{ states(travel_time_sensor) not in ['unknown', 'unavailable'] }}"
+                      then:
+                        - alias: Convert travel time to seconds
+                          variables:
+                            travel_time_duration: |-
+                              {% if state_attr(travel_time_sensor, 'duration') | is_number %}
+                                {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
+                              {% elif is_state_attr(travel_time_sensor, 'unit_of_measurement', 'min') %}
+                                {{ states(travel_time_sensor) | float * 60 }}
+                              {% elif is_state_attr(travel_time_sensor, 'unit_of_measurement', 's') %}
+                                {{ states(travel_time_sensor) | float }}
+                              {% elif is_state_attr(travel_time_sensor, 'device_class', 'timestamp') %}
+                                {{
+                                  states(travel_time_sensor) | as_timestamp
+                                  - states[travel_time_sensor].last_updated | as_timestamp
+                                }}
+                              {% else %}
+                                unknown
+                              {% endif %}
+                        - alias: Stop if travel time integration is not supported
+                          if:
+                            - condition: template
+                              value_template: "{{ travel_time_duration == 'unknown' }}"
+                          then:
+                            - alias: Set error id
+                              variables:
+                                message_id: "unsupported_tt_integration"
+                            - alias: Create error
+                              sequence: *create_error
+                            - alias: Log error
+                              action: system_log.write
+                              data:
+                                level: error
+                                message: "{{ message }}"
+                                logger: blueprints.etiennec78.automatic_gate
+                            - stop: Travel time integration not supported
+                              error: true
+                        - alias: Only continue if the duration is positive
                           condition: template
-                          value_template: "{{ opening_time is not none }}"
+                          value_template: "{{ travel_time_duration >= 0 }}"
+                        - alias: Set the opening time
+                          variables:
+                            opening_time: |-
+                              {{
+                                states[travel_time_sensor].last_updated | as_timestamp
+                                  + travel_time_duration
+                                  - lead_time
+                                  - (timer_opening if behavior.arrival.opening == 'timer' else 0)
+                              }}
                         - alias: Set a timer for the gate opening (or max int value if travel time sensor is unknown and no previous eta was stored)
                           variables:
                             seconds_before_opening: "{{ opening_time - now() | as_timestamp }}"
+                        - alias: Only continue if the refresh rate is not set to 'Listen'
+                          condition: template
+                          value_template: "{{ travel_time_rate != 'listen' }}"
                         - alias: Set the next refresh timestamp
                           variables:
-                            in_activation_zone: *activation_zone_in_condition
                             next_refresh: !input refresh_function
                             last_refresh_timestamp: "{{ now() | as_timestamp }}"
-                  else:
-                    - alias: If the last quick update was a long time ago
-                      if:
-                        - condition: template
-                          value_template: |-
-                            {{
-                              last_quick_tt_update is not none
-                              and last_quick_tt_update + timedelta(seconds=5) > now()
-                            }}
-                      then:
-                        - alias: Note that the travel time sensor tried to update too quickly
-                          variables:
-                            quick_tt_updates: "{{ quick_tt_updates + 1 }}"
                       else:
-                        - alias: Reset the quick travel time updates counter
+                        - alias: Add 1 to the failed updates counter
                           variables:
-                            quick_tt_updates: 1
-                    - alias: Reset the last quick update variable
-                      variables:
-                        last_quick_tt_update: "{{ now() }}"
-                    - alias: If 20 travel time updates were too quick
-                      if:
-                        - condition: template
-                          value_template: "{{ quick_tt_updates > 20 }}"
-                      then:
-                        - alias: Mark error in driver itinerary sensor
-                          variables:
-                            update:
-                              status: "{{ none }}"
-                              error: updated_frequently
-                            itinerary_value: "{{ dict(itinerary_value, **update) }}"
-                        - alias: Save the itinerary status
-                          action: input_text.set_value
-                          target:
-                            entity_id: "{{ itinerary_sensor }}"
-                          data:
-                            value: "{{ itinerary_value | to_json }}"
-                        - alias: Set error id
-                          variables:
-                            message_id: "disabled_updated_frequently"
-                        - alias: Get notification translation
-                          variables: *get_translation
-                        - alias: Disable the blueprint
-                          sequence: *disable_blueprint
+                            failed_updates: "{{ failed_updates + 1 }}"
         - alias: Wait for new driver position or vehicle left
           wait_for_trigger:
             - trigger: event
@@ -3730,6 +3769,14 @@ actions:
                         condition: not
                         conditions: *in_forbidden_zone
                     sequence:
+                      - alias: If the driver just entered the activation zone
+                        if:
+                          - condition: template
+                            value_template: "{{ repeat.first }}"
+                        then:
+                          - alias: Force a travel time update
+                            variables:
+                              next_refresh: 0
                       - alias: If the travel time needs to be updated
                         if:
                           - condition: template
@@ -3741,10 +3788,11 @@ actions:
                                   and failed_updates < 20
                               }}
                         then:
+                          - alias: Store a variable for the following sequence
+                            variables:
+                              in_activation_zone: true
                           - alias: Update travel time
                             sequence: *update_travel_time
-                      - alias: Get the travel time
-                        sequence: *get_travel_time
                       - alias: If ETA in the future or no opening time could be set
                         if:
                           - condition: template
