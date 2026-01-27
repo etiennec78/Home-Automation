@@ -30,7 +30,7 @@ Makes managing your gate while driving easier: You won't ever have to use your r
   * Read notifications aloud on Android 🗣️
   * Multiple gate support ⛩️
   * Open/Close with BLE trackers 📡
-  * House locks support 🔐
+  * House locks and alarm support 🔐
   * Avoid opening when parked near house 🅿️
 
 
