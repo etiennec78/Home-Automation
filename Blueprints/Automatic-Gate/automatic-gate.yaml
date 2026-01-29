@@ -42,7 +42,7 @@ blueprint:
     * Discord: @etiennec78
     [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
   homeassistant:
-    min_version: 2025.4.0
+    min_version: 2026.2.0
   input:
     essential_inputs:
       name: Essential inputs
@@ -788,6 +788,7 @@ variables:
         invalid_ibeacon_transmitter: "These iBeacon transmitters: '{data}' are invalid (#19)"
         no_compatible_gps_tracker: "These persons cannot be tracked by GPS: '{data}' because they do not have GPS trackers, or they come from a different mobile app than the notification device (#20)"
         deprecated_translations: "Custom translations now use a yaml dictionnary instead of json. Please update your old config. (#21)"
+        update_polling_enabled: "These travel time sensors have an update polling enabled: '{data}'. Please disable it to avoid calling the API too often. (#22)"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -855,6 +856,7 @@ variables:
         invalid_ibeacon_transmitter: "Ces transmetteurs iBeacon: '{data}' sont invalides (#19)"
         no_compatible_gps_tracker: "Ces personnes ne pourront pas être attendue en GPS: '{data}' car elle n'ont pas de traceurs gps, ou ils proviennent d'une application différente de celle de l'appareil de notification (#20)"
         deprecated_translations: "Les traductions personnalisés utilisent maintenant un dictionnaire yaml au lieu de json. Mettez à jour votre configuration svp. (#21)"
+        update_polling_enabled: "Ces capteurs de temps de trajet sont mis à jour automatiquement: '{data}'. Veuillez désactiver les mise à jour automatiques afin d'éviter d'appeler l'API trop souvent. (#22)"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -1330,6 +1332,36 @@ actions:
               error: "{{ custom_translations_error }}"
               message_id: "deprecated_translations"
               level: 0
+            - alias: Check that travel time sensor update polling is disabled
+              error: |-
+                {%
+                  if arrival_opening_method == 'time'
+                  and behavior.arrival.opening != 'off'
+                  and travel_time_rate != 'listen'
+                %}
+                  {% set data = namespace(invalid=[]) %}
+                  {% for sensor in travel_time_sensors %}
+                    {%
+                      if not (
+                        sensor
+                        | config_entry_id
+                        | default(none)
+                        | config_entry_attr('pref_disable_polling')
+                      )
+                    %}
+                      {% set data.invalid = data.invalid + [sensor] %}
+                    {% endif %}
+                  {% endfor %}
+                  {{
+                    data.invalid
+                    | map('state_attr', 'friendly_name')
+                    | list
+                  }}
+                {% else %}
+                  {{ false }}
+                {% endif %}
+              message_id: "update_polling_enabled"
+              level: 2
           sequence:
             - alias: If a check failed
               if:
