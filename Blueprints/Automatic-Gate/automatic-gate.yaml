@@ -3785,7 +3785,7 @@ actions:
           stop: Successful
   - alias: Check if an error needs to be raised
     variables:
-      error: |-
+      message_id: |-
         {%
           if is_state(
             person,
