@@ -3792,10 +3792,11 @@ actions:
                           - condition: template
                             value_template: |-
                               {{
-                                travel_time_rate in ['continuous', 'near-home']
-                                or opening_time is none
-                                  and travel_time_rate == 'once'
+                                travel_time_rate != 'once'
+                                or (
+                                  opening_time is none
                                   and failed_updates < 20
+                                )
                               }}
                         then:
                           - alias: Store a variable for the following sequence
