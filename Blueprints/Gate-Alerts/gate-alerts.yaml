@@ -713,172 +713,174 @@ actions:
           - alias: Format the notification message
             variables:
               message: "{{ message.format(error=error) }}"
-      - alias: Notify each user
-        repeat:
-          for_each: "{{ notify_services }}"
-          sequence:
-            - action: "{{ repeat.item }}"
-              data:
-                title: "{{ title }}"
-                message: "{{ message }}"
-                data:
-                  car_ui: "{{ car_visible }}"
-                  notification_icon: mdi:gate-alert
-                  channel: Gate alerts
-                  importance: high
-                  priority: high
-                  ttl: 0
-                  sticky: true
-                  persistent: "{{ notification_type == 'open' }}"
-                  push:
-                    sound:
-                      name: "default"
-                      critical: "{{ int(car_visible) }}"
-                  tag: "{{ notification_tag }}"
-                  timeout: |-
-                    {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
-                      30
-                    {% else %}
-                      2147483647
-                    {% endif %}
-                  chronometer: "{{ notification_delay != 0 }}"
-                  when: "{{ (utcnow() - timedelta(minutes=notification_delay)) | as_timestamp | int }}"
-                  actions: |-
-                    {%
-                      if notification_type == 'open'
-                      and states[gate].domain in ['cover', 'switch']
-                    %}
-                      {{
-                        [
-                          {
-                            'action': closing_order_id,
-                            'title': button_text,
-                            'icon': 'sfsymbols:lock'
-                          }
-                        ]
-                      }}
-                    {% else %}
-                      {{ [] }}
-                    {% endif %}
 
-            - alias: Play TTS on each phone, if enabled
-              if:
-                condition: template
-                value_template: !input phone_tts
-              then:
+      - parallel:
+          - alias: Notify each user
+            repeat:
+              for_each: "{{ notify_services }}"
+              sequence:
                 - action: "{{ repeat.item }}"
                   data:
-                    message: TTS
+                    title: "{{ title }}"
+                    message: "{{ message }}"
                     data:
-                      tts_text: "{{ message }}"
+                      car_ui: "{{ car_visible }}"
+                      notification_icon: mdi:gate-alert
                       channel: Gate alerts
                       importance: high
                       priority: high
                       ttl: 0
-                      media_stream: !input phone_tts_stream
+                      sticky: true
+                      persistent: "{{ notification_type == 'open' }}"
+                      push:
+                        sound:
+                          name: "default"
+                          critical: "{{ int(car_visible) }}"
+                      tag: "{{ notification_tag }}"
+                      timeout: |-
+                        {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
+                          30
+                        {% else %}
+                          2147483647
+                        {% endif %}
+                      chronometer: "{{ notification_delay != 0 }}"
+                      when: "{{ (utcnow() - timedelta(minutes=notification_delay)) | as_timestamp | int }}"
+                      actions: |-
+                        {%
+                          if notification_type == 'open'
+                          and states[gate].domain in ['cover', 'switch']
+                        %}
+                          {{
+                            [
+                              {
+                                'action': closing_order_id,
+                                'title': button_text,
+                                'icon': 'sfsymbols:lock'
+                              }
+                            ]
+                          }}
+                        {% else %}
+                          {{ [] }}
+                        {% endif %}
 
-      - alias: If the user has entered a TTS service
-        if:
-          - condition: template
-            value_template: "{{ speaker_tts_service != '' }}"
-        then:
-          - alias: Play TTS on each speaker
-            repeat:
-              for_each: "{{ speaker_tts_devices }}"
-              sequence:
-                - alias: Initialize a variable to store the speaker volume later
-                  variables:
-                    old_volume: "{{ none }}"
-
-                - alias: If the tts night mode is currently active
+                - alias: Play TTS on each phone, if enabled
                   if:
-                    - condition: template
-                      value_template: |-
-                        {% set start = today_at(tts_volume_night_time_start) %}
-                        {% set end = today_at(tts_volume_night_time_end) %}
-                        {% set time = now() %}
-                        {{
-                          tts_volume_night_time_start != ''
-                          and tts_volume_night_time_end != ''
-                          and (
-                            start <= end and start <= time <= end
-                            or start > end and (time >= start or time <= end)
-                          )
-                        }}
+                    condition: template
+                    value_template: !input phone_tts
                   then:
-                    - alias: If the speaker is not exposing its volume because it is turned off
+                    - action: "{{ repeat.item }}"
+                      data:
+                        message: TTS
+                        data:
+                          tts_text: "{{ message }}"
+                          channel: Gate alerts
+                          importance: high
+                          priority: high
+                          ttl: 0
+                          media_stream: !input phone_tts_stream
+
+          - alias: If the user has entered a TTS service
+            if:
+              - condition: template
+                value_template: "{{ speaker_tts_service != '' }}"
+            then:
+              - alias: Play TTS on each speaker
+                repeat:
+                  for_each: "{{ speaker_tts_devices }}"
+                  sequence:
+                    - alias: Initialize a variable to store the speaker volume later
+                      variables:
+                        old_volume: "{{ none }}"
+
+                    - alias: If the tts night mode is currently active
                       if:
                         - condition: template
                           value_template: |-
+                            {% set start = today_at(tts_volume_night_time_start) %}
+                            {% set end = today_at(tts_volume_night_time_end) %}
+                            {% set time = now() %}
                             {{
-                              is_state(repeat.item, 'off')
-                              and state_attr(repeat.item, 'volume_level') is none
+                              tts_volume_night_time_start != ''
+                              and tts_volume_night_time_end != ''
+                              and (
+                                start <= end and start <= time <= end
+                                or start > end and (time >= start or time <= end)
+                              )
                             }}
                       then:
-                        - alias: Turn on the speaker
-                          action: media_player.turn_on
+                        - alias: If the speaker is not exposing its volume because it is turned off
+                          if:
+                            - condition: template
+                              value_template: |-
+                                {{
+                                  is_state(repeat.item, 'off')
+                                  and state_attr(repeat.item, 'volume_level') is none
+                                }}
+                          then:
+                            - alias: Turn on the speaker
+                              action: media_player.turn_on
+                              target:
+                                entity_id: "{{ repeat.item }}"
+                            - alias: Wait for the speaker to turn on
+                              wait_template: "{{ not is_state(repeat.item, 'off') }}"
+                              continue_on_timeout: true
+                              timeout: 3
+
+                        - alias: Only continue if the speaker has a higher volume than night mode
+                          condition: template
+                          value_template: |-
+                            {{
+                              state_attr(repeat.item, 'volume_level') is none
+                              or (
+                                state_attr(repeat.item, 'volume_level') * 100
+                              ) | int > tts_volume_at_night
+                            }}
+
+                        - alias: Save the current volume
+                          variables:
+                            old_volume: "{{ state_attr(repeat.item, 'volume_level') }}"
+
+                        - alias: Lower the volume
+                          action: media_player.volume_set
                           target:
                             entity_id: "{{ repeat.item }}"
-                        - alias: Wait for the speaker to turn on
-                          wait_template: "{{ not is_state(repeat.item, 'off') }}"
-                          continue_on_timeout: true
-                          timeout: 3
+                          data:
+                            volume_level: "{{ tts_volume_at_night / 100 }}"
 
-                    - alias: Only continue if the speaker has a higher volume than night mode
-                      condition: template
-                      value_template: |-
-                        {{
-                          state_attr(repeat.item, 'volume_level') is none
-                          or (
-                            state_attr(repeat.item, 'volume_level') * 100
-                          ) | int > tts_volume_at_night
-                        }}
-
-                    - alias: Save the current volume
-                      variables:
-                        old_volume: "{{ state_attr(repeat.item, 'volume_level') }}"
-
-                    - alias: Lower the volume
-                      action: media_player.volume_set
-                      target:
-                        entity_id: "{{ repeat.item }}"
+                    - alias: Play the TTS
+                      action: tts.speak
                       data:
-                        volume_level: "{{ tts_volume_at_night / 100 }}"
-
-                - alias: Play the TTS
-                  action: tts.speak
-                  data:
-                    cache: true
-                    media_player_entity_id: "{{ repeat.item }}"
-                    message: "{{ message }}"
-                  target:
-                    entity_id: "{{ speaker_tts_service }}"
-
-                - alias: If the old volume could be saved
-                  if:
-                    - condition: template
-                      value_template: "{{ old_volume is not none }}"
-                  then:
-                    - alias: Restore the old volume
-                      action: media_player.volume_set
+                        cache: true
+                        media_player_entity_id: "{{ repeat.item }}"
+                        message: "{{ message }}"
                       target:
-                        entity_id: "{{ repeat.item }}"
-                      data:
-                        volume_level: "{{ old_volume }}"
+                        entity_id: "{{ speaker_tts_service }}"
 
-      - alias: Send persistent notification to dashboard, if enabled
-        if:
-          condition: template
-          value_template: !input persistent_notification
-        then:
-          - action: persistent_notification.create
-            data:
-              title: "{{ title }}"
-              message: "{{ message }}"
-              notification_id: "{{ notification_tag }}"
+                    - alias: If the old volume could be saved
+                      if:
+                        - condition: template
+                          value_template: "{{ old_volume is not none }}"
+                      then:
+                        - alias: Restore the old volume
+                          action: media_player.volume_set
+                          target:
+                            entity_id: "{{ repeat.item }}"
+                          data:
+                            volume_level: "{{ old_volume }}"
 
-      - alias: Exec user extra actions
-        sequence: !input extra_actions
+          - alias: Send persistent notification to dashboard, if enabled
+            if:
+              condition: template
+              value_template: !input persistent_notification
+            then:
+              - action: persistent_notification.create
+                data:
+                  title: "{{ title }}"
+                  message: "{{ message }}"
+                  notification_id: "{{ notification_tag }}"
+
+          - alias: Exec user extra actions
+            sequence: !input extra_actions
 
   - wait_for_trigger:
     - alias: Wait for gate closed
