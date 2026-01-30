@@ -3786,7 +3786,13 @@ actions:
                         then:
                           - alias: Force a travel time update
                             variables:
-                              next_refresh: 0
+                              next_refresh: |-
+                                {{
+                                  max(
+                                    2 - now() | as_timestamp + last_refresh_timestamp,
+                                    0
+                                  )
+                                }}
                       - alias: If the travel time needs to be updated
                         if:
                           - condition: template
