@@ -13,6 +13,7 @@ Compatible with [KLI 310](https://amzn.to/4eJeVcS) and 860963 Velux remotes
 * **Bidirectional Control**: Supports opening/closing even while the shutter is in motion 🔄
 * **Position Control**: Precise shutter positioning through cover entity 🎯
 * **Real-Time Position**: Continuously reports position as the shutter moves 🚩
+* **BLE Integration**: Built-in BLE tracker for automations 📡
 
 
 ## Buy Me a Coffee ☕

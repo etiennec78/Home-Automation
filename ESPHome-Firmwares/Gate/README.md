@@ -13,7 +13,7 @@ An ESPHome firmware for automating gates using an [ESP32](https://amzn.to/3y2UtC
 * **Bidirectional Control**: Supports opening/closing even while the gate is in motion 🔄
 * **Position Control**: Precise gate positioning through cover entity 🎯
 * **Real-Time Position**: Continuously reports position as the gate moves 🚩
-* **BLE Integration**: Built-in iBeacon scanner for automations 📡
+* **BLE Integration**: Built-in BLE tracker for automations 📡
 
 > ⚠️ Since this firmware uses a single control pin without additional sensors, it cannot detect state changes from external controls (e.g., remotes). For consistent operation, use the same control method to open and then close consecutively.
 
@@ -36,7 +36,6 @@ An ESPHome firmware for automating gates using an [ESP32](https://amzn.to/3y2UtC
 * Home Assistant sensors:
    * [Persons](/sensors.md#gps-location-trackers--persons-)
    * [Nearest distance sensor](/sensors.md#nearest-distance-sensor-)
-   * Optional: [Phone iBeacon UUIDs](/sensors.md#bluetooth-transmitter-)
 
 ### Setup 🛠️
 
