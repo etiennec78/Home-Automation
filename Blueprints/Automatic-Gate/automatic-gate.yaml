@@ -2758,8 +2758,21 @@ actions:
                   id: "{{ none }}"
           - alias: If one of the gates is open
             if:
-              - condition: template
-                value_template: *gate_open
+              - condition: or
+                conditions:
+                  - alias: Gate open
+                    condition: template
+                    value_template: *gate_open
+                  - alias: Opening request sent but not acknowledged yet
+                    condition: template
+                    value_template: |-
+                      {{
+                        gate
+                        | select('is_state', ['unknown', 'unavailable'])
+                        | list
+                        != gate
+                        and opening_behavior != 'off'
+                      }}
             then:
               - alias: If BLE devices are needed to close the gate
                 if:
