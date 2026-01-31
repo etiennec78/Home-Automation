@@ -524,7 +524,7 @@ The automation will automatically turn the transmitter off if not needed
 
 Each BLE tracker entity to monitor your distance from the gate while leaving, and close it when you're out of reach
 
-Could be from my [ESPHome firmware](ESPHome-Firmwares/Gate) or any other bluetooth iBeacon scanner near your gate
+Could be from my [ESPHome firmware](ESPHome-Firmwares/Gate) or any other bluetooth BLE tracker near your gate
 
 Supported types: device_tracker, rssi sensor, distance sensor, bermuda area sensor
 

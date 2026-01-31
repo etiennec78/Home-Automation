@@ -49,7 +49,8 @@ Makes managing your gate while driving easier: You won't ever have to use your r
 * One of these solutions to detect when you arrive:
   * A travel time service provider ([Waze](https://www.home-assistant.io/integrations/waze_travel_time/), [Here](https://www.home-assistant.io/integrations/here_travel_time/) with its ⚠️ [auto-polling disabled](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval) ⚠️ (steps 1, 2)
   * A smart vehicle providing its ETA
-  * An iBeacon scanner (less recommended)
+  * A BLE scanner (less recommended)
+  * Only a GPS device tracker (not recommended)
 * The [Gate Alerts blueprint](../Gate-Alerts) to receive notifications when opening
 
 ### Import the blueprint 🗺️
