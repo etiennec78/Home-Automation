@@ -1627,6 +1627,7 @@ actions:
                             else {}
                           }}
                     - action: "{{ states[repeat.item].domain ~ '.' ~ action }}"
+                      data: "{{ data }}"
                       target:
                         entity_id: "{{ repeat.item }}"
               - alias: Set notification ids
