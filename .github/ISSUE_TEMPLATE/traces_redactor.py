@@ -6,6 +6,7 @@ privacy.
 
 from sys import argv
 import json
+from pathlib import Path
 
 SENSITIVE_KEYS = {
     "default": {
@@ -191,7 +192,21 @@ class Redactor:
         except IOError:
             print(f"Could not write to the file '{output_file}'")
 
-    def redact_json_file(self, input_file: str, output_file: str) -> bool:
+    def get_output_path(self, input_file: str) -> str:
+        """Appends _redacted to the given file path
+
+        Args:
+            input_file (str): Path to the input JSON file.
+
+        Returns:
+            The path of the output JSON file.
+        """
+        path = Path(input_file)
+        output_file = path.parent / f"{path.stem}_redacted{path.suffix}"
+
+        return str(output_file)
+
+    def redact_json_file(self, input_file: str) -> bool:
         """
         Redacts sensitive information from a JSON file and saves the result.
 
@@ -206,6 +221,7 @@ class Redactor:
             redacted = {
                 key: self.get_replacement(key, value) for key, value in data.items()
             }
+            output_file = self.get_output_path(input_file)
             self.save_trace(redacted, output_file)
 
             return True
