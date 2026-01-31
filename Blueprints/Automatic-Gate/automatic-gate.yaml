@@ -2223,7 +2223,13 @@ actions:
                 - alias: Gates closed
                   trigger: template
                   id: gate_closed
-                  value_template: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list == gate }}"
+                  value_template: &all_gates_closed |-
+                    {{
+                      gate
+                      | select('is_state', ['off', 'closed', 'closing'])
+                      | list
+                      == gate
+                    }}
                   enabled: "{{ gates_were_opened }}"
               timeout: |-
                 {{
@@ -2588,7 +2594,7 @@ actions:
           - alias: If one of the gates is closed
             if:
               - condition: template
-                value_template: &gate_closed |-
+                value_template: |-
                   {{
                     gate
                     | select('is_state', ['off', 'closed', 'closing'])
@@ -2712,7 +2718,7 @@ actions:
                             - alias: Manual opening
                               trigger: template
                               id: manual
-                              value_template: *gate_open
+                              value_template: *all_gates_open
                             - alias: Vehicle left
                               trigger: template
                               id: vehicle_stopped
@@ -2916,7 +2922,7 @@ actions:
                         - alias: Manual closing
                           trigger: template
                           id: manual
-                          value_template: *gate_closed
+                          value_template: *all_gates_closed
                         - alias: BLE out of reach
                           trigger: template
                           id: ble_out_of_range
@@ -3229,10 +3235,10 @@ actions:
                                 <<: *notification_data
                                 notification_icon: mdi:sleep
                           - sequence: *tts
-                      - alias: Wait for gate closed
+                      - alias: Wait for manual gate closing
                         wait_for_trigger:
                           - trigger: template
-                            value_template: *gate_closed
+                            value_template: *all_gates_closed
                       - alias: If a notify service exists
                         if:
                           - condition: template
