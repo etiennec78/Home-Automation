@@ -3587,7 +3587,12 @@ actions:
                               value_template: |-
                                 {{
                                   last_quick_tt_update is not none
-                                  and last_quick_tt_update + timedelta(seconds=5) > now()
+                                  and (
+                                    last_quick_tt_update
+                                    | as_datetime
+                                    + timedelta(seconds=5)
+                                    > now()
+                                  )
                                 }}
                           then:
                             - alias: Note that the travel time sensor tried to update too quickly
