@@ -217,6 +217,12 @@ blueprint:
             }}
           selector:
             template:
+        pause_refresh_driving_away:
+          name: ⏸️ Pause refresh while driving away
+          description: Stop calling the travel time API while the distance of the user from home is increasing
+          default: true
+          selector:
+            boolean:
 
     gate_behavior:
       name: Gate behavior
@@ -672,6 +678,7 @@ variables:
   notify_service: "{{ none }}"
   itinerary_sensors: !input itinerary_sensors
   travel_time_rate: !input travel_time_rate
+  pause_refresh_driving_away: !input pause_refresh_driving_away
   behavior:
     departure:
       opening: !input departure_opening_behavior
@@ -3549,10 +3556,14 @@ actions:
                       variables:
                         current_distance: "{{ distance(person, gate_location) }}"
                     - choose:
-                        - alias: If the user is driving towards home
+                        - alias: If the user is driving towards home (or the travel time should always be refreshed)
                           conditions:
                             - condition: template
-                              value_template: "{{ current_distance - return_zone < 5 }}"
+                              value_template: |-
+                                {{
+                                  not pause_refresh_driving_away
+                                  or current_distance - return_zone < 5
+                                }}
                           sequence:
                             - alias: Stop if travel time sensor does not exist
                               if:
