@@ -3565,6 +3565,14 @@ actions:
                                   or current_distance - return_zone < 5
                                 }}
                           sequence:
+                            - alias: If the return zone should be shrunken
+                              if:
+                                - condition: template
+                                  value_template: "{{ return_zone - current_distance > 10 }}"
+                              then:
+                                - alias: Shrink the return zone
+                                  variables:
+                                    return_zone: "{{ current_distance + 5 }}"
                             - alias: Stop if travel time sensor does not exist
                               if:
                                 - condition: template
