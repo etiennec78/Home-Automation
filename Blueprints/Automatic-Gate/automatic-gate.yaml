@@ -3655,7 +3655,7 @@ actions:
                             - condition: template
                               value_template: "{{ current_distance - return_zone > 10 }}"
                           sequence:
-                            - alias:
+                            - alias: Expand the return zone
                               variables:
                                 return_zone: "{{ current_distance - 5 }}"
                 - alias: If travel time just got updated
