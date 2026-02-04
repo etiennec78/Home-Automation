@@ -3555,117 +3555,109 @@ actions:
                     - alias: Get the current distance of the user from the gate
                       variables:
                         current_distance: "{{ distance(person, gate_location) }}"
-                    - choose:
-                        - alias: If the user is driving towards home (or the travel time should always be refreshed)
-                          conditions:
+                    - alias: Manage the return zone size
+                      variables:
+                        return_zone: >
+                          {% set diff = return_zone - current_distance %}
+                          {% if diff > 10 %}
+                            {{ current_distance + 5 }}
+                          {% elif diff < -10 %}
+                            {{ current_distance - 5 }}
+                          {% else %}
+                            {{ return_zone }}
+                          {% endif %}
+                    - alias: Only continue if the user is driving towards home (or the travel time should always be refreshed)
+                      condition: template
+                      value_template: |-
+                        {{
+                          not pause_refresh_driving_away
+                          or current_distance - return_zone < 5
+                        }}
+                    - alias: Stop if travel time sensor does not exist
+                      if:
+                        - condition: template
+                          value_template: "{{ states[travel_time_sensor] is none }}"
+                      then:
+                        - alias: Set error id
+                          variables:
+                            message_id: "invalid_travel_time_sensor"
+                        - alias: Create error
+                          sequence: *create_error
+                        - alias: Log error
+                          action: system_log.write
+                          data:
+                            level: error
+                            message: "{{ message }}"
+                            logger: blueprints.etiennec78.automatic_gate
+                        - stop: Travel time sensor does not exist
+                          error: true
+                    - alias: If the travel time sensor was updated more than 2s ago and the API was called less than 300 times
+                      if:
+                        - condition: template
+                          value_template: |-
+                            {{
+                              now()
+                              - states[travel_time_sensor].last_updated
+                              > timedelta(seconds=2)
+                              and api_calls < 300
+                            }}
+                      then:
+                        - alias: Update travel time
+                          action: homeassistant.update_entity
+                          target:
+                            entity_id: "{{ travel_time_sensor }}"
+                        - alias: Increment the API calls counter
+                          variables:
+                            api_calls: "{{ api_calls + 1 }}"
+                      else:
+                        - alias: If the last quick update was a long time ago
+                          if:
                             - condition: template
                               value_template: |-
                                 {{
-                                  not pause_refresh_driving_away
-                                  or current_distance - return_zone < 5
+                                  last_quick_tt_update is not none
+                                  and (
+                                    last_quick_tt_update
+                                    | as_datetime
+                                    + timedelta(seconds=5)
+                                    > now()
+                                  )
                                 }}
-                          sequence:
-                            - alias: If the return zone should be shrunken
-                              if:
-                                - condition: template
-                                  value_template: "{{ return_zone - current_distance > 10 }}"
-                              then:
-                                - alias: Shrink the return zone
-                                  variables:
-                                    return_zone: "{{ current_distance + 5 }}"
-                            - alias: Stop if travel time sensor does not exist
-                              if:
-                                - condition: template
-                                  value_template: "{{ states[travel_time_sensor] is none }}"
-                              then:
-                                - alias: Set error id
-                                  variables:
-                                    message_id: "invalid_travel_time_sensor"
-                                - alias: Create error
-                                  sequence: *create_error
-                                - alias: Log error
-                                  action: system_log.write
-                                  data:
-                                    level: error
-                                    message: "{{ message }}"
-                                    logger: blueprints.etiennec78.automatic_gate
-                                - stop: Travel time sensor does not exist
-                                  error: true
-                            - alias: If the travel time sensor was updated more than 2s ago and the API was called less than 300 times
-                              if:
-                                - condition: template
-                                  value_template: |-
-                                    {{
-                                      now()
-                                      - states[travel_time_sensor].last_updated
-                                      > timedelta(seconds=2)
-                                      and api_calls < 300
-                                    }}
-                              then:
-                                - alias: Update travel time
-                                  action: homeassistant.update_entity
-                                  target:
-                                    entity_id: "{{ travel_time_sensor }}"
-                                - alias: Increment the API calls counter
-                                  variables:
-                                    api_calls: "{{ api_calls + 1 }}"
-                              else:
-                                - alias: If the last quick update was a long time ago
-                                  if:
-                                    - condition: template
-                                      value_template: |-
-                                        {{
-                                          last_quick_tt_update is not none
-                                          and (
-                                            last_quick_tt_update
-                                            | as_datetime
-                                            + timedelta(seconds=5)
-                                            > now()
-                                          )
-                                        }}
-                                  then:
-                                    - alias: Note that the travel time sensor tried to update too quickly
-                                      variables:
-                                        quick_tt_updates: "{{ quick_tt_updates + 1 }}"
-                                  else:
-                                    - alias: Reset the quick travel time updates counter
-                                      variables:
-                                        quick_tt_updates: 1
-                                - alias: Reset the last quick update variable
-                                  variables:
-                                    last_quick_tt_update: "{{ now() }}"
-                                - alias: If 20 travel time updates were too quick or the API was called more than 300 times
-                                  if:
-                                    - condition: template
-                                      value_template: "{{ quick_tt_updates > 20 or api_calls > 300 }}"
-                                  then:
-                                    - alias: Mark error in driver itinerary sensor
-                                      variables:
-                                        update:
-                                          status: "{{ none }}"
-                                          error: updated_frequently
-                                        itinerary_value: "{{ dict(itinerary_value, **update) }}"
-                                    - alias: Save the itinerary status
-                                      action: input_text.set_value
-                                      target:
-                                        entity_id: "{{ itinerary_sensor }}"
-                                      data:
-                                        value: "{{ itinerary_value | to_json }}"
-                                    - alias: Set error id
-                                      variables:
-                                        message_id: "disabled_updated_frequently"
-                                    - alias: Get notification translation
-                                      variables: *get_translation
-                                    - alias: Disable the blueprint
-                                      sequence: *disable_blueprint
-                        - alias: If the user is driving away from home and his return zone needs to expand
-                          conditions:
-                            - condition: template
-                              value_template: "{{ current_distance - return_zone > 10 }}"
-                          sequence:
-                            - alias: Expand the return zone
+                          then:
+                            - alias: Note that the travel time sensor tried to update too quickly
                               variables:
-                                return_zone: "{{ current_distance - 5 }}"
+                                quick_tt_updates: "{{ quick_tt_updates + 1 }}"
+                          else:
+                            - alias: Reset the quick travel time updates counter
+                              variables:
+                                quick_tt_updates: 1
+                        - alias: Reset the last quick update variable
+                          variables:
+                            last_quick_tt_update: "{{ now() }}"
+                        - alias: If 20 travel time updates were too quick or the API was called more than 300 times
+                          if:
+                            - condition: template
+                              value_template: "{{ quick_tt_updates > 20 or api_calls > 300 }}"
+                          then:
+                            - alias: Mark error in driver itinerary sensor
+                              variables:
+                                update:
+                                  status: "{{ none }}"
+                                  error: updated_frequently
+                                itinerary_value: "{{ dict(itinerary_value, **update) }}"
+                            - alias: Save the itinerary status
+                              action: input_text.set_value
+                              target:
+                                entity_id: "{{ itinerary_sensor }}"
+                              data:
+                                value: "{{ itinerary_value | to_json }}"
+                            - alias: Set error id
+                              variables:
+                                message_id: "disabled_updated_frequently"
+                            - alias: Get notification translation
+                              variables: *get_translation
+                            - alias: Disable the blueprint
+                              sequence: *disable_blueprint
                 - alias: If travel time just got updated
                   if:
                     - condition: template
