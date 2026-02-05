@@ -4117,6 +4117,8 @@ actions:
           _: "{{ ble_started | is_defined }}"
       - sequence: *restore_ble
     continue_on_error: true
+  - stop: Fatal error
+    error: true
 # Run in parralel to let the automation start with multiple users driving simultaneously
 mode: parallel
 max: 10
