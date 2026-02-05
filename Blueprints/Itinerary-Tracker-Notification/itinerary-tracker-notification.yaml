@@ -396,6 +396,12 @@ actions:
           driving_sensor: "{{ driving_sensors[idx] }}"
           driver: "{{ persons[idx] }}"
           driver_name: "{{ state_attr(driver, 'friendly_name') }}"
+          travel_time_sensor: |-
+            {{
+              travel_time_sensors[idx]
+              if idx < travel_time_sensors | length
+              else none
+            }}
   - alias: Initialize variables for the error checker
     variables:
       messages: []
@@ -718,126 +724,126 @@ actions:
   - alias: Format the notification message
     variables:
       message: "{{ message.format(driver_name=driver_name) }}"
-  - alias: Notify each user except the driver about itinerary start
-    repeat:
-      for_each: "{{ active_notify_services }}"
-      sequence:
-        - action: "{{ repeat.item }}"
-          data:
-            message: "{{ message }}"
-            data: &notification_data
-              notification_icon: mdi:car
-              tag: "{{ notification_tag }}"
-              channel: Itinerary status
-              sticky: true
-              # Hack to retrieve notification service when dismissed
-              confirmation: "{{ repeat.item }}"
-              url: !input on_tap_link
-              clickAction: !input on_tap_link
-              alert_once: true
-  - alias: Send an itinerary started persistent notification
-    action: persistent_notification.create
-    data:
-      message: "{{ message }}"
-      notification_id: "{{ persistent_id }}"
-    enabled: !input persistent_notification
-  - alias: If drive_start_tts is enabled
-    if:
-      - condition: template
-        value_template: !input drive_start_tts
-    then: &play_speaker_tts
-      - alias: Only continue if a TTS service has been entered and someone is home
-        condition: template
-        value_template: |-
-          {{
-            speaker_tts_service != ''
-            and persons | select('is_state', 'home') | list != []
-          }}
-      - alias: Play TTS on each speaker
+  - parallel:
+      - alias: Notify each user except the driver about itinerary start
         repeat:
-          for_each: "{{ speaker_tts_devices }}"
+          for_each: "{{ active_notify_services }}"
           sequence:
-            - alias: Initialize a variable to store the speaker volume later
-              variables:
-                old_volume: "{{ none }}"
-            - alias: If the tts night mode is currently active
-              if:
-                - condition: template
-                  value_template: |-
-                    {% set start = today_at(tts_volume_night_time_start) %}
-                    {% set end = today_at(tts_volume_night_time_end) %}
-                    {% set time = now() %}
-                    {{
-                      tts_volume_night_time_start != ''
-                      and tts_volume_night_time_end != ''
-                      and (
-                        start <= end and start <= time <= end
-                        or start > end and (time >= start or time <= end)
-                      )
-                    }}
-              then:
-                - alias: If the speaker is not exposing its volume because it is turned off
+            - action: "{{ repeat.item }}"
+              data:
+                message: "{{ message }}"
+                data: &notification_data
+                  notification_icon: mdi:car
+                  tag: "{{ notification_tag }}"
+                  channel: Itinerary status
+                  sticky: true
+                  # Hack to retrieve notification service when dismissed
+                  confirmation: "{{ repeat.item }}"
+                  url: !input on_tap_link
+                  clickAction: !input on_tap_link
+                  alert_once: true
+      - alias: Send an itinerary started persistent notification
+        action: persistent_notification.create
+        data:
+          message: "{{ message }}"
+          notification_id: "{{ persistent_id }}"
+        enabled: !input persistent_notification
+      - alias: If drive_start_tts is enabled
+        if:
+          - condition: template
+            value_template: !input drive_start_tts
+        then: &play_speaker_tts
+          - alias: Only continue if a TTS service has been entered and someone is home
+            condition: template
+            value_template: |-
+              {{
+                speaker_tts_service != ''
+                and persons | select('is_state', 'home') | list != []
+              }}
+          - alias: Play TTS on each speaker
+            repeat:
+              for_each: "{{ speaker_tts_devices }}"
+              sequence:
+                - alias: Initialize a variable to store the speaker volume later
+                  variables:
+                    old_volume: "{{ none }}"
+                - alias: If the tts night mode is currently active
                   if:
                     - condition: template
                       value_template: |-
+                        {% set start = today_at(tts_volume_night_time_start) %}
+                        {% set end = today_at(tts_volume_night_time_end) %}
+                        {% set time = now() %}
                         {{
-                          is_state(repeat.item, 'off')
-                          and state_attr(repeat.item, 'volume_level') is none
+                          tts_volume_night_time_start != ''
+                          and tts_volume_night_time_end != ''
+                          and (
+                            start <= end and start <= time <= end
+                            or start > end and (time >= start or time <= end)
+                          )
                         }}
                   then:
-                    - alias: Turn on the speaker
-                      action: media_player.turn_on
+                    - alias: If the speaker is not exposing its volume because it is turned off
+                      if:
+                        - condition: template
+                          value_template: |-
+                            {{
+                              is_state(repeat.item, 'off')
+                              and state_attr(repeat.item, 'volume_level') is none
+                            }}
+                      then:
+                        - alias: Turn on the speaker
+                          action: media_player.turn_on
+                          target:
+                            entity_id: "{{ repeat.item }}"
+                        - alias: Wait for the speaker to turn on
+                          wait_template: "{{ not is_state(repeat.item, 'off') }}"
+                          continue_on_timeout: true
+                          timeout: 3
+                    - alias: Only continue if the speaker has a higher volume than night mode
+                      condition: template
+                      value_template: |-
+                        {{
+                          state_attr(repeat.item, 'volume_level') is none
+                          or (
+                            state_attr(repeat.item, 'volume_level') * 100
+                          ) | int > tts_volume_at_night
+                        }}
+                    - alias: Save the current volume
+                      variables:
+                        old_volume: "{{ state_attr(repeat.item, 'volume_level') }}"
+                    - alias: Lower the volume
+                      action: media_player.volume_set
                       target:
                         entity_id: "{{ repeat.item }}"
-                    - alias: Wait for the speaker to turn on
-                      wait_template: "{{ not is_state(repeat.item, 'off') }}"
-                      continue_on_timeout: true
-                      timeout: 3
-                - alias: Only continue if the speaker has a higher volume than night mode
-                  condition: template
-                  value_template: |-
-                    {{
-                      state_attr(repeat.item, 'volume_level') is none
-                      or (
-                        state_attr(repeat.item, 'volume_level') * 100
-                      ) | int > tts_volume_at_night
-                    }}
-                - alias: Save the current volume
-                  variables:
-                    old_volume: "{{ state_attr(repeat.item, 'volume_level') }}"
-                - alias: Lower the volume
-                  action: media_player.volume_set
-                  target:
-                    entity_id: "{{ repeat.item }}"
+                      data:
+                        volume_level: "{{ tts_volume_at_night / 100 }}"
+                - alias: Play the TTS
+                  action: tts.speak
                   data:
-                    volume_level: "{{ tts_volume_at_night / 100 }}"
-            - alias: Play the TTS
-              action: tts.speak
-              data:
-                cache: true
-                media_player_entity_id: "{{ repeat.item }}"
-                message: "{{ message }}"
-              target:
-                entity_id: "{{ speaker_tts_service }}"
-            - alias: If the old volume could be saved
-              if:
-                - condition: template
-                  value_template: "{{ old_volume is not none }}"
-              then:
-                - alias: Restore the old volume
-                  action: media_player.volume_set
+                    cache: true
+                    media_player_entity_id: "{{ repeat.item }}"
+                    message: "{{ message }}"
                   target:
-                    entity_id: "{{ repeat.item }}"
-                  data:
-                    volume_level: "{{ old_volume }}"
+                    entity_id: "{{ speaker_tts_service }}"
+                - alias: If the old volume could be saved
+                  if:
+                    - condition: template
+                      value_template: "{{ old_volume is not none }}"
+                  then:
+                    - alias: Restore the old volume
+                      action: media_player.volume_set
+                      target:
+                        entity_id: "{{ repeat.item }}"
+                      data:
+                        volume_level: "{{ old_volume }}"
   - alias: If travel time sensors set
     if:
       condition: template
-      value_template: "{{ travel_time_sensors != [] }}"
+      value_template: "{{ travel_time_sensor is not none }}"
     then:
       - alias: Initialize variables for the following sequence
         variables:
-          travel_time_sensor: "{{ travel_time_sensors[idx] }}"
           next_refresh: 0
           nearly_arrived_sent: false
           last_arrival_timestamp: 0
@@ -971,7 +977,53 @@ actions:
                       value_template: "{{ wait.trigger.id == 'conditions_changed' }}"
                   sequence:
                     - variables:
+                        old_notify_services: "{{ active_notify_services }}"
                         active_notify_services: *get_active_services
+                    - choose:
+                        - alias: If a user needs to be removed from the list
+                          conditions:
+                            - condition: template
+                              value_template: "{{ old_notify_services | length > active_notify_services | length }}"
+                          sequence:
+                            - alias: Remove itinerary notification for each removed user
+                              repeat:
+                                for_each: "{{ active_notify_services | difference(old_notify_services) }}"
+                                sequence: &clear_notification
+                                  - action: "{{ repeat.item }}"
+                                    data:
+                                      message: clear_notification
+                                      data:
+                                        tag: "{{ notification_tag }}"
+                        - alias: If a user has been added back and arrival values exist
+                          conditions:
+                            - condition: template
+                              value_template: "{{ arrival_timestamp is not none }}"
+                          sequence: &send_eta
+                            - alias: Get notification translation
+                              variables:
+                                message_id: "itinerary_ongoing"
+                                message: *get_message
+                            - alias: Format the notification message
+                              variables:
+                                message: |-
+                                  {{
+                                    message.format(
+                                      arrival=arrival,
+                                      driver_name=driver_name
+                                    )
+                                  }}
+                            - alias: Send ETA notification to each user
+                              repeat:
+                                for_each: "{{ active_notify_services }}"
+                                sequence:
+                                  - action: "{{ repeat.item }}"
+                                    data:
+                                      message: "{{ message }}"
+                                      data:
+                                        <<: *notification_data
+                                        notification_icon: mdi:map-marker-account
+                                        chronometer: true
+                                        when: "{{ arrival_timestamp | int }}"
                 - alias: If travel time remaining needs to trigger nearly arrived TTS
                   conditions:
                     - condition: template
@@ -1085,31 +1137,8 @@ actions:
                     - alias: Save the current time of arrival
                       variables:
                         last_arrival_timestamp: "{{ arrival_timestamp }}"
-                    - alias: Get notification translation
-                      variables:
-                        message_id: "itinerary_ongoing"
-                        message: *get_message
-                    - alias: Format the notification message
-                      variables:
-                        message: |-
-                          {{
-                            message.format(
-                              arrival=arrival,
-                              driver_name=driver_name
-                            )
-                          }}
-                    - alias: Send ETA notification to each user
-                      repeat:
-                        for_each: "{{ active_notify_services }}"
-                        sequence:
-                          - action: "{{ repeat.item }}"
-                            data:
-                              message: "{{ message }}"
-                              data:
-                                <<: *notification_data
-                                notification_icon: mdi:map-marker-account
-                                chronometer: true
-                                when: "{{ arrival_timestamp | int }}"
+                    - alias: Send an ETA notification
+                      sequence: *send_eta
                     - alias: If persistent notifications are still active
                       if:
                         - condition: template
@@ -1166,44 +1195,40 @@ actions:
       - alias: Format the notification message
         variables:
           message: "{{ message.format(driver_name=driver_name) }}"
-      - alias: Send arrival notification to each user
-        repeat:
-          for_each: "{{ active_notify_services }}"
-          sequence:
-            - action: "{{ repeat.item }}"
-              data:
-                message: "{{ message }}"
+      - parallel:
+          - alias: Send arrival notification to each user
+            repeat:
+              for_each: "{{ active_notify_services }}"
+              sequence:
+                - action: "{{ repeat.item }}"
+                  data:
+                    message: "{{ message }}"
+                    data:
+                      notification_icon: mdi:home-map-marker
+                      tag: "{{ notification_tag }}"
+                      channel: Itinerary status
+                      url: !input on_tap_link
+                      clickAction: !input on_tap_link
+                      timeout: 300
+          - alias: If persistent notifications are still active
+            if:
+              - condition: template
+                value_template: "{{ persistent_active }}"
+            then:
+              - alias: Update the persistent notification
+                action: persistent_notification.create
                 data:
-                  notification_icon: mdi:home-map-marker
-                  tag: "{{ notification_tag }}"
-                  channel: Itinerary status
-                  url: !input on_tap_link
-                  clickAction: !input on_tap_link
-                  timeout: 300
-      - alias: If persistent notifications are still active
-        if:
-          - condition: template
-            value_template: "{{ persistent_active }}"
-        then:
-          - alias: Update the persistent notification
-            action: persistent_notification.create
-            data:
-              message: "{{ message }}"
-              notification_id: "{{ persistent_id }}"
+                  message: "{{ message }}"
+                  notification_id: "{{ persistent_id }}"
 
-      - alias: If driver_arrived_tts is enabled
-        if:
-          - condition: template
-            value_template: !input driver_arrived_tts
-        then: *play_speaker_tts
+          - alias: If driver_arrived_tts is enabled
+            if:
+              - condition: template
+                value_template: !input driver_arrived_tts
+            then: *play_speaker_tts
     else:
       - alias: Remove itinerary notification for each user
         repeat:
           for_each: "{{ active_notify_services }}"
-          sequence:
-            - action: "{{ repeat.item }}"
-              data:
-                message: clear_notification
-                data:
-                  tag: "{{ notification_tag }}"
+          sequence: *clear_notification
 mode: parallel
