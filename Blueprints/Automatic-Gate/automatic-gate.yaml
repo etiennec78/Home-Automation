@@ -4083,6 +4083,12 @@ actions:
             <<: *notification_data
             notification_icon: mdi:alert
     continue_on_error: true
+  - alias: Restore iBeacons
+    sequence:
+      - variables:
+          _: "{{ ble_started | is_defined }}"
+      - sequence: *restore_ble
+    continue_on_error: true
 # Run in parralel to let the automation start with multiple users driving simultaneously
 mode: parallel
 max: 10
