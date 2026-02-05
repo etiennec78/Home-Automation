@@ -756,6 +756,10 @@ variables:
         ble_out_of_range: "Your BLE device is out of range"
         awaiting: "The gate will close once all users have entered/exited"
         something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
+        fatal_error: |-
+          Something went wrong !
+          Automatic Gate blueprint stopped unexpectedly. This should not have happened.
+          Please report this issue on Github.
         vehicle_stopped: "You have left your vehicle"
         canceling_order: "You have pressed the cancel button"
         did_not_leave: "The vehicle did not leave in less than {{safety_delay}} minutes"
@@ -825,6 +829,10 @@ variables:
         ble_out_of_range: "Votre appareil BLE est hors de portée"
         awaiting: "Le portail se refermera une fois tous les conducteurs entrés/sortis"
         something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
+        fatal_error: |-
+          Un problème est survenu !
+          Le blueprint Automatic Gate s'est arrêté de manière inattendue.
+          Svp, reportez ce problème sur Github.
         vehicle_stopped: "Le véhicule a été arrêté"
         canceling_order: "Vous avez appuyé sur le bouton annuler"
         did_not_leave: "Le véhicule n'est pas sorti en moins de {{safety_delay}} minutes"
@@ -4051,8 +4059,8 @@ actions:
     value_template: "{{ errored }}"
   - alias: Set message id
     variables:
-      message: something_went_wrong
-      message_id: something_went_wrong
+      message: fatal_error
+      message_id: fatal_error
   - alias: Get message translation
     variables:
       message: *get_message
