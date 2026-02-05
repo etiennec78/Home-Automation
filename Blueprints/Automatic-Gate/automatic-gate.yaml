@@ -219,7 +219,7 @@ blueprint:
             template:
         pause_refresh_driving_away:
           name: ⏸️ Pause refresh while driving away
-          description: Stop calling the travel time API while the distance of the user from home is increasing
+          description: Stop calling the travel time API while the distance of the user from the activation zone is increasing
           default: true
           selector:
             boolean:
@@ -678,7 +678,6 @@ variables:
   notify_service: "{{ none }}"
   itinerary_sensors: !input itinerary_sensors
   travel_time_rate: !input travel_time_rate
-  pause_refresh_driving_away: !input pause_refresh_driving_away
   behavior:
     departure:
       opening: !input departure_opening_behavior
@@ -3566,13 +3565,20 @@ actions:
                           {% else %}
                             {{ return_zone }}
                           {% endif %}
-                    - alias: Only continue if the user is driving towards home (or the travel time should always be refreshed)
-                      condition: template
-                      value_template: |-
-                        {{
-                          not pause_refresh_driving_away
-                          or current_distance - return_zone < 5
-                        }}
+                    - alias: Only continue if the user is driving towards the activation zone
+                      condition: or
+                      conditions:
+                        - alias: Direction check disabled
+                          condition: not
+                          conditions:
+                            - condition: template
+                              value_template: !input pause_refresh_driving_away
+                        - alias: Driving towards activation zone
+                          condition: template
+                          value_template: "{{ current_distance - return_zone < 5 }}"
+                        - alias: Driver in activation zone
+                          condition: template
+                          value_template: *activation_zone_in_condition
                     - alias: Stop if travel time sensor does not exist
                       if:
                         - condition: template
