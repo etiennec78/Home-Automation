@@ -2857,7 +2857,8 @@ actions:
                   - condition: template
                     value_template: |-
                       {{
-                        'ble' in close_when_disconnected_from
+                        itinerary_mode == 'departure'
+                        and 'ble' in close_when_disconnected_from
                         and ble_entities | length > idx
                       }}
                 then: *start_ble
