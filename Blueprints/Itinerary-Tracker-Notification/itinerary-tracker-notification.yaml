@@ -396,6 +396,12 @@ actions:
           driving_sensor: "{{ driving_sensors[idx] }}"
           driver: "{{ persons[idx] }}"
           driver_name: "{{ state_attr(driver, 'friendly_name') }}"
+          travel_time_sensor: |-
+            {{
+              travel_time_sensors[idx]
+              if idx < travel_time_sensors | length
+              else none
+            }}
   - alias: Initialize variables for the error checker
     variables:
       messages: []
@@ -834,11 +840,10 @@ actions:
   - alias: If travel time sensors set
     if:
       condition: template
-      value_template: "{{ travel_time_sensors != [] }}"
+      value_template: "{{ travel_time_sensor is not none }}"
     then:
       - alias: Initialize variables for the following sequence
         variables:
-          travel_time_sensor: "{{ travel_time_sensors[idx] }}"
           next_refresh: 0
           nearly_arrived_sent: false
           last_arrival_timestamp: 0
