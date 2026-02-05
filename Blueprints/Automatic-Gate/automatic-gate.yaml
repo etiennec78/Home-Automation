@@ -217,6 +217,12 @@ blueprint:
             }}
           selector:
             template:
+        pause_refresh_driving_away:
+          name: ⏸️ Pause refresh while driving away
+          description: Stop calling the travel time API while the distance of the user from the activation zone is increasing
+          default: true
+          selector:
+            boolean:
 
     gate_behavior:
       name: Gate behavior
@@ -3504,6 +3510,7 @@ actions:
     variables:
       last_refresh_timestamp: 0
       next_refresh: 0
+      return_zone: "{{ distance(person, gate_location) }}"
       seconds_before_opening: 2147483647
       api_calls: 0
   - alias: Set the itinerary status to "arriving"
@@ -3576,6 +3583,34 @@ actions:
                     - alias: Only continue if the travel time should be updated
                       condition: template
                       value_template: "{{ last_refresh_timestamp + next_refresh < now() | as_timestamp }}"
+                    - alias: Get the current distance of the user from the gate
+                      variables:
+                        current_distance: "{{ distance(person, gate_location) }}"
+                    - alias: Manage the return zone size
+                      variables:
+                        return_zone: >
+                          {% set diff = return_zone - current_distance %}
+                          {% if diff > 10 %}
+                            {{ current_distance + 5 }}
+                          {% elif diff < -10 %}
+                            {{ current_distance - 5 }}
+                          {% else %}
+                            {{ return_zone }}
+                          {% endif %}
+                    - alias: Only continue if the user is driving towards the activation zone
+                      condition: or
+                      conditions:
+                        - alias: Direction check disabled
+                          condition: not
+                          conditions:
+                            - condition: template
+                              value_template: !input pause_refresh_driving_away
+                        - alias: Driving towards activation zone
+                          condition: template
+                          value_template: "{{ current_distance - return_zone < 5 }}"
+                        - alias: Driver in activation zone
+                          condition: template
+                          value_template: *activation_zone_in_condition
                     - alias: Stop if travel time sensor does not exist
                       if:
                         - condition: template
@@ -3619,7 +3654,12 @@ actions:
                               value_template: |-
                                 {{
                                   last_quick_tt_update is not none
-                                  and last_quick_tt_update + timedelta(seconds=5) > now()
+                                  and (
+                                    last_quick_tt_update
+                                    | as_datetime
+                                    + timedelta(seconds=5)
+                                    > now()
+                                  )
                                 }}
                           then:
                             - alias: Note that the travel time sensor tried to update too quickly
