@@ -1430,6 +1430,7 @@ actions:
                   {{ false }}
                 {% endif %}
               message_id: "update_polling_enabled"
+              level: 2
             - alias: Check that the travel time refresh function gives slow enough delays
               error: |-
                 {{
