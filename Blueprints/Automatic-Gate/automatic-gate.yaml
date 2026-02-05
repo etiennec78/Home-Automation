@@ -1562,11 +1562,13 @@ actions:
                       title: "{{ title }}"
                       message: "{{ message }}"
                       notification_id: "{{ config_checker_tag }}"
+                    continue_on_error: true
                 else:
                   - alias: Remove the previous dashboard notification
                     action: persistent_notification.dismiss
                     data:
                       notification_id: "{{ config_checker_tag }}"
+                    continue_on_error: true
             else:
               - alias: Build the notification
                 variables:
@@ -1585,6 +1587,7 @@ actions:
                   title: "{{ title }}"
                   message: "{{ message ~ '\n\n' ~ more_info_md }}"
                   notification_id: "{{ config_checker_tag }}"
+                continue_on_error: true
               - alias: If the blueprint was not triggered manually
                 if:
                   - condition: template
@@ -1612,6 +1615,7 @@ actions:
                                 name: "default"
                                 critical: 1
                             tag: "{{ config_checker_tag }}"
+                        continue_on_error: true
                       - sequence: &tts
                           - alias: Notify over TTS
                             action: "{{ notify_service }}"
@@ -1637,6 +1641,7 @@ actions:
                                 ttl: 0
                                 media_stream: !input phone_tts_stream
                             enabled: !input phone_tts
+                            continue_on_error: true
           - alias: Confirm that no error occured while the config checker was running
             variables:
               successful_check: true
@@ -1662,6 +1667,7 @@ actions:
               title: "{{ title }}"
               message: "{{ message }}"
               notification_id: "{{ config_checker_tag }}"
+            continue_on_error: true
           - stop: Config checker failed
             error: true
       - alias: Check whether the blueprint was triggered by a driving sensor and tests passed
@@ -1790,6 +1796,7 @@ actions:
                                 name: "default"
                                 critical: 1
                             tag: itinerary-status
+                        continue_on_error: true
                       - sequence: *tts
                   - stop: Blueprint triggered closing on the user
                     error: true
@@ -1833,12 +1840,14 @@ actions:
                               title: "{{ title }}"
                               message: "{{ message }}"
                               data: *notification_data
+                            continue_on_error: true
                           - sequence: *tts
                       - alias: Notify all users on the dashboard that the blueprint has disabled itself
                         action: persistent_notification.create
                         data:
                           title: "{{ title }}"
                           message: "{{ message }}"
+                        continue_on_error: true
                       - alias: Disable the blueprint
                         action: automation.turn_off
                         target:
@@ -1871,6 +1880,7 @@ actions:
                           title: "{{ title }}"
                           message: "{{ message }}"
                           data: *notification_data
+                        continue_on_error: true
                       - sequence: *tts
                   - stop: The gate recently tried to close
         else:
@@ -2036,10 +2046,12 @@ actions:
                         priority: high
                         importance: high
                         confirmation: true
+                    continue_on_error: true
               - alias: Update the driver's location by refreshing his gps device trackers
                 action: homeassistant.update_entity
                 data:
                   entity_id: "{{ other_gps_to_wait_for }}"
+                continue_on_error: true
           - alias: If a BLE tracker has been provided
             if:
               - condition: template
@@ -2049,6 +2061,7 @@ actions:
                 action: homeassistant.update_entity
                 data:
                   entity_id: "{{ ble_entities[idx] }}"
+                continue_on_error: true
           - alias: If a wifi tracker has been provided
             if:
               - condition: template
@@ -2058,6 +2071,7 @@ actions:
                 action: homeassistant.update_entity
                 data:
                   entity_id: "{{ wifi_devices[idx] }}"
+                continue_on_error: true
           - alias: Repeat while the location has not been confirmed
             repeat:
               while:
@@ -2205,6 +2219,7 @@ actions:
                                         }
                                       )
                                     }}
+                                continue_on_error: true
                               - alias: Add a message to send to the phone when the iBeacon states need to be restored
                                 variables:
                                   ibeacon_restore_messages: |-
@@ -2228,6 +2243,7 @@ actions:
                           action: switch.turn_on
                           target:
                             entity_id: "{{ ble_scanner_switch }}"
+                          continue_on_error: true
                         - alias: Remember that the blueprint turned on the scanner
                           variables:
                             scanner_turned_on: true
@@ -2419,6 +2435,7 @@ actions:
                                         title: "{{ title }}"
                                         message: "{{ message }}"
                                         data: *notification_data
+                                      continue_on_error: true
                                     - sequence: *tts
                                 - alias: Mark error in driver itinerary sensor
                                   variables:
@@ -2458,6 +2475,7 @@ actions:
                                               recursive=True
                                             )
                                           }}
+                                        continue_on_error: true
                                 - alias: If the BLE scanner was turned on by the blueprint
                                   if:
                                     - condition: template
@@ -2467,6 +2485,7 @@ actions:
                                       action: switch.turn_off
                                       target:
                                         entity_id: "{{ ble_scanner_switch }}"
+                                      continue_on_error: true
                             - alias: Check if there is another driver near the gate
                               variables:
                                 someone_near_gate: |-
@@ -2501,6 +2520,7 @@ actions:
                                   action: switch.turn_off
                                   target:
                                     entity_id: "{{ ble_scanner_switch }}"
+                                  continue_on_error: true
                             - alias: Reset the ble_started variable
                               variables:
                                 ble_started: false
@@ -2876,6 +2896,7 @@ actions:
                                         message: clear_notification
                                         data:
                                           tag: itinerary-status
+                                      continue_on_error: true
                   - alias: If opening behavior is not set to off
                     if:
                       - condition: template
@@ -3289,6 +3310,7 @@ actions:
                                   data:
                                     <<: *notification_data
                                     notification_icon: mdi:sleep
+                                continue_on_error: true
                               - sequence: *tts
                           - alias: Wait for manual gate closing
                             wait_for_trigger:
@@ -3302,6 +3324,7 @@ actions:
                               - alias: Remove awaiting user notification
                                 action: "{{ notify_service }}"
                                 data: *clear_notification
+                                continue_on_error: true
                         else:
                           - alias: If an error needs to be raised
                             if:
@@ -3368,6 +3391,7 @@ actions:
                               action: "lock.{{ prefix }}lock"
                               target:
                                 entity_id: "{{ repeat.item }}"
+                              continue_on_error: true
                   - alias: If door unlatching is enabled
                     if:
                       - condition: template
@@ -3390,6 +3414,7 @@ actions:
                                   action: lock.open
                                   target:
                                     entity_id: "{{ repeat.item }}"
+                                  continue_on_error: true
                   - alias: Set the alarm action
                     variables:
                       action: |-
@@ -3454,6 +3479,7 @@ actions:
                       entity_id: "{{ alarm }}"
                     data: |-
                       {{ {} if alarm_code == '' else {'code': alarm_code} }}
+                    continue_on_error: true
               - alias: Reset the itinerary status
                 variables:
                   update:
@@ -3565,6 +3591,7 @@ actions:
               data:
                 <<: *notification_data
                 notification_icon: mdi:map-check
+            continue_on_error: true
           - sequence: *tts
       - alias: Repeat while driver still driving
         repeat:
@@ -3661,6 +3688,7 @@ actions:
                               action: homeassistant.update_entity
                               target:
                                 entity_id: "{{ travel_time_sensor }}"
+                              continue_on_error: true
                             - alias: Increment the API calls counter
                               variables:
                                 api_calls: "{{ api_calls + 1 }}"
