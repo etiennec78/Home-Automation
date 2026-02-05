@@ -4111,6 +4111,16 @@ actions:
             <<: *notification_data
             notification_icon: mdi:alert
     continue_on_error: true
+  - alias: Restore itinerary sensor
+    sequence:
+      - variables:
+          _: "{{ itinerary_sensor | is_defined }}"
+      - action: input_text.set_value
+        target:
+          entity_id: "{{ itinerary_sensor }}"
+        data:
+          value: "{{ default_itinerary_sensor_value | to_json }}"
+    continue_on_error: true
   - alias: Restore iBeacons
     sequence:
       - variables:
