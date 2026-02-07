@@ -2,30 +2,30 @@
 
 The entity representing your gate or garage door
 
-This can come from my [ESPHome firmware](ESPHome-Firmwares/Gate) or from any other integration
+This can come from my [ESPHome firmware](ESPHome-Firmwares/Gate) or any other integration
 
 #### Supported Gate Types ⚙️
 
 There are two main types of gate entities you can use:
 
 1. State-based gates: entities that stay ON while open and OFF when closed
-   These are fully compatible with the Automatic Gate blueprint
+   These are fully compatible with the blueprints from this repo
 
 2. Pulse-triggered gates: entities that briefly turn ON then OFF to send a pulse to the gate motor
-   Read the section below for more information
+   These need workarounds to make them work with the blueprints from this repo
+    <details>
+      <summary>Read more</summary>
+      These gates cannot reliably handle the closing sequence automatically, because they do not know their own position
 
-#### Notes for Pulse-Triggered Gates ⚠️
+      Sending another pulse while still opening may simply stop the gate instead of closing it
 
-If your gate uses a pulse trigger for all actions, it cannot reliably handle the closing sequence automatically, because it does not know its own position
+      To use such gates:
 
-Sending another pulse while still opening may simply stop the gate instead of closing it
-
-To use such gates:
-
-* Option 1: Disable the closing behavior in the blueprint settings
-* Option 2: Use the [ESPHome Gate Firmware](ESPHome-Firmwares/Gate), which supports pulse-triggered gates correctly
-* Option 3: If you have three separate pulse triggers (for open / close / stop), you can combine them into a single gate entity using a [state-based template cover](https://www.home-assistant.io/integrations/template/#state-based-cover---garage-door)
-
+      * Option 1: Disable the closing behavior in the blueprint settings
+      * Option 2: Use the [ESPHome Gate Firmware](ESPHome-Firmwares/Gate), which supports pulse-triggered gates correctly
+      * Option 3: If you have three separate pulse triggers (for open / close / stop), you can combine them into a single gate entity using a [state-based template cover](https://www.home-assistant.io/integrations/template/#state-based-cover---garage-door)
+    </details>
+  
 
 ## GPS location trackers / Persons 🌎
 
@@ -72,9 +72,8 @@ Less frequent location updates can impact ETA accuracy
 
   To make this work, you need to enable the "Single accurate location" sensor : Settings > Companion app > Manage sensors > Single accurate location ✔
 
-  #### Notes 📌
-
-  * If high precision mode does not trigger, please increase its range or check its conditions
+  > [!TIP]
+  > If high precision mode does not trigger, please increase its range or check its conditions
 
 </details>
 
@@ -297,9 +296,11 @@ Each travel time sensor monitoring each user's time left before arrival
 
 🟢: Free until a limit is reached
 
-> ⚠️ Please [disable sensor auto-polling (steps 1, 2)](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval), as the Automatic Gate will refresh the sensor itself
+> [!WARNING]
+> Please [disable sensor auto-polling (steps 1, 2)](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval), as the Automatic Gate will refresh the sensor itself
 
-> ⚠️ Please note that I am not responsible for any charges incurred by travel time services
+> [!WARNING]
+> Please note that I am not responsible for any charges incurred by travel time services
 
 <details>
   <summary>Option 1: Here Travel Time 🚘</summary>
@@ -324,8 +325,6 @@ Each travel time sensor monitoring each user's time left before arrival
 
 <details>
   <summary>Option 2: Google Travel Time 🚘</summary>
-
-  ⚠️ Work in progress, the current integration is not compatible
 
   #### Setup 🛠️
 
@@ -395,7 +394,8 @@ Each input text helper stores user itinerary states and serves as a trigger for 
 | Maximum length | `255` |
 | Display mode | `Text` |
 
-> ⚠️ Don't forget to set the maximum length to 255
+> [!NOTE]
+> Don't forget to set the maximum length to 255
 
 #### Data stored 💾
 
@@ -417,10 +417,10 @@ Each input text helper stores user itinerary states and serves as a trigger for 
 
 | State | Meaning |
 | :---: | :---: |
-| `{{none}}` | The automation is not running for this user |
-| `leaving` | The user is currently leaving home |
-| `arriving` | The user is driving and being tracked by the automation |
-| `on_approach` | The user has triggered the gate opening, and will arrive soon |
+| `null` | The automation is not running for this user |
+| `'leaving'` | The user is currently leaving home |
+| `'arriving'` | The user is driving and being tracked by the automation |
+| `'on_approach'` | The user has triggered the gate opening, and will arrive soon |
 
 </details>
 
@@ -429,24 +429,24 @@ Each input text helper stores user itinerary states and serves as a trigger for 
 
 | Error | Meaning |
 | :---: | :---: |
-| `{{none}}` | No error occurred |
-| `vehicle_stopped` | The driver stopped his vehicle unexpectedly |
-| `canceling_order` | The driver pressed the cancel itinerary button |
-| `did_not_leave` | The driver did not leave home on time |
-| `did_not_arrive` | The driver did not arrive home on time with the gate open |
-| `timed_out` | The driver's phone did not report a new position in time |
-| `vehicle_away` | The gate was waiting for an event to open upon departure, but the user left the activation zone |
-| `travel_time_did_not_respond` | The travel time sensor did not update its value in time |
-| `not_home` | The driver enabled the home presence check before opening, but was not detected at home |
-| `triggered_frequently` | This driver triggered the blueprint multiple times too quickly |
-| `updated_frequently` | The blueprint tried to update the travel time sensor too frequently and was stopped to prevent costs |
-| `forbidden_zone` | The driver entered a forbidden zone upon arrival |
-| `invalid_travel_time_sensor` | The travel time sensor provided does not exist |
-| `unsupported_tt_integration` | The travel time sensor provided is not compatible with this blueprint |
-| `too_close` | The driver started his vehicle in the activation zone, but outside his home |
-| `gate_closed` | While waiting for the driver's location to be confirmed, the gate was manually opened and then closed |
-| `location_not_confirmed` | The driver enabled the location request input, but the phone did not receive the request |
-| `got_no_gps_data` | The phone received the location request but did not send back any GPS coordinates |
+| `null` | No error occurred |
+| `'vehicle_stopped'` | The driver stopped his vehicle unexpectedly |
+| `'canceling_order'` | The driver pressed the cancel itinerary button |
+| `'did_not_leave'` | The driver did not leave home on time |
+| `'did_not_arrive'` | The driver did not arrive home on time with the gate open |
+| `'timed_out'` | The driver's phone did not report a new position in time |
+| `'vehicle_away'` | The gate was waiting for an event to open upon departure, but the user left the activation zone |
+| `'travel_time_did_not_respond'` | The travel time sensor did not update its value in time |
+| `'not_home'` | The driver enabled the home presence check before opening, but was not detected at home |
+| `'triggered_frequently'` | This driver triggered the blueprint multiple times too quickly |
+| `'updated_frequently'` | The blueprint tried to update the travel time sensor too frequently and was stopped to prevent costs |
+| `'forbidden_zone'` | The driver entered a forbidden zone upon arrival |
+| `'invalid_travel_time_sensor'` | The travel time sensor provided does not exist |
+| `'unsupported_tt_integration'` | The travel time sensor provided is not compatible with this blueprint |
+| `'too_close'` | The driver started his vehicle in the activation zone, but outside his home |
+| `'gate_closed'` | While waiting for the driver's location to be confirmed, the gate was manually opened and then closed |
+| `'location_not_confirmed'` | The driver enabled the location request input, but the phone did not receive the request |
+| `'got_no_gps_data'` | The phone received the location request but did not send back any GPS coordinates |
 
 </details>
 
@@ -495,6 +495,12 @@ Companion app BLE transmitter lets a scanner automatically close your gate upon 
 
 The automation will automatically turn the transmitter off if not needed
 
+> [!NOTE]
+> Your Bluetooth transmitter should mark your devices as unavailable or away after a short time or this will have no effect
+
+> [!WARNING]
+> Please set the closing behavior to 'Notification request', or the gate could close on your vehicle if your ble tracker is unreliable
+
 #### Setup 🛠️
 
 1. Install through the [companion app](https://www.home-assistant.io/integrations/mobile_app/) settings: Settings > Companion app > Manage sensors > BLE Transmitter
@@ -513,18 +519,15 @@ The automation will automatically turn the transmitter off if not needed
 | Transmit power | - |
 | UUID | [Random UUID](https://www.uuidgenerator.net/) |
 
-#### Notes 📌
-
-* Automatic Gate turns on the iBeacon itself with the right settings when needed
-* Your Bluetooth transmitter should mark your devices as unavailable after a short time or this will have no effect
-* ⚠️ Be aware that placing your BLE transmitter too far from your gate could cause the gate to close on your vehicle if it loses connection
+> [!NOTE]
+> Automatic Gate turns on the iBeacon itself with the right settings when needed if 'iBeacon transmitter entities' are provided
 
 
 ## Bluetooth entities 🔎
 
 Each BLE tracker entity to monitor your distance from the gate while leaving, and close it when you're out of reach
 
-Could be from my [ESPHome firmware](ESPHome-Firmwares/Gate) or any other bluetooth BLE tracker near your gate
+Could be from my [ESPHome firmware](ESPHome-Firmwares/Gate), with [iBeacon](https://www.home-assistant.io/integrations/ibeacon/) or [Bermduda](https://github.com/agittins/bermuda), or any other bluetooth BLE tracker near your gate
 
 Supported types: device_tracker, rssi sensor, distance sensor, bermuda area sensor
 
