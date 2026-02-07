@@ -650,7 +650,7 @@ blueprint:
       input:
         run_checks_when_enabled:
           name: 🧪 Run tests when blueprint enabled
-          description: Run tests after adding the blueprint, updating inputs, and after HA startup
+          description: Run tests after adding the blueprint or updating inputs
           default: true
           selector:
             boolean:
@@ -762,7 +762,7 @@ variables:
           Please report this issue on Github.
         automation_crashed: |-
           The previous Automatic Gate instance of this driver seems to have crashed.
-          If you did not shut down HA while driving, please report this issue on Github.
+          Please report this issue on Github.
         vehicle_stopped: "You have left your vehicle"
         canceling_order: "You have pressed the cancel button"
         did_not_leave: "The vehicle did not leave in less than {{safety_delay}} minutes"
@@ -838,7 +838,7 @@ variables:
           Svp, signalez ce problème sur Github.
         automation_crashed: |-
           L'instance Automatic Gate précédente de ce conducteur a l'air d'avoir rencontré un problème.
-          Si vous n'avez pas éteint HA pendant que cette personne conduisait, signalez ce problème sur Github svp.
+          Svp, signalez ce problème sur Github.
         vehicle_stopped: "Le véhicule a été arrêté"
         canceling_order: "Vous avez appuyé sur le bouton annuler"
         did_not_leave: "Le véhicule n'est pas sorti en moins de {{safety_delay}} minutes"
@@ -899,10 +899,52 @@ triggers:
     id: blueprint_enabled
     value_template: "{{ is_state(this.entity_id, 'on') }}"
     enabled: !input run_checks_when_enabled
+  - alias: Trigger when HA starts
+    trigger: homeassistant
+    id: ha_started
+    event: start
 
 conditions: []
 
 actions:
+  - alias: If triggered by HA startup
+    if:
+      - condition: trigger
+        id: ha_started
+    then:
+      - alias: Reset all itinerary sensors
+        repeat:
+          for_each: !input itinerary_sensors
+          sequence:
+            - alias: Get the current itinerary value
+              variables:
+                itinerary_sensor: "{{ repeat.item }}"
+                itinerary_value: &get_itinerary_value |-
+                  {%
+                    set state = (
+                      states(itinerary_sensor)
+                      | from_json(default_itinerary_sensor_value)
+                    )
+                  %}
+                  {%
+                    if default_itinerary_sensor_value.keys() == state.keys()
+                  %}
+                    {{ state }}
+                  {% else %}
+                    {{ default_itinerary_sensor_value }}
+                  {% endif %}
+            - alias: Reset the itinerary status
+              variables: &reset_itinerary
+                update:
+                  status: null
+                itinerary_value: "{{ itinerary_value | combine(update) }}"
+            - alias: Save the itinerary status
+              action: input_text.set_value
+              target:
+                entity_id: "{{ itinerary_sensor }}"
+              data:
+                value: "{{ itinerary_value | to_json }}"
+      - stop: Itinerary sensors reset
   - alias: Initialize a variable to check if an error occured
     variables:
       errored: true
@@ -943,20 +985,7 @@ actions:
                   else device_attr(notify_devices[idx], 'manufacturer') == 'Apple'
                 }}
               itinerary_sensor: "{{ itinerary_sensors[idx] }}"
-              itinerary_value: |-
-                {%
-                  set state = (
-                    states(itinerary_sensor)
-                    | from_json(default_itinerary_sensor_value)
-                  )
-                %}
-                {%
-                  if default_itinerary_sensor_value.keys() == state.keys()
-                %}
-                  {{ state }}
-                {% else %}
-                  {{ default_itinerary_sensor_value }}
-                {% endif %}
+              itinerary_value: *get_itinerary_value
               ble_transmitter_entity: |-
                 {{
                   ble_transmitter_entities[idx]
@@ -3523,10 +3552,7 @@ actions:
                       {{ {} if alarm_code == '' else {'code': alarm_code} }}
                     continue_on_error: true
               - alias: Reset the itinerary status
-                variables:
-                  update:
-                    status: "{{ none }}"
-                  itinerary_value: "{{ dict(itinerary_value, **update) }}"
+                variables: *reset_itinerary
               - alias: Save the itinerary status
                 action: input_text.set_value
                 target:
