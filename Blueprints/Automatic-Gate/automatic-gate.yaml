@@ -760,6 +760,9 @@ variables:
           Something went wrong !
           Automatic Gate blueprint stopped unexpectedly. This should not have happened.
           Please report this issue on Github.
+        automation_crashed: |-
+          The previous Automatic Gate instance of this driver seems to have crashed.
+          If you did not shut down HA while driving, please report this issue on Github.
         vehicle_stopped: "You have left your vehicle"
         canceling_order: "You have pressed the cancel button"
         did_not_leave: "The vehicle did not leave in less than {{safety_delay}} minutes"
@@ -832,7 +835,10 @@ variables:
         fatal_error: |-
           Un problème est survenu !
           Le blueprint Automatic Gate s'est arrêté de manière inattendue.
-          Svp, reportez ce problème sur Github.
+          Svp, signalez ce problème sur Github.
+        automation_crashed: |-
+          L'instance Automatic Gate précédente de ce conducteur a l'air d'avoir rencontré un problème.
+          Si vous n'avez pas éteint HA pendant que cette personne conduisait, signalez ce problème sur Github svp.
         vehicle_stopped: "Le véhicule a été arrêté"
         canceling_order: "Vous avez appuyé sur le bouton annuler"
         did_not_leave: "Le véhicule n'est pas sorti en moins de {{safety_delay}} minutes"
@@ -1682,147 +1688,93 @@ actions:
       - alias: Only continue if the check above passed (it is named 'errored' to avoid raising an error when leaving the sequence)
         condition: template
         value_template: "{{ errored }}"
-      - alias: If last automation iteration ended less than 5s ago
-        if:
-          - condition: template
-            value_template: "{{ states[itinerary_sensor].last_updated + timedelta(seconds=5) > now() }}"
-        then:
-          - alias: Update the quick triggers counter
-            variables:
-              update:
-                status: "{{ none }}"
-                error: "triggered_frequently"
-                quick_triggers: "{{ itinerary_value.quick_triggers + 1 }}"
-              itinerary_value: "{{ dict(itinerary_value, **update) }}"
-          - alias: Save the quick triggers counter
-            action: input_text.set_value
-            target:
-              entity_id: "{{ itinerary_sensor }}"
-            data:
-              value: "{{ itinerary_value | to_json }}"
-          - alias: Save if the blueprint recently tried closing the gate
-            variables:
-              tried_closing_recently: |-
-                {{
-                  itinerary_value.last_closed
-                    | as_datetime
-                    + timedelta(seconds=lead_time)
-                    > now()
-                }}
-          - choose:
-              - alias: If the gate may be closing on the driver
-                conditions:
-                  - condition: template
-                    value_template: "{{ tried_closing_recently }}"
-                  - alias: If the user wants his gate to reopen if the driving sensor quickly triggers
-                    condition: template
-                    value_template: !input quick_triggers_reopen_gate
-                  - alias: If the gate was not closed manually
-                    condition: template
-                    value_template: "{{ itinerary_value.auto_closed }}"
-                  - alias: If one of the gates is closing/closed
-                    condition: template
-                    value_template: &gate_open |-
-                      {{
-                        gate
-                        | select('is_state', ['on', 'open', 'opening'])
-                        | list
-                        != []
-                      }}
-                sequence:
-                  - alias: Reopen each gate to avoid closing on the driver
-                    repeat: &open_gates
-                      for_each: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list }}"
-                      sequence:
-                        - alias: Get the action to call
-                          variables:
-                            action: |-
-                              {% if states[repeat.item].domain == 'switch' %}
-                                turn_on
-                              {% elif states[repeat.item].domain == 'cover' %}
-                                {%
-                                  if partial_open_position != 100
-                                  and (
-                                    state_attr(repeat.item, 'supported_features')
-                                    | bitwise_and(4) == 4
-                                  )
-                                %}
-                                  set_cover_position
-                                {% else %}
-                                  open_cover
-                                {% endif %}
-                              {% endif %}
-                            data: |-
-                              {{
-                                {'position': partial_open_position}
-                                if action == 'set_cover_position'
-                                else {}
-                              }}
-                        - action: "{{ states[repeat.item].domain ~ '.' ~ action }}"
-                          data: "{{ data }}"
-                          target:
-                            entity_id: "{{ repeat.item }}"
-                  - alias: Set notification ids
-                    variables:
-                      title_id: "gate_reopening"
-                      message_id: "triggered_frequently"
-                  - alias: Get notification translation
-                    variables: *get_translation
-                  - alias: Log error
-                    action: system_log.write
-                    data:
-                      level: error
-                      message: "{{ message }}"
-                      logger: blueprints.etiennec78.automatic_gate
-                  - alias: If a notify service exists
-                    if:
+      - choose:
+          - alias: If last automation iteration ended less than 5s ago
+            conditions:
+              - condition: template
+                value_template: "{{ states[itinerary_sensor].last_updated + timedelta(seconds=5) > now() }}"
+            sequence:
+              - alias: Update the quick triggers counter
+                variables:
+                  update:
+                    status: "{{ none }}"
+                    error: "triggered_frequently"
+                    quick_triggers: "{{ itinerary_value.quick_triggers + 1 }}"
+                  itinerary_value: "{{ dict(itinerary_value, **update) }}"
+              - alias: Save the quick triggers counter
+                action: input_text.set_value
+                target:
+                  entity_id: "{{ itinerary_sensor }}"
+                data:
+                  value: "{{ itinerary_value | to_json }}"
+              - alias: Save if the blueprint recently tried closing the gate
+                variables:
+                  tried_closing_recently: |-
+                    {{
+                      itinerary_value.last_closed
+                        | as_datetime
+                        + timedelta(seconds=lead_time)
+                        > now()
+                    }}
+              - choose:
+                  - alias: If the gate may be closing on the driver
+                    conditions:
                       - condition: template
-                        value_template: "{{ notify_service is not none }}"
-                    then:
-                      - alias: Notify driver that the gate is reopening
-                        action: "{{ notify_service }}"
-                        data:
-                          title: "{{ title }}"
-                          message: "{{ message }}"
-                          data: &notification_data
-                            car_ui: true
-                            notification_icon: mdi:alert-circle
-                            channel: Itinerary status
-                            importance: high
-                            priority: high
-                            ttl: 0
-                            push:
-                              sound:
-                                name: "default"
-                                critical: 1
-                            tag: itinerary-status
-                        continue_on_error: true
-                      - sequence: *tts
-                  - stop: Blueprint triggered closing on the user
-                    error: true
-              - alias: If this is the third time the error occurs in a row
-                conditions:
-                  - condition: template
-                    value_template: "{{ itinerary_value.quick_triggers >= 3 }}"
-                sequence:
-                  - alias: Set error id
-                    variables:
-                      message_id: "disabled_triggered_frequently"
-                  - alias: Disable the blueprint
-                    sequence: &disable_blueprint
-                      - alias: Get title id
+                        value_template: "{{ tried_closing_recently }}"
+                      - alias: If the user wants his gate to reopen if the driving sensor quickly triggers
+                        condition: template
+                        value_template: !input quick_triggers_reopen_gate
+                      - alias: If the gate was not closed manually
+                        condition: template
+                        value_template: "{{ itinerary_value.auto_closed }}"
+                      - alias: If one of the gates is closing/closed
+                        condition: template
+                        value_template: &gate_open |-
+                          {{
+                            gate
+                            | select('is_state', ['on', 'open', 'opening'])
+                            | list
+                            != []
+                          }}
+                    sequence:
+                      - alias: Reopen each gate to avoid closing on the driver
+                        repeat: &open_gates
+                          for_each: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list }}"
+                          sequence:
+                            - alias: Get the action to call
+                              variables:
+                                action: |-
+                                  {% if states[repeat.item].domain == 'switch' %}
+                                    turn_on
+                                  {% elif states[repeat.item].domain == 'cover' %}
+                                    {%
+                                      if partial_open_position != 100
+                                      and (
+                                        state_attr(repeat.item, 'supported_features')
+                                        | bitwise_and(4) == 4
+                                      )
+                                    %}
+                                      set_cover_position
+                                    {% else %}
+                                      open_cover
+                                    {% endif %}
+                                  {% endif %}
+                                data: |-
+                                  {{
+                                    {'position': partial_open_position}
+                                    if action == 'set_cover_position'
+                                    else {}
+                                  }}
+                            - action: "{{ states[repeat.item].domain ~ '.' ~ action }}"
+                              data: "{{ data }}"
+                              target:
+                                entity_id: "{{ repeat.item }}"
+                      - alias: Set notification ids
                         variables:
-                          title_id: "disabled"
+                          title_id: "gate_reopening"
+                          message_id: "triggered_frequently"
                       - alias: Get notification translation
                         variables: *get_translation
-                      - alias: Format the error message
-                        variables:
-                          message: |-
-                            {{
-                              message.format(
-                                quick_triggers=itinerary_value.quick_triggers
-                              )
-                            }}
                       - alias: Log error
                         action: system_log.write
                         data:
@@ -1834,7 +1786,102 @@ actions:
                           - condition: template
                             value_template: "{{ notify_service is not none }}"
                         then:
-                          - alias: Notify driver that the blueprint is disabling itself
+                          - alias: Notify driver that the gate is reopening
+                            action: "{{ notify_service }}"
+                            data:
+                              title: "{{ title }}"
+                              message: "{{ message }}"
+                              data: &notification_data
+                                car_ui: true
+                                notification_icon: mdi:alert-circle
+                                channel: Itinerary status
+                                importance: high
+                                priority: high
+                                ttl: 0
+                                push:
+                                  sound:
+                                    name: "default"
+                                    critical: 1
+                                tag: itinerary-status
+                            continue_on_error: true
+                          - sequence: *tts
+                      - stop: Blueprint triggered closing on the user
+                        error: true
+                  - alias: If this is the third time the error occurs in a row
+                    conditions:
+                      - condition: template
+                        value_template: "{{ itinerary_value.quick_triggers >= 3 }}"
+                    sequence:
+                      - alias: Set error id
+                        variables:
+                          message_id: "disabled_triggered_frequently"
+                      - alias: Disable the blueprint
+                        sequence: &disable_blueprint
+                          - alias: Get title id
+                            variables:
+                              title_id: "disabled"
+                          - alias: Get notification translation
+                            variables: *get_translation
+                          - alias: Format the error message
+                            variables:
+                              message: |-
+                                {{
+                                  message.format(
+                                    quick_triggers=itinerary_value.quick_triggers
+                                  )
+                                }}
+                          - alias: Log error
+                            action: system_log.write
+                            data:
+                              level: error
+                              message: "{{ message }}"
+                              logger: blueprints.etiennec78.automatic_gate
+                          - alias: If a notify service exists
+                            if:
+                              - condition: template
+                                value_template: "{{ notify_service is not none }}"
+                            then:
+                              - alias: Notify driver that the blueprint is disabling itself
+                                action: "{{ notify_service }}"
+                                data:
+                                  title: "{{ title }}"
+                                  message: "{{ message }}"
+                                  data: *notification_data
+                                continue_on_error: true
+                              - sequence: *tts
+                          - alias: Notify all users on the dashboard that the blueprint has disabled itself
+                            action: persistent_notification.create
+                            data:
+                              title: "{{ title }}"
+                              message: "{{ message }}"
+                            continue_on_error: true
+                          - alias: Disable the blueprint
+                            action: automation.turn_off
+                            target:
+                              entity_id: "{{ this.entity_id }}"
+                  - alias: If the gate recently tried to close but the gate does not need to reopen
+                    conditions:
+                      - condition: template
+                        value_template: "{{ tried_closing_recently }}"
+                    sequence:
+                      - alias: Set notification ids
+                        variables:
+                          title_id: "itinerary_canceled"
+                          message_id: "triggered_frequently"
+                      - alias: Get notification translation
+                        variables: *get_translation
+                      - alias: Log error
+                        action: system_log.write
+                        data:
+                          level: error
+                          message: "{{ message }}"
+                          logger: blueprints.etiennec78.automatic_gate
+                      - alias: If a notify service exists
+                        if:
+                          - condition: template
+                            value_template: "{{ notify_service is not none }}"
+                        then:
+                          - alias: Notify driver of itinerary cancelation
                             action: "{{ notify_service }}"
                             data:
                               title: "{{ title }}"
@@ -1842,53 +1889,48 @@ actions:
                               data: *notification_data
                             continue_on_error: true
                           - sequence: *tts
-                      - alias: Notify all users on the dashboard that the blueprint has disabled itself
-                        action: persistent_notification.create
-                        data:
-                          title: "{{ title }}"
-                          message: "{{ message }}"
-                        continue_on_error: true
-                      - alias: Disable the blueprint
-                        action: automation.turn_off
-                        target:
-                          entity_id: "{{ this.entity_id }}"
-              - alias: If the gate recently tried to close but the gate does not need to reopen
-                conditions:
+                      - stop: The gate recently tried to close
+          - alias: If last automation instance ended more than 10 minutes ago and its status is not none
+            conditions:
+              - condition: template
+                value_template: |-
+                  {{
+                    itinerary_value.status is not none
+                    and states[itinerary_sensor].last_updated
+                    + timedelta(minutes=10)
+                    < now()
+                  }}
+            sequence:
+              - alias: Set message id
+                variables:
+                  message_id: "automation_crashed"
+              - alias: Get notification translation
+                variables:
+                  message: *get_message
+              - alias: Log error
+                action: system_log.write
+                data:
+                  level: error
+                  message: "{{ message }}"
+                  logger: blueprints.etiennec78.automatic_gate
+              - alias: Notify of the issue on the dashboard
+                action: persistent_notification.create
+                data:
+                  message: "{{ message }}"
+              - alias: If a notify service exists
+                if:
                   - condition: template
-                    value_template: "{{ tried_closing_recently }}"
-                sequence:
-                  - alias: Set notification ids
-                    variables:
-                      title_id: "itinerary_canceled"
-                      message_id: "triggered_frequently"
-                  - alias: Get notification translation
-                    variables: *get_translation
-                  - alias: Log error
-                    action: system_log.write
+                    value_template: "{{ notify_service is not none }}"
+                then:
+                  - alias: Send the error message
+                    action: "{{ notify_service }}"
                     data:
-                      level: error
                       message: "{{ message }}"
-                      logger: blueprints.etiennec78.automatic_gate
-                  - alias: If a notify service exists
-                    if:
-                      - condition: template
-                        value_template: "{{ notify_service is not none }}"
-                    then:
-                      - alias: Notify driver of itinerary cancelation
-                        action: "{{ notify_service }}"
-                        data:
-                          title: "{{ title }}"
-                          message: "{{ message }}"
-                          data: *notification_data
-                        continue_on_error: true
-                      - sequence: *tts
-                  - stop: The gate recently tried to close
-        else:
           - alias: If the quick triggers counter is not at 0
-            if:
+            conditions:
               - condition: template
                 value_template: "{{ itinerary_value.quick_triggers != 0 }}"
-            then:
+            sequence:
               - alias: Reset the quick triggers counter
                 variables:
                   update:
