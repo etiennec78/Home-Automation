@@ -758,10 +758,10 @@ variables:
         something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
         fatal_error: |-
           Something went wrong !
-          Automatic Gate blueprint stopped unexpectedly. This should not have happened.
+          The blueprint stopped unexpectedly. This should not have happened.
           Please report this issue on Github.
         automation_crashed: |-
-          The previous Automatic Gate instance of this driver seems to have crashed.
+          The previous blueprint instance of this driver seems to have crashed.
           Please report this issue on Github.
         vehicle_stopped: "You have left your vehicle"
         canceling_order: "You have pressed the cancel button"
@@ -834,10 +834,10 @@ variables:
         something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
         fatal_error: |-
           Un problème est survenu !
-          Le blueprint Automatic Gate s'est arrêté de manière inattendue.
+          Le blueprint s'est arrêté de manière inattendue.
           Svp, signalez ce problème sur Github.
         automation_crashed: |-
-          L'instance Automatic Gate précédente de ce conducteur a l'air d'avoir rencontré un problème.
+          L'instance de blueprint précédente de ce conducteur a l'air d'avoir rencontré un problème.
           Svp, signalez ce problème sur Github.
         vehicle_stopped: "Le véhicule a été arrêté"
         canceling_order: "Vous avez appuyé sur le bouton annuler"
@@ -1945,6 +1945,7 @@ actions:
               - alias: Notify of the issue on the dashboard
                 action: persistent_notification.create
                 data:
+                  title: "{{ blueprint_name }}"
                   message: "{{ message }}"
               - alias: If a notify service exists
                 if:
@@ -1954,6 +1955,7 @@ actions:
                   - alias: Send the error message
                     action: "{{ notify_service }}"
                     data:
+                      title: "{{ blueprint_name }}"
                       message: "{{ message }}"
           - alias: If the quick triggers counter is not at 0
             conditions:
@@ -4164,6 +4166,7 @@ actions:
   - alias: Notify of the issue on the dashboard
     action: persistent_notification.create
     data:
+      title: "{{ blueprint_name }}"
       message: "{{ message }}"
     continue_on_error: true
   - alias: Notify the driver of the issue
@@ -4174,6 +4177,7 @@ actions:
         value_template: "{{ notify_service is not none }}"
       - action: "{{ notify_service }}"
         data:
+          title: "{{ blueprint_name }}"
           message: "{{ message }}"
           data:
             <<: *notification_data
