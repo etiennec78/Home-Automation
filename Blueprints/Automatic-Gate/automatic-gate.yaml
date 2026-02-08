@@ -236,6 +236,13 @@ blueprint:
           default: false
           selector:
             boolean:
+        gps_request_refresh_function:
+          name: ⏳ GPS request refresh function
+          description: |-
+            Your GPS request **refresh function** to get the delay between two GPS requests, while taking into account the remaining time
+          default: "{{ max(seconds_before_opening / 3, 5) }}"
+          selector:
+            template:
 
     gate_behavior:
       name: Gate behavior
@@ -3898,7 +3905,7 @@ actions:
                             - alias: Set a timer for the gate opening (or max int value if travel time sensor is unknown and no previous eta was stored) and for next gps refresh
                               variables:
                                 seconds_before_opening: "{{ opening_time - now() | as_timestamp }}"
-                                next_gps_refresh: "{{ max(seconds_before_opening / 3, 5) }}"
+                                next_gps_refresh: !input gps_request_refresh_function
                                 next_gps_refresh_ts: |-
                                   {{
                                     now() | as_timestamp + next_gps_refresh
@@ -3959,7 +3966,7 @@ actions:
                     - alias: Get the next gps refresh timestamp
                       variables:
                         seconds_before_opening: "{{ opening_time - now() | as_timestamp }}"
-                        next_gps_refresh: "{{ max(seconds_before_opening / 3, 5) }}"
+                        next_gps_refresh: !input gps_request_refresh_function
                         next_gps_refresh_ts: "{{ now() | as_timestamp + next_gps_refresh }}"
                 - alias: If the opening method should use a BLE tracker
                   conditions:
