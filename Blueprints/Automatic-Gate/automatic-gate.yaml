@@ -228,11 +228,11 @@ blueprint:
           description: |-
             Send a request to your phone when its location is outdated (based on the travel time sensor)
 
-            > [!INFO]
+            > [!NOTE]
             > If you are using an Android phone, please consider using the [High Accuracy Mode](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#settings-) instead
 
             > [!WARNING]
-            > GPS needs the "[Single accurate location](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#extra-requesting-manual-gps-updates-)" sensor turned on in the companion app*
+            > GPS needs the [Single accurate location](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#extra-requesting-manual-gps-updates-) sensor turned on in the companion app
           default: false
           selector:
             boolean:
