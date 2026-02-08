@@ -3943,7 +3943,10 @@ actions:
             - alias: Set the timeout for the next action
               variables:
                 timeout: |-
-                  {% if request_gps_location %}
+                  {%
+                    if request_gps_location
+                    and next_gps_refresh_ts is not none
+                  %}
                     {%
                       set timeout = (
                         next_gps_refresh_ts
@@ -3954,7 +3957,7 @@ actions:
                   {% else %}
                     {% set timeout = 2147483647 %}
                   {% endif %}
-                  {{ min(timeout, 0) }}
+                  {{ max(timeout, 0) }}
             - alias: Wait for new driver position or vehicle left
               wait_for_trigger:
                 - trigger: event
@@ -4026,7 +4029,10 @@ actions:
                           - alias: Set the timeout for the next action
                             variables:
                               timeout: |-
-                                {% if request_gps_location %}
+                                {%
+                                  if request_gps_location
+                                  and next_gps_refresh_ts is not none
+                                %}
                                   {%
                                     set timeout = (
                                       next_gps_refresh_ts
@@ -4037,7 +4043,7 @@ actions:
                                 {% else %}
                                   {% set timeout = 2147483647 %}
                                 {% endif %}
-                                {{ min(timeout, 0) }}
+                                {{ max(timeout, 0) }}
                           - alias: Wait for new position, vehicle left, or reachable BLE device
                             wait_for_trigger:
                               - alias: New position
