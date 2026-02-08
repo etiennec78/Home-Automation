@@ -4153,18 +4153,21 @@ actions:
                                 variables:
                                   timeouts2:
                                     opening: "{{ seconds_before_opening }}"
-                                    gps_request: "{{ next_gps_refresh_ts - now() | as_timestamp }}"
-                                    timed_out: "{{ timeout_delay*60 }}"
+                                    gps_request: |-
+                                      {{
+                                        next_gps_refresh_ts - now() | as_timestamp
+                                        if request_gps_location and next_gps_refresh_ts is not none
+                                        else 2147483647
+                                      }}
+                                    timed_out: |-
+                                      {{
+                                        timeout_delay * 60
+                                        if travel_time_rate != 'once'
+                                        else 2147483647
+                                      }}
                                   timeout_type: |-
-                                    {% set types = ['opening'] %}
-                                    {% if request_gps_location %}
-                                      {% set types = types + ['gps_request'] %}
-                                    {% endif %}
-                                    {% if travel_time_rate != 'once' %}
-                                      {% set types = types + ['timed_out'] %}
-                                    {% endif %}
                                     {{
-                                      types
+                                      timeouts2
                                       | items
                                       | sort(attribute='1')
                                       | first
