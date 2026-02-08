@@ -834,6 +834,7 @@ variables:
         deprecated_translations: "Custom translations now use a yaml dictionnary instead of json. Please update your old config. (#21)"
         update_polling_enabled: "These travel time sensors have an update polling enabled: '{data}'. Please disable it to avoid calling the API too often. (#22)"
         quick_refresh_function: "Your travel time refresh function makes too many calls to the API: {data} for a 2-hour trip (#23)"
+        tt_not_continuous_listen: "You have enabled GPS requests, but your travel time refresh is neither set to 'Continuously' nor 'Listen' (#24)"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -910,6 +911,7 @@ variables:
         deprecated_translations: "Les traductions personnalisés utilisent maintenant un dictionnaire yaml au lieu de json. Mettez à jour votre configuration svp. (#21)"
         update_polling_enabled: "Ces capteurs de temps de trajet sont mis à jour automatiquement: '{data}'. Veuillez désactiver les mise à jour automatiques afin d'éviter d'appeler l'API trop souvent. (#22)"
         quick_refresh_function: "Votre fonction d'actualisation du temps de trajet effectue trop d'appels à l'API: {data} pour un trajet de 2 heures (#23)"
+        tt_not_continuous_listen: "Vous avez activé les requêtes GPS, mais votre rafraîchissement de temps de trajet n'est ni sur 'Continuously', ni 'Listen' (#24)"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -1516,6 +1518,14 @@ actions:
                     }}
                   message_id: "quick_refresh_function"
                   level: 2
+                - alias: Check that the travel time refresh rate is set to 'Listen' or 'Continuously' if GPS requests are enabled
+                  error: |-
+                    {{
+                      request_gps_location
+                      and travel_time_rate not in ['continuous', 'listen']
+                    }}
+                  message_id: "tt_not_continuous_listen"
+                  level: 1
               sequence:
                 - alias: If a check failed
                   if:

@@ -57,5 +57,6 @@ Refer to the table below to fix the errors
   | #21 | Custom translations now use a yaml dictionnary instead of json. Please update your old config. | If you want to migrate your old translations, simply remove the '\|-' and save your automation |
   | #22 | These travel time sensors have an update polling enabled: '{data}'. Please disable it to avoid calling the API too often. | If your travel time sensor calls an API (Maps, Here, Waze, ...), please [disable the sensor update polling](https://github.com/etiennec78/Home-Automation/edit/master/README.md#travel-time-sensors-%EF%B8%8F). If your sensor needs to be updated 24h/7, set the 'Travel time refresh rate' input to 'Listen for updates' |
   | #23 | Your travel time refresh function makes too many calls to the API: ... for a 2-hour trip | Make sure your refresh function returns longer intervals. It should call the API less than 120 times per 2-hour trip. |
+  | #24 | You have enabled GPS requests, but your travel time refresh is neither set to 'Continuously' nor 'Listen' | Either untick 'Request gps location', or add a travel time sensor and set the refresh rate to 'Continuously' or 'Listen' |
   
 </details>
