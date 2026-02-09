@@ -3654,6 +3654,19 @@ actions:
           entity_id: "{{ itinerary_sensor }}"
         data:
           value: "{{ itinerary_value | to_json }}"
+      - alias: If the arrival opening behavior is set to off but the opening mode is set to 'time' and no travel time sensor was given
+        if:
+          - condition: template
+            value_template: |-
+              {{
+                behavior.arrival.opening == 'off'
+                and arrival_opening_method == 'time'
+                and travel_time_sensor is none
+              }}
+        then:
+          - alias: Set the opening mode to zone
+            variables:
+              arrival_opening_method: "zone"
       - alias: If a notify service exists and the user wants to be notified
         if:
           - condition: template
