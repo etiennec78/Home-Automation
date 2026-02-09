@@ -3986,6 +3986,10 @@ actions:
                       variables:
                         seconds_before_opening: "{{ opening_time - now() | as_timestamp }}"
                         outdated_delay: !input gps_outdated_function
+                    - alias: Get the next gps refresh timestamp
+                      variables:
+                        next_gps_refresh: !input gps_request_refresh_function
+                        next_gps_refresh_ts: "{{ now() | as_timestamp + next_gps_refresh }}"
                     - alias: Only continue if the GPS location is outdated
                       condition: template
                       value_template: |-
@@ -3995,10 +3999,6 @@ actions:
                           > timedelta(seconds=outdated_delay)
                         }}
                     - sequence: *gps_request
-                    - alias: Get the next gps refresh timestamp
-                      variables:
-                        next_gps_refresh: !input gps_request_refresh_function
-                        next_gps_refresh_ts: "{{ now() | as_timestamp + next_gps_refresh }}"
                 - alias: If the opening method should use a BLE tracker
                   conditions:
                     - condition: template
