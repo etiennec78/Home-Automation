@@ -4171,33 +4171,41 @@ actions:
     continue_on_error: true
   - alias: Notify the driver of the issue
     sequence:
-      - variables:
-          _: "{{ notify_service | is_defined }}"
-      - condition: template
-        value_template: "{{ notify_service is not none }}"
-      - action: "{{ notify_service }}"
-        data:
-          title: "{{ blueprint_name }}"
-          message: "{{ message }}"
-          data:
-            <<: *notification_data
-            notification_icon: mdi:alert
+      - if:
+          - condition: template
+            value_template: |-
+              {{
+                notify_service is defined
+                and notify_service is not none
+              }}
+        then:
+          - action: "{{ notify_service }}"
+            data:
+              title: "{{ blueprint_name }}"
+              message: "{{ message }}"
+              data:
+                <<: *notification_data
+                notification_icon: mdi:alert
     continue_on_error: true
   - alias: Restore itinerary sensor
     sequence:
-      - variables:
-          _: "{{ itinerary_sensor | is_defined }}"
-      - action: input_text.set_value
-        target:
-          entity_id: "{{ itinerary_sensor }}"
-        data:
-          value: "{{ default_itinerary_sensor_value | to_json }}"
+      - if:
+          - condition: template
+            value_template: "{{ itinerary_sensor is defined }}"
+        then:
+          - action: input_text.set_value
+            target:
+              entity_id: "{{ itinerary_sensor }}"
+            data:
+              value: "{{ default_itinerary_sensor_value | to_json }}"
     continue_on_error: true
   - alias: Restore iBeacons
     sequence:
-      - variables:
-          _: "{{ ble_started | is_defined }}"
-      - sequence: *restore_ble
+      - if:
+          - condition: template
+            value_template: "{{ ble_started is defined }}"
+        then:
+          - sequence: *restore_ble
     continue_on_error: true
   - stop: Fatal error
     error: true
