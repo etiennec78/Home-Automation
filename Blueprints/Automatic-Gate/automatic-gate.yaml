@@ -898,7 +898,6 @@ triggers:
     trigger: template
     id: blueprint_enabled
     value_template: "{{ is_state(this.entity_id, 'on') }}"
-    enabled: !input run_checks_when_enabled
   - alias: Trigger when HA starts
     trigger: homeassistant
     id: ha_started
@@ -910,7 +909,9 @@ actions:
   - alias: If triggered by HA startup
     if:
       - condition: trigger
-        id: ha_started
+        id:
+          - ha_started
+          - blueprint_enabled
     then:
       - alias: Reset all itinerary sensors
         repeat:
@@ -944,7 +945,20 @@ actions:
                 entity_id: "{{ itinerary_sensor }}"
               data:
                 value: "{{ itinerary_value | to_json }}"
-      - stop: Itinerary sensors reset
+      - alias: If triggered by HA startup, or blueprint enabled but checks are disabled
+        if:
+          - condition: or
+            conditions:
+              - condition: trigger
+                id: ha_started
+              - condition: and
+                conditions:
+                  - condition: trigger
+                    id: blueprint_enabled
+                  - condition: not
+                    conditions: !input run_checks_when_enabled
+        then:
+          - stop: Itinerary sensors reset
   - alias: Initialize a variable to check if an error occured
     variables:
       errored: true
