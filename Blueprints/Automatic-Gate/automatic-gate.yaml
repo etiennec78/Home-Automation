@@ -3982,21 +3982,31 @@ actions:
                     - condition: template
                       value_template: "{{ wait.remaining == 0 }}"
                   sequence: &request_gps_location
-                    - alias: Get the GPS outdated delay
-                      variables:
-                        seconds_before_opening: "{{ opening_time - now() | as_timestamp }}"
-                        outdated_delay: !input gps_outdated_function
-                    - alias: Get the next gps refresh timestamp
-                      variables:
-                        next_gps_refresh: !input gps_request_refresh_function
-                        next_gps_refresh_ts: "{{ now() | as_timestamp + next_gps_refresh }}"
+                    - alias: If an opening time is planned
+                      if:
+                        - condition: template
+                          value_template: "{{ opening_time is not none }}"
+                      then:
+                        - alias: Get the next gps refresh timestamp
+                          variables:
+                            seconds_before_opening: "{{ opening_time - now() | as_timestamp }}"
+                            outdated_delay: !input gps_outdated_function
+                            next_gps_refresh: !input gps_request_refresh_function
+                            next_gps_refresh_ts: "{{ now() | as_timestamp + next_gps_refresh }}"
+                      else:
+                        - alias: Remove the planned gps request
+                          variables:
+                            next_gps_refresh_ts: null
                     - alias: Only continue if the GPS location is outdated
                       condition: template
                       value_template: |-
                         {{
-                          now()
-                          - states[person].last_updated
-                          > timedelta(seconds=outdated_delay)
+                          opening_time is not none
+                          and (
+                            now()
+                            - states[person].last_updated
+                            > timedelta(seconds=outdated_delay)
+                          )
                         }}
                     - sequence: *gps_request
                 - alias: If the opening method should use a BLE tracker
