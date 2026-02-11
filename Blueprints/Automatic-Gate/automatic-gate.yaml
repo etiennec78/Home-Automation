@@ -956,7 +956,9 @@ actions:
                   - condition: trigger
                     id: blueprint_enabled
                   - condition: not
-                    conditions: !input run_checks_when_enabled
+                    conditions:
+                      - condition: template
+                        value_template: !input run_checks_when_enabled
         then:
           - stop: Itinerary sensors reset
   - alias: Initialize a variable to check if an error occured
