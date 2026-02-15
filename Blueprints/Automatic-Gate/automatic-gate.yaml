@@ -3712,9 +3712,6 @@ actions:
               condition: not
               conditions: *in_forbidden_zone
           sequence:
-            - alias: Reset opening time variable
-              variables:
-                opening_time: "{{ none }}"
             - alias: If the travel time refresh rate is set to "Continuously" or is needed to request gps location
               if:
                 - condition: template
@@ -4116,8 +4113,10 @@ actions:
                             condition: template
                             value_template: |-
                               {{
-                                opening_time is none
-                                or opening_time > as_timestamp(now())
+                                not repeat.first and (
+                                  opening_time is none
+                                  or opening_time > as_timestamp(now())
+                                )
                               }}
                           - alias: Not in a forbidden zone
                             condition: not
@@ -4128,8 +4127,12 @@ actions:
                               - condition: template
                                 value_template: "{{ repeat.first }}"
                             then:
-                              - alias: Force a travel time update
+                              - alias: Reset opening time variable
                                 variables:
+                                  opening_time: "{{ none }}"
+                              - alias: Force a GPS and travel time update
+                                variables:
+                                  next_gps_refresh_ts: "{{ now() | as_timestamp }}"
                                   next_refresh: |-
                                     {{
                                       max(
