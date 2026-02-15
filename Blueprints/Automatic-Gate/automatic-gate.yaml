@@ -3627,6 +3627,13 @@ actions:
               - alias: Set error id
                 variables:
                   message_id: "too_close"
+              - alias: Send a silent error if the behaviors are set to off
+                variables:
+                  silent_error: |-
+                    {{
+                      behavior.departure.opening == 'off'
+                      and dehavior.departure.closing == 'off'
+                    }}
               - alias: Create error
                 sequence: *create_error
               - stop: Started too close to home
@@ -4082,6 +4089,13 @@ actions:
                                             and opening_time > now() | as_timestamp
                                           }}
                                     sequence:
+                                      - alias: Send a silent error if the behaviors are set to off
+                                        variables:
+                                          silent_error: |-
+                                            {{
+                                              opening_behavior == 'off'
+                                              and closing_behavior == 'off'
+                                            }}
                                       - alias: Set error id
                                         variables:
                                           message_id: "timed_out"
@@ -4167,6 +4181,13 @@ actions:
       - alias: Only continue if an error should be raised
         condition: template
         value_template: "{{ message_id is not none }}"
+      - alias: Send a silent error if the behaviors are set to off
+        variables:
+          silent_error: |-
+            {{
+              behavior.departure.opening == 'off'
+              and behavior.departure.closing == 'off'
+            }}
       - alias: Create error
         sequence: *create_error
       - alias: Only continue if the error is critical
