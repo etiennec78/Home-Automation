@@ -3665,6 +3665,13 @@ actions:
               - alias: Set error id
                 variables:
                   message_id: "too_close"
+              - alias: Send a silent error if the behaviors are set to off
+                variables:
+                  silent_error: |-
+                    {{
+                      behavior.departure.opening == 'off'
+                      and dehavior.departure.closing == 'off'
+                    }}
               - alias: Create error
                 sequence: *create_error
               - stop: Started too close to home
@@ -3693,6 +3700,19 @@ actions:
           entity_id: "{{ itinerary_sensor }}"
         data:
           value: "{{ itinerary_value | to_json }}"
+      - alias: If the arrival opening behavior is set to off but the opening mode is set to 'time' and no travel time sensor was given
+        if:
+          - condition: template
+            value_template: |-
+              {{
+                behavior.arrival.opening == 'off'
+                and arrival_opening_method == 'time'
+                and travel_time_sensor is none
+              }}
+        then:
+          - alias: Set the opening mode to zone
+            variables:
+              arrival_opening_method: "zone"
       - alias: If a notify service exists and the user wants to be notified
         if:
           - condition: template
@@ -4227,6 +4247,13 @@ actions:
                                       - condition: template
                                         value_template: "{{ wait.remaining == 0 and timeout_type != 'opening' }}"
                                     sequence:
+                                      - alias: Send a silent error if the behaviors are set to off
+                                        variables:
+                                          silent_error: |-
+                                            {{
+                                              opening_behavior == 'off'
+                                              and closing_behavior == 'off'
+                                            }}
                                       - alias: Set error id
                                         variables:
                                           message_id: "{{ timeout_type }}"
@@ -4312,6 +4339,13 @@ actions:
       - alias: Only continue if an error should be raised
         condition: template
         value_template: "{{ message_id is not none }}"
+      - alias: Send a silent error if the behaviors are set to off
+        variables:
+          silent_error: |-
+            {{
+              behavior.departure.opening == 'off'
+              and behavior.departure.closing == 'off'
+            }}
       - alias: Create error
         sequence: *create_error
       - alias: Only continue if the error is critical
