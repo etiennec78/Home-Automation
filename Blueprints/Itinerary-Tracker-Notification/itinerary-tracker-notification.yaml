@@ -344,7 +344,8 @@ variables:
         deprecated_translations: "Les traductions personnalisés utilisent maintenant un dictionnaire yaml au lieu de json. Mettez à jour votre configuration svp. (#21)"
 
 triggers:
-  - trigger: state
+  - alias: Trigger when user connects to vehicle
+    trigger: state
     id: vehicle_started
     entity_id: !input driving_sensors
     from: "off"
@@ -866,25 +867,30 @@ actions:
           sequence:
             - alias: Wait for travel time update, vehicle left, or notification cleared
               wait_for_trigger:
-                - trigger: event
+                - alias: Travel time sensor updated
+                  trigger: event
                   id: travel_time
                   event_type: state_changed
                   event_data:
                     entity_id: "{{ travel_time_sensor }}"
-                - trigger: template
+                - alias: Vehicle stopped
+                  trigger: template
                   id: vehicle_left
                   value_template: "{{ is_state(driving_sensor, 'off') }}"
-                - trigger: event
+                - alias: Notification cleared
+                  trigger: event
                   id: notification_cleared
                   event_type: mobile_app_notification_cleared
                   event_data:
                     tag: "{{ notification_tag }}"
-                - trigger: persistent_notification
+                - alias: Persistent notification cleared
+                  trigger: persistent_notification
                   id: persistent_cleared
                   notification_id: "{{ persistent_id }}"
                   update_type: removed
                   enabled: "{{ persistent_active }}"
-                - trigger: template
+                - alias: Notification conditions changed
+                  trigger: template
                   id: conditions_changed
                   value_template: |-
                     {% set data = namespace(services_list=[]) %}
@@ -1193,7 +1199,8 @@ actions:
     else:
       - alias: Wait for user to leave vehicle
         wait_for_trigger:
-          - trigger: template
+          - alias: Vehicle stopped
+            trigger: template
             id: vehicle_left
             value_template: "{{ is_state(driving_sensor, 'off') }}"
   - alias: If driver arrived home

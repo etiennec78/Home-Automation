@@ -2776,7 +2776,7 @@ actions:
                   {% endif %}
                   {{ data.recently_closed and not data.auto_closed }}
             then:
-              - alias: Change the departure opening behavior to notificaiton request
+              - alias: Change the departure opening behavior to notification request
                 variables:
                   behavior: |-
                     {{
@@ -3029,7 +3029,7 @@ actions:
                       - condition: template
                         value_template: "{{ opening_behavior != 'off' }}"
                     then:
-                      - alias: Open each gate because driver is leaving
+                      - alias: Open each gate
                         repeat: *open_gates
               - alias: Set an empty trigger id
                 variables: &reset_trigger_id
@@ -3441,7 +3441,8 @@ actions:
                               - sequence: *tts
                           - alias: Wait for manual gate closing
                             wait_for_trigger:
-                              - trigger: template
+                              - alias: Manual closing
+                                trigger: template
                                 value_template: *all_gates_closed
                           - alias: If a notify service exists
                             if:
@@ -3615,7 +3616,7 @@ actions:
                   entity_id: "{{ itinerary_sensor }}"
                 data:
                   value: "{{ itinerary_value | to_json }}"
-          - alias: If the driver is not driving anyomore
+          - alias: If the driver is not driving anymore
             if:
               - condition: template
                 value_template: "{{ is_state(driving_sensor, 'off') }}"
@@ -3626,10 +3627,12 @@ actions:
               count: 2
               sequence:
                 - wait_for_trigger:
-                    - trigger: template
+                    - alias: Vehicle stopped
+                      trigger: template
                       id: vehicle_stopped
                       value_template: "{{ is_state(driving_sensor, 'off') }}"
-                    - trigger: template
+                    - alias: Driver drove 250m away
+                      trigger: template
                       value_template: |-
                         {% if state_attr(person, 'gps_accuracy') is none %}
                           {% set accuracy = 100 %}
@@ -3639,7 +3642,8 @@ actions:
                         {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
 
                         {{ gate_distance > activation_zone + 250 }}
-                    - trigger: template
+                    - alias: Driver returned to the activation zone
+                      trigger: template
                       value_template: |-
                         {% if state_attr(person, 'gps_accuracy') is none %}
                           {% set accuracy = 100 %}
@@ -3993,13 +3997,16 @@ actions:
                   {{ max(timeout, 0) }}
             - alias: Wait for new driver position or vehicle left
               wait_for_trigger:
-                - trigger: event
+                - alias: New position
+                  trigger: event
                   event_type: state_changed
                   event_data:
                     entity_id: "{{ person }}"
-                - trigger: template
+                - alias: Vehicle stopped
+                  trigger: template
                   value_template: "{{ is_state(driving_sensor, 'off') }}"
-                - trigger: event
+                - alias: Travel time updated
+                  trigger: event
                   event_type: state_changed
                   event_data:
                     entity_id: "{{ travel_time_sensor }}"
@@ -4099,7 +4106,7 @@ actions:
                                 id: vehicle_stopped
                                 trigger: template
                                 value_template: "{{ is_state(driving_sensor, 'off') }}"
-                              - alias: reachable BLE device
+                              - alias: Reachable BLE device
                                 trigger: template
                                 id: ble_in_reach
                                 value_template: |-
@@ -4224,16 +4231,19 @@ actions:
                                   timeout: "{{ max(timeouts2[timeout_type], 0) }}"
                               - alias: Wait for ETA, travel time, new position, vehicle left, and cancel if deviced timed out
                                 wait_for_trigger:
-                                  - trigger: event
+                                  - alias: New position
+                                    trigger: event
                                     event_type: state_changed
                                     event_data:
                                       entity_id: "{{ person }}"
-                                  - trigger: event
+                                  - alias: Travel time sensor updated
+                                    trigger: event
                                     event_type: state_changed
                                     event_data:
                                       entity_id: "{{ travel_time_sensor }}"
                                     enabled: "{{ travel_time_rate == 'listen' }}"
-                                  - trigger: template
+                                  - alias: Vehicle stopped
+                                    trigger: template
                                     value_template: "{{ is_state(driving_sensor, 'off') }}"
                                 timeout: "{{ timeout }}"
                               - choose:
@@ -4271,7 +4281,7 @@ actions:
                     and opening_time <= as_timestamp(now())
                   or arrival_opening_method == 'zone'
                 }}
-            - alias: Return to the previous loop if the user has left the the activation zone
+            - alias: Only continue if the driver is still in the activation zone
               condition: template
               value_template: *activation_zone_in_condition
             - alias: Only continue if the driver is still driving
