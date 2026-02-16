@@ -776,7 +776,7 @@ actions:
                   sequence:
                     - alias: Initialize a variable to store the speaker volume later
                       variables:
-                        old_volume: "{{ none }}"
+                        old_volume: null
                     - alias: If the tts night mode is currently active
                       if:
                         - condition: template
@@ -857,8 +857,8 @@ actions:
           next_refresh: 0
           nearly_arrived_sent: false
           last_arrival_timestamp: 0
-          nearly_arrived_timestamp: "{{ none }}"
-          arrival_timestamp: "{{ none }}"
+          nearly_arrived_timestamp: null
+          arrival_timestamp: null
           timer_removed: false
       - alias: Repeat while driver still driving
         repeat:

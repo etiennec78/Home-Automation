@@ -703,7 +703,7 @@ variables:
   travel_time_sensors: !input travel_time_sensors
   notify_devices: !input notify_devices
   notify_services: "{{ notify_devices | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}"
-  notify_service: "{{ none }}"
+  notify_service: null
   itinerary_sensors: !input itinerary_sensors
   travel_time_rate: !input travel_time_rate
   request_gps_location: !input request_gps_location
@@ -736,7 +736,7 @@ variables:
   security_features: !input security_features
   dont_lock_if_people_remaining: !input dont_lock_if_people_remaining
   quick_tt_updates: 0
-  last_quick_tt_update: "{{ none }}"
+  last_quick_tt_update: null
   failed_updates: 0
   silent_error: false
   config_checker_tag: "{{ 'config-checker-' ~ this.attributes.id }}"
@@ -744,8 +744,8 @@ variables:
   closing_order_id: "{{ 'closing_order_' ~ this.context.id }}"
   canceling_order_id: "{{ 'canceling_order_' ~ this.context.id }}"
   default_itinerary_sensor_value:
-    status: "{{ none }}"
-    error: "{{ none }}"
+    status: null
+    error: null
     quick_triggers: 0
     last_closed: 0
     auto_closed: false
@@ -757,8 +757,8 @@ variables:
   timeout_messages:
     closing_suggestion: "closing_suggestion"
     safety_delay: "undefined"
-    timer: "{{ none }}"
-    default: "{{ none }}"
+    timer: null
+    default: null
   critical_errors:
     - "travel_time_did_not_respond"
   blueprint_name: "{{ state_attr(this.entity_id, 'friendly_name') }}"
@@ -1781,7 +1781,7 @@ actions:
               - alias: Update the quick triggers counter
                 variables:
                   update:
-                    status: "{{ none }}"
+                    status: null
                     error: "triggered_frequently"
                     quick_triggers: "{{ itinerary_value.quick_triggers + 1 }}"
                   itinerary_value: "{{ itinerary_value | combine(update) }}"
@@ -2020,7 +2020,7 @@ actions:
               - alias: Reset the quick triggers counter
                 variables:
                   update:
-                    error: "{{ none }}"
+                    error: null
                     quick_triggers: 0
                   itinerary_value: "{{ itinerary_value | combine(update) }}"
               - alias: Save the quick triggers counter
@@ -2102,7 +2102,7 @@ actions:
             }}
           wait_for_wifi: "{{ 'wifi' in only_open_near and wifi_devices | length > idx }}"
           wait_for_ble: "{{ 'ble' in only_open_near and ble_entities | length > idx }}"
-          ble_started: "{{ false }}"
+          ble_started: false
       - alias: Get whether the user is leaving or arriving
         variables: &get_itinerary_mode
           departure: |-
@@ -2139,7 +2139,7 @@ actions:
           - alias: Store values for the next sequence
             variables:
               start_timestamp: "{{ now() | as_timestamp }}"
-              received_timestamp: "{{ none }}"
+              received_timestamp: null
               old_location_id: "{{ states[person].context.id }}"
               gates_were_opened: &all_gates_open |-
                 {{
@@ -2568,7 +2568,7 @@ actions:
                                 - alias: Mark error in driver itinerary sensor
                                   variables:
                                     update:
-                                      status: "{{ none }}"
+                                      status: null
                                       error: "{{ message_id }}"
                                     itinerary_value: "{{ itinerary_value | combine(update) }}"
                                 - alias: Save the itinerary status
@@ -2704,7 +2704,7 @@ actions:
             variables:
               update:
                 status: leaving
-                error: "{{ none }}"
+                error: null
               itinerary_value: "{{ itinerary_value | combine(update) }}"
           - alias: Save the itinerary status
             action: input_text.set_value
@@ -3035,7 +3035,7 @@ actions:
                 variables: &reset_trigger_id
                   wait:
                     trigger:
-                      id: "{{ none }}"
+                      id: null
               - alias: If one of the gates is open
                 if:
                   - condition: or
@@ -3075,7 +3075,7 @@ actions:
                         }}
                       wait_trigger_start: "{{ now() | as_timestamp }}"
                       wait_notif_reception: "{{ not ios_device and closing_behavior == 'timer' }}"
-                      timer_reset_timestamp: "{{ none }}"
+                      timer_reset_timestamp: null
                   - alias: Wait for events at least once, then while the gate closing has not been triggered
                     repeat:
                       until: "{{ break }}"
@@ -3696,7 +3696,7 @@ actions:
         variables:
           update:
             status: arriving
-            error: "{{ none }}"
+            error: null
           itinerary_value: "{{ itinerary_value | combine(update) }}"
       - alias: Save the itinerary status
         action: input_text.set_value
@@ -3878,7 +3878,7 @@ actions:
                                 - alias: Mark error in driver itinerary sensor
                                   variables:
                                     update:
-                                      status: "{{ none }}"
+                                      status: null
                                       error: updated_frequently
                                     itinerary_value: "{{ itinerary_value | combine(update) }}"
                                 - alias: Save the itinerary status
@@ -4171,7 +4171,7 @@ actions:
                             then:
                               - alias: Reset opening time variable
                                 variables:
-                                  opening_time: "{{ none }}"
+                                  opening_time: null
                               - alias: Force a GPS and travel time update
                                 variables:
                                   next_gps_refresh_ts: "{{ now() | as_timestamp }}"

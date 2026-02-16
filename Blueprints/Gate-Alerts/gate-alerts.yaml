@@ -801,7 +801,7 @@ actions:
                       sequence:
                         - alias: Initialize a variable to store the speaker volume later
                           variables:
-                            old_volume: "{{ none }}"
+                            old_volume: null
 
                         - alias: If the tts night mode is currently active
                           if:
