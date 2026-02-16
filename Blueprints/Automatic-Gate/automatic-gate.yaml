@@ -756,7 +756,7 @@ variables:
     default: "{{ MAX_INT }}"
   timeout_messages:
     closing_suggestion: "closing_suggestion"
-    safety_delay: "undefined"
+    safety_delay: null
     timer: null
     default: null
   critical_errors:
