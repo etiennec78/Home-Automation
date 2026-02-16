@@ -223,6 +223,33 @@ blueprint:
           default: true
           selector:
             boolean:
+        request_gps_location:
+          name: 🛰️ Request gps location
+          description: |-
+            Send a request to your phone when its location is outdated (based on the travel time sensor)
+
+            > [!NOTE]
+            > If you are using an Android phone, please consider using the [High Accuracy Mode](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#settings-) instead
+
+            > [!WARNING]
+            > GPS needs the [Single accurate location](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#extra-requesting-manual-gps-updates-) sensor turned on in the companion app
+          default: false
+          selector:
+            boolean:
+        gps_request_refresh_function:
+          name: ⏳ GPS request refresh function
+          description: |-
+            Your GPS request **refresh function** to get the delay between two GPS requests, while taking into account the remaining time
+          default: "{{ max(seconds_before_opening / 3, 5) }}"
+          selector:
+            template:
+        gps_outdated_function:
+          name: ⌛ GPS outdated function
+          description: |-
+            The function to get the timeframe after which the GPS will be considered outdated and a request will be made to update it
+          default: "{{ max(seconds_before_opening / 10, 5) }}"
+          selector:
+            template:
 
     gate_behavior:
       name: Gate behavior
@@ -678,6 +705,7 @@ variables:
   notify_service: "{{ none }}"
   itinerary_sensors: !input itinerary_sensors
   travel_time_rate: !input travel_time_rate
+  request_gps_location: !input request_gps_location
   behavior:
     departure:
       opening: !input departure_opening_behavior
@@ -806,6 +834,7 @@ variables:
         deprecated_translations: "Custom translations now use a yaml dictionnary instead of json. Please update your old config. (#21)"
         update_polling_enabled: "These travel time sensors have an update polling enabled: '{data}'. Please disable it to avoid calling the API too often. (#22)"
         quick_refresh_function: "Your travel time refresh function makes too many calls to the API: {data} for a 2-hour trip (#23)"
+        tt_not_continuous_listen: "You have enabled GPS requests, but your travel time refresh is neither set to 'Continuously' nor 'Listen' (#24)"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -882,6 +911,7 @@ variables:
         deprecated_translations: "Les traductions personnalisés utilisent maintenant un dictionnaire yaml au lieu de json. Mettez à jour votre configuration svp. (#21)"
         update_polling_enabled: "Ces capteurs de temps de trajet sont mis à jour automatiquement: '{data}'. Veuillez désactiver les mise à jour automatiques afin d'éviter d'appeler l'API trop souvent. (#22)"
         quick_refresh_function: "Votre fonction d'actualisation du temps de trajet effectue trop d'appels à l'API: {data} pour un trajet de 2 heures (#23)"
+        tt_not_continuous_listen: "Vous avez activé les requêtes GPS, mais votre rafraîchissement de temps de trajet n'est ni sur 'Continuously', ni 'Listen' (#24)"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -1504,6 +1534,14 @@ actions:
                     }}
                   message_id: "quick_refresh_function"
                   level: 2
+                - alias: Check that the travel time refresh rate is set to 'Listen' or 'Continuously' if GPS requests are enabled
+                  error: |-
+                    {{
+                      request_gps_location
+                      and travel_time_rate not in ['continuous', 'listen']
+                    }}
+                  message_id: "tt_not_continuous_listen"
+                  level: 1
               sequence:
                 - alias: If a check failed
                   if:
@@ -2125,7 +2163,7 @@ actions:
                 if:
                   - condition: template
                     value_template: "{{ wait_for_mobile_gps }}"
-                then:
+                then: &gps_request
                   - alias: Update the driver's location with a mobile app location request
                     action: "{{ notify_service }}"
                     data:
@@ -3641,6 +3679,7 @@ actions:
           next_refresh: 0
           return_zone: "{{ distance(person, gate_location) }}"
           seconds_before_opening: 2147483647
+          next_gps_refresh_ts: null
           api_calls: 0
       - alias: Set the itinerary status to "arriving"
         variables:
@@ -3689,13 +3728,17 @@ actions:
               condition: not
               conditions: *in_forbidden_zone
           sequence:
-            - alias: Reset opening time variable
-              variables:
-                opening_time: "{{ none }}"
-            - alias: If the travel time refresh rate is set to "Continuously"
+            - alias: If the travel time refresh rate is set to "Continuously" or is needed to request gps location
               if:
                 - condition: template
-                  value_template: "{{ travel_time_rate == 'continuous' }}"
+                  value_template: |-
+                    {{
+                      travel_time_rate == 'continuous'
+                      or (
+                        request_gps_location
+                        and travel_time_rate == 'listen'
+                      )
+                    }}
               then:
                 - alias: Store a variable for the following sequence
                   variables:
@@ -3889,13 +3932,20 @@ actions:
                                       - lead_time
                                       - (timer_opening if behavior.arrival.opening == 'timer' else 0)
                                   }}
-                            - alias: Set a timer for the gate opening (or max int value if travel time sensor is unknown and no previous eta was stored)
+                            - alias: Set a timer for the gate opening (or max int value if travel time sensor is unknown and no previous eta was stored) and for next gps refresh
                               variables:
                                 seconds_before_opening: "{{ opening_time - now() | as_timestamp }}"
+                                next_gps_refresh: !input gps_request_refresh_function
+                                next_gps_refresh_ts: |-
+                                  {{
+                                    now() | as_timestamp + next_gps_refresh
+                                    if next_gps_refresh_ts is none
+                                    else next_gps_refresh_ts
+                                  }}
                             - alias: Only continue if the refresh rate is not set to 'Listen'
                               condition: template
                               value_template: "{{ travel_time_rate != 'listen' }}"
-                            - alias: Set the next refresh timestamp
+                            - alias: Set the next travel time refresh timestamp
                               variables:
                                 next_refresh: !input refresh_function
                                 last_refresh_timestamp: "{{ now() | as_timestamp }}"
@@ -3903,6 +3953,24 @@ actions:
                             - alias: Add 1 to the failed updates counter
                               variables:
                                 failed_updates: "{{ failed_updates + 1 }}"
+            - alias: Set the timeout for the next action
+              variables:
+                timeout: |-
+                  {%
+                    if request_gps_location
+                    and next_gps_refresh_ts is not none
+                  %}
+                    {%
+                      set timeout = (
+                        next_gps_refresh_ts
+                        - now()
+                        | as_timestamp
+                      )
+                    %}
+                  {% else %}
+                    {% set timeout = 2147483647 %}
+                  {% endif %}
+                  {{ max(timeout, 0) }}
             - alias: Wait for new driver position or vehicle left
               wait_for_trigger:
                 - trigger: event
@@ -3911,7 +3979,49 @@ actions:
                     entity_id: "{{ person }}"
                 - trigger: template
                   value_template: "{{ is_state(driving_sensor, 'off') }}"
+                - trigger: event
+                  event_type: state_changed
+                  event_data:
+                    entity_id: "{{ travel_time_sensor }}"
+                  enabled: |-
+                    {{
+                      request_gps_location
+                      and travel_time_rate == 'listen'
+                    }}
+              timeout: "{{ timeout }}"
             - choose:
+                - alias: If a GPS request must be sent
+                  conditions:
+                    - condition: template
+                      value_template: "{{ wait.remaining == 0 }}"
+                  sequence: &request_gps_location
+                    - alias: If an opening time is planned
+                      if:
+                        - condition: template
+                          value_template: "{{ opening_time is not none }}"
+                      then:
+                        - alias: Get the next gps refresh timestamp
+                          variables:
+                            seconds_before_opening: "{{ opening_time - now() | as_timestamp }}"
+                            outdated_delay: !input gps_outdated_function
+                            next_gps_refresh: !input gps_request_refresh_function
+                            next_gps_refresh_ts: "{{ now() | as_timestamp + next_gps_refresh }}"
+                      else:
+                        - alias: Remove the planned gps request
+                          variables:
+                            next_gps_refresh_ts: null
+                    - alias: Only continue if the GPS location is outdated
+                      condition: template
+                      value_template: |-
+                        {{
+                          opening_time is not none
+                          and (
+                            now()
+                            - states[person].last_updated
+                            > timedelta(seconds=outdated_delay)
+                          )
+                        }}
+                    - sequence: *gps_request
                 - alias: If the opening method should use a BLE tracker
                   conditions:
                     - condition: template
@@ -3939,6 +4049,24 @@ actions:
                               - condition: template
                                 value_template: "{{ repeat.first and ble_entities | length > idx }}"
                             then: *start_ble
+                          - alias: Set the timeout for the next action
+                            variables:
+                              timeout: |-
+                                {%
+                                  if request_gps_location
+                                  and next_gps_refresh_ts is not none
+                                %}
+                                  {%
+                                    set timeout = (
+                                      next_gps_refresh_ts
+                                      - now()
+                                      | as_timestamp
+                                    )
+                                  %}
+                                {% else %}
+                                  {% set timeout = 2147483647 %}
+                                {% endif %}
+                                {{ max(timeout, 0) }}
                           - alias: Wait for new position, vehicle left, or reachable BLE device
                             wait_for_trigger:
                               - alias: New position
@@ -3960,21 +4088,27 @@ actions:
                                     or is_state(ble_entities[idx], 'home')
                                     or state_attr(ble_entities[idx], 'area_id') in gate_areas
                                   }}
-                          - alias: If BLE devices won't need to stay on
-                            if:
-                              - condition: or
+                            timeout: "{{ timeout }}"
+                          - choose:
+                              - alias: If a GPS request must be sent
                                 conditions:
-                                  - alias: Triggered by vehicle stopped or reachable BLE device
-                                    condition: template
-                                    value_template: "{{ wait.trigger.id != 'position' }}"
-                                  - alias: Not in the activation zone
-                                    condition: not
-                                    conditions: *activation_zone_in_condition
-                                  - alias: Is in a forbidden zone
-                                    condition: template
-                                    value_template: *in_forbidden_zone
-                            then:
-                              - sequence: *restore_ble
+                                  - condition: template
+                                    value_template: "{{ wait.remaining == 0 }}"
+                                sequence: *request_gps_location
+                              - alias: If BLE devices won't need to stay on
+                                conditions:
+                                  - condition: or
+                                    conditions:
+                                      - alias: Triggered by vehicle stopped or reachable BLE device
+                                        condition: template
+                                        value_template: "{{ wait.trigger.id in ['vehicle_stopped', 'ble_in_reach'] }}"
+                                      - alias: Not in the activation zone
+                                        condition: not
+                                        conditions: *activation_zone_in_condition
+                                      - alias: Is in a forbidden zone
+                                        condition: template
+                                        value_template: *in_forbidden_zone
+                                sequence: *restore_ble
                 - alias: If the opening method should use a travel time sensor
                   conditions:
                     - condition: template
@@ -3995,7 +4129,8 @@ actions:
                             condition: template
                             value_template: |-
                               {{
-                                opening_time is none
+                                repeat.first
+                                or opening_time is none
                                 or opening_time > as_timestamp(now())
                               }}
                           - alias: Not in a forbidden zone
@@ -4007,8 +4142,12 @@ actions:
                               - condition: template
                                 value_template: "{{ repeat.first }}"
                             then:
-                              - alias: Force a travel time update
+                              - alias: Reset opening time variable
                                 variables:
+                                  opening_time: "{{ none }}"
+                              - alias: Force a GPS and travel time update
+                                variables:
+                                  next_gps_refresh_ts: "{{ now() | as_timestamp }}"
                                   next_refresh: |-
                                     {{
                                       max(
@@ -4038,6 +4177,31 @@ actions:
                               - condition: template
                                 value_template: "{{ seconds_before_opening > 0 }}"
                             then:
+                              - alias: Set the timeout for the next action
+                                variables:
+                                  timeouts2:
+                                    opening: "{{ seconds_before_opening }}"
+                                    gps_request: |-
+                                      {{
+                                        next_gps_refresh_ts - now() | as_timestamp
+                                        if request_gps_location and next_gps_refresh_ts is not none
+                                        else 2147483647
+                                      }}
+                                    timed_out: |-
+                                      {{
+                                        timeout_delay * 60
+                                        if travel_time_rate != 'once'
+                                        else 2147483647
+                                      }}
+                                  timeout_type: |-
+                                    {{
+                                      timeouts2
+                                      | items
+                                      | sort(attribute='1')
+                                      | first
+                                      | first
+                                    }}
+                                  timeout: "{{ max(timeouts2[timeout_type], 0) }}"
                               - alias: Wait for ETA, travel time, new position, vehicle left, and cancel if deviced timed out
                                 wait_for_trigger:
                                   - trigger: event
@@ -4051,27 +4215,21 @@ actions:
                                     enabled: "{{ travel_time_rate == 'listen' }}"
                                   - trigger: template
                                     value_template: "{{ is_state(driving_sensor, 'off') }}"
-                                timeout:
-                                  seconds: |-
-                                    {% if travel_time_rate == 'once' %}
-                                      {{ seconds_before_opening }}
-                                    {% else %}
-                                      {{ min(timeout_delay*60, seconds_before_opening) }}
-                                    {% endif %}
+                                timeout: "{{ timeout }}"
                               - choose:
+                                  - alias: If a GPS request must be sent
+                                    conditions:
+                                      - condition: template
+                                        value_template: "{{ wait.remaining == 0 and timeout_type == 'gps_request' }}"
+                                    sequence: *request_gps_location
                                   - alias: If timeout ran out of time (not because of eta reached)
                                     conditions:
                                       - condition: template
-                                        value_template: |-
-                                          {{
-                                            wait.remaining == 0
-                                            and opening_time is not none
-                                            and opening_time > now() | as_timestamp
-                                          }}
+                                        value_template: "{{ wait.remaining == 0 and timeout_type != 'opening' }}"
                                     sequence:
                                       - alias: Set error id
                                         variables:
-                                          message_id: "timed_out"
+                                          message_id: "{{ timeout_type }}"
                                       - alias: Create error
                                         sequence: *create_error
                                       - stop: Timed out
