@@ -1086,7 +1086,7 @@ actions:
                     - alias: Calculate ETA
                       variables:
                         remaining: |-
-                            {% if state_attr(travel_time_sensor, 'duration') != none %}
+                            {% if state_attr(travel_time_sensor, 'duration') is not none %}
                               {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
                             {% elif state_attr(travel_time_sensor, 'unit_of_measurement') == "min" %}
                               {{ states(travel_time_sensor) | float * 60 }}
