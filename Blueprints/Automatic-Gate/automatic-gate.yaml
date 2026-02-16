@@ -1783,7 +1783,7 @@ actions:
                     status: "{{ none }}"
                     error: "triggered_frequently"
                     quick_triggers: "{{ itinerary_value.quick_triggers + 1 }}"
-                  itinerary_value: "{{ dict(itinerary_value, **update) }}"
+                  itinerary_value: "{{ itinerary_value | combine(update) }}"
               - alias: Save the quick triggers counter
                 action: input_text.set_value
                 target:
@@ -2021,7 +2021,7 @@ actions:
                   update:
                     error: "{{ none }}"
                     quick_triggers: 0
-                  itinerary_value: "{{ dict(itinerary_value, **update) }}"
+                  itinerary_value: "{{ itinerary_value | combine(update) }}"
               - alias: Save the quick triggers counter
                 action: input_text.set_value
                 target:
@@ -2569,7 +2569,7 @@ actions:
                                     update:
                                       status: "{{ none }}"
                                       error: "{{ message_id }}"
-                                    itinerary_value: "{{ dict(itinerary_value, **update) }}"
+                                    itinerary_value: "{{ itinerary_value | combine(update) }}"
                                 - alias: Save the itinerary status
                                   action: input_text.set_value
                                   target:
@@ -2704,7 +2704,7 @@ actions:
               update:
                 status: leaving
                 error: "{{ none }}"
-              itinerary_value: "{{ dict(itinerary_value, **update) }}"
+              itinerary_value: "{{ itinerary_value | combine(update) }}"
           - alias: Save the itinerary status
             action: input_text.set_value
             target:
@@ -2717,11 +2717,10 @@ actions:
               opening_message: "leaving_home"
               timeout_messages: |-
                 {{
-                  dict(
-                    timeout_messages, **{
-                      'safety_delay': 'did_not_leave'
-                    }
-                  )
+                  timeout_messages
+                  | combine({
+                    'safety_delay': 'did_not_leave'
+                  })
                 }}
           - if:
               - alias: If the user doesn't want his gate to open automatically if someone just closed it
@@ -3373,7 +3372,7 @@ actions:
                       update:
                         last_closed: "{{ now() | as_timestamp | int }}"
                         auto_closed: "{{ wait.trigger.id != 'closing_order' }}"
-                      itinerary_value: "{{ dict(itinerary_value, **update) }}"
+                      itinerary_value: "{{ itinerary_value | combine(update) }}"
                   - alias: If gate closing is enabled
                     if:
                       - condition: template
@@ -3697,7 +3696,7 @@ actions:
           update:
             status: arriving
             error: "{{ none }}"
-          itinerary_value: "{{ dict(itinerary_value, **update) }}"
+          itinerary_value: "{{ itinerary_value | combine(update) }}"
       - alias: Save the itinerary status
         action: input_text.set_value
         target:
@@ -3880,7 +3879,7 @@ actions:
                                     update:
                                       status: "{{ none }}"
                                       error: updated_frequently
-                                    itinerary_value: "{{ dict(itinerary_value, **update) }}"
+                                    itinerary_value: "{{ itinerary_value | combine(update) }}"
                                 - alias: Save the itinerary status
                                   action: input_text.set_value
                                   target:
@@ -4294,7 +4293,7 @@ actions:
               variables:
                 update:
                   status: on_approach
-                itinerary_value: "{{ dict(itinerary_value, **update) }}"
+                itinerary_value: "{{ itinerary_value | combine(update) }}"
             - alias: Save the itinerary status
               action: input_text.set_value
               target:
