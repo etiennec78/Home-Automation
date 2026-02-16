@@ -934,8 +934,6 @@ triggers:
     id: ha_started
     event: start
 
-conditions: []
-
 actions:
   - alias: If triggered by HA startup
     if:

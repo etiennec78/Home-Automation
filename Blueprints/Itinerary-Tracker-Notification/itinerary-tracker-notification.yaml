@@ -357,8 +357,6 @@ triggers:
     value_template: "{{ is_state(this.entity_id, 'on') }}"
     enabled: !input run_checks_when_enabled
 
-conditions: []
-
 actions:
   - alias: If the blueprint was triggered by a driving sensor
     if:
