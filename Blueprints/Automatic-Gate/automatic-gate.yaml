@@ -4113,10 +4113,9 @@ actions:
                             condition: template
                             value_template: |-
                               {{
-                                not repeat.first and (
-                                  opening_time is none
-                                  or opening_time > as_timestamp(now())
-                                )
+                                repeat.first
+                                or opening_time is none
+                                or opening_time > as_timestamp(now())
                               }}
                           - alias: Not in a forbidden zone
                             condition: not
