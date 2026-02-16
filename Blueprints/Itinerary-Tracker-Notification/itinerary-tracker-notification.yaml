@@ -158,7 +158,7 @@ blueprint:
           description: |-
             The function used to calculate the **seconds** between two tracking notifications to lower your quota consumption
             *Note : {{remaining}} will be replaced by the seconds remaining until the arrival*
-          default: "{{ max(10, (remaining)/4) }}"
+          default: "{{ max(10, remaining/4) }}"
           selector:
             template:
         on_tap_link:
