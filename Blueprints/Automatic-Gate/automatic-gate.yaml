@@ -689,6 +689,7 @@ blueprint:
             boolean:
 
 variables:
+  MAX_INT: 2147483647
   gate: !input gate
   gate_location: !input gate_location
   gate_areas: "{{ gate | map('area_id') | difference([none]) | list }}"
@@ -752,7 +753,7 @@ variables:
     closing_suggestion: !input suggest_closing_after
     safety_delay: "{{ safety_delay * 60 }}"
     timer: !input timer_closing
-    default: 2147483647
+    default: "{{ MAX_INT }}"
   timeout_messages:
     closing_suggestion: "closing_suggestion"
     safety_delay: "undefined"
@@ -2973,7 +2974,7 @@ actions:
                                 {% if opening_behavior == 'timer' %}
                                   {{ timer_opening }}
                                 {% else %}
-                                  2147483647
+                                  {{ MAX_INT }}
                                 {% endif %}
                             - choose:
                                 - alias: If the timer ran out but not in timer mode
@@ -3688,7 +3689,7 @@ actions:
           last_refresh_timestamp: 0
           next_refresh: 0
           return_zone: "{{ distance(person, gate_location) }}"
-          seconds_before_opening: 2147483647
+          seconds_before_opening: "{{ MAX_INT }}"
           next_gps_refresh_ts: null
           api_calls: 0
       - alias: Set the itinerary status to "arriving"
@@ -3991,7 +3992,7 @@ actions:
                       )
                     %}
                   {% else %}
-                    {% set timeout = 2147483647 %}
+                    {% set timeout = MAX_INT %}
                   {% endif %}
                   {{ max(timeout, 0) }}
             - alias: Wait for new driver position or vehicle left
@@ -4090,7 +4091,7 @@ actions:
                                     )
                                   %}
                                 {% else %}
-                                  {% set timeout = 2147483647 %}
+                                  {% set timeout = MAX_INT %}
                                 {% endif %}
                                 {{ max(timeout, 0) }}
                           - alias: Wait for new position, vehicle left, or reachable BLE device
@@ -4211,13 +4212,13 @@ actions:
                                       {{
                                         next_gps_refresh_ts - now() | as_timestamp
                                         if request_gps_location and next_gps_refresh_ts is not none
-                                        else 2147483647
+                                        else MAX_INT
                                       }}
                                     timed_out: |-
                                       {{
                                         timeout_delay * 60
                                         if travel_time_rate != 'once'
-                                        else 2147483647
+                                        else MAX_INT
                                       }}
                                   timeout_type: |-
                                     {{

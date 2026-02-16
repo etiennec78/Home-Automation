@@ -273,6 +273,7 @@ blueprint:
             boolean:
 
 variables:
+  MAX_INT: 2147483647
   dead_zone: !input dead_zone
   persons: !input persons
   notify_devices: !input notify_devices
@@ -923,7 +924,7 @@ actions:
               timeout:
                 # Wait for the end of the cooldown, or for the nearly arrived TTS, or indefinitely
                 seconds: |-
-                  {% set values = [2147483647] %}
+                  {% set values = [MAX_INT] %}
 
                   {# End of cooldown #}
                   {% if next_refresh > now() | as_timestamp %}

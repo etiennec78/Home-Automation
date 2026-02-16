@@ -232,6 +232,7 @@ blueprint:
             boolean:
 
 variables:
+  MAX_INT: 2147483647
   gate: !input gate
   notification_type: !input notification_type
   notification_delay: !input notification_delay
@@ -747,7 +748,7 @@ actions:
                         {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
                           30
                         {% else %}
-                          2147483647
+                          {{ MAX_INT }}
                         {% endif %}
                       chronometer: "{{ notification_delay != 0 }}"
                       when: "{{ (utcnow() - timedelta(minutes=notification_delay)) | as_timestamp | int }}"
@@ -925,7 +926,7 @@ actions:
       {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
         30
       {% else %}
-        2147483647
+        {{ MAX_INT }}
       {% endif %}
 
   - alias: Stop if timer ran out but problem still present
