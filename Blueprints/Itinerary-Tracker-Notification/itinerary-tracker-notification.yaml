@@ -765,12 +765,14 @@ actions:
           - condition: template
             value_template: !input drive_start_tts
         then: &play_speaker_tts
-          - alias: Only continue if a TTS service has been entered and someone is home
+          - alias: Only continue if someone is home
             condition: template
             value_template: >-
               {{
-                speaker_tts_service != ''
-                and persons | select('is_state', 'home') | list != []
+                persons
+                | select('is_state', 'home')
+                | list
+                != []
               }}
           - alias: Play TTS on each speaker
             repeat:
