@@ -97,7 +97,7 @@ blueprint:
             number:
               min: 300
               max: 5000
-              unit_of_measurement: meters
+              unit_of_measurement: m
 
     persons_to_notify:
       name: Persons to notify
@@ -232,7 +232,7 @@ blueprint:
             number:
               min: 0
               max: 60
-              unit_of_measurement: minutes
+              unit_of_measurement: min
         tts_volume_night_time_start:
           name: 🌙 TTS night time start
           description: |-

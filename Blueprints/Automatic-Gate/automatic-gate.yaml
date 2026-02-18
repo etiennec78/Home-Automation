@@ -93,7 +93,7 @@ blueprint:
             number:
               min: 10
               max: 300
-              unit_of_measurement: seconds
+              unit_of_measurement: s
 
     per_person_sensors:
       name: Per person sensors
@@ -189,7 +189,7 @@ blueprint:
             number:
               min: 150
               max: 5000
-              unit_of_measurement: meters
+              unit_of_measurement: m
         travel_time_rate:
           name: 🔄 Travel time refresh rate
           description: |-
@@ -314,7 +314,7 @@ blueprint:
             number:
               min: 1
               max: 600
-              unit_of_measurement: seconds
+              unit_of_measurement: s
         arrival_opening_behavior:
           name: 🛬🔓 Arrival opening behavior
           description: |-
@@ -355,7 +355,7 @@ blueprint:
             number:
               min: 1
               max: 20
-              unit_of_measurement: seconds
+              unit_of_measurement: s
         timer_closing:
           name: ⏱️🔐 Cancelable timer time for closing
           description: The time before the gate automatically closes in "cancelable timer" mode without your input
@@ -364,7 +364,7 @@ blueprint:
             number:
               min: 1
               max: 120
-              unit_of_measurement: seconds
+              unit_of_measurement: s
         partial_open_position:
           name: ↔️ Gate partial opening
           description: |-
@@ -397,7 +397,7 @@ blueprint:
             number:
               min: 2
               max: 30
-              unit_of_measurement: minutes
+              unit_of_measurement: min
         timeout_delay:
           name: ⌛ Timeout delay
           description: |-
@@ -408,7 +408,7 @@ blueprint:
             number:
               min: 0.5
               max: 30
-              unit_of_measurement: minutes
+              unit_of_measurement: min
         forbidden_zones:
           name: ⛔ Forbidden zones
           description: If you enter any of these zones while driving home, your itinerary will be canceled
@@ -530,7 +530,7 @@ blueprint:
             number:
               min: 0
               max: 300
-              unit_of_measurement: seconds
+              unit_of_measurement: s
         ble_transmitter_entities:
           name: 📡 iBeacon transmitter entities
           description: |-
@@ -582,7 +582,7 @@ blueprint:
             number:
               min: 0
               max: 1800
-              unit_of_measurement: seconds
+              unit_of_measurement: s
         gps_outdated_delay:
           name: ⌛ GPS outdated delay
           description: The timeframe after which the GPS will be considered outdated and a request will be made to update it
@@ -591,7 +591,7 @@ blueprint:
             number:
               min: 0
               max: 300
-              unit_of_measurement: seconds
+              unit_of_measurement: s
         close_when_disconnected_from:
           name: 📡 Close on departure when disconnected from
           description: Close the gate if driver's BLE device is out of range

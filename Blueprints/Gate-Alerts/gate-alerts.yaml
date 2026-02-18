@@ -74,7 +74,7 @@ blueprint:
             number:
               min: 0
               max: 30
-              unit_of_measurement: minutes
+              unit_of_measurement: min
         error_message_sensor:
           name: ⚠️ Error Message Sensor
           description: |-
