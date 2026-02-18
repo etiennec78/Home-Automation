@@ -2704,19 +2704,22 @@ actions:
         repeat:
           count: "{{ 2 if departure_mode else 1 }}"
           sequence:
+            - alias: Get whereas the driver is at the gate location
+              variables:
+                departure_mode: |-
+                  {{
+                    is_state(
+                      person, [
+                        state_attr(gate_location, 'friendly_name'),
+                        states[gate_location].object_id
+                      ]
+                    )
+                  }}
             - choose:
                 - alias: If driver at gate location
                   conditions:
                     - condition: template
-                      value_template: |-
-                        {{
-                          is_state(
-                            person, [
-                              state_attr(gate_location, 'friendly_name'),
-                              states[gate_location].object_id
-                            ]
-                          )
-                        }}
+                      value_template: "{{ departure_mode }}"
                   sequence:
                     #############
                     # DEPARTURE #
@@ -2725,7 +2728,6 @@ actions:
                     - alias: Initialize departure mode variables
                       variables:
                         itinerary_mode: "departure"
-                        opening_message: "leaving_home"
                         timeout_messages: |-
                           {{
                             timeout_messages
@@ -2834,7 +2836,6 @@ actions:
                 - alias: Initialize arrival mode variables
                   variables:
                     itinerary_mode: "arrival"
-                    opening_message: "soon_arrived"
                     timeout_messages: |-
                       {{
                         timeout_messages | combine({
@@ -3580,7 +3581,7 @@ actions:
                                     - "{{ canceling_action }}"
                     - alias: Set message id
                       variables:
-                        message_id: "{{ opening_message }}"
+                        message_id: "{{ 'leaving_home' if departure_mode else 'soon_arrived' }}"
                     - alias: Get notification translation
                       variables: *get_translation
                     - alias: Send the timer notification or opening request
@@ -3736,7 +3737,7 @@ actions:
                     - condition: template
                       value_template: |-
                         {{
-                          itinerary_mode == 'departure'
+                          departure_mode
                           and 'ble' in close_when_disconnected_from
                           and ble_entities | length > idx
                         }}
@@ -3747,7 +3748,7 @@ actions:
                     suggest_closing: |-
                       {{
                         closing_behavior == 'notif'
-                        and itinerary_mode == 'departure'
+                        and departure_mode
                         and 'ble' not in close_when_disconnected_from
                       }}
                     wait_trigger_start: "{{ now() | as_timestamp }}"
@@ -3817,7 +3818,7 @@ actions:
                               }}
                             enabled: |-
                               {{
-                                itinerary_mode == 'departure'
+                                departure_mode
                                 'ble' in close_when_disconnected_from
                                 and idx < ble_entities | length
                               }}
@@ -3916,7 +3917,7 @@ actions:
                                   - alias: If the user is leaving
                                     if:
                                       - condition: template
-                                        value_template: "{{ itinerary_mode == 'departure' }}"
+                                        value_template: "{{ departure_mode }}"
                                     then:
                                       - alias: Restore BLE devices
                                         sequence: *restore_ble
@@ -3929,7 +3930,7 @@ actions:
                                           {{ none }}
                                         {%
                                           elif wait.trigger.id == 'vehicle_stopped'
-                                          and itinerary_mode == 'arrival'
+                                          and not departure_mode
                                         %}
                                           arrived
                                         {% else %}
@@ -4031,7 +4032,7 @@ actions:
                     {{
                       closing_behavior in ['timer', 'notif']
                       or (
-                        itinerary_mode == 'arrival'
+                        not departure_mode
                         and itinerary_started_notif
                         and opening_behavior not in ['timer', 'notif']
                       )
@@ -4165,13 +4166,13 @@ actions:
                 - condition: or
                   conditions:
                     - condition: template
-                      value_template: "{{ itinerary_mode == 'departure' }}"
+                      value_template: "{{ departure_mode }}"
                     - condition: template
                       value_template: *activation_zone_in_condition
               then:
                 - alias: Set lock action prefix
                   variables:
-                    prefix: "{{ '' if itinerary_mode == 'departure' else 'un' }}"
+                    prefix: "{{ '' if departure_mode else 'un' }}"
                 - alias: Do not lock if dont_lock_if_people_remaining is true and someone else is home
                   condition: template
                   value_template: |-
