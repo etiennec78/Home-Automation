@@ -237,7 +237,14 @@ variables:
   notification_type: !input notification_type
   notification_delay: !input notification_delay
   notify_devices: !input notify_devices
-  notify_services: "{{ notify_devices | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}"
+  notify_services: |-
+    {{
+      notify_devices
+      | map('device_attr', 'name')
+      | map('slugify')
+      | map('regex_replace', '^', 'notify.mobile_app_')
+      | list
+    }}
   persistent_notification: !input persistent_notification
   speaker_tts_devices: !input speaker_tts_devices
   speaker_tts_service: !input speaker_tts_service
@@ -632,7 +639,17 @@ actions:
   - alias: If gate paused or fully open, and supporting position
     if:
       condition: template
-      value_template: "{{ notification_type == 'open' and is_state(gate, 'open') and notification_delay == 0 and state_attr(gate, 'supported_features') | bitwise_and(4) == 4 }}"
+      value_template: |-
+        {{
+          notification_type == 'open'
+          and is_state(gate, 'open')
+          and notification_delay == 0
+          and (
+            state_attr(gate, 'supported_features')
+            | bitwise_and(4)
+            == 4
+          )
+        }}
     then:
       - alias: Set notification ids
         variables:
@@ -751,7 +768,12 @@ actions:
                           {{ MAX_INT }}
                         {% endif %}
                       chronometer: "{{ notification_delay != 0 }}"
-                      when: "{{ (utcnow() - timedelta(minutes=notification_delay)) | as_timestamp | int }}"
+                      when: |-
+                        {{
+                          (utcnow() - timedelta(minutes=notification_delay))
+                          | as_timestamp
+                          | int
+                        }}
                       actions: |-
                         {%
                           if notification_type == 'open'
@@ -932,7 +954,14 @@ actions:
   - alias: Stop if timer ran out but problem still present
     if:
       condition: template
-      value_template: "{{ wait.remaining == 0 and not(notification_type == 'error' or is_state(gate, ['off', 'closed'])) }}"
+      value_template: |-
+        {{
+          wait.remaining == 0
+          and not(
+            notification_type == 'error'
+            or is_state(gate, ['off', 'closed'])
+          )
+        }}
     then:
       - stop: Timer ran out
 

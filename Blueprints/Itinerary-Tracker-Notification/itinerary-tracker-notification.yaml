@@ -277,7 +277,14 @@ variables:
   dead_zone: !input dead_zone
   persons: !input persons
   notify_devices: !input notify_devices
-  notify_services: "{{ notify_devices | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}"
+  notify_services: |-
+    {{
+      notify_devices
+      | map('device_attr', 'name')
+      | map('slugify')
+      | map('regex_replace', '^', 'notify.mobile_app_')
+      | list
+    }}
   driving_sensors: !input driving_sensors
   travel_time_sensors: !input travel_time_sensors
   notify_everyone: !input notify_everyone
@@ -1043,7 +1050,8 @@ actions:
                   conditions:
                     - condition: template
                       value_template: |-
-                        {{ nearly_arrived_tts
+                        {{
+                          nearly_arrived_tts
                           and not nearly_arrived_sent
                           and nearly_arrived_timestamp is not none
                           and nearly_arrived_timestamp <= now() | as_timestamp

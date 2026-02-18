@@ -1821,7 +1821,12 @@ actions:
                     sequence:
                       - alias: Reopen each gate to avoid closing on the driver
                         repeat: &open_gates
-                          for_each: "{{ gate | select('is_state', ['off', 'closed', 'closing']) | list }}"
+                          for_each: >-
+                            {{
+                              gate
+                              | select('is_state', ['off', 'closed', 'closing'])
+                              | list
+                            }}
                           sequence:
                             - alias: Get the action to call
                               variables:
@@ -3681,7 +3686,15 @@ actions:
                               - alias: If an error needs to be raised
                                 conditions:
                                   - condition: template
-                                    value_template: "{{ wait.trigger.id in ['vehicle_stopped', 'vehicle_away', 'forbidden_zone', 'canceling_order'] }}"
+                                    value_template: >-
+                                      {{
+                                        wait.trigger.id in [
+                                          'vehicle_stopped',
+                                          'vehicle_away',
+                                          'forbidden_zone',
+                                          'canceling_order'
+                                        ]
+                                      }}
                                 sequence:
                                   - alias: Set error id
                                     variables:
