@@ -702,7 +702,14 @@ variables:
   driving_sensors: !input driving_sensors
   travel_time_sensors: !input travel_time_sensors
   notify_devices: !input notify_devices
-  notify_services: "{{ notify_devices | map('device_attr', 'name') | map('slugify') | map('regex_replace', '^', 'notify.mobile_app_') | list }}"
+  notify_services: >-
+    {{
+      notify_devices
+      | map('device_attr', 'name')
+      | map('slugify')
+      | map('regex_replace', '^', 'notify.mobile_app_')
+      | list
+    }}
   notify_service: null
   itinerary_sensors: !input itinerary_sensors
   travel_time_rate: !input travel_time_rate
