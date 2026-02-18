@@ -393,7 +393,7 @@ actions:
               {% endfor %}
 
             {{ data.services_list }}
-          driving_sensor: "{{ driving_sensors[idx] }}"
+          driving_sensor: "{{ trigger.entity_id }}"
           driver: "{{ persons[idx] }}"
           driver_name: "{{ state_attr(driver, 'friendly_name') }}"
           travel_time_sensor: |-
