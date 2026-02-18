@@ -3819,7 +3819,7 @@ actions:
                             enabled: >-
                               {{
                                 departure_mode
-                                'ble' in close_when_disconnected_from
+                                and 'ble' in close_when_disconnected_from
                                 and idx < ble_entities | length
                               }}
                             for: !input ble_away_timeout
