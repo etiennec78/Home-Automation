@@ -304,7 +304,6 @@ variables:
   dismissed_idx: []
   notification_tag: "{{ 'itinerary-tracker-' ~ this.context.id }}"
   config_checker_tag: "{{ 'config-checker-' ~ this.attributes.id }}"
-  persistent_id: "{{ 'persistent_' ~ this.context.id }}"
   persistent_active: !input persistent_notification
   blueprint_name: "{{ state_attr(this.entity_id, 'friendly_name') }}"
   strings:
@@ -758,7 +757,7 @@ actions:
         action: persistent_notification.create
         data:
           message: "{{ message }}"
-          notification_id: "{{ persistent_id }}"
+          notification_id: "{{ notification_tag }}"
         enabled: !input persistent_notification
         continue_on_error: true
       - alias: If drive_start_tts is enabled
@@ -892,7 +891,7 @@ actions:
                 - alias: Persistent notification cleared
                   trigger: persistent_notification
                   id: persistent_cleared
-                  notification_id: "{{ persistent_id }}"
+                  notification_id: "{{ notification_tag }}"
                   update_type: removed
                   enabled: "{{ persistent_active }}"
                 - alias: Notification conditions changed
@@ -1115,7 +1114,7 @@ actions:
                           data:
                             title: "{{ title }}"
                             message: "{{ message }}"
-                            notification_id: "{{ persistent_id }}"
+                            notification_id: "{{ notification_tag }}"
                           continue_on_error: true
                         - stop: Travel time integration not supported
                           error: true
@@ -1172,7 +1171,7 @@ actions:
                           action: persistent_notification.create
                           data:
                             message: "{{ message }}"
-                            notification_id: "{{ persistent_id }}"
+                            notification_id: "{{ notification_tag }}"
                           continue_on_error: true
                 - alias: If the timer needs to be removed from the notification
                   conditions: >-
@@ -1247,7 +1246,7 @@ actions:
                 action: persistent_notification.create
                 data:
                   message: "{{ message }}"
-                  notification_id: "{{ persistent_id }}"
+                  notification_id: "{{ notification_tag }}"
                 continue_on_error: true
 
           - alias: If driver_arrived_tts is enabled
