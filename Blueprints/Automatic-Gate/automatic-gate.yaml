@@ -2752,7 +2752,8 @@ actions:
                         entity_id: "{{ itinerary_sensor }}"
                       data:
                         value: "{{ itinerary_value | to_json }}"
-                    - if:
+                    - alias: If the gate should ask for a confirmation before opening
+                      if:
                         - alias: If the user doesn't want his gate to open automatically if someone just closed it
                           condition: template
                           value_template: !input ask_reopen_manually_closed
