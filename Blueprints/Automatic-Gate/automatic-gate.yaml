@@ -2844,6 +2844,7 @@ actions:
                       }}
                 - alias: Initialize travel time variables
                   variables:
+                    opening_time: null
                     last_refresh_timestamp: 0
                     next_refresh: 0
                     return_zone: "{{ distance(person, gate_location) }}"
