@@ -1892,7 +1892,7 @@ actions:
                   - alias: If this is the third time the error occurs in a row
                     conditions:
                       - condition: template
-                        value_template: "{{ itinerary_value.quick_triggers >= 3 }}"
+                        value_template: "{{ itinerary_value.quick_triggers > 2 }}"
                     sequence:
                       - alias: Set error id
                         variables:
