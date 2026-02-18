@@ -464,7 +464,7 @@ actions:
               error: |-
                 {{
                   (tts_volume_night_time_start == '')
-                  | bitwise_xor(tts_volume_night_time_end == '')
+                  != (tts_volume_night_time_end == '')
                 }}
               message_id: "night_mode_missing_bound"
               level: 1
