@@ -386,7 +386,7 @@ triggers:
 conditions:
   - alias: If triggered by gate fully closed, only continue if it does not support position tracking
     condition: template
-    value_template: |-
+    value_template: >-
       {{
         trigger.id == 'blueprint_enabled'
         or notification_type != 'close'
@@ -431,7 +431,7 @@ actions:
         repeat:
           for_each:
             - alias: Check custom translations
-              error: |-
+              error: >-
                 {% set data = namespace(invalid=[]) %}
                 {% for key, sub_items in custom_translations.items() %}
                   {% if key not in strings['en'] %}
@@ -459,7 +459,7 @@ actions:
               message_id: "invalid_speakers"
               level: 1
             - alias: Check that there is a way to notify the user
-              error: |-
+              error: >-
                 {{
                   notify_devices | length == 0
                   and speaker_tts_devices | length == 0
@@ -468,7 +468,7 @@ actions:
               message_id: "no_notification_method"
               level: 2
             - alias: Check that both or neither night time end and start have been entered
-              error: |-
+              error: >-
                 {{
                   (tts_volume_night_time_start == '')
                   != (tts_volume_night_time_end == '')
@@ -483,7 +483,7 @@ actions:
             - alias: If a check failed
               if:
                 - condition: template
-                  value_template: |-
+                  value_template: >-
                     {% set error = repeat.item.error %}
                     {{ error != [] if error is list else error }}
               then:
@@ -498,7 +498,7 @@ actions:
                 - alias: Append the error message to the list
                   variables:
                     message_id: "{{ repeat.item.message_id }}"
-                    message: &get_message |-
+                    message: &get_message >-
                       {# Custom translation #}
                       {%
                         if 'message' in custom_translations
@@ -521,7 +521,7 @@ actions:
                   then:
                     - alias: Format the string with error data
                       variables:
-                        message: |-
+                        message: >-
                           {{
                             message.format(
                               data=(
@@ -549,7 +549,7 @@ actions:
               - alias: Get notification translation
                 variables: &get_translation
                   message: *get_message
-                  title: &get_title |-
+                  title: &get_title >-
                     {# Custom translation #}
                     {%
                       if 'title' in custom_translations
@@ -628,7 +628,7 @@ actions:
 
   - alias: Only continue if the blueprint was triggered by an alert and tests passed
     condition: template
-    value_template: |-
+    value_template: >-
       {{
         trigger.platform is not none
         and trigger.id != 'blueprint_enabled'
@@ -639,7 +639,7 @@ actions:
   - alias: If gate paused or fully open, and supporting position
     if:
       condition: template
-      value_template: |-
+      value_template: >-
         {{
           notification_type == 'open'
           and is_state(gate, 'open')
@@ -660,7 +660,7 @@ actions:
         variables: *get_translation
       - alias: Get button translation
         variables: &get_translation_button
-          button_text: |-
+          button_text: >-
             {# Custom translation #}
             {%
               if 'button' in custom_translations
@@ -714,7 +714,7 @@ actions:
     else:
       - alias: Set notification ids
         variables:
-          title_id: |-
+          title_id: >-
             {%
               if notification_type == 'open'
               and notification_delay != 0
@@ -761,20 +761,20 @@ actions:
                           name: "default"
                           critical: "{{ int(car_visible) }}"
                       tag: "{{ notification_tag }}"
-                      timeout: |-
+                      timeout: >-
                         {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
                           30
                         {% else %}
                           {{ MAX_INT }}
                         {% endif %}
                       chronometer: "{{ notification_delay != 0 }}"
-                      when: |-
+                      when: >-
                         {{
                           (utcnow() - timedelta(minutes=notification_delay))
                           | as_timestamp
                           | int
                         }}
-                      actions: |-
+                      actions: >-
                         {%
                           if notification_type == 'open'
                           and states[gate].domain in ['cover', 'switch']
@@ -828,7 +828,7 @@ actions:
                         - alias: If the tts night mode is currently active
                           if:
                             - condition: template
-                              value_template: |-
+                              value_template: >-
                                 {% set start = today_at(tts_volume_night_time_start) %}
                                 {% set end = today_at(tts_volume_night_time_end) %}
                                 {% set time = now() %}
@@ -844,7 +844,7 @@ actions:
                             - alias: If the speaker is not exposing its volume because it is turned off
                               if:
                                 - condition: template
-                                  value_template: |-
+                                  value_template: >-
                                     {{
                                       is_state(repeat.item, 'off')
                                       and state_attr(repeat.item, 'volume_level') is none
@@ -860,7 +860,7 @@ actions:
 
                             - alias: Only continue if the speaker has a higher volume than night mode
                               condition: template
-                              value_template: |-
+                              value_template: >-
                                 {{
                                   state_attr(repeat.item, 'volume_level') is none
                                   or (
@@ -944,7 +944,7 @@ actions:
       enabled: "{{ notification_type == 'open' }}"
 
     # Remove notification after 30s in case of an error or gate closing without position tracking
-    timeout: |-
+    timeout: >-
       {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
         30
       {% else %}
@@ -954,7 +954,7 @@ actions:
   - alias: Stop if timer ran out but problem still present
     if:
       condition: template
-      value_template: |-
+      value_template: >-
         {{
           wait.remaining == 0
           and not(
@@ -970,7 +970,7 @@ actions:
       condition: template
       value_template: "{{ wait.trigger.id == 'closing_order' }}"
     then:
-      - action: |-
+      - action: >-
           {% if states[gate].domain == 'switch' %}
             switch.turn_off
           {% elif states[gate].domain == 'cover' %}

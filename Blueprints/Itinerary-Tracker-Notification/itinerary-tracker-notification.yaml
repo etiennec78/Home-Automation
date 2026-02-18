@@ -373,7 +373,7 @@ actions:
       - alias: Set variables containing data related to the driver
         variables:
           idx: "{{ driving_sensors.index(trigger.entity_id) }}"
-          active_notify_services: &get_active_services |-
+          active_notify_services: &get_active_services >-
             {% set data = namespace(services_list=[]) %}
 
               {% for notify_idx in range(notify_services | length) %}
@@ -403,7 +403,7 @@ actions:
           driving_sensor: "{{ trigger.entity_id }}"
           driver: "{{ persons[idx] }}"
           driver_name: "{{ state_attr(driver, 'friendly_name') }}"
-          travel_time_sensor: |-
+          travel_time_sensor: >-
             {{
               travel_time_sensors[idx]
               if idx < travel_time_sensors | length
@@ -445,7 +445,7 @@ actions:
         repeat:
           for_each:
             - alias: Check custom translations
-              error: |-
+              error: >-
                 {% set data = namespace(invalid=[]) %}
                 {% for key, sub_items in custom_translations.items() %}
                   {% if key not in strings['en'] %}
@@ -465,7 +465,7 @@ actions:
               message_id: "invalid_translations"
               level: 1
             - alias: Check that all per person sensors have been entered
-              error: |-
+              error: >-
                 {{
                   not(
                     travel_time_sensors | length
@@ -480,7 +480,7 @@ actions:
               message_id: "invalid_speakers"
               level: 1
             - alias: Check that per person sensors are in the right order
-              error: |-
+              error: >-
                 {%
                   set per_person_phone_sensors = [
                     driving_sensors
@@ -541,7 +541,7 @@ actions:
               message_id: "per_person_sensors_mismatch"
               level: 2
             - alias: Check that there is a way to notify the user
-              error: |-
+              error: >-
                 {{
                   notify_devices | length == 0
                   and speaker_tts_devices | length == 0
@@ -550,7 +550,7 @@ actions:
               message_id: "no_notification_method"
               level: 2
             - alias: Check that both or neither night time end and start have been entered
-              error: |-
+              error: >-
                 {{
                   (tts_volume_night_time_start == '')
                   != (tts_volume_night_time_end == '')
@@ -565,7 +565,7 @@ actions:
             - alias: If a check failed
               if:
                 - condition: template
-                  value_template: |-
+                  value_template: >-
                     {% set error = repeat.item.error %}
                     {{ error != [] if error is list else error }}
               then:
@@ -580,7 +580,7 @@ actions:
                 - alias: Get notification translation
                   variables:
                     message_id: "{{ repeat.item.message_id }}"
-                    message: &get_message |-
+                    message: &get_message >-
                       {# Custom translation #}
                       {%
                         if 'message' in custom_translations
@@ -603,7 +603,7 @@ actions:
                   then:
                     - alias: Format the string with error data
                       variables:
-                        message: |-
+                        message: >-
                           {{
                             message.format(
                               data=(
@@ -631,7 +631,7 @@ actions:
               - alias: Get notification translation
                 variables:
                   message: *get_message
-                  title: &get_title |-
+                  title: &get_title >-
                     {# Custom translation #}
                     {%
                       if 'title' in custom_translations
@@ -710,7 +710,7 @@ actions:
 
   - alias: Only continue if the blueprint was triggered by a driving sensor and tests passed
     condition: template
-    value_template: |-
+    value_template: >-
       {{
         trigger.platform is not none
         and trigger.id == 'vehicle_started'
@@ -720,7 +720,7 @@ actions:
 
   - alias: Only continue if driver not in the dead zone
     condition: template
-    value_template: |-
+    value_template: >-
       {% if state_attr(driver, 'gps_accuracy') is none %}
         {% set accuracy = 100 %}
       {% else %}
@@ -768,7 +768,7 @@ actions:
         then: &play_speaker_tts
           - alias: Only continue if a TTS service has been entered and someone is home
             condition: template
-            value_template: |-
+            value_template: >-
               {{
                 speaker_tts_service != ''
                 and persons | select('is_state', 'home') | list != []
@@ -785,7 +785,7 @@ actions:
                     - alias: If the tts night mode is currently active
                       if:
                         - condition: template
-                          value_template: |-
+                          value_template: >-
                             {% set start = today_at(tts_volume_night_time_start) %}
                             {% set end = today_at(tts_volume_night_time_end) %}
                             {% set time = now() %}
@@ -801,7 +801,7 @@ actions:
                         - alias: If the speaker is not exposing its volume because it is turned off
                           if:
                             - condition: template
-                              value_template: |-
+                              value_template: >-
                                 {{
                                   is_state(repeat.item, 'off')
                                   and state_attr(repeat.item, 'volume_level') is none
@@ -816,7 +816,7 @@ actions:
                               timeout: 3
                         - alias: Only continue if the speaker has a higher volume than night mode
                           condition: template
-                          value_template: |-
+                          value_template: >-
                             {{
                               state_attr(repeat.item, 'volume_level') is none
                               or (
@@ -898,7 +898,7 @@ actions:
                 - alias: Notification conditions changed
                   trigger: template
                   id: conditions_changed
-                  value_template: |-
+                  value_template: >-
                     {% set data = namespace(services_list=[]) %}
 
                     {% for notify_idx in range(notify_services | length) %}
@@ -928,7 +928,7 @@ actions:
                   enabled: "{{ not notify_everyone }}"
               timeout:
                 # Wait for the end of the cooldown, or for the nearly arrived TTS, or indefinitely
-                seconds: |-
+                seconds: >-
                   {% set values = [MAX_INT] %}
 
                   {# End of cooldown #}
@@ -971,9 +971,9 @@ actions:
                   sequence:
                     - alias: Remove the notification service
                       variables:
-                        active_notify_services: |-
+                        active_notify_services: >-
                           {{ active_notify_services | difference([wait.trigger.event.data.confirmation]) }}
-                        dismissed_idx: |-
+                        dismissed_idx: >-
                           {{
                             dismissed_idx | union(
                               [
@@ -1026,7 +1026,7 @@ actions:
                                 message: *get_message
                             - alias: Format the notification message
                               variables:
-                                message: |-
+                                message: >-
                                   {{
                                     message.format(
                                       arrival=arrival,
@@ -1049,7 +1049,7 @@ actions:
                 - alias: If travel time remaining needs to trigger nearly arrived TTS
                   conditions:
                     - condition: template
-                      value_template: |-
+                      value_template: >-
                         {{
                           nearly_arrived_tts
                           and not nearly_arrived_sent
@@ -1064,7 +1064,7 @@ actions:
                         message: *get_message
                     - alias: Format the notification message
                       variables:
-                        message: |-
+                        message: >-
                           {{
                             message.format(
                               driver_name=driver_name,
@@ -1083,7 +1083,7 @@ actions:
                 - alias: If triggered by travel time update and notifications are not on cooldown
                   conditions:
                     - condition: template
-                      value_template: |-
+                      value_template: >-
                         {{
                           wait.trigger.id == 'travel_time'
                           and next_refresh <= now() | as_timestamp
@@ -1091,7 +1091,7 @@ actions:
                   sequence:
                     - alias: Calculate ETA
                       variables:
-                        remaining: |-
+                        remaining: >-
                             {% if state_attr(travel_time_sensor, 'duration') is not none %}
                               {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
                             {% elif state_attr(travel_time_sensor, 'unit_of_measurement') == "min" %}
@@ -1130,7 +1130,7 @@ actions:
                     - alias: If the nearly arrived tts has not been triggered yet
                       if:
                         - condition: template
-                          value_template: |-
+                          value_template: >-
                             {{
                               nearly_arrived_tts
                               and not nearly_arrived_sent
@@ -1141,7 +1141,7 @@ actions:
                             nearly_arrived_timestamp: "{{ arrival_timestamp - nearly_arrived_time*60 }}"
                     - alias: Do not send notification if the time of arrival did not change
                       condition: template
-                      value_template: |-
+                      value_template: >-
                         {# If the next notification will be sent near the arrival #}
                         {% if arrival_timestamp - next_refresh < 120 %}
                           {# Refresh notification if eta differs by at least 5s #}
@@ -1175,7 +1175,7 @@ actions:
                             notification_id: "{{ persistent_id }}"
                           continue_on_error: true
                 - alias: If the timer needs to be removed from the notification
-                  conditions: |-
+                  conditions: >-
                     {{
                       arrival_timestamp is not none
                       and arrival_timestamp <= now() | as_timestamp
