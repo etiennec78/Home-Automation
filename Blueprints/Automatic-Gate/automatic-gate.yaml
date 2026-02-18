@@ -1003,7 +1003,7 @@ actions:
           - alias: Set variables containing data related to the driver
             variables:
               idx: "{{ driving_sensors.index(trigger.entity_id) }}"
-              person: >-
+              driver: >-
                 {% if idx < persons | length %}
                   {{ persons[idx] }}
                 {% elif persons | length == 1 %}
@@ -2054,13 +2054,13 @@ actions:
       - alias: Get which sensor the blueprint should wait to confirm the driver's presence
         variables:
           gps_trackers: >-
-            {% if states[person].domain == 'person' %}
-              {% set trackers = state_attr(person, 'device_trackers') %}
+            {% if states[driver].domain == 'person' %}
+              {% set trackers = state_attr(driver, 'device_trackers') %}
               {% if trackers is none %}
                 {% set trackers = [] %}
               {% endif %}
             {% else %}
-              {% set trackers = [person] %}
+              {% set trackers = [driver] %}
             {% endif %}
             {{
               trackers
@@ -2111,19 +2111,19 @@ actions:
           departure: >-
             {{
               is_state(
-                person, [
+                driver, [
                   state_attr(gate_location, 'friendly_name'),
                   states[gate_location].object_id
                 ]
               )
             }}
           eta_zone: &activation_zone_in_condition >-
-            {% if state_attr(person, 'gps_accuracy') is none %}
+            {% if state_attr(driver, 'gps_accuracy') is none %}
               {% set accuracy = 100 %}
             {% else %}
-              {% set accuracy = state_attr(person, 'gps_accuracy') %}
+              {% set accuracy = state_attr(driver, 'gps_accuracy') %}
             {% endif %}
-            {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
+            {% set gate_distance = distance(driver, gate_location)*1000 - accuracy %}
 
             {{ gate_distance < activation_zone }}
           arrival: "{{ not eta_zone }}"
@@ -2143,7 +2143,7 @@ actions:
             variables:
               start_timestamp: "{{ now() | as_timestamp }}"
               received_timestamp: null
-              old_location_id: "{{ states[person].context.id }}"
+              old_location_id: "{{ states[driver].context.id }}"
               gates_were_opened: &all_gates_open >-
                 {{
                   gate
@@ -2154,7 +2154,7 @@ actions:
               lock_departure: false
               gps_confirmed: >-
                 {{
-                  states[person].last_updated
+                  states[driver].last_updated
                   + timedelta(seconds=gps_outdated_delay)
                   >= now()
                 }}
@@ -2385,7 +2385,7 @@ actions:
                       trigger: event
                       event_type: state_changed
                       event_data:
-                        entity_id: "{{ person }}"
+                        entity_id: "{{ driver }}"
                     - alias: Notification received
                       trigger: event
                       id: notification_received
@@ -2699,7 +2699,7 @@ actions:
           departure_mode: >-
             {{
               is_state(
-                person, [
+                driver, [
                   state_attr(gate_location, 'friendly_name'),
                   states[gate_location].object_id
                 ]
@@ -2714,7 +2714,7 @@ actions:
                 departure_mode: >-
                   {{
                     is_state(
-                      person, [
+                      driver, [
                         state_attr(gate_location, 'friendly_name'),
                         states[gate_location].object_id
                       ]
@@ -2853,7 +2853,7 @@ actions:
                     opening_time: null
                     last_refresh_timestamp: 0
                     next_refresh: 0
-                    return_zone: "{{ distance(person, gate_location) }}"
+                    return_zone: "{{ distance(driver, gate_location) }}"
                     seconds_before_opening: "{{ MAX_INT }}"
                     next_gps_refresh_ts: null
                     api_calls: 0
@@ -2917,7 +2917,7 @@ actions:
                         condition: not
                         conditions: &in_forbidden_zone >-
                           {{
-                            person in (
+                            driver in (
                               expand(forbidden_zones)
                               | map(attribute='entity_id')
                               | list
@@ -2957,7 +2957,7 @@ actions:
                                     value_template: "{{ last_refresh_timestamp + next_refresh < now() | as_timestamp }}"
                                   - alias: Get the current distance of the user from the gate
                                     variables:
-                                      current_distance: "{{ distance(person, gate_location) }}"
+                                      current_distance: "{{ distance(driver, gate_location) }}"
                                   - alias: Manage the return zone size
                                     variables:
                                       return_zone: >
@@ -3176,7 +3176,7 @@ actions:
                             trigger: event
                             event_type: state_changed
                             event_data:
-                              entity_id: "{{ person }}"
+                              entity_id: "{{ driver }}"
                           - alias: Vehicle stopped
                             trigger: template
                             value_template: "{{ is_state(driving_sensor, 'off') }}"
@@ -3219,7 +3219,7 @@ actions:
                                     opening_time is not none
                                     and (
                                       now()
-                                      - states[person].last_updated
+                                      - states[driver].last_updated
                                       > timedelta(seconds=outdated_delay)
                                     )
                                   }}
@@ -3279,7 +3279,7 @@ actions:
                                           trigger: event
                                           event_type: state_changed
                                           event_data:
-                                            entity_id: "{{ person }}"
+                                            entity_id: "{{ driver }}"
                                         - alias: Vehicle stopped
                                           id: vehicle_stopped
                                           trigger: template
@@ -3413,7 +3413,7 @@ actions:
                                               trigger: event
                                               event_type: state_changed
                                               event_data:
-                                                entity_id: "{{ person }}"
+                                                entity_id: "{{ driver }}"
                                             - alias: Travel time sensor updated
                                               trigger: event
                                               event_type: state_changed
@@ -3627,12 +3627,12 @@ actions:
                                 trigger: template
                                 id: vehicle_away
                                 value_template: &activation_zone_out_trigger >-
-                                  {% if state_attr(person, 'gps_accuracy') is none %}
+                                  {% if state_attr(driver, 'gps_accuracy') is none %}
                                     {% set accuracy = 100 %}
                                   {% else %}
-                                    {% set accuracy = state_attr(person, 'gps_accuracy') %}
+                                    {% set accuracy = state_attr(driver, 'gps_accuracy') %}
                                   {% endif %}
-                                  {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
+                                  {% set gate_distance = distance(driver, gate_location)*1000 - accuracy %}
 
                                   {{ gate_distance > activation_zone }}
                               - alias: Forbidden zone entered
@@ -4197,7 +4197,7 @@ actions:
                       or not expand(gate_location)
                         | map(attribute='entity_id')
                         | list
-                        | difference([person])
+                        | difference([driver])
                     }}
                 - alias: If locking action is enabled
                   if:
@@ -4336,23 +4336,23 @@ actions:
                               - alias: Driver drove 250m away
                                 trigger: template
                                 value_template: >-
-                                  {% if state_attr(person, 'gps_accuracy') is none %}
+                                  {% if state_attr(driver, 'gps_accuracy') is none %}
                                     {% set accuracy = 100 %}
                                   {% else %}
-                                    {% set accuracy = state_attr(person, 'gps_accuracy') %}
+                                    {% set accuracy = state_attr(driver, 'gps_accuracy') %}
                                   {% endif %}
-                                  {% set gate_distance = distance(person, gate_location)*1000 - accuracy %}
+                                  {% set gate_distance = distance(driver, gate_location)*1000 - accuracy %}
 
                                   {{ gate_distance > activation_zone + 250 }}
                               - alias: Driver returned to the activation zone
                                 trigger: template
                                 value_template: >-
-                                  {% if state_attr(person, 'gps_accuracy') is none %}
+                                  {% if state_attr(driver, 'gps_accuracy') is none %}
                                     {% set accuracy = 100 %}
                                   {% else %}
-                                    {% set accuracy = state_attr(person, 'gps_accuracy') %}
+                                    {% set accuracy = state_attr(driver, 'gps_accuracy') %}
                                   {% endif %}
-                                  {% set gate_distance = distance(person, gate_location)*1000 + accuracy %}
+                                  {% set gate_distance = distance(driver, gate_location)*1000 + accuracy %}
 
                                   {{ gate_distance < activation_zone }}
                           - alias: Don't continue if driver stopped vehicle
@@ -4371,7 +4371,7 @@ actions:
                         message_id: >-
                           {%
                             if is_state(
-                              person,
+                              driver,
                               [
                                 state_attr(gate_location, 'friendly_name'),
                                 states[gate_location].object_id
@@ -4382,7 +4382,7 @@ actions:
                           %}
                             travel_time_did_not_respond
                           {%
-                            elif person in (
+                            elif driver in (
                               expand(forbidden_zones)
                               | map(attribute='entity_id')
                               | list
