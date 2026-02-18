@@ -3329,7 +3329,7 @@ actions:
                                         {{
                                           repeat.first
                                           or opening_time is none
-                                          or opening_time > as_timestamp(now())
+                                          or opening_time > now() | as_timestamp
                                         }}
                                     - alias: Not in a forbidden zone
                                       condition: not
@@ -3449,7 +3449,7 @@ actions:
                               and wait.trigger.id == 'ble_in_reach'
                             or arrival_opening_method == 'time'
                               and opening_time is not none
-                              and opening_time <= as_timestamp(now())
+                              and opening_time <= now() | as_timestamp
                             or arrival_opening_method == 'zone'
                           }}
                       - alias: Only continue if the driver is still in the activation zone
