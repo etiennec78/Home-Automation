@@ -2914,90 +2914,306 @@ actions:
                           notification_icon: mdi:map-check
                       continue_on_error: true
                     - sequence: *tts
-                - alias: Repeat while driver still driving
+                - alias: Initialize variables for the following sequence
+                  variables:
+                    in_activation_zone: false
+                - alias: Repeat while driver still driving and the opening should not be triggered yet
                   repeat:
                     while:
                       - alias: Still driving
                         condition: template
                         value_template: "{{ is_state(driving_sensor, 'on') }}"
-                      - alias: Not in a forbidden zone
-                        condition: not
-                        conditions: &in_forbidden_zone >-
-                          {{
-                            driver in (
-                              expand(forbidden_zones)
-                              | map(attribute='entity_id')
-                              | list
-                            )
-                          }}
                       - alias: Gate should not open yet
                         condition: template
                         value_template: "{{ itinerary_value.status != 'on_approach' }}"
                     sequence:
-                      - alias: If the travel time refresh rate is set to "Continuously" or is needed to request gps location
+                      - alias: Set the timeout for the next 'wait for trigger' action
+                        variables:
+                          timeouts2:
+                            opening: >-
+                              {{
+                                seconds_before_opening
+                                if in_activation_zone
+                                else MAX_INT
+                              }}
+                            gps_request: >-
+                              {{
+                                next_gps_refresh_ts - now() | as_timestamp
+                                if request_gps_location and next_gps_refresh_ts is not none
+                                else MAX_INT
+                              }}
+                            timed_out: >-
+                              {{
+                                timeout_delay * 60
+                                if in_activation_zone and travel_time_rate != 'once'
+                                else MAX_INT
+                              }}
+                          timeout_type: >-
+                            {{
+                              timeouts2
+                              | items
+                              | sort(attribute='1')
+                              | first
+                              | first
+                            }}
+                          timeout: "{{ max(timeouts2[timeout_type], 0) }}"
+                      - alias: Wait for new driver position, vehicle left, travel time update or opening trigger
+                        wait_for_trigger:
+                          - alias: New position
+                            id: position
+                            trigger: event
+                            event_type: state_changed
+                            event_data:
+                              entity_id: "{{ driver }}"
+                          - alias: Vehicle stopped
+                            id: vehicle_stopped
+                            trigger: template
+                            value_template: "{{ is_state(driving_sensor, 'off') }}"
+                          - alias: Travel time sensor updated
+                            id: travel_time
+                            trigger: event
+                            event_type: state_changed
+                            event_data:
+                              entity_id: "{{ travel_time_sensor }}"
+                            enabled: >-
+                              {{
+                                travel_time_sensor is not none
+                                and (
+                                  request_gps_location
+                                  or (
+                                    in_activation_zone
+                                    and arrival_opening_method == 'time'
+                                    and travel_time_rate == 'listen'
+                                  )
+                                )
+                              }}
+                          - alias: Reachable BLE device
+                            trigger: template
+                            id: ble_in_reach
+                            value_template: >-
+                              {{
+                                states(ble_entities[idx]) | is_number
+                                or is_state(ble_entities[idx], 'home')
+                                or state_attr(ble_entities[idx], 'area_id') in gate_areas
+                              }}
+                            enabled: >-
+                              {{
+                                in_activation_zone
+                                and arrival_opening_method == 'ble'
+                                and idx < ble_entities | length
+                              }}
+                        timeout: "{{ timeout }}"
+                      - alias: Get whether the user is in the activation zone
+                        variables:
+                          was_in_zone: "{{ in_activation_zone }}"
+                          in_activation_zone: *activation_zone_in_condition
+                      - alias: If the user just entered the activazion zone
+                        if:
+                          - condition: template
+                            value_template: "{{ in_activation_zone and not was_in_zone }}"
+                        then:
+                          - alias: Reset opening time variable
+                            variables:
+                              opening_time: null
+                          - alias: Force a GPS and travel time update
+                            variables:
+                              next_gps_refresh_ts: "{{ now() | as_timestamp }}"
+                              next_refresh: >-
+                                {{
+                                  max(
+                                    2 - now() | as_timestamp + last_refresh_timestamp,
+                                    0
+                                  )
+                                }}
+                          - alias: Turn on BLE devices if they exist
+                            sequence: *start_ble
+                      - alias: If the travel time may need to be calculated
                         if:
                           - condition: template
                             value_template: >-
                               {{
-                                travel_time_rate == 'continuous'
-                                or (
-                                  request_gps_location
-                                  and travel_time_rate == 'listen'
+                                'trigger' in wait
+                                and (
+                                  wait.trigger.id == 'travel_time'
+                                  or (
+                                    wait.trigger.id == 'position'
+                                    and (
+                                      travel_time_rate == 'continuous'
+                                      or in_activation_zone and (
+                                        travel_time_rate == 'near-home'
+                                        or (
+                                          travel_time_rate == 'once'
+                                          and opening_time is none
+                                          and failed_updates < 20
+                                        )
+                                      )
+                                    )
+                                  )
                                 )
                               }}
                         then:
-                          - alias: Store a variable for the following sequence
-                            variables:
-                              in_activation_zone: false
-                          - alias: Update travel time
-                            sequence: &update_travel_time
-                              - alias: Only continue if a travel time sensor was given
+                          - alias: If the refresh rate is not set to 'Listen'
+                            if:
+                              - condition: template
+                                value_template: "{{ travel_time_rate != 'listen' }}"
+                            then:
+                              - alias: Only continue if the travel time should be updated
                                 condition: template
-                                value_template: "{{ travel_time_sensor is not none }}"
-                              - alias: If the refresh rate is not set to 'Listen'
+                                value_template: "{{ last_refresh_timestamp + next_refresh < now() | as_timestamp }}"
+                              - alias: Get the current distance of the user from the gate
+                                variables:
+                                  current_distance: "{{ distance(driver, gate_location) }}"
+                              - alias: Manage the return zone size
+                                variables:
+                                  return_zone: >
+                                    {% set diff = return_zone - current_distance %}
+                                    {% if diff > 10 %}
+                                      {{ current_distance + 5 }}
+                                    {% elif diff < -10 %}
+                                      {{ current_distance - 5 }}
+                                    {% else %}
+                                      {{ return_zone }}
+                                    {% endif %}
+                              - alias: Only continue if the user is driving towards the activation zone
+                                condition: or
+                                conditions:
+                                  - alias: Direction check disabled
+                                    condition: not
+                                    conditions:
+                                      - condition: template
+                                        value_template: !input pause_refresh_driving_away
+                                  - alias: Driving towards activation zone
+                                    condition: template
+                                    value_template: "{{ current_distance - return_zone < 5 }}"
+                                  - alias: Driver in activation zone
+                                    condition: template
+                                    value_template: *activation_zone_in_condition
+                              - alias: Stop if travel time sensor does not exist
                                 if:
                                   - condition: template
-                                    value_template: "{{ travel_time_rate != 'listen' }}"
+                                    value_template: "{{ states[travel_time_sensor] is none }}"
                                 then:
-                                  - alias: Only continue if the travel time should be updated
-                                    condition: template
-                                    value_template: "{{ last_refresh_timestamp + next_refresh < now() | as_timestamp }}"
-                                  - alias: Get the current distance of the user from the gate
+                                  - alias: Set error id
                                     variables:
-                                      current_distance: "{{ distance(driver, gate_location) }}"
-                                  - alias: Manage the return zone size
+                                      message_id: "invalid_travel_time_sensor"
+                                  - alias: Create error
+                                    sequence: *create_error
+                                  - alias: Log error
+                                    action: system_log.write
+                                    data:
+                                      level: error
+                                      message: "{{ message }}"
+                                      logger: blueprints.etiennec78.automatic_gate
+                                  - stop: Travel time sensor does not exist
+                                    error: true
+                              - alias: If the travel time sensor was updated more than 2s ago and the API was called less than 300 times
+                                if:
+                                  - condition: template
+                                    value_template: >-
+                                      {{
+                                        now()
+                                        - states[travel_time_sensor].last_updated
+                                        > timedelta(seconds=2)
+                                        and api_calls < 300
+                                      }}
+                                then:
+                                  - alias: Update travel time
+                                    action: homeassistant.update_entity
+                                    target:
+                                      entity_id: "{{ travel_time_sensor }}"
+                                    continue_on_error: true
+                                  - alias: Increment the API calls counter
                                     variables:
-                                      return_zone: >
-                                        {% set diff = return_zone - current_distance %}
-                                        {% if diff > 10 %}
-                                          {{ current_distance + 5 }}
-                                        {% elif diff < -10 %}
-                                          {{ current_distance - 5 }}
-                                        {% else %}
-                                          {{ return_zone }}
-                                        {% endif %}
-                                  - alias: Only continue if the user is driving towards the activation zone
-                                    condition: or
-                                    conditions:
-                                      - alias: Direction check disabled
-                                        condition: not
-                                        conditions:
-                                          - condition: template
-                                            value_template: !input pause_refresh_driving_away
-                                      - alias: Driving towards activation zone
-                                        condition: template
-                                        value_template: "{{ current_distance - return_zone < 5 }}"
-                                      - alias: Driver in activation zone
-                                        condition: template
-                                        value_template: *activation_zone_in_condition
-                                  - alias: Stop if travel time sensor does not exist
+                                      api_calls: "{{ api_calls + 1 }}"
+                                else:
+                                  - alias: If the last quick update was a long time ago
                                     if:
                                       - condition: template
-                                        value_template: "{{ states[travel_time_sensor] is none }}"
+                                        value_template: >-
+                                          {{
+                                            last_quick_tt_update is not none
+                                            and (
+                                              last_quick_tt_update
+                                              | as_datetime
+                                              + timedelta(seconds=5)
+                                              > now()
+                                            )
+                                          }}
+                                    then:
+                                      - alias: Note that the travel time sensor tried to update too quickly
+                                        variables:
+                                          quick_tt_updates: "{{ quick_tt_updates + 1 }}"
+                                    else:
+                                      - alias: Reset the quick travel time updates counter
+                                        variables:
+                                          quick_tt_updates: 1
+                                  - alias: Reset the last quick update variable
+                                    variables:
+                                      last_quick_tt_update: "{{ now() }}"
+                                  - alias: If 20 travel time updates were too quick or the API was called more than 300 times
+                                    if:
+                                      - condition: template
+                                        value_template: "{{ quick_tt_updates > 20 or api_calls > 300 }}"
+                                    then:
+                                      - alias: Mark error in driver itinerary sensor
+                                        variables:
+                                          update:
+                                            status: null
+                                            error: updated_frequently
+                                          itinerary_value: "{{ itinerary_value | combine(update) }}"
+                                      - alias: Save the itinerary status
+                                        action: input_text.set_value
+                                        target:
+                                          entity_id: "{{ itinerary_sensor }}"
+                                        data:
+                                          value: "{{ itinerary_value | to_json }}"
+                                      - alias: Set error id
+                                        variables:
+                                          message_id: "disabled_updated_frequently"
+                                      - alias: Get notification translation
+                                        variables: *get_translation
+                                      - alias: Disable the blueprint
+                                        sequence: *disable_blueprint
+                          - alias: If travel time just got updated
+                            if:
+                              - condition: template
+                                value_template: >-
+                                  {{
+                                    now()
+                                    - states[travel_time_sensor].last_updated
+                                    < timedelta(seconds=2)
+                                  }}
+                            then:
+                              - alias: If the travel time sensor is not unknown or unavailable
+                                if:
+                                  - condition: template
+                                    value_template: "{{ states(travel_time_sensor) not in ['unknown', 'unavailable'] }}"
+                                then:
+                                  - alias: Convert travel time to seconds
+                                    variables:
+                                      travel_time_duration: >-
+                                        {% if state_attr(travel_time_sensor, 'duration') | is_number %}
+                                          {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
+                                        {% elif is_state_attr(travel_time_sensor, 'unit_of_measurement', 'min') %}
+                                          {{ states(travel_time_sensor) | float * 60 }}
+                                        {% elif is_state_attr(travel_time_sensor, 'unit_of_measurement', 's') %}
+                                          {{ states(travel_time_sensor) | float }}
+                                        {% elif is_state_attr(travel_time_sensor, 'device_class', 'timestamp') %}
+                                          {{
+                                            states(travel_time_sensor) | as_timestamp
+                                            - states[travel_time_sensor].last_updated | as_timestamp
+                                          }}
+                                        {% else %}
+                                          unknown
+                                        {% endif %}
+                                  - alias: Stop if travel time integration is not supported
+                                    if:
+                                      - condition: template
+                                        value_template: "{{ travel_time_duration == 'unknown' }}"
                                     then:
                                       - alias: Set error id
                                         variables:
-                                          message_id: "invalid_travel_time_sensor"
+                                          message_id: "unsupported_tt_integration"
                                       - alias: Create error
                                         sequence: *create_error
                                       - alias: Log error
@@ -3006,204 +3222,105 @@ actions:
                                           level: error
                                           message: "{{ message }}"
                                           logger: blueprints.etiennec78.automatic_gate
-                                      - stop: Travel time sensor does not exist
+                                      - stop: Travel time integration not supported
                                         error: true
-                                  - alias: If the travel time sensor was updated more than 2s ago and the API was called less than 300 times
-                                    if:
-                                      - condition: template
-                                        value_template: >-
-                                          {{
-                                            now()
-                                            - states[travel_time_sensor].last_updated
-                                            > timedelta(seconds=2)
-                                            and api_calls < 300
-                                          }}
-                                    then:
-                                      - alias: Update travel time
-                                        action: homeassistant.update_entity
-                                        target:
-                                          entity_id: "{{ travel_time_sensor }}"
-                                        continue_on_error: true
-                                      - alias: Increment the API calls counter
-                                        variables:
-                                          api_calls: "{{ api_calls + 1 }}"
-                                    else:
-                                      - alias: If the last quick update was a long time ago
-                                        if:
-                                          - condition: template
-                                            value_template: >-
-                                              {{
-                                                last_quick_tt_update is not none
-                                                and (
-                                                  last_quick_tt_update
-                                                  | as_datetime
-                                                  + timedelta(seconds=5)
-                                                  > now()
-                                                )
-                                              }}
-                                        then:
-                                          - alias: Note that the travel time sensor tried to update too quickly
-                                            variables:
-                                              quick_tt_updates: "{{ quick_tt_updates + 1 }}"
-                                        else:
-                                          - alias: Reset the quick travel time updates counter
-                                            variables:
-                                              quick_tt_updates: 1
-                                      - alias: Reset the last quick update variable
-                                        variables:
-                                          last_quick_tt_update: "{{ now() }}"
-                                      - alias: If 20 travel time updates were too quick or the API was called more than 300 times
-                                        if:
-                                          - condition: template
-                                            value_template: "{{ quick_tt_updates > 20 or api_calls > 300 }}"
-                                        then:
-                                          - alias: Mark error in driver itinerary sensor
-                                            variables:
-                                              update:
-                                                status: null
-                                                error: updated_frequently
-                                              itinerary_value: "{{ itinerary_value | combine(update) }}"
-                                          - alias: Save the itinerary status
-                                            action: input_text.set_value
-                                            target:
-                                              entity_id: "{{ itinerary_sensor }}"
-                                            data:
-                                              value: "{{ itinerary_value | to_json }}"
-                                          - alias: Set error id
-                                            variables:
-                                              message_id: "disabled_updated_frequently"
-                                          - alias: Get notification translation
-                                            variables: *get_translation
-                                          - alias: Disable the blueprint
-                                            sequence: *disable_blueprint
-                              - alias: If travel time just got updated
+                                  - alias: Only continue if the duration is positive
+                                    condition: template
+                                    value_template: "{{ travel_time_duration >= 0 }}"
+                                  - alias: Set the opening time
+                                    variables:
+                                      opening_time: >-
+                                        {{
+                                          states[travel_time_sensor].last_updated | as_timestamp
+                                            + travel_time_duration
+                                            - lead_time
+                                            - (timer_opening if behavior.arrival.opening == 'timer' else 0)
+                                        }}
+                                  - alias: Set a timer for the gate opening (or max int value if travel time sensor is unknown and no previous eta was stored) and for next gps refresh
+                                    variables:
+                                      seconds_before_opening: "{{ opening_time - now() | as_timestamp }}"
+                                      next_gps_refresh: !input gps_request_refresh_function
+                                      next_gps_refresh_ts: >-
+                                        {{
+                                          now() | as_timestamp + next_gps_refresh
+                                          if next_gps_refresh_ts is none
+                                          else next_gps_refresh_ts
+                                        }}
+                                  - alias: Only continue if the refresh rate is not set to 'Listen'
+                                    condition: template
+                                    value_template: "{{ travel_time_rate != 'listen' }}"
+                                  - alias: Set the next travel time refresh timestamp
+                                    variables:
+                                      next_refresh: !input refresh_function
+                                      last_refresh_timestamp: "{{ now() | as_timestamp }}"
+                                else:
+                                  - alias: Add 1 to the failed updates counter
+                                    variables:
+                                      failed_updates: "{{ failed_updates + 1 }}"
+                      - alias: Try to get a message error id
+                        variables:
+                          message_id: >-
+                            {%
+                              if is_state(
+                                driver,
+                                [
+                                  state_attr(gate_location, 'friendly_name'),
+                                  states[gate_location].object_id
+                                ]
+                              )
+                              and arrival_opening_method == 'time'
+                              and opening_time is none
+                            %}
+                              travel_time_did_not_respond
+                            {%
+                              elif driver in (
+                                expand(forbidden_zones)
+                                | map(attribute='entity_id')
+                                | list
+                              )
+                            %}
+                              forbidden_zone
+                            {% elif is_state(driving_sensor, 'off') %}
+                              vehicle_stopped
+                            {% else %}
+                              {{ none }}
+                            {% endif %}
+                      - choose:
+                          - alias: If an error needs to be raised
+                            conditions:
+                              - condition: template
+                                value_template: "{{ message_id is not none }}"
+                            sequence:
+                              - alias: Send a silent error if the behaviors are set to off
+                                variables:
+                                  silent_error: >-
+                                    {{
+                                      behavior.departure.opening == 'off'
+                                      and behavior.departure.closing == 'off'
+                                    }}
+                              - alias: Create error
+                                sequence: *create_error
+                              - alias: Restore BLE devices if needed
+                                sequence: *restore_ble
+                              - alias: If the error is critical
                                 if:
                                   - condition: template
-                                    value_template: >-
-                                      {{
-                                        now()
-                                        - states[travel_time_sensor].last_updated
-                                        < timedelta(seconds=2)
-                                      }}
+                                    value_template: "{{ message_id in critical_errors }}"
                                 then:
-                                  - alias: If the travel time sensor is not unknown or unavailable
-                                    if:
-                                      - condition: template
-                                        value_template: "{{ states(travel_time_sensor) not in ['unknown', 'unavailable'] }}"
-                                    then:
-                                      - alias: Convert travel time to seconds
-                                        variables:
-                                          travel_time_duration: >-
-                                            {% if state_attr(travel_time_sensor, 'duration') | is_number %}
-                                              {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
-                                            {% elif is_state_attr(travel_time_sensor, 'unit_of_measurement', 'min') %}
-                                              {{ states(travel_time_sensor) | float * 60 }}
-                                            {% elif is_state_attr(travel_time_sensor, 'unit_of_measurement', 's') %}
-                                              {{ states(travel_time_sensor) | float }}
-                                            {% elif is_state_attr(travel_time_sensor, 'device_class', 'timestamp') %}
-                                              {{
-                                                states(travel_time_sensor) | as_timestamp
-                                                - states[travel_time_sensor].last_updated | as_timestamp
-                                              }}
-                                            {% else %}
-                                              unknown
-                                            {% endif %}
-                                      - alias: Stop if travel time integration is not supported
-                                        if:
-                                          - condition: template
-                                            value_template: "{{ travel_time_duration == 'unknown' }}"
-                                        then:
-                                          - alias: Set error id
-                                            variables:
-                                              message_id: "unsupported_tt_integration"
-                                          - alias: Create error
-                                            sequence: *create_error
-                                          - alias: Log error
-                                            action: system_log.write
-                                            data:
-                                              level: error
-                                              message: "{{ message }}"
-                                              logger: blueprints.etiennec78.automatic_gate
-                                          - stop: Travel time integration not supported
-                                            error: true
-                                      - alias: Only continue if the duration is positive
-                                        condition: template
-                                        value_template: "{{ travel_time_duration >= 0 }}"
-                                      - alias: Set the opening time
-                                        variables:
-                                          opening_time: >-
-                                            {{
-                                              states[travel_time_sensor].last_updated | as_timestamp
-                                                + travel_time_duration
-                                                - lead_time
-                                                - (timer_opening if behavior.arrival.opening == 'timer' else 0)
-                                            }}
-                                      - alias: Set a timer for the gate opening (or max int value if travel time sensor is unknown and no previous eta was stored) and for next gps refresh
-                                        variables:
-                                          seconds_before_opening: "{{ opening_time - now() | as_timestamp }}"
-                                          next_gps_refresh: !input gps_request_refresh_function
-                                          next_gps_refresh_ts: >-
-                                            {{
-                                              now() | as_timestamp + next_gps_refresh
-                                              if next_gps_refresh_ts is none
-                                              else next_gps_refresh_ts
-                                            }}
-                                      - alias: Only continue if the refresh rate is not set to 'Listen'
-                                        condition: template
-                                        value_template: "{{ travel_time_rate != 'listen' }}"
-                                      - alias: Set the next travel time refresh timestamp
-                                        variables:
-                                          next_refresh: !input refresh_function
-                                          last_refresh_timestamp: "{{ now() | as_timestamp }}"
-                                    else:
-                                      - alias: Add 1 to the failed updates counter
-                                        variables:
-                                          failed_updates: "{{ failed_updates + 1 }}"
-                      - alias: Set the timeout for the next action
-                        variables:
-                          timeout: >-
-                            {%
-                              if request_gps_location
-                              and next_gps_refresh_ts is not none
-                            %}
-                              {%
-                                set timeout = (
-                                  next_gps_refresh_ts
-                                  - now()
-                                  | as_timestamp
-                                )
-                              %}
-                            {% else %}
-                              {% set timeout = MAX_INT %}
-                            {% endif %}
-                            {{ max(timeout, 0) }}
-                      - alias: Wait for new driver position or vehicle left
-                        wait_for_trigger:
-                          - alias: New position
-                            trigger: event
-                            event_type: state_changed
-                            event_data:
-                              entity_id: "{{ driver }}"
-                          - alias: Vehicle stopped
-                            trigger: template
-                            value_template: "{{ is_state(driving_sensor, 'off') }}"
-                          - alias: Travel time updated
-                            trigger: event
-                            event_type: state_changed
-                            event_data:
-                              entity_id: "{{ travel_time_sensor }}"
-                            enabled: >-
-                              {{
-                                request_gps_location
-                                and travel_time_rate == 'listen'
-                              }}
-                        timeout: "{{ timeout }}"
-                      - choose:
+                                  - alias: Log error
+                                    action: system_log.write
+                                    data:
+                                      level: error
+                                      message: "{{ message }}"
+                                      logger: blueprints.etiennec78.automatic_gate
+                                  - stop: Critical error
+                                    error: true
+                              - stop: Itinerary canceled
                           - alias: If a GPS request must be sent
                             conditions:
                               - condition: template
-                                value_template: "{{ wait.remaining == 0 }}"
-                            sequence: &request_gps_location
+                                value_template: "{{ wait.remaining == 0 and timeout_type == 'gps_request' }}"
+                            sequence:
                               - alias: If an opening time is planned
                                 if:
                                   - condition: template
@@ -3219,273 +3336,34 @@ actions:
                                   - alias: Remove the planned gps request
                                     variables:
                                       next_gps_refresh_ts: null
-                              - alias: Only continue if the GPS location is outdated
-                                condition: template
+                          - alias: If the gate should open
+                            conditions:
+                              - condition: template
                                 value_template: >-
                                   {{
-                                    opening_time is not none
+                                    in_activation_zone
                                     and (
-                                      now()
-                                      - states[driver].last_updated
-                                      > timedelta(seconds=outdated_delay)
+                                      arrival_opening_method == 'zone'
+                                      or (
+                                        arrival_opening_method == 'time'
+                                        and opening_time is not none
+                                        and opening_time <= now() | as_timestamp
+                                      )
+                                      or wait.trigger.id == 'ble_in_reach'
                                     )
                                   }}
-                              - sequence: *gps_request
-                          - alias: If the opening method should use a BLE tracker
-                            conditions:
-                              - condition: template
-                                value_template: "{{ arrival_opening_method == 'ble' }}"
                             sequence:
-                              - alias: Set an empty trigger id
-                                variables: &reset_trigger_id
-                                  wait:
-                                    trigger:
-                                      id: null
-                              - repeat:
-                                  while:
-                                    - alias: Still in the activation zone
-                                      condition: template
-                                      value_template: *activation_zone_in_condition
-                                    - alias: Still driving
-                                      condition: template
-                                      value_template: "{{ is_state(driving_sensor, 'on') }}"
-                                    - alias: Opening not triggered
-                                      condition: template
-                                      value_template: "{{ wait.trigger.id != 'ble_in_reach' }}"
-                                    - alias: Not in a forbidden zone
-                                      condition: not
-                                      conditions: *in_forbidden_zone
-                                  sequence:
-                                    - alias: If this is the first loop and the driver has a BLE tracker
-                                      if:
-                                        - condition: template
-                                          value_template: "{{ repeat.first and ble_entities | length > idx }}"
-                                      then: *start_ble
-                                    - alias: Set the timeout for the next action
-                                      variables:
-                                        timeout: >-
-                                          {%
-                                            if request_gps_location
-                                            and next_gps_refresh_ts is not none
-                                          %}
-                                            {%
-                                              set timeout = (
-                                                next_gps_refresh_ts
-                                                - now()
-                                                | as_timestamp
-                                              )
-                                            %}
-                                          {% else %}
-                                            {% set timeout = MAX_INT %}
-                                          {% endif %}
-                                          {{ max(timeout, 0) }}
-                                    - alias: Wait for new position, vehicle left, or reachable BLE device
-                                      wait_for_trigger:
-                                        - alias: New position
-                                          id: position
-                                          trigger: event
-                                          event_type: state_changed
-                                          event_data:
-                                            entity_id: "{{ driver }}"
-                                        - alias: Vehicle stopped
-                                          id: vehicle_stopped
-                                          trigger: template
-                                          value_template: "{{ is_state(driving_sensor, 'off') }}"
-                                        - alias: Reachable BLE device
-                                          trigger: template
-                                          id: ble_in_reach
-                                          value_template: >-
-                                            {{
-                                              states(ble_entities[idx]) | is_number
-                                              or is_state(ble_entities[idx], 'home')
-                                              or state_attr(ble_entities[idx], 'area_id') in gate_areas
-                                            }}
-                                      timeout: "{{ timeout }}"
-                                    - choose:
-                                        - alias: If a GPS request must be sent
-                                          conditions:
-                                            - condition: template
-                                              value_template: "{{ wait.remaining == 0 }}"
-                                          sequence: *request_gps_location
-                                        - alias: If BLE devices won't need to stay on
-                                          conditions:
-                                            - condition: or
-                                              conditions:
-                                                - alias: Triggered by vehicle stopped or reachable BLE device
-                                                  condition: template
-                                                  value_template: "{{ wait.trigger.id in ['vehicle_stopped', 'ble_in_reach'] }}"
-                                                - alias: Not in the activation zone
-                                                  condition: not
-                                                  conditions: *activation_zone_in_condition
-                                                - alias: Is in a forbidden zone
-                                                  condition: template
-                                                  value_template: *in_forbidden_zone
-                                          sequence: *restore_ble
-                          - alias: If the opening method should use a travel time sensor
-                            conditions:
-                              - condition: template
-                                value_template: "{{ arrival_opening_method == 'time' }}"
-                            sequence:
-                              - alias: Repeat while driver in activation zone and still driving
-                                # This allows to update to a precise ETA even if a traffic jam appears near your gate
-                                # It will return to the previous loop if the driver has entered the radius but passed by
-                                repeat:
-                                  while:
-                                    - alias: Still in the activation zone
-                                      condition: template
-                                      value_template: *activation_zone_in_condition
-                                    - alias: Still driving
-                                      condition: template
-                                      value_template: "{{ is_state(driving_sensor, 'on') }}"
-                                    - alias: Opening not triggered
-                                      condition: template
-                                      value_template: >-
-                                        {{
-                                          repeat.first
-                                          or opening_time is none
-                                          or opening_time > now() | as_timestamp
-                                        }}
-                                    - alias: Not in a forbidden zone
-                                      condition: not
-                                      conditions: *in_forbidden_zone
-                                  sequence:
-                                    - alias: If the driver just entered the activation zone
-                                      if:
-                                        - condition: template
-                                          value_template: "{{ repeat.first }}"
-                                      then:
-                                        - alias: Reset opening time variable
-                                          variables:
-                                            opening_time: null
-                                        - alias: Force a GPS and travel time update
-                                          variables:
-                                            next_gps_refresh_ts: "{{ now() | as_timestamp }}"
-                                            next_refresh: >-
-                                              {{
-                                                max(
-                                                  2 - now() | as_timestamp + last_refresh_timestamp,
-                                                  0
-                                                )
-                                              }}
-                                    - alias: If the travel time needs to be updated
-                                      if:
-                                        - condition: template
-                                          value_template: >-
-                                            {{
-                                              travel_time_rate != 'once'
-                                              or (
-                                                opening_time is none
-                                                and failed_updates < 20
-                                              )
-                                            }}
-                                      then:
-                                        - alias: Store a variable for the following sequence
-                                          variables:
-                                            in_activation_zone: true
-                                        - alias: Update travel time
-                                          sequence: *update_travel_time
-                                    - alias: If ETA in the future or no opening time could be set
-                                      if:
-                                        - condition: template
-                                          value_template: "{{ seconds_before_opening > 0 }}"
-                                      then:
-                                        - alias: Set the timeout for the next action
-                                          variables:
-                                            timeouts2:
-                                              opening: "{{ seconds_before_opening }}"
-                                              gps_request: >-
-                                                {{
-                                                  next_gps_refresh_ts - now() | as_timestamp
-                                                  if request_gps_location and next_gps_refresh_ts is not none
-                                                  else MAX_INT
-                                                }}
-                                              timed_out: >-
-                                                {{
-                                                  timeout_delay * 60
-                                                  if travel_time_rate != 'once'
-                                                  else MAX_INT
-                                                }}
-                                            timeout_type: >-
-                                              {{
-                                                timeouts2
-                                                | items
-                                                | sort(attribute='1')
-                                                | first
-                                                | first
-                                              }}
-                                            timeout: "{{ max(timeouts2[timeout_type], 0) }}"
-                                        - alias: Wait for ETA, travel time, new position, vehicle left, and cancel if deviced timed out
-                                          wait_for_trigger:
-                                            - alias: New position
-                                              trigger: event
-                                              event_type: state_changed
-                                              event_data:
-                                                entity_id: "{{ driver }}"
-                                            - alias: Travel time sensor updated
-                                              trigger: event
-                                              event_type: state_changed
-                                              event_data:
-                                                entity_id: "{{ travel_time_sensor }}"
-                                              enabled: "{{ travel_time_rate == 'listen' }}"
-                                            - alias: Vehicle stopped
-                                              trigger: template
-                                              value_template: "{{ is_state(driving_sensor, 'off') }}"
-                                          timeout: "{{ timeout }}"
-                                        - choose:
-                                            - alias: If a GPS request must be sent
-                                              conditions:
-                                                - condition: template
-                                                  value_template: "{{ wait.remaining == 0 and timeout_type == 'gps_request' }}"
-                                              sequence: *request_gps_location
-                                            - alias: If timeout ran out of time (not because of eta reached)
-                                              conditions:
-                                                - condition: template
-                                                  value_template: "{{ wait.remaining == 0 and timeout_type != 'opening' }}"
-                                              sequence:
-                                                - alias: Send a silent error if the behaviors are set to off
-                                                  variables:
-                                                    silent_error: >-
-                                                      {{
-                                                        opening_behavior == 'off'
-                                                        and closing_behavior == 'off'
-                                                      }}
-                                                - alias: Set error id
-                                                  variables:
-                                                    message_id: "{{ timeout_type }}"
-                                                - alias: Create error
-                                                  sequence: *create_error
-                                                - stop: Timed out
-                      - alias: Only continue if the gate opening sequence should be started
-                        condition: template
-                        value_template: >-
-                          {{
-                            arrival_opening_method == 'ble'
-                              and wait.trigger.id == 'ble_in_reach'
-                            or arrival_opening_method == 'time'
-                              and opening_time is not none
-                              and opening_time <= now() | as_timestamp
-                            or arrival_opening_method == 'zone'
-                          }}
-                      - alias: Only continue if the driver is still in the activation zone
-                        condition: template
-                        value_template: *activation_zone_in_condition
-                      - alias: Only continue if the driver is still driving
-                        condition: template
-                        value_template: "{{ is_state(driving_sensor, 'on') }}"
-                      - alias: Only continue if the user is not in a forbidden zone
-                        condition: not
-                        conditions: *in_forbidden_zone
-                      - alias: Set the itinerary status to "on_approach"
-                        variables:
-                          update:
-                            status: on_approach
-                          itinerary_value: "{{ itinerary_value | combine(update) }}"
-                      - alias: Save the itinerary status
-                        action: input_text.set_value
-                        target:
-                          entity_id: "{{ itinerary_sensor }}"
-                        data:
-                          value: "{{ itinerary_value | to_json }}"
+                              - alias: Set the itinerary status to "on_approach"
+                                variables:
+                                  update:
+                                    status: on_approach
+                                  itinerary_value: "{{ itinerary_value | combine(update) }}"
+                              - alias: Save the itinerary status
+                                action: input_text.set_value
+                                target:
+                                  entity_id: "{{ itinerary_sensor }}"
+                                data:
+                                  value: "{{ itinerary_value | to_json }}"
 
             ##############################
             # OPENING & CLOSING SEQUENCE #
@@ -3645,7 +3523,14 @@ actions:
                               - alias: Forbidden zone entered
                                 trigger: template
                                 id: forbidden_zone
-                                value_template: *in_forbidden_zone
+                                value_template: &in_forbidden_zone >-
+                                  {{
+                                    driver in (
+                                      expand(forbidden_zones)
+                                      | map(attribute='entity_id')
+                                      | list
+                                    )
+                                  }}
                               - alias: Opening button pressed
                                 trigger: event
                                 id: opening_order
@@ -3734,8 +3619,6 @@ actions:
                   then:
                     - alias: Open each gate
                       repeat: *open_gates
-            - alias: Set an empty trigger id
-              variables: *reset_trigger_id
             - alias: If one of the gates is open
               if:
                 - condition: or
@@ -4308,9 +4191,6 @@ actions:
                   data: >-
                     {{ {} if alarm_code == '' else {'code': alarm_code} }}
                   continue_on_error: true
-            - alias: Get whether the itinerary status is different from on_approach
-              variables:
-                not_approach: "{{ itinerary_value.status != 'on_approach' }}"
             - alias: Reset the itinerary status
               variables: *reset_itinerary
             - alias: Save the itinerary status
@@ -4319,111 +4199,48 @@ actions:
                 entity_id: "{{ itinerary_sensor }}"
               data:
                 value: "{{ itinerary_value | to_json }}"
-            - choose:
-                - alias: If the driver was leaving home
-                  conditions:
-                    - condition: template
-                      value_template: "{{ departure_mode }}"
-                  sequence:
-                    - alias: If the driver is not driving anymore
-                      if:
-                        - condition: template
-                          value_template: "{{ is_state(driving_sensor, 'off') }}"
-                      then:
-                        - stop: Stopped driving
-                    - alias: Wait for driver to travel 250m away from activation zone, then return, to start itinerary
-                      repeat:
-                        count: 2
-                        sequence:
-                          - wait_for_trigger:
-                              - alias: Vehicle stopped
-                                trigger: template
-                                id: vehicle_stopped
-                                value_template: "{{ is_state(driving_sensor, 'off') }}"
-                              - alias: Driver drove 250m away
-                                trigger: template
-                                value_template: >-
-                                  {% if state_attr(driver, 'gps_accuracy') is none %}
-                                    {% set accuracy = 100 %}
-                                  {% else %}
-                                    {% set accuracy = state_attr(driver, 'gps_accuracy') %}
-                                  {% endif %}
-                                  {% set gate_distance = distance(driver, gate_location)*1000 - accuracy %}
+            - alias: If the driver was leaving home
+              if:
+                - condition: template
+                  value_template: "{{ departure_mode }}"
+              then:
+                - alias: Wait for driver to travel 250m away from activation zone, then return, to start itinerary
+                  repeat:
+                    count: 2
+                    sequence:
+                      - wait_for_trigger:
+                          - alias: Vehicle stopped
+                            trigger: template
+                            id: vehicle_stopped
+                            value_template: "{{ is_state(driving_sensor, 'off') }}"
+                          - alias: Driver drove 250m away
+                            trigger: template
+                            value_template: >-
+                              {% if state_attr(driver, 'gps_accuracy') is none %}
+                                {% set accuracy = 100 %}
+                              {% else %}
+                                {% set accuracy = state_attr(driver, 'gps_accuracy') %}
+                              {% endif %}
+                              {% set gate_distance = distance(driver, gate_location)*1000 - accuracy %}
 
-                                  {{ gate_distance > activation_zone + 250 }}
-                              - alias: Driver returned to the activation zone
-                                trigger: template
-                                value_template: >-
-                                  {% if state_attr(driver, 'gps_accuracy') is none %}
-                                    {% set accuracy = 100 %}
-                                  {% else %}
-                                    {% set accuracy = state_attr(driver, 'gps_accuracy') %}
-                                  {% endif %}
-                                  {% set gate_distance = distance(driver, gate_location)*1000 + accuracy %}
+                              {{ gate_distance > activation_zone + 250 }}
+                          - alias: Driver returned to the activation zone
+                            trigger: template
+                            value_template: >-
+                              {% if state_attr(driver, 'gps_accuracy') is none %}
+                                {% set accuracy = 100 %}
+                              {% else %}
+                                {% set accuracy = state_attr(driver, 'gps_accuracy') %}
+                              {% endif %}
+                              {% set gate_distance = distance(driver, gate_location)*1000 + accuracy %}
 
-                                  {{ gate_distance < activation_zone }}
-                          - alias: Don't continue if driver stopped vehicle
-                            if:
-                              - condition: template
-                                value_template: "{{ wait.trigger.id == 'vehicle_stopped' }}"
-                            then:
-                              - stop: Arrived to destination
-                - alias: If the driver was driving towards home but the gate did not open
-                  conditions:
-                    - condition: template
-                      value_template: "{{ not_approach }}"
-                  sequence:
-                    - alias: Check if an error needs to be raised
-                      variables:
-                        message_id: >-
-                          {%
-                            if is_state(
-                              driver,
-                              [
-                                state_attr(gate_location, 'friendly_name'),
-                                states[gate_location].object_id
-                              ]
-                            )
-                            and arrival_opening_method == 'time'
-                            and opening_time is none
-                          %}
-                            travel_time_did_not_respond
-                          {%
-                            elif driver in (
-                              expand(forbidden_zones)
-                              | map(attribute='entity_id')
-                              | list
-                            )
-                          %}
-                            forbidden_zone
-                          {% elif is_state(driving_sensor, 'off') %}
-                            vehicle_stopped
-                          {% else %}
-                            {{ none }}
-                          {% endif %}
-                    - alias: Only continue if an error should be raised
-                      condition: template
-                      value_template: "{{ message_id is not none }}"
-                    - alias: Send a silent error if the behaviors are set to off
-                      variables:
-                        silent_error: >-
-                          {{
-                            behavior.departure.opening == 'off'
-                            and behavior.departure.closing == 'off'
-                          }}
-                    - alias: Create error
-                      sequence: *create_error
-                    - alias: Only continue if the error is critical
-                      condition: template
-                      value_template: "{{ message_id in critical_errors }}"
-                    - alias: Log error
-                      action: system_log.write
-                      data:
-                        level: error
-                        message: "{{ message }}"
-                        logger: blueprints.etiennec78.automatic_gate
-                    - stop: Critical error
-                      error: true
+                              {{ gate_distance < activation_zone }}
+                      - alias: Don't continue if driver stopped vehicle
+                        if:
+                          - condition: template
+                            value_template: "{{ wait.trigger.id == 'vehicle_stopped' }}"
+                        then:
+                          - stop: Arrived to destination
             - alias: Mark the automation as not failed
               variables:
                 errored: false
