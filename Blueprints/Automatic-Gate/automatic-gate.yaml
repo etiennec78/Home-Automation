@@ -2670,7 +2670,7 @@ actions:
         then:
           - alias: Restore BLE devices
             sequence: *restore_ble
-      - alias: Get whereas the driver is at the gate location
+      - alias: Get whether the driver is at the gate location
         variables:
           departure_mode: >-
             {{
@@ -2685,7 +2685,7 @@ actions:
         repeat:
           count: "{{ 2 if departure_mode else 1 }}"
           sequence:
-            - alias: Get whereas the driver is at the gate location
+            - alias: Get whether the driver is at the gate location
               variables:
                 departure_mode: >-
                   {{
