@@ -3328,8 +3328,8 @@ actions:
                                 variables:
                                   silent_error: >-
                                     {{
-                                      behavior.departure.opening == 'off'
-                                      and behavior.departure.closing == 'off'
+                                      behavior.arrival.opening == 'off'
+                                      and behavior.arrival.closing == 'off'
                                     }}
                               - alias: Create error
                                 sequence: *create_error
