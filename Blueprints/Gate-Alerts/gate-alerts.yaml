@@ -252,18 +252,13 @@ variables:
   tts_volume_night_time_end: !input tts_volume_night_time_end
   tts_volume_at_night: !input tts_volume_at_night
   error_message_sensor: !input error_message_sensor
-  error: >-
-    {% if error_message_sensor == [] %}
-      none
-    {% else %}
-      {{ states(error_message_sensor) }}
-    {% endif %}
   car_visible: !input car_visible
   language: !input language
   custom_translations: !input custom_translations
   notification_tag: "gate-{{ notification_type }}"
   config_checker_tag: "{{ 'config-checker-' ~ this.attributes.id }}"
   closing_order_id: "{{ 'closing_order_' ~ this.context.id }}"
+  error_checker_ran: false
   blueprint_name: "{{ state_attr(this.entity_id, 'friendly_name') }}"
   strings:
     en:
@@ -395,12 +390,9 @@ conditions:
       }}
 
 actions:
-  - alias: Initialize variables for the error checker
+  - alias: Check that custom strings are valid
     variables:
-      messages: []
       custom_translations_error: "{{ custom_translations is not mapping }}"
-      successfull_check: false
-      error_level: 0
   - alias: If the custom translations is not a mapping
     if:
       - condition: template
@@ -427,204 +419,212 @@ actions:
             condition: trigger
             id: blueprint_enabled
     then:
-      - alias: Check for errors
-        repeat:
-          for_each:
-            - alias: Check custom translations
-              error: >-
-                {% set data = namespace(invalid=[]) %}
-                {% for key, sub_items in custom_translations.items() %}
-                  {% if key not in strings['en'] %}
-                    {% set data.invalid = data.invalid + [key] %}
-                  {% else %}
-                    {% for subkey, value in sub_items.items() %}
-                      {%
-                        if value is not string
-                        or subkey not in strings['en'][key]
-                      %}
-                        {% set data.invalid = data.invalid + [subkey] %}
+      ##################
+      # ERROR CHECKING #
+      ##################
+
+      - alias: Initialize variables for the error checker
+        variables:
+          error_checker_ran: true
+          successfull_check: false
+          messages: []
+          error_level: 0
+      - alias: Run the error checker in an error-safe sequence
+        sequence:
+          - alias: Check for errors
+            repeat:
+              for_each:
+                - alias: Check custom translations
+                  error: >-
+                    {% set data = namespace(invalid=[]) %}
+                    {% for key, sub_items in custom_translations.items() %}
+                      {% if key not in strings['en'] %}
+                        {% set data.invalid = data.invalid + [key] %}
+                      {% else %}
+                        {% for subkey, value in sub_items.items() %}
+                          {%
+                            if value is not string
+                            or subkey not in strings['en'][key]
+                          %}
+                            {% set data.invalid = data.invalid + [subkey] %}
+                          {% endif %}
+                        {% endfor %}
                       {% endif %}
                     {% endfor %}
-                  {% endif %}
-                {% endfor %}
-                {{ data.invalid }}
-              message_id: "invalid_translations"
-              level: 1
-            - alias: Check gate error sensor presence
-              error: "{{ notification_type == 'error' and not error_message_sensor }}"
-              message_id: "missing_error_sensor"
-              level: 2
-            - alias: Check for tts and media player sensors presence
-              error: "{{ (speaker_tts_devices | length < 1) != (speaker_tts_service == '') }}"
-              message_id: "invalid_speakers"
-              level: 1
-            - alias: Check that there is a way to notify the user
-              error: >-
-                {{
-                  notify_devices | length == 0
-                  and speaker_tts_devices | length == 0
-                  and not persistent_notification
-                }}
-              message_id: "no_notification_method"
-              level: 2
-            - alias: Check that both or neither night time end and start have been entered
-              error: >-
-                {{
-                  (tts_volume_night_time_start == '')
-                  != (tts_volume_night_time_end == '')
-                }}
-              message_id: "night_mode_missing_bound"
-              level: 1
-            - alias: Check custom translations depreciation
-              error: "{{ custom_translations_error }}"
-              message_id: "deprecated_translations"
-              level: 0
-          sequence:
-            - alias: If a check failed
-              if:
-                - condition: template
-                  value_template: >-
-                    {% set error = repeat.item.error %}
-                    {{ error != [] if error is list else error }}
-              then:
-                - alias: If the error level is higher than the current highest
+                    {{ data.invalid }}
+                  message_id: "invalid_translations"
+                  level: 1
+                - alias: Check gate error sensor presence
+                  error: "{{ notification_type == 'error' and not error_message_sensor }}"
+                  message_id: "missing_error_sensor"
+                  level: 2
+                - alias: Check for tts and media player sensors presence
+                  error: "{{ (speaker_tts_devices | length < 1) != (speaker_tts_service == '') }}"
+                  message_id: "invalid_speakers"
+                  level: 1
+                - alias: Check that there is a way to notify the user
+                  error: >-
+                    {{
+                      notify_devices | length == 0
+                      and speaker_tts_devices | length == 0
+                      and not persistent_notification
+                    }}
+                  message_id: "no_notification_method"
+                  level: 2
+                - alias: Check that both or neither night time end and start have been entered
+                  error: >-
+                    {{
+                      (tts_volume_night_time_start == '')
+                      != (tts_volume_night_time_end == '')
+                    }}
+                  message_id: "night_mode_missing_bound"
+                  level: 1
+                - alias: Check custom translations depreciation
+                  error: "{{ custom_translations_error }}"
+                  message_id: "deprecated_translations"
+                  level: 0
+              sequence:
+                - alias: If a check failed
                   if:
                     - condition: template
-                      value_template: "{{ repeat.item.level > error_level }}"
+                      value_template: >-
+                        {% set error = repeat.item.error %}
+                        {{ error != [] if error is list else error }}
                   then:
-                    - alias: Save the new highest error level
+                    - alias: If the error level is higher than the current highest
+                      if:
+                        - condition: template
+                          value_template: "{{ repeat.item.level > error_level }}"
+                      then:
+                        - alias: Save the new highest error level
+                          variables:
+                            error_level: "{{ repeat.item.level }}"
+                    - alias: Append the error message to the list
                       variables:
-                        error_level: "{{ repeat.item.level }}"
-                - alias: Append the error message to the list
-                  variables:
-                    message_id: "{{ repeat.item.message_id }}"
-                    message: &get_message >-
-                      {# Custom translation #}
-                      {%
-                        if 'message' in custom_translations
-                        and message_id in custom_translations['message']
-                      %}
-                        {{ custom_translations['message'][message_id] }}
+                        message_id: "{{ repeat.item.message_id }}"
+                        message: &get_message >-
+                          {# Custom translation #}
+                          {%
+                            if 'message' in custom_translations
+                            and message_id in custom_translations['message']
+                          %}
+                            {{ custom_translations['message'][message_id] }}
 
-                      {# Selected language #}
-                      {% elif message_id in strings[language]['message'] %}
-                        {{ strings[language]['message'][message_id] }}
+                          {# Selected language #}
+                          {% elif message_id in strings[language]['message'] %}
+                            {{ strings[language]['message'][message_id] }}
 
-                      {# Fallback to english #}
-                      {% else %}
-                        {{ strings['en']['message'][message_id] }}
-                      {% endif %}
-                - alias: If the error variable contains a list
-                  if:
-                    - condition: template
-                      value_template: "{{ repeat.item.error is list }}"
-                  then:
-                    - alias: Format the string with error data
+                          {# Fallback to english #}
+                          {% else %}
+                            {{ strings['en']['message'][message_id] }}
+                          {% endif %}
+                    - alias: If the error variable contains a list
+                      if:
+                        - condition: template
+                          value_template: "{{ repeat.item.error is list }}"
+                      then:
+                        - alias: Format the string with error data
+                          variables:
+                            message: >-
+                              {{
+                                message.format(
+                                  data=(
+                                    ', '.join(repeat.item.error)
+                                  )
+                                )
+                              }}
+                    - alias: Append the error message to the list
                       variables:
-                        message: >-
-                          {{
-                            message.format(
-                              data=(
-                                ', '.join(repeat.item.error)
-                              )
-                            )
-                          }}
-                - alias: Append the error message to the list
-                  variables:
-                    messages: "{{ messages | union([message]) }}"
-      - alias: If the config is valid
-        if:
-          - condition: template
-            value_template: "{{ messages | length == 0 }}"
-        then:
-          - alias: If the blueprint was triggered manually
+                        messages: "{{ messages | union([message]) }}"
+          - alias: If the config is valid
             if:
               - condition: template
-                value_template: "{{ trigger.platform is none }}"
+                value_template: "{{ messages | length == 0 }}"
             then:
-              - alias: Set message ids
+              - alias: If the blueprint was triggered manually
+                if:
+                  - condition: template
+                    value_template: "{{ trigger.platform is none }}"
+                then:
+                  - alias: Set message ids
+                    variables:
+                      title_id: "valid_config"
+                      message_id: "valid_config"
+                  - alias: Get notification translation
+                    variables: &get_translation
+                      message: *get_message
+                      title: &get_title >-
+                        {# Custom translation #}
+                        {%
+                          if 'title' in custom_translations
+                          and title_id in custom_translations['title']
+                        %}
+                          {{ custom_translations['title'][title_id] }}
+
+                        {# Selected language #}
+                        {% elif title_id in strings[language]['title'] %}
+                          {{ strings[language]['title'][title_id] }}
+
+                        {# Fallback to english #}
+                        {% else %}
+                          {{ strings['en']['title'][title_id] }}
+                        {% endif %}
+                  - alias: Notify all users on the dashboard that the config is valid
+                    action: persistent_notification.create
+                    data:
+                      title: "{{ title }}"
+                      message: "{{ message }}"
+                      notification_id: "{{ config_checker_tag }}"
+                    continue_on_error: true
+                else:
+                  - alias: Remove the previous dashboard notification
+                    action: persistent_notification.dismiss
+                    data:
+                      notification_id: "{{ config_checker_tag }}"
+                    continue_on_error: true
+            else:
+              - alias: Build the notification
                 variables:
-                  title_id: "valid_config"
-                  message_id: "valid_config"
-              - alias: Get notification translation
-                variables: &get_translation
-                  message: *get_message
-                  title: &get_title >-
-                    {# Custom translation #}
-                    {%
-                      if 'title' in custom_translations
-                      and title_id in custom_translations['title']
-                    %}
-                      {{ custom_translations['title'][title_id] }}
-
-                    {# Selected language #}
-                    {% elif title_id in strings[language]['title'] %}
-                      {{ strings[language]['title'][title_id] }}
-
-                    {# Fallback to english #}
-                    {% else %}
-                      {{ strings['en']['title'][title_id] }}
-                    {% endif %}
-              - alias: Notify all users on the dashboard that the config is valid
+                  title_id: "invalid_config"
+                  title: *get_title
+                  message: "{{ '• ' ~ '\n• '.join(messages) }}"
+              - alias: Build the more info link
+                variables:
+                  message_id: "more_info"
+                  more_info: *get_message
+                  link: "https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/README.md#error-codes-table-%EF%B8%8F"
+                  more_info_md: "[{{more_info}}]({{link}})"
+              - alias: Notify all users on the dashboard that the config is invalid
                 action: persistent_notification.create
                 data:
                   title: "{{ title }}"
-                  message: "{{ message }}"
+                  message: "{{ message ~ '\n\n' ~ more_info_md }}"
                   notification_id: "{{ config_checker_tag }}"
                 continue_on_error: true
-            else:
-              - alias: Remove the previous dashboard notification
-                action: persistent_notification.dismiss
-                data:
-                  notification_id: "{{ config_checker_tag }}"
-                continue_on_error: true
-        else:
-          - alias: Build the notification
+          - alias: Confirm that no error occured while the config checker was running
+            variables:
+              successful_check: true
+        continue_on_error: true
+      - alias: If an error occured while the config checker was running
+        if:
+          - condition: template
+            value_template: "{{ not successful_check }}"
+        then:
+          - alias: Set notification ids
             variables:
               title_id: "invalid_config"
-              title: *get_title
-              message: "{{ '• ' ~ '\n• '.join(messages) }}"
-          - alias: Build the more info link
-            variables:
-              message_id: "more_info"
-              more_info: *get_message
-              link: "https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/README.md#error-codes-table-%EF%B8%8F"
-              more_info_md: "[{{more_info}}]({{link}})"
-          - alias: Notify all users on the dashboard that the config is invalid
+              message_id: "something_went_wrong"
+          - alias: Get notification translation
+            variables: *get_translation
+          - alias: Notify all users on the dashboard that an error occured
             action: persistent_notification.create
             data:
               title: "{{ title }}"
-              message: "{{ message ~ '\n\n' ~ more_info_md }}"
+              message: "{{ message }}"
               notification_id: "{{ config_checker_tag }}"
             continue_on_error: true
-      - alias: Confirm that no error occured while the config checker was running
-        variables:
-          successful_check: true
-    else:
-      - alias: Mark the check as successful since it did not happen
-        variables:
-          successful_check: true
-    continue_on_error: true
-  - alias: If an error occured while the config checker was running
-    if:
-      - condition: template
-        value_template: "{{ not successful_check }}"
-    then:
-      - alias: Set notification ids
-        variables:
-          title_id: "invalid_config"
-          message_id: "something_went_wrong"
-      - alias: Get notification translation
-        variables: *get_translation
-      - alias: Notify all users on the dashboard that an error occured
-        action: persistent_notification.create
-        data:
-          title: "{{ title }}"
-          message: "{{ message }}"
-          notification_id: "{{ config_checker_tag }}"
-        continue_on_error: true
-      - stop: Config checker failed
-        error: true
+          - stop: Config checker failed
+            error: true
 
   - alias: Only continue if the blueprint was triggered by an alert and tests passed
     condition: template
@@ -632,8 +632,7 @@ actions:
       {{
         trigger.platform is not none
         and trigger.id != 'blueprint_enabled'
-        and successful_check
-        and error_level < 2
+        and (not error_checker_ran or error_level < 2)
       }}
 
   - alias: If gate paused or fully open, and supporting position
@@ -736,7 +735,12 @@ actions:
         then:
           - alias: Format the notification message
             variables:
-              message: "{{ message.format(error=error) }}"
+              message: >-
+                {{
+                  message.format(
+                    error=states(error_message_sensor)
+                  )
+                }}
 
       - parallel:
           - alias: Notify each user
