@@ -2013,20 +2013,27 @@ actions:
           - condition: template
             value_template: "{{ notify_service is none }}"
         then:
-          alias: Change behaviors needing a notification service to auto
-          variables:
-            behavior: >-
-              {% set data = namespace(behaviors={}) %}
-              {% for key, val in behavior.items() %}
-                {% set inner = namespace(value={}) %}
-                {% for subkey, subval in val.items() %}
-                  {% set inner.value = inner.value | combine({
-                    subkey: 'auto' if subval in ['notif', 'timer'] else subval
-                  }) %}
+          - alias: Change behaviors needing a notification service to auto
+            variables:
+              behavior: >-
+                {% set data = namespace(behaviors={}) %}
+                {% for key, val in behavior.items() %}
+                  {% set inner = namespace(value={}) %}
+                  {% for subkey, subval in val.items() %}
+                    {% set inner.value = inner.value | combine({
+                      subkey: 'auto' if subval in ['notif', 'timer'] else subval
+                    }) %}
+                  {% endfor %}
+                  {% set data.behaviors = data.behaviors | combine({ key: inner.value }) %}
                 {% endfor %}
-                {% set data.behaviors = data.behaviors | combine({ key: inner.value }) %}
-              {% endfor %}
-              {{ data.behaviors }}
+                {{ data.behaviors }}
+          - alias: Clear a previous blueprint notification
+            action: "{{ notify_service }}"
+            data: &clear_notification
+              message: clear_notification
+              data:
+                tag: itinerary-status
+            continue_on_error: true
       - alias: Get which sensor the blueprint should wait to confirm the driver's presence
         variables:
           gps_trackers: >-
@@ -3589,10 +3596,7 @@ actions:
                                 sequence:
                                   - alias: Remove opening notification
                                     action: "{{ notify_service }}"
-                                    data: &clear_notification
-                                      message: clear_notification
-                                      data:
-                                        tag: itinerary-status
+                                    data: *clear_notification
                                     continue_on_error: true
                 - alias: If opening behavior is not set to off
                   if:
@@ -3937,6 +3941,7 @@ actions:
                 - alias: Remove closing notification
                   action: "{{ notify_service }}"
                   data: *clear_notification
+                  continue_on_error: true
             - alias: If gate not closed manually
               if:
                 - condition: template
