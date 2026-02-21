@@ -3284,10 +3284,9 @@ actions:
                                   {{
                                     in_activation_zone
                                     and (
-                                        arrival_opening_method == 'zone'
-                                        or not wait.completed and timeout_type == 'opening'
-                                        or wait.completed and and wait.trigger.id == ble_in_reach'
-                                      )
+                                      arrival_opening_method == 'zone'
+                                      or not wait.completed and timeout_type == 'opening'
+                                      or wait.completed and wait.trigger.id == 'ble_in_reach'
                                     )
                                   }}
                             sequence:
@@ -3334,10 +3333,10 @@ actions:
                                   {{ none }}
                                 {% endif %}
                           - alias: If an error needs to be raised
-                            conditions:
+                            if:
                               - condition: template
                                 value_template: "{{ message_id is not none }}"
-                            sequence:
+                            then:
                               - alias: Send a silent error if the behaviors are set to off
                                 variables:
                                   silent_error: >-
