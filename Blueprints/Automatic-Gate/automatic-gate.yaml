@@ -3512,7 +3512,7 @@ actions:
                       repeat:
                         until:
                           - condition: template
-                            value_template: |-
+                            value_template: >-
                               {{
                                 not wait.completed
                                 or wait.trigger.id != 'notification_received'

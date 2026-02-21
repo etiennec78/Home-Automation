@@ -237,7 +237,7 @@ variables:
   notification_type: !input notification_type
   notification_delay: !input notification_delay
   notify_devices: !input notify_devices
-  notify_services: |-
+  notify_services: >-
     {{
       notify_devices
       | map('device_attr', 'name')
@@ -252,7 +252,7 @@ variables:
   tts_volume_night_time_end: !input tts_volume_night_time_end
   tts_volume_at_night: !input tts_volume_at_night
   error_message_sensor: !input error_message_sensor
-  error: |-
+  error: >-
     {% if error_message_sensor == [] %}
       none
     {% else %}

@@ -277,7 +277,7 @@ variables:
   dead_zone: !input dead_zone
   persons: !input persons
   notify_devices: !input notify_devices
-  notify_services: |-
+  notify_services: >-
     {{
       notify_devices
       | map('device_attr', 'name')
