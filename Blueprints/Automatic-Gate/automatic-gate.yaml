@@ -2805,7 +2805,7 @@ actions:
                         silent_error: >-
                           {{
                             behavior.departure.opening == 'off'
-                            and dehavior.departure.closing == 'off'
+                            and behavior.departure.closing == 'off'
                           }}
                     - alias: Create error
                       sequence: *create_error
