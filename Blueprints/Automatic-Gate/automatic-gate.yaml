@@ -2426,7 +2426,7 @@ actions:
                     - alias: Triggered by a new GPS location
                       conditions:
                         - condition: template
-                          value_template: "{{ wait.trigger.id == 'position' }}"
+                          value_template: "{{ wait.completed and wait.trigger.id == 'position' }}"
                       sequence:
                         - alias: Save the previous location
                           variables:
@@ -2447,7 +2447,7 @@ actions:
                     - alias: Triggered by the gate closing
                       conditions:
                         - condition: template
-                          value_template: "{{ wait.trigger.id == 'gate_closed' }}"
+                          value_template: "{{ wait.completed and wait.trigger.id == 'gate_closed' }}"
                       sequence:
                         - alias: Get whether the gate was automatically closed
                           variables:
@@ -3554,7 +3554,11 @@ actions:
                               - alias: If the notification was received
                                 conditions:
                                   - condition: template
-                                    value_template: "{{ wait.trigger.id == 'notification_received' }}"
+                                    value_template: >-
+                                      {{
+                                        wait.completed
+                                        and wait.trigger.id == 'notification_received'
+                                      }}
                                 sequence:
                                   - alias: Stop waiting for notification reception
                                     variables:
@@ -3564,7 +3568,8 @@ actions:
                                   - condition: template
                                     value_template: >-
                                       {{
-                                        wait.trigger.id in [
+                                        wait.completed
+                                        and wait.trigger.id in [
                                           'vehicle_stopped',
                                           'vehicle_away',
                                           'forbidden_zone',
@@ -3759,7 +3764,11 @@ actions:
                       - alias: If the notification was received
                         if:
                           - condition: template
-                            value_template: "{{ wait.trigger.id == 'notification_received' }}"
+                            value_template: >-
+                              {{
+                                wait.completed
+                                and wait.trigger.id == 'notification_received'
+                              }}
                         then:
                           - alias: Stop waiting for notification reception and reset the timer
                             variables:
@@ -3772,7 +3781,9 @@ actions:
                                   - condition: template
                                     value_template: >-
                                       {{
-                                        wait.trigger.id in ['manual', 'closing_order']
+                                        wait.completed and wait.trigger.id in [
+                                          'manual', 'closing_order'
+                                        ]
                                         or (
                                           not wait.completed
                                           and timeout_type == 'timer'
@@ -3792,7 +3803,7 @@ actions:
                                         and (
                                           not wait.completed
                                             and timeout_type == 'safety_delay'
-                                          or wait.trigger.id in [
+                                          or wait.completed and wait.trigger.id in [
                                             'vehicle_stopped',
                                             'vehicle_away',
                                             'forbidden_zone',
@@ -3911,7 +3922,7 @@ actions:
                               - alias: If the itinerary needs to be canceled
                                 conditions:
                                   - condition: template
-                                    value_template: "{{ wait.trigger.id == 'canceling_order' }}"
+                                    value_template: "{{ wait.completed and wait.trigger.id == 'canceling_order' }}"
                                 sequence:
                                   - alias: Set error id
                                     variables:
@@ -3922,7 +3933,7 @@ actions:
                               - alias: If the vehicle was restarted
                                 conditions:
                                   - condition: template
-                                    value_template: "{{ wait.trigger.id == 'vehicle_restarted' }}"
+                                    value_template: "{{ wait.completed and wait.trigger.id == 'vehicle_restarted' }}"
                                 sequence:
                                   - stop: Letting the new instance take over
             - alias: If a notification needs to be cleared
@@ -3945,13 +3956,13 @@ actions:
             - alias: If gate not closed manually
               if:
                 - condition: template
-                  value_template: "{{ wait.trigger.id != 'manual' }}"
+                  value_template: "{{ not wait.completed or wait.trigger.id != 'manual' }}"
               then:
                 - alias: Update the last closed variable
                   variables:
                     update:
                       last_closed: "{{ now() | as_timestamp | int }}"
-                      auto_closed: "{{ wait.trigger.id != 'closing_order' }}"
+                      auto_closed: "{{ not wait.completed or wait.trigger.id != 'closing_order' }}"
                     itinerary_value: "{{ itinerary_value | combine(update) }}"
                 - alias: If gate closing is enabled
                   if:
