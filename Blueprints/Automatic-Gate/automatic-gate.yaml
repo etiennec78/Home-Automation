@@ -3257,65 +3257,7 @@ actions:
                                   - alias: Add 1 to the failed updates counter
                                     variables:
                                       failed_updates: "{{ failed_updates + 1 }}"
-                      - alias: Try to get a message error id
-                        variables:
-                          message_id: >-
-                            {%
-                              if is_state(
-                                driver,
-                                [
-                                  state_attr(gate_location, 'friendly_name'),
-                                  states[gate_location].object_id
-                                ]
-                              )
-                              and arrival_opening_method == 'time'
-                              and opening_time is none
-                            %}
-                              travel_time_did_not_respond
-                            {%
-                              elif driver in (
-                                expand(forbidden_zones)
-                                | map(attribute='entity_id')
-                                | list
-                              )
-                            %}
-                              forbidden_zone
-                            {% elif is_state(driving_sensor, 'off') %}
-                              vehicle_stopped
-                            {% else %}
-                              {{ none }}
-                            {% endif %}
                       - choose:
-                          - alias: If an error needs to be raised
-                            conditions:
-                              - condition: template
-                                value_template: "{{ message_id is not none }}"
-                            sequence:
-                              - alias: Send a silent error if the behaviors are set to off
-                                variables:
-                                  silent_error: >-
-                                    {{
-                                      behavior.departure.opening == 'off'
-                                      and behavior.departure.closing == 'off'
-                                    }}
-                              - alias: Create error
-                                sequence: *create_error
-                              - alias: Restore BLE devices if needed
-                                sequence: *restore_ble
-                              - alias: If the error is critical
-                                if:
-                                  - condition: template
-                                    value_template: "{{ message_id in critical_errors }}"
-                                then:
-                                  - alias: Log error
-                                    action: system_log.write
-                                    data:
-                                      level: error
-                                      message: "{{ message }}"
-                                      logger: blueprints.etiennec78.automatic_gate
-                                  - stop: Critical error
-                                    error: true
-                              - stop: Itinerary canceled
                           - alias: If a GPS request must be sent
                             conditions:
                               - condition: template
@@ -3376,6 +3318,67 @@ actions:
                                   entity_id: "{{ itinerary_sensor }}"
                                 data:
                                   value: "{{ itinerary_value | to_json }}"
+                        default:
+                          - alias: Try to get a message error id
+                            variables:
+                              message_id: >-
+                                {% if not wait.completed %}
+                                  {{ timeout_type }}
+                                {%
+                                  elif is_state(
+                                    driver,
+                                    [
+                                      state_attr(gate_location, 'friendly_name'),
+                                      states[gate_location].object_id
+                                    ]
+                                  )
+                                  and arrival_opening_method == 'time'
+                                  and opening_time is none
+                                %}
+                                  travel_time_did_not_respond
+                                {%
+                                  elif driver in (
+                                    expand(forbidden_zones)
+                                    | map(attribute='entity_id')
+                                    | list
+                                  )
+                                %}
+                                  forbidden_zone
+                                {% elif is_state(driving_sensor, 'off') %}
+                                  vehicle_stopped
+                                {% else %}
+                                  {{ none }}
+                                {% endif %}
+                          - alias: If an error needs to be raised
+                            conditions:
+                              - condition: template
+                                value_template: "{{ message_id is not none }}"
+                            sequence:
+                              - alias: Send a silent error if the behaviors are set to off
+                                variables:
+                                  silent_error: >-
+                                    {{
+                                      behavior.departure.opening == 'off'
+                                      and behavior.departure.closing == 'off'
+                                    }}
+                              - alias: Create error
+                                sequence: *create_error
+                              - alias: Restore BLE devices if needed
+                                sequence: *restore_ble
+                              - alias: If the error is critical
+                                if:
+                                  - condition: template
+                                    value_template: "{{ message_id in critical_errors }}"
+                                then:
+                                  - alias: Log error
+                                    action: system_log.write
+                                    data:
+                                      level: error
+                                      message: "{{ message }}"
+                                      logger: blueprints.etiennec78.automatic_gate
+                                  - stop: Critical error
+                                    error: true
+                              - stop: Itinerary canceled
 
             ##############################
             # OPENING & CLOSING SEQUENCE #
