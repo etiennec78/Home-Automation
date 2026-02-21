@@ -2473,7 +2473,7 @@ actions:
                                   {% break %}
                                 {% endif %}
                               {% endfor %}
-                              {{ data.recently_closed and not data.auto_closed }}
+                              {{ data.auto_closed }}
                 - choose:
                     - alias: If the blueprint needs to stop
                       conditions:
