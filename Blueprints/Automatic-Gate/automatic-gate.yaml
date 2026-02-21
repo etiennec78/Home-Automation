@@ -1624,33 +1624,16 @@ actions:
                           if 'title' in custom_translations
                           and title_id in custom_translations['title']
                         %}
-                          {%
-                            set title_string = (
-                              custom_translations['title'][title_id]
-                            )
-                          %}
+                          {{ custom_translations['title'][title_id] }}
 
                         {# Selected language #}
                         {% elif title_id in strings[language]['title'] %}
-                          {%
-                            set title_string = (
-                              strings[language]['title'][title_id]
-                            )
-                          %}
+                          {{ strings[language]['title'][title_id] }}
 
                         {# Fallback to english #}
                         {% else %}
-                          {%
-                            set title_string = (
-                              strings['en']['title'][title_id]
-                            )
-                          %}
+                          {{ strings['en']['title'][title_id] }}
                         {% endif %}
-                        {{
-                          title_string.format(
-                            awaited_persons=awaited_persons
-                          )
-                        }}
                   - alias: Notify all users on the dashboard that the config is valid
                     action: persistent_notification.create
                     data:
@@ -4022,15 +4005,22 @@ actions:
                         - condition: template
                           value_template: *gate_open
                       then:
-                        - alias: Format drivers near gate as a string
-                          variables:
-                            awaited_persons: "{{ drivers_near_gate | join(', ') }}"
                         - alias: Set notification ids
                           variables:
                             title_id: "awaiting"
                             message_id: "awaiting"
                         - alias: Get notification translation
                           variables: *get_translation
+                        - alias: Format title with names of drivers near gate
+                          variables:
+                            title: >-
+                              {{
+                                title.format(
+                                  awaited_persons=(
+                                    drivers_near_gate | join(', ')
+                                  )
+                                )
+                              }}
                         - alias: If a notify service exists
                           if:
                             - condition: template
