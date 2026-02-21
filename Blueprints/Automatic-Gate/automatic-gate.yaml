@@ -1226,7 +1226,7 @@ actions:
                             {% set trackers = [tracker] %}
                           {% endif %}
                           {%
-                            if tracker is none
+                            if trackers is none
                             or (
                               trackers
                               | select('is_state_attr', 'source_type', 'gps')
