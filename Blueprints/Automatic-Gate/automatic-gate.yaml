@@ -3486,10 +3486,6 @@ actions:
                                 trigger: template
                                 id: vehicle_stopped
                                 value_template: "{{ is_state(driving_sensor, 'off') }}"
-                              - alias: Vehicle restarted
-                                trigger: template
-                                id: vehicle_restarted
-                                value_template: "{{ is_state(driving_sensor, 'on') }}"
                               - alias: Activation zone left
                                 trigger: template
                                 id: vehicle_away
