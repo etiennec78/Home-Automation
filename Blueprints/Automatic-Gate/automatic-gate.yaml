@@ -2890,12 +2890,11 @@ actions:
                           timeouts:
                             opening: >-
                               {{
-                                seconds_before_opening
+                                opening_time - now() | as_timestamp
                                 if (
                                   in_activation_zone
                                   and arrival_opening_method == 'time'
                                   and opening_time is not none
-                                  and opening_time <= now() | as_timestamp
                                 )
                                 else MAX_INT
                               }}
