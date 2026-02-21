@@ -3187,7 +3187,7 @@ actions:
                               - alias: If the travel time sensor is not unknown or unavailable
                                 if:
                                   - condition: template
-                                    value_template: "{{ states(travel_time_sensor) not in ['unknown', 'unavailable'] }}"
+                                    value_template: "{{ travel_time_sensor | has_value }}"
                                 then:
                                   - alias: Convert travel time to seconds
                                     variables:
@@ -3631,7 +3631,7 @@ actions:
                       value_template: >-
                         {{
                           gate
-                          | select('is_state', ['unknown', 'unavailable'])
+                          | reject('has_value')
                           | list
                           != gate
                           and opening_behavior != 'off'
