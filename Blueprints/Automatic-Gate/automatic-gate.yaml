@@ -1787,10 +1787,10 @@ actions:
                         value_template: "{{ itinerary_value.auto_closed }}"
                       - alias: If one of the gates is closing/closed
                         condition: template
-                        value_template: &gate_open >-
+                        value_template: &gate_closed >-
                           {{
                             gate
-                            | select('is_state', ['on', 'open', 'opening'])
+                            | select('is_state', ['off', 'closed', 'closing'])
                             | list
                             != []
                           }}
@@ -3360,13 +3360,7 @@ actions:
             - alias: If one of the gates is closed
               if:
                 - condition: template
-                  value_template: >-
-                    {{
-                      gate
-                      | select('is_state', ['off', 'closed', 'closing'])
-                      | list
-                      != []
-                    }}
+                  value_template: *gate_closed
               then:
                 - alias: Initialize a variable to wait for the phone to receive the notification before starting the timer
                   variables:
@@ -3611,7 +3605,13 @@ actions:
                   conditions:
                     - alias: Gate open
                       condition: template
-                      value_template: *gate_open
+                      value_template: &gate_open >-
+                        {{
+                          gate
+                          | select('is_state', ['on', 'open', 'opening'])
+                          | list
+                          != []
+                        }}
                     - alias: Opening request sent but not acknowledged yet
                       condition: template
                       value_template: >-
