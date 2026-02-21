@@ -2988,7 +2988,10 @@ actions:
                                     0
                                   )
                                 }}
-                          - alias: Turn on BLE devices if they exist
+                          - alias: Only continue if ble devices need to be turned on
+                            condition: template
+                            value_template: "{{ arrival_opening_method == 'ble' }}"
+                          - alias: Turn on BLE devices
                             sequence: *start_ble
                       - alias: If the travel time may need to be calculated
                         if:
