@@ -2504,7 +2504,7 @@ actions:
                         - condition: template
                           value_template: >-
                             {{
-                              wait.remaining == 0
+                              not wait.completed
                               or wait.trigger.id == 'vehicle_stopped'
                               or wait.trigger.id == 'position' and entered_activation_zone
                               or (
@@ -2518,7 +2518,7 @@ actions:
                         - alias: Set the error id
                           variables:
                             message_id: >-
-                              {% if wait.remaining == 0 %}
+                              {% if not wait.completed %}
                                 {%
                                   if (
                                     wait_for_gps
@@ -3319,7 +3319,7 @@ actions:
                           - alias: If a GPS request must be sent
                             conditions:
                               - condition: template
-                                value_template: "{{ wait.remaining == 0 and timeout_type == 'gps_request' }}"
+                                value_template: "{{ not wait.completed and timeout_type == 'gps_request' }}"
                             sequence:
                               - alias: If an opening time is planned
                                 if:
@@ -3562,7 +3562,7 @@ actions:
                                   - condition: template
                                     value_template: >-
                                       {{
-                                        wait.remaining == 0
+                                        not wait.completed
                                         and opening_behavior != 'timer'
                                       }}
                                 sequence:
@@ -3783,7 +3783,7 @@ actions:
                                       {{
                                         wait.trigger.id in ['manual', 'closing_order']
                                         or (
-                                          wait.remaining == 0
+                                          not wait.completed
                                           and timeout_type == 'timer'
                                         )
                                       }}
@@ -3799,7 +3799,7 @@ actions:
                                         security_notif_override
                                         and closing_behavior == 'notif'
                                         and (
-                                          wait.remaining == 0
+                                          not wait.completed
                                             and timeout_type == 'safety_delay'
                                           or wait.trigger.id in [
                                             'vehicle_stopped',
@@ -3829,7 +3829,7 @@ actions:
                                   - alias: Set message id
                                     variables:
                                       message_id: >-
-                                        {% if wait.remaining == 0 %}
+                                        {% if not wait.completed %}
                                           {{ timeout_messages[timeout_type] }}
                                         {% elif wait.trigger.id in ['manual', 'closing_order'] %}
                                           {{ none }}
