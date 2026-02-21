@@ -2951,7 +2951,7 @@ actions:
                               }}
                           - alias: Reachable BLE device
                             trigger: template
-                            id: ble_in_reach
+                            id: ble_in_range
                             value_template: >-
                               {{
                                 states(ble_entities[idx]) | is_number
@@ -3264,7 +3264,7 @@ actions:
                                     and (
                                       arrival_opening_method == 'zone'
                                       or not wait.completed and timeout_type == 'opening'
-                                      or wait.completed and wait.trigger.id == 'ble_in_reach'
+                                      or wait.completed and wait.trigger.id == 'ble_in_range'
                                     )
                                   }}
                             sequence:
