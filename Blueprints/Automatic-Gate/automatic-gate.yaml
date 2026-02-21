@@ -3279,6 +3279,8 @@ actions:
                                   entity_id: "{{ itinerary_sensor }}"
                                 data:
                                   value: "{{ itinerary_value | to_json }}"
+                              - alias: Restore BLE devices if needed
+                                sequence: *restore_ble
                         default:
                           - alias: Try to get a message error id
                             variables:
