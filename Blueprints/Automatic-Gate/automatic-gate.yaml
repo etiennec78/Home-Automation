@@ -3336,6 +3336,18 @@ actions:
                                   - alias: Remove the planned gps request
                                     variables:
                                       next_gps_refresh_ts: null
+                              - alias: Only continue if the GPS location is outdated
+                                condition: template
+                                value_template: >-
+                                  {{
+                                    opening_time is not none
+                                    and (
+                                      now()
+                                      - states[driver].last_updated
+                                      > timedelta(seconds=outdated_delay)
+                                    )
+                                  }}
+                              - sequence: *gps_request
                           - alias: If the gate should open
                             conditions:
                               - condition: template
