@@ -2861,7 +2861,6 @@ actions:
                     last_refresh_timestamp: 0
                     next_refresh: 0
                     return_zone: "{{ distance(driver, gate_location) }}"
-                    seconds_before_opening: "{{ MAX_INT }}"
                     next_gps_refresh_ts: null
                     api_calls: 0
                 - alias: Set the itinerary status to "arriving"
@@ -2933,7 +2932,12 @@ actions:
                             opening: >-
                               {{
                                 seconds_before_opening
-                                if in_activation_zone
+                                if (
+                                  in_activation_zone
+                                  and arrival_opening_method == 'time'
+                                  and opening_time is not none
+                                  and opening_time <= now() | as_timestamp
+                                )
                                 else MAX_INT
                               }}
                             gps_request: >-
@@ -3032,7 +3036,7 @@ actions:
                           - condition: template
                             value_template: >-
                               {{
-                                'trigger' in wait
+                                wait.completed
                                 and (
                                   wait.trigger.id == 'travel_time'
                                   or (
@@ -3297,13 +3301,10 @@ actions:
                                   {{
                                     in_activation_zone
                                     and (
-                                      arrival_opening_method == 'zone'
-                                      or (
-                                        arrival_opening_method == 'time'
-                                        and opening_time is not none
-                                        and opening_time <= now() | as_timestamp
+                                        arrival_opening_method == 'zone'
+                                        or not wait.completed and timeout_type == 'opening'
+                                        or wait.completed and and wait.trigger.id == ble_in_reach'
                                       )
-                                      or wait.trigger.id == 'ble_in_reach'
                                     )
                                   }}
                             sequence:
@@ -3503,11 +3504,19 @@ actions:
                     - condition: template
                       value_template: "{{ opening_behavior != 'auto' }}"
                   then:
+                    - alias: Set an empty trigger id
+                      variables:
+                        trigger:
+                          completed: true
                     - alias: Listen for events a second time if the first event was a notification received confirmation
                       repeat:
                         until:
                           - condition: template
-                            value_template: "{{ wait.trigger.id != 'notification_received' or opening_behavior == 'off' }}"
+                            value_template: |-
+                              {{
+                                not wait.completed
+                                or wait.trigger.id != 'notification_received'
+                              }}
                         sequence:
                           - alias: Wait for events before opening the gate or canceling the itinerary
                             wait_for_trigger:
