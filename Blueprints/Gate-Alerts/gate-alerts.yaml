@@ -382,11 +382,15 @@ conditions:
   - alias: If triggered by gate fully closed, only continue if it does not support position tracking
     condition: template
     value_template: >-
+      {% set features = state_attr(gate, 'supported_features') %}
       {{
         trigger.id == 'blueprint_enabled'
         or notification_type != 'close'
         or not is_state(gate, 'closed')
-        or state_attr(gate, 'supported_features') | bitwise_and(4) == 0
+        or (
+          (0 if features is none else features)
+          | bitwise_and(4) == 0
+        )
       }}
 
 actions:
@@ -639,14 +643,14 @@ actions:
     if:
       condition: template
       value_template: >-
+        {% set features = state_attr(gate, 'supported_features') %}
         {{
           notification_type == 'open'
           and is_state(gate, 'open')
           and notification_delay == 0
           and (
-            state_attr(gate, 'supported_features')
-            | bitwise_and(4)
-            == 4
+            (0 if features is none else features)
+            | bitwise_and(4) == 4
           )
         }}
     then:
