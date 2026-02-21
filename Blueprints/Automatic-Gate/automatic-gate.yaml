@@ -1810,10 +1810,11 @@ actions:
                                   {% if states[repeat.item].domain == 'switch' %}
                                     turn_on
                                   {% elif states[repeat.item].domain == 'cover' %}
+                                    {% set features = state_attr(repeat.item, 'supported_features') %}
                                     {%
                                       if partial_open_position != 100
                                       and (
-                                        state_attr(repeat.item, 'supported_features')
+                                        (0 if features is none else features)
                                         | bitwise_and(4) == 4
                                       )
                                     %}
@@ -4130,8 +4131,9 @@ actions:
                             if:
                               - condition: template
                                 value_template: >-
+                                  {% set features = state_attr(repeat.item, 'supported_features')%}
                                   {{
-                                    state_attr(repeat.item, 'supported_features')
+                                    (0 if features is none else features)
                                     | bitwise_and(1) == 1
                                   }}
                             then:
@@ -4153,7 +4155,10 @@ actions:
                         {% if prefix == '' and 'arm' in security_features %}
                           {%
                             if state not in ['armed_away', 'armed_vacation']
-                            and features | bitwise_and(2) == 2
+                            and (
+                              (0 if features is none else features)
+                              | bitwise_and(2) == 2
+                            )
                           %}
                             alarm_arm_away
                           {% else %}
