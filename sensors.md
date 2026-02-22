@@ -257,7 +257,9 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
 <details>
   <summary>Combining these sensors 🔗</summary>
 
-  If some people drive several cars, combine their sensors so there is only one per person
+  If some users have multiple vehicles, you can merge all sensors into one with this template.
+  
+  Also, for the same car, some driving sensors can be quick but less reliable (e.g.: Bluetooth vs plugged CarPlay). By merging them you can benefit form the reactivity and the reliability.
 
   #### Setup 🛠️
 
@@ -270,7 +272,7 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
   | Setting | Parameter |
   | :--- | :---: |
   | Name | `User0 driving` |
-  | State template | `{{ is_state('sensor.first_sensor', 'on') and is_state('sensor.second_sensor', 'on') }}` |
+  | State template | `{{ is_state('sensor.first_sensor', 'on') or is_state('sensor.second_sensor', 'on') }}` |
   | Device class | `Moving` |
   | Device | *Your phone* |
 
