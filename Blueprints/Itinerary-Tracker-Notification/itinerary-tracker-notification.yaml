@@ -9,7 +9,9 @@ blueprint:
     ## Description 📝
     A blueprint that notifies all selected users when another one is driving home
 
-    ## Key Features 🌟
+    <details>
+      <summary><h2>Key Features 🌟</h2></summary>
+
     * Travel time and ETA notification updates 🔁
     * Companion app notifications 🔔
     * Custom link on notification tap 👆
@@ -18,6 +20,8 @@ blueprint:
     * Notification limiter ⌛
     * Built-in translations 🌍
     * State-based notification filtering 📍
+
+    </details>
 
     ## More info ℹ️
     * Version: 2.0.0
@@ -47,7 +51,7 @@ blueprint:
           name: 💬 Notify devices
           description: |-
             Each [**device** to **notify**](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#notify-services-)
-            *Note : Optional*
+            > *Optional*
           default: []
           selector:
             device:
@@ -58,7 +62,7 @@ blueprint:
           name: 🚗 Driving sensors
           description: |-
             Each **[driving sensor](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#driving-sensors-)** which should trigger the automation (same order)
-            *Note : There can be less driving sensors than users to notify. Place users with driving sensors first.*
+            > *There can be less driving sensors than users to notify. Place users with driving sensors first.*
           selector:
             entity:
               multiple: true
@@ -70,7 +74,7 @@ blueprint:
           name: ✈️ Travel time sensors
           description: |-
             Each **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#travel-time-sensors-%EF%B8%8F)** monitoring each user **time left before arrival** (same order)
-            *Note: Optional if "Track travel time" is set to false*
+            > *Optional*
           default: []
           selector:
             entity:
@@ -93,13 +97,13 @@ blueprint:
             number:
               min: 300
               max: 5000
-              unit_of_measurement: meters
+              unit_of_measurement: m
 
     persons_to_notify:
       name: Persons to notify
       icon: mdi:bell-ring
       collapsed: true
-      description: If notify everyone is disabled, the bluprint will check for any of these conditions per user
+      description: If notify everyone is disabled, the blueprint will check for any of these conditions per user (OR)
       input:
         notify_everyone:
           name: 🔔🧩 Notify everyone
@@ -136,7 +140,9 @@ blueprint:
       input:
         language:
           name: Notification language
-          description: The **language** in which **notifications** will be sent to you
+          description: |-
+            The **language** in which **notifications** will be sent to you
+            > *If your language is not supported by this blueprint, could you please [open a pull request](https://github.com/etiennec78/Home-Automation/pulls) ?*
           default: "en"
           selector:
             language:
@@ -147,7 +153,7 @@ blueprint:
           name: Custom translations
           description: |-
             A **yaml** dictionary to change the default **notifications translations**
-            *Note : You can find the translation keys in the strings['en'] variable in the code or in your traces*
+            > *You can find the translation keys in the strings['en'] variable in the code or in your traces*
           default:
             title: {}
             message: {}
@@ -156,8 +162,8 @@ blueprint:
         notif_refresh_rate_ftn:
           name: 🔁 Notification refresh rate function
           description: |-
-            The function used to calculate the **seconds** between two tracking notifications to lower your quota consumption
-            *Note : {{remaining}} will be replaced by the seconds remaining until the arrival*
+            The function used to calculate the **seconds** between two tracking notifications to lower your quota consumptio
+            > *`remaining` will be replaced by the seconds remaining until the arrival*
           default: "{{ max(10, remaining/4) }}"
           selector:
             template:
@@ -165,12 +171,12 @@ blueprint:
           name: 👆 On tap link
           description: |-
             The **link** you will go to if you **tap** on the notification
-            *Note : Can be Home Assistant relative links*
+            > *Can be Home Assistant relative links*
           default: "/lovelace/vehicle-tracker-map"
           selector:
             text:
         persistent_notification:
-          name: 🔔 Persistent notification
+          name: 🔔 Persistent notifications
           description: Show notifications in Home Assistant **[dashboard](https://www.home-assistant.io/integrations/persistent_notification)**
           default: false
           selector:
@@ -185,7 +191,7 @@ blueprint:
           name: 🔊 TTS speakers
           description: |-
             The **home speakers** your want to play TTS on
-            *Note : Optional*
+            > *Optional*
           default: []
           selector:
             entity:
@@ -195,7 +201,7 @@ blueprint:
           name: 🎙️ TTS service
           description: |-
             The **TTS service** you want to use for your speakers
-            *Note : Optional*
+            > *Optional*
           default: ""
           selector:
             entity:
@@ -226,12 +232,12 @@ blueprint:
             number:
               min: 0
               max: 60
-              unit_of_measurement: minutes
+              unit_of_measurement: min
         tts_volume_night_time_start:
           name: 🌙 TTS night time start
           description: |-
             The time at which the volume of the TTS will start being lowered
-            *Note: Optional*
+            > *Optional*
           default: ""
           selector:
             time:
@@ -239,7 +245,7 @@ blueprint:
           name: ☀️ TTS night time end
           description: |-
             The time at which the volume of the TTS will stop being lowered
-            *Note: Optional*
+            > *Optional*
           default: ""
           selector:
             time:
