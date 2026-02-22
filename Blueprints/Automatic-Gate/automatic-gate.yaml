@@ -2895,6 +2895,7 @@ actions:
                         {{
                           notify_service is not none
                           and itinerary_started_notif
+                          and repeat.first
                         }}
                   then:
                     - alias: Set notification ids
