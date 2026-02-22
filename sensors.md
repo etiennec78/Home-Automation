@@ -546,7 +546,7 @@ Could be from my [ESPHome firmware](ESPHome-Firmwares/Gate) [configured](ESPHome
 Supported types: device_tracker, rssi sensor, distance sensor, bermuda area sensor
 
 
-## Bluetooth scanner switch ⏻
+## Bluetooth scanner switch ⏯️
 
 A switch which can turn on/off your BLE scanner. Not needed if your BLE scanner runs 24/7
 
