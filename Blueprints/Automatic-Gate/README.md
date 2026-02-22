@@ -49,7 +49,8 @@ Makes managing your gate while driving easier: You won't ever have to use your r
 * One of these solutions to detect when you arrive:
   * A travel time service provider ([Waze](https://www.home-assistant.io/integrations/waze_travel_time/), [Here](https://www.home-assistant.io/integrations/here_travel_time/) with its ⚠️ [auto-polling disabled](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval) ⚠️ (steps 1, 2)
   * A smart vehicle providing its ETA
-  * An iBeacon scanner (less recommended)
+  * A BLE scanner (less recommended)
+  * Only a GPS device tracker (not recommended)
 * The [Gate Alerts blueprint](../Gate-Alerts) to receive notifications when opening
 
 ### Import the blueprint 🗺️
@@ -65,3 +66,37 @@ Makes managing your gate while driving easier: You won't ever have to use your r
 5. Press `Save` in the bottom right corner
 6. Optional: In the upper-right corner, press `⁝` then `Run actions` and check your dashboard notifications for configuration errors
 7. Setup the [Gate Alerts blueprint](../Gate-Alerts) to receive notifications when opening
+
+### Tips 💡
+
+<details>
+  <summary><h4>Add opening notifications 🔓</h4></summary>
+
+  By default, this blueprint does not notify you when the gate is opening.
+  
+  You need to setup the [Gate Alerts blueprint](../Gate-Alerts).
+</details>
+
+<details>
+  <summary><h4>Stop if parked outside 🅿️</h4></summary>
+
+  If you sometimes park your car outside, near your house, this blueprint could open your gate when starting your vehicle, thinking you want to exit.
+  
+  To fix this, you can enable 'Wi-Fi' or 'Bluetooth LE' in 'Confirm the location on startup', and add the required sensors.
+</details>
+
+<details>
+  <summary><h4>Per-user configuration 🛠️</h4></summary>
+
+  If you want to change the configuration for a specific user, you can have multiple instances of this blueprint in parallel.
+
+  To sync these instances, you will have to add the 'Itinerary sensors' of the others blueprint instances to each configuration.
+</details>
+
+<details>
+  <summary><h4>Cycling 🚲</h4></summary>
+
+  You can use this blueprint with a bike instead of a vehicle.
+  
+  [Learn more](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#option-3-cycling-).
+</details>

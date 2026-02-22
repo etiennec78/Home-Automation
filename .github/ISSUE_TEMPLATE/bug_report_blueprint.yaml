@@ -46,7 +46,11 @@ body:
         You can download your blueprint traces by going into :
         *[Settings > Automations & scenes](https://my.home-assistant.io/redirect/automations) > Blueprint name > Traces (top right) > Three dots (top right) > Download trace*
 
-        You can remove sensitive information by running [this script](https://github.com/etiennec78/Home-Automation/blob/master/.github/ISSUE_TEMPLATE/traces_redactor.py) with the following command : `python3 traces_redactor.py trace.json`
+        > [!WARNING]
+        > Your logs will likely contain GPS coordinates
+
+        > [!TIP]
+        > You can remove sensitive information by running [this script](https://github.com/etiennec78/Home-Automation/blob/master/.github/ISSUE_TEMPLATE/traces_redactor.py) with the following command : `python3 traces_redactor.py trace.json`
       placeholder: Drag and drop your traces
   - type: markdown
     attributes:
