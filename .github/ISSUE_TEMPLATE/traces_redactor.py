@@ -23,10 +23,8 @@ SENSITIVE_KEYS = {
         "message",
         "context_message",
         "trigger",
-        "driver_name",
         "confirmation",
-        "alarm_code"
-        "awaited_persons",
+        "for_each",
     },
 }
 
@@ -62,9 +60,10 @@ SENSITIVE_IDS = {
     "gps_trackers",
     "other_gps_to_wait_for",
     "drivers_near_gate",
+    "alarm_code",
+    "awaited_persons",
+    "driver_name",
 }
-
-SAVE_LOCATION = "trace_redacted.json"
 
 
 class Config:
@@ -91,6 +90,7 @@ class Redactor:
     redacted_ids = []
     config: Config
     sensitive_keys: list[str]
+    output_file: str | None
 
     def __init__(self, config: Config):
         """
@@ -101,6 +101,7 @@ class Redactor:
         """
         self.config = config
         self._set_sensitive_keys()
+        self.output_file = None
 
     def _set_sensitive_keys(self) -> None:
         """
@@ -170,41 +171,33 @@ class Redactor:
                     return json.load(f)
                 except json.decoder.JSONDecodeError:
                     f.seek(0)
-                    print(
-                        f"Error: the file '{input_file}' does not contain valid json"
-                    )
+                    print(f"Error: the file '{input_file}' does not contain valid json")
         except FileNotFoundError:
             print(f"Error: The file '{input_file}' does not exist")
         except IOError:
             print(f"Could not read the file '{input_file}'")
 
-    def save_trace(self, data: dict, output_file: str) -> None:
+    def save_trace(self, data: dict) -> None:
         """
         Saves redacted JSON data to a file.
 
         Args:
             data (dict): The redacted JSON data.
-            output_file (str): Path to the output JSON file.
         """
         try:
-            with open(output_file, "w", encoding="utf-8") as f:
+            with open(self.output_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
         except IOError:
-            print(f"Could not write to the file '{output_file}'")
+            print(f"Could not write to the file '{self.output_file}'")
 
-    def get_output_path(self, input_file: str) -> str:
+    def set_output_path(self, input_file: str) -> None:
         """Appends _redacted to the given file path
 
         Args:
             input_file (str): Path to the input JSON file.
-
-        Returns:
-            The path of the output JSON file.
         """
         path = Path(input_file)
-        output_file = path.parent / f"{path.stem}_redacted{path.suffix}"
-
-        return str(output_file)
+        self.output_file = path.parent / f"{path.stem}_redacted{path.suffix}"
 
     def redact_json_file(self, input_file: str) -> bool:
         """
@@ -212,7 +205,6 @@ class Redactor:
 
         Args:
             input_file (str): Path to the input JSON file.
-            output_file (str): Path to the output JSON file.
 
         Returns:
             bool: Whereas the file redacting was successfull
@@ -221,8 +213,8 @@ class Redactor:
             redacted = {
                 key: self.get_replacement(key, value) for key, value in data.items()
             }
-            output_file = self.get_output_path(input_file)
-            self.save_trace(redacted, output_file)
+            self.set_output_path(input_file)
+            self.save_trace(redacted)
 
             return True
 
@@ -349,7 +341,7 @@ if __name__ == "__main__":
     if file_location := args_manager.get_file_location():
         config = args_manager.get_config()
         redactor = Redactor(config)
-        if redactor.redact_json_file(file_location, SAVE_LOCATION):
+        if redactor.redact_json_file(file_location):
             print(
-                f"The file '{file_location}' has been successfuly redacted and saved in '{SAVE_LOCATION}'."
+                f"The file '{file_location}' has been successfuly redacted and saved in '{redactor.output_file}'."
             )
