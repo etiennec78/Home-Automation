@@ -3676,6 +3676,7 @@ actions:
                     wait_trigger_start: "{{ now() | as_timestamp }}"
                     wait_notif_reception: "{{ not ios_device and closing_behavior == 'timer' }}"
                     timer_reset_timestamp: null
+                    timer_notif_sent: false
                     timeouts:
                       closing_suggestion: !input suggest_closing_after
                       safety_delay: "{{ safety_delay * 60 }}"
@@ -3842,10 +3843,15 @@ actions:
                                       closing_behavior: "timer"
                                       timer_reset_timestamp: "{{ now() | as_timestamp }}"
                           - choose:
-                              - alias: If this is the first loop
+                              - alias: If this is the first loop or the behavior just switched to timer
                                 conditions:
                                   - condition: template
-                                    value_template: "{{ repeat.first }}"
+                                    value_template: >-
+                                      {{
+                                        repeat.first
+                                        or closing_behavior == 'timer'
+                                          and not timer_notif_sent
+                                      }}
                                 sequence:
                                   - alias: If the user is leaving
                                     if:
@@ -3918,6 +3924,9 @@ actions:
                                                     actions:
                                                       - "{{ canceling_action }}"
                                                       - "{{ closing_action }}"
+                                              - alias: Remember that the timer notification was sent
+                                                variables:
+                                                  timer_notif_sent: true
                                           - alias: If closing behavior is set to notification request
                                             conditions:
                                               - condition: template
