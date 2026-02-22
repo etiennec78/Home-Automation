@@ -762,7 +762,7 @@ variables:
         timer_opening: "Gate opening in {{timer_opening}}s 🔓"
         timer_closing: "Gate closing in {{timer_closing}}s 🔐"
         gate_reopening: "Gate reopening 🔓"
-        itinerary_canceled: "Itinerary canceled ❌"
+        itinerary_canceled: "Automatic Gate stopped ❌"
         awaiting: "Gate awaiting {awaited_persons} 💤"
         disabled: "Automatic Gate disabled 🚫"
         valid_config: "{{blueprint_name}}: Valid configuration 🛠️✅"
@@ -783,16 +783,18 @@ variables:
         automation_crashed: |-
           The previous blueprint instance of this driver seems to have crashed.
           Please report this issue on Github.
-        vehicle_stopped: "You have left your vehicle"
+        vehicle_stopped: "Your vehicle has been stopped"
         canceling_order: "You have pressed the cancel button"
         did_not_leave: "The vehicle did not leave in less than {{safety_delay}} minutes"
         did_not_arrive: "The vehicle did not arrive in less than {{safety_delay}} minutes"
         timed_out: "Your position has not been updated in {{timeout_delay}} minutes"
-        vehicle_away: "The vehicle is not in the activation zone"
+        vehicle_away: "The vehicle is no longer in the activation zone"
         travel_time_did_not_respond: "Your travel time integration did not respond during your itinerary"
         not_home: "You were not detected at home"
         location_not_confirmed: "Your location could not be confirmed"
-        got_no_gps_data: "Your phone is reachable, but is not sending back its location ! Check that the 'Single Accurate Location' sensor is enabled."
+        got_no_gps_data: |-
+          Your phone is reachable, but is not sending back its location !
+          Check that the 'Single Accurate Location' sensor is enabled
         gate_closed: "The gate has been closed manually"
         triggered_frequently: "The blueprint is being triggered repeatedly !"
         disabled_triggered_frequently: |-
@@ -807,28 +809,38 @@ variables:
         too_close: "You have started driving too close to the gate zone"
         valid_config: "Your configuration seems valid"
         more_info: "More info"
-        invalid_translations: "Your custom translations are not valid. Check the following keys: '{data}'. (#1)"
-        missing_ble_entities: "You have not entered any BLE scanners (#2)"
-        ble_not_used: "You have entered these BLE scanners: '{data}' but are not using them (#3)"
+        invalid_translations: |-
+          Your custom translations are not valid
+          Check the following keys: '{data}' (#1)
+        missing_ble_entities: "You have not entered any BLE tracker (#2)"
+        ble_not_used: "You have entered these BLE trackers: '{data}' but are not using them (#3)"
         missing_wifi_trackers: "You have not entered any Wi-Fi trackers (#4)"
         wifi_not_used: "You have entered these Wi-Fi trackers: '{data}' but are not using them (#5)"
         missing_gps_data: "These trackers/persons: '{data}' do not support GPS tracking (#6)"
-        ble_not_unknown: "These BLE trackers: '{data}' are currently not reporting an 'unknown' state. If you are currently near them, you can ignore this error. (#7)"
+        ble_not_unknown: |-
+          These BLE trackers: '{data}' are currently not reporting an 'unknown' state
+          If you are currently near them, you can ignore this error (#7)
         missing_travel_time_sensors: "Your opening method on arrival is set to 'Travel Time' but you have not provided enough travel time sensors (#8)"
         zone_too_large: "Your activation zone is too large for the 'Zone' arrival opening method (#9)"
         invalid_itinerary_sensor_length: "These itinerary sensors: '{data}' have a maximum length of less than 255 (#10)"
-        invalid_per_person_sensors: "You have not entered a consistent number of sensors in the per person sensor inputs (#11)"
+        invalid_per_person_sensors: "You have entered an inconsistent number of sensors in the per person sensor inputs (#11)"
         per_person_sensors_mismatch: "These persons: '{data}' appear to have mixed up per person sensors (#12)"
         no_gate_area: "You are using area BLE trackers: '{data}', but your gate has not been placed in an area (#13)"
         wifi_tracker_is_gps: "These trackers: '{data}' are GPS-based, not router-based (#14)"
         invalid_ibeacon_transmitter: "These iBeacon transmitters: '{data}' are invalid (#19)"
         no_compatible_gps_tracker: "The location of these persons: '{data}' cannot be requested because they do not have GPS trackers, or they come from a different mobile app than the notification device (#20)"
-        deprecated_translations: "Custom translations now use a yaml dictionnary instead of json. Please update your old config. (#21)"
-        update_polling_enabled: "These travel time sensors have an update polling enabled: '{data}'. Please disable it to avoid calling the API too often. (#22)"
+        deprecated_translations: |-
+          Custom translations now use a yaml dictionnary instead of json
+          Please update your old config (#21)
+        update_polling_enabled: |-
+          These travel time sensors have an update polling enabled: '{data}'
+          Please disable it to avoid calling the API too often (#22)
         quick_refresh_function: "Your travel time refresh function makes too many calls to the API: {data} for a 2-hour trip (#23)"
         tt_not_continuous_listen: "You have enabled GPS requests, but your travel time refresh is neither set to 'Continuously' nor 'Listen' (#24)"
-        notif_behavior_no_device: "You have set some gate behaviors to 'Notification request' or 'Cancelable timer', but some users are missing a notify device. These behaviors will be switched to 'Fully Automatic'. (#25)"
-        wrong_transmitter_entities: "These iBeacon transmitter entities: '{data}' do not come the associated notification device. (#26)"
+        notif_behavior_no_device: |-
+          You have set some gate behaviors to 'Notification request' or 'Cancelable timer', but some users are missing a notify device
+          These behaviors will be switched to 'Fully Automatic' (#25)
+        wrong_transmitter_entities: "These iBeacon transmitter entities: '{data}' do not come the associated notification device (#26)"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -841,7 +853,7 @@ variables:
         timer_opening: "Ouverture portail dans {{timer_opening}}s 🔓"
         timer_closing: "Fermeture portail dans {{timer_closing}}s 🔐"
         gate_reopening: "Réouverture portail 🔓"
-        itinerary_canceled: "Itinéraire annulé ❌"
+        itinerary_canceled: "Arrêt d'Automatic Gate ❌"
         awaiting: "Portail en attente de {awaited_persons} 💤"
         disabled: "Automatic Gate désactivé 🚫"
         valid_config: "{{blueprint_name}}: Configuration valide 🛠️✅"
@@ -867,11 +879,13 @@ variables:
         did_not_leave: "Le véhicule n'est pas sorti en moins de {{safety_delay}} minutes"
         did_not_arrive: "Le véhicule n'est pas arrivé en moins de {{safety_delay}} minutes"
         timed_out: "Votre position n'a pas été mise à jour ces {{timeout_delay}} dernières minutes"
-        vehicle_away: "Le véhicule n'est pas dans la zone d'ouverture"
+        vehicle_away: "Le véhicule n'est plus dans la zone d'ouverture"
         travel_time_did_not_respond: "Votre intégration de temps de trajet n'a pas renvoyé de valeur"
         not_home: "Le véhicule n'est pas à la maison"
         location_not_confirmed: "Votre localisation n'a pas pu être confirmée"
-        got_no_gps_data: "Votre téléphone est joignable, mais ne renvoie pas sa localisation ! Vérifiez que le capteur 'Emplacement précis unique' est activé."
+        got_no_gps_data: |-
+          Votre téléphone est joignable, mais ne renvoie pas sa localisation !
+          Vérifiez que le capteur 'Emplacement précis unique' est activé
         gate_closed: "Le portail a été fermé manuellement"
         triggered_frequently: "L'automatisation se déclenche à répétition !"
         disabled_triggered_frequently: |-
@@ -886,13 +900,17 @@ variables:
         too_close: "Vous avez démarré trop près de la zone du portail"
         valid_config: "Votre configuration semble valide"
         more_info: "Plus d'infos"
-        invalid_translations: "Vos traductions personnalisées ne sont pas valides. Vérifiez les valeurs suivantes: '{data}'. (#1)"
-        missing_ble_entities: "Vous n'avez pas entré de scanner BLE (#2)"
-        ble_not_used: "Vous avez entré ces scanners BLE: '{data}' mais ne les utilisez pas (#3)"
+        invalid_translations: |-
+          Vos traductions personnalisées ne sont pas valides
+          Vérifiez les valeurs suivantes: '{data}' (#1)
+        missing_ble_entities: "Vous n'avez pas entré de traceurs BLE (#2)"
+        ble_not_used: "Vous avez entré ces traceurs BLE: '{data}' mais ne les utilisez pas (#3)"
         missing_wifi_trackers: "Vous n'avez pas entré de traceurs Wi-Fi (#4)"
         wifi_not_used: "Vous avez entré ces traceurs Wi-Fi: '{data}' mais ne les utilisez pas (#5)"
-        missing_gps_data: "Ces traceurs/personnes: '{data}' ne prend pas en charge le suivi GPS (#6)"
-        ble_not_unknown: "Ces traceurs BLE: '{data}' sont actuellement dans un état différent de 'unknown'. Si vous vous trouvez actuellement à proximité, vous pouvez ignorer cette erreur. (#7)"
+        missing_gps_data: "Ces traceurs/personnes: '{data}' ne prennent pas en charge le suivi GPS (#6)"
+        ble_not_unknown: |-
+          Ces traceurs BLE: '{data}' sont actuellement dans un état différent de 'unknown'
+          Si vous vous trouvez actuellement à proximité, vous pouvez ignorer cette erreur (#7)
         missing_travel_time_sensors: "Votre méthode d'ouverture à l'arrvée est réglée sur 'Travel Time' mais vous n'avez pas fourni assez de capteurs de temps de trajet (#8)"
         zone_too_large: "Votre zone d'activation est trop grande pour la méthode d'ouverture à l'arrivée 'Zone' (#9)"
         invalid_itinerary_sensor_length: "Ces capteurs d'itinéraire: '{data}' ont une longueur maximale inférieure à 255 (#10)"
@@ -902,12 +920,18 @@ variables:
         wifi_tracker_is_gps: "Ces traceurs: '{data}' sont de type GPS au lieu de Routeur (#14)"
         invalid_ibeacon_transmitter: "Ces transmetteurs iBeacon: '{data}' sont invalides (#19)"
         no_compatible_gps_tracker: "La localisation de ces personnes: '{data}' ne pourra pas être rafraîchie car elles n'ont pas de traceurs gps, ou ils proviennent d'une application différente de celle de l'appareil de notification (#20)"
-        deprecated_translations: "Les traductions personnalisés utilisent maintenant un dictionnaire yaml au lieu de json. Mettez à jour votre configuration svp. (#21)"
-        update_polling_enabled: "Ces capteurs de temps de trajet sont mis à jour automatiquement: '{data}'. Veuillez désactiver les mise à jour automatiques afin d'éviter d'appeler l'API trop souvent. (#22)"
+        deprecated_translations: |-
+          Les traductions personnalisées utilisent maintenant un dictionnaire yaml au lieu de json
+          Mettez à jour votre configuration svp (#21)
+        update_polling_enabled: |-
+          Ces capteurs de temps de trajet sont mis à jour automatiquement: '{data}'
+          Veuillez désactiver les mise à jour automatiques afin d'éviter d'appeler l'API trop souvent (#22)
         quick_refresh_function: "Votre fonction d'actualisation du temps de trajet effectue trop d'appels à l'API: {data} pour un trajet de 2 heures (#23)"
         tt_not_continuous_listen: "Vous avez activé les requêtes GPS, mais votre rafraîchissement de temps de trajet n'est ni sur 'Continuously', ni 'Listen' (#24)"
-        notif_behavior_no_device: "Vous avez réglé certains comportements de portail sur 'Notification request' ou 'Cancelable timer', mais certains utilisateurs n'ont pas d'appareil de notification associé. Ces comportements basculeront sur le mode 'Fully Automatic'. (#25)"
-        wrong_transmitter_entities: "Ces transmetteurs iBeacon: '{data}' ne viennent pas de l'appareil de notifications associé. (#26)"
+        notif_behavior_no_device: |-
+          Vous avez réglé certains comportements de portail sur 'Notification request' ou 'Cancelable timer', mais certains utilisateurs n'ont pas d'appareil de notification associé
+          Ces comportements basculeront sur le mode 'Fully Automatic' (#25)
+        wrong_transmitter_entities: "Ces transmetteurs iBeacon: '{data}' ne viennent pas de l'appareil de notifications associé (#26)"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
