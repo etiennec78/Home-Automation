@@ -1,5 +1,11 @@
 # ESPHome Firmwares ⚙️
 
+## Description 📝
+
+ESPHome firmware for automating devices by connecting and flashing ESP boards
+
+## Content 📁
+
 | Firmware | Description | File |
 | :---: | :---: | :---: |
 | Gate ⛩️ | [Read More](ESPHome-Firmwares/Gate) | [File](ESPHome-Firmwares/Gate/gate.yaml) |

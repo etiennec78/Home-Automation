@@ -1,5 +1,11 @@
 # Blueprints 🛠️
 
+## Description 📝
+
+Home Assistant blueprints for easy home automation
+
+## Content 📁
+
 | Blueprint | Description | Quick install |
 | :---: | :---: | :---: |
 | Automatic Gate ⛩️ | [Read More](Automatic-Gate) | [![Quickly import Automatic Gate](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FBlueprints%2FAutomatic-Gate%2Fautomatic-gate.yaml) |
