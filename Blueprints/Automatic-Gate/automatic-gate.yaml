@@ -832,6 +832,7 @@ variables:
         quick_refresh_function: "Your travel time refresh function makes too many calls to the API: {data} for a 2-hour trip (#23)"
         tt_not_continuous_listen: "You have enabled GPS requests, but your travel time refresh is neither set to 'Continuously' nor 'Listen' (#24)"
         notif_behavior_no_device: "You have set some gate behaviors to 'Notification request' or 'Cancelable timer', but some users are missing a notify device. These behaviors will be switched to 'Fully Automatic'. (#25)"
+        wrong_transmitter_entities: "These iBeacon transmitter entities: '{data}' do not come the associated notification device. (#26)"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -910,6 +911,7 @@ variables:
         quick_refresh_function: "Votre fonction d'actualisation du temps de trajet effectue trop d'appels à l'API: {data} pour un trajet de 2 heures (#23)"
         tt_not_continuous_listen: "Vous avez activé les requêtes GPS, mais votre rafraîchissement de temps de trajet n'est ni sur 'Continuously', ni 'Listen' (#24)"
         notif_behavior_no_device: "Vous avez réglé certains comportements de portail sur 'Notification request' ou 'Cancelable timer', mais certains utilisateurs n'ont pas d'appareil de notification associé. Ces comportements basculeront sur le mode 'Fully Automatic'. (#25)"
+        wrong_transmitter_entities: "Ces transmetteurs iBeacon: '{data}' ne viennent pas de l'appareil de notifications associé. (#26)"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -1563,6 +1565,25 @@ actions:
                           {{ data.result }}
                         {% endif %}
                       message_id: "notif_behavior_no_device"
+                      level: 1
+                    - alias: Check that the transmitters come from the associated notification device
+                      error: >-
+                        {% set data = namespace(invalid=[]) %}
+                        {% for transmitter_idx in range(ble_transmitter_entities | length) %}
+                          {% set transmitter = ble_transmitter_entities[transmitter_idx] %}
+                          {%
+                            if (
+                              transmitter_idx < notify_devices | length
+                              and transmitter not in device_entities(
+                                notify_devices[transmitter_idx]
+                              )
+                            )
+                          %}
+                            {% set data.invalid = data.invalid + [transmitter] %}
+                          {% endif %}
+                        {% endfor %}
+                        {{ data.invalid }}
+                      message_id: "wrong_transmitter_entities"
                       level: 1
                   sequence:
                     - alias: If a check failed
