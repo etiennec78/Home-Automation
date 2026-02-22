@@ -3952,6 +3952,133 @@ actions:
                                 value_template: "{{ wait.trigger.id == 'vehicle_restarted' }}"
                             sequence:
                               - stop: Letting the new instance take over
+                - alias: If gate not closed manually
+                  if:
+                    - condition: template
+                      value_template: "{{ not wait.completed or wait.trigger.id != 'manual' }}"
+                  then:
+                    - alias: Update the last closed variable
+                      variables:
+                        update:
+                          last_closed: "{{ now() | as_timestamp | int }}"
+                          auto_closed: "{{ not wait.completed or wait.trigger.id != 'closing_order' }}"
+                        itinerary_value: "{{ itinerary_value | combine(update) }}"
+                    - alias: If gate closing is enabled
+                      if:
+                        - condition: template
+                          value_template: "{{ closing_behavior != 'off' }}"
+                      then:
+                        - alias: Get other drivers near the gate
+                          variables:
+                            drivers_near_gate: >-
+                              {% set data = namespace(drivers_near_gate=[]) %}
+                              {% for sensor_idx in range(itinerary_sensors | length) %}
+                                {% if sensor_idx != idx %}
+                                  {%
+                                    set value = (
+                                      states(
+                                        itinerary_sensors[sensor_idx]
+                                      )
+                                      | from_json(default_itinerary_sensor_value)
+                                    )
+                                  %}
+                                  {% if value.status in ['on_approach', 'leaving'] %}
+                                    {% if sensor_idx < persons | length %}
+                                      {% set name_sensor = persons[sensor_idx] %}
+                                    {% else %}
+                                      {% set name_sensor = itinerary_sensors[sensor_idx] %}
+                                    {% endif %}
+                                    {%
+                                      set data.drivers_near_gate = data.drivers_near_gate + [
+                                        state_attr(name_sensor, 'friendly_name')
+                                      ]
+                                    %}
+                                  {% endif %}
+                                {% endif %}
+                              {% endfor %}
+                              {{ data.drivers_near_gate }}
+                        - alias: If someone is currently approaching or leaving
+                          if:
+                            - condition: template
+                              value_template: "{{ drivers_near_gate != [] }}"
+                            - condition: template
+                              value_template: *gate_open
+                          then:
+                            - alias: Set notification ids
+                              variables:
+                                title_id: "awaiting"
+                                message_id: "awaiting"
+                            - alias: Get notification translation
+                              variables: *get_translation
+                            - alias: Format title with names of drivers near gate
+                              variables:
+                                title: >-
+                                  {{
+                                    title.format(
+                                      awaited_persons=(
+                                        drivers_near_gate | join(', ')
+                                      )
+                                    )
+                                  }}
+                            - alias: If a notify service exists
+                              if:
+                                - condition: template
+                                  value_template: "{{ notify_service is not none }}"
+                              then:
+                                - alias: Notify driver that gate will wait for next person
+                                  action: "{{ notify_service }}"
+                                  data:
+                                    title: "{{ title }}"
+                                    message: "{{ message }}"
+                                    data:
+                                      <<: *notification_data
+                                      notification_icon: mdi:sleep
+                                  continue_on_error: true
+                                - sequence: *tts
+                            - alias: Wait for manual gate closing
+                              wait_for_trigger:
+                                - alias: Manual closing
+                                  trigger: template
+                                  value_template: *all_gates_closed
+                            - alias: If a notify service exists
+                              if:
+                                - condition: template
+                                  value_template: "{{ notify_service is not none }}"
+                              then:
+                                - alias: Remove awaiting user notification
+                                  action: "{{ notify_service }}"
+                                  data: *clear_notification
+                                  continue_on_error: true
+                          else:
+                            - alias: If an error needs to be raised
+                              if:
+                                - condition: template
+                                  value_template: >-
+                                    {{
+                                      closing_behavior == 'auto'
+                                      and message_id is not none
+                                      and message_id != 'arrived'
+                                    }}
+                              then:
+                                - alias: Create error
+                                  sequence: *create_error
+                            - alias: Close all gates
+                              repeat:
+                                for_each: >-
+                                  {{
+                                    gate
+                                    | select('is_state', ['on', 'open', 'opening'])
+                                    | list
+                                  }}
+                                sequence:
+                                  - action: >-
+                                      {% if states[repeat.item].domain == 'switch' %}
+                                        switch.turn_off
+                                      {% elif states[repeat.item].domain == 'cover' %}
+                                        cover.close_cover
+                                      {% endif %}
+                                    target:
+                                      entity_id: "{{ repeat.item }}"
             - alias: If a notification needs to be cleared
               if:
                 - condition: template
@@ -3969,133 +4096,6 @@ actions:
                   action: "{{ notify_service }}"
                   data: *clear_notification
                   continue_on_error: true
-            - alias: If gate not closed manually
-              if:
-                - condition: template
-                  value_template: "{{ not wait.completed or wait.trigger.id != 'manual' }}"
-              then:
-                - alias: Update the last closed variable
-                  variables:
-                    update:
-                      last_closed: "{{ now() | as_timestamp | int }}"
-                      auto_closed: "{{ not wait.completed or wait.trigger.id != 'closing_order' }}"
-                    itinerary_value: "{{ itinerary_value | combine(update) }}"
-                - alias: If gate closing is enabled
-                  if:
-                    - condition: template
-                      value_template: "{{ closing_behavior != 'off' }}"
-                  then:
-                    - alias: Get other drivers near the gate
-                      variables:
-                        drivers_near_gate: >-
-                          {% set data = namespace(drivers_near_gate=[]) %}
-                          {% for sensor_idx in range(itinerary_sensors | length) %}
-                            {% if sensor_idx != idx %}
-                              {%
-                                set value = (
-                                  states(
-                                    itinerary_sensors[sensor_idx]
-                                  )
-                                  | from_json(default_itinerary_sensor_value)
-                                )
-                              %}
-                              {% if value.status in ['on_approach', 'leaving'] %}
-                                {% if sensor_idx < persons | length %}
-                                  {% set name_sensor = persons[sensor_idx] %}
-                                {% else %}
-                                  {% set name_sensor = itinerary_sensors[sensor_idx] %}
-                                {% endif %}
-                                {%
-                                  set data.drivers_near_gate = data.drivers_near_gate + [
-                                    state_attr(name_sensor, 'friendly_name')
-                                  ]
-                                %}
-                              {% endif %}
-                            {% endif %}
-                          {% endfor %}
-                          {{ data.drivers_near_gate }}
-                    - alias: If someone is currently approaching or leaving
-                      if:
-                        - condition: template
-                          value_template: "{{ drivers_near_gate != [] }}"
-                        - condition: template
-                          value_template: *gate_open
-                      then:
-                        - alias: Set notification ids
-                          variables:
-                            title_id: "awaiting"
-                            message_id: "awaiting"
-                        - alias: Get notification translation
-                          variables: *get_translation
-                        - alias: Format title with names of drivers near gate
-                          variables:
-                            title: >-
-                              {{
-                                title.format(
-                                  awaited_persons=(
-                                    drivers_near_gate | join(', ')
-                                  )
-                                )
-                              }}
-                        - alias: If a notify service exists
-                          if:
-                            - condition: template
-                              value_template: "{{ notify_service is not none }}"
-                          then:
-                            - alias: Notify driver that gate will wait for next person
-                              action: "{{ notify_service }}"
-                              data:
-                                title: "{{ title }}"
-                                message: "{{ message }}"
-                                data:
-                                  <<: *notification_data
-                                  notification_icon: mdi:sleep
-                              continue_on_error: true
-                            - sequence: *tts
-                        - alias: Wait for manual gate closing
-                          wait_for_trigger:
-                            - alias: Manual closing
-                              trigger: template
-                              value_template: *all_gates_closed
-                        - alias: If a notify service exists
-                          if:
-                            - condition: template
-                              value_template: "{{ notify_service is not none }}"
-                          then:
-                            - alias: Remove awaiting user notification
-                              action: "{{ notify_service }}"
-                              data: *clear_notification
-                              continue_on_error: true
-                      else:
-                        - alias: If an error needs to be raised
-                          if:
-                            - condition: template
-                              value_template: >-
-                                {{
-                                  closing_behavior == 'auto'
-                                  and message_id is not none
-                                  and message_id != 'arrived'
-                                }}
-                          then:
-                            - alias: Create error
-                              sequence: *create_error
-                        - alias: Close all gates
-                          repeat:
-                            for_each: >-
-                              {{
-                                gate
-                                | select('is_state', ['on', 'open', 'opening'])
-                                | list
-                              }}
-                            sequence:
-                              - action: >-
-                                  {% if states[repeat.item].domain == 'switch' %}
-                                    switch.turn_off
-                                  {% elif states[repeat.item].domain == 'cover' %}
-                                    cover.close_cover
-                                  {% endif %}
-                                target:
-                                  entity_id: "{{ repeat.item }}"
             - alias: If the driver is leaving or has arrived home
               if:
                 - condition: or
