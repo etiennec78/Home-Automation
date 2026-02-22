@@ -72,8 +72,7 @@ Less frequent location updates can impact ETA accuracy
 
   To make this work, you need to enable the "Single accurate location" sensor : Settings > Companion app > Manage sensors > Single accurate location ✔
 
-  > [!TIP]
-  > If high precision mode does not trigger, please increase its range or check its conditions
+  > 💡 Tip: If high precision mode does not trigger, please increase its range or check its conditions
 
 </details>
 
