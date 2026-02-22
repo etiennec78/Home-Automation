@@ -106,7 +106,10 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
 | Smart vehicle 🌐 | ✅ | ❓ | - |
 
 <details>
-  <summary><h4>Option 1: Android Bluetooth 🍏🛜</h4></summary>
+  <summary><h4>Option 1: Bluetooth 🛜</h4></summary>
+  
+  <details>
+    <summary><h4>Android 🍏</h4></summary>
 
   ### Setup 🛠️
 
@@ -130,10 +133,10 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
   * `sensor.user0_bluetooth_connection` is your Bluetooth companion app sensor
   * `connected_paired_devices` needs to be left untouched
 
-</details>
+  </details>
 
-<details>
-  <summary><h4>Option 2: iOS Bluetooth 🍎🛜</h4></summary>
+  <details>
+    <summary><h4>iOS🍎</h4></summary>
 
   #### Setup 🛠️
 
@@ -155,19 +158,23 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
   16. Repeat steps 8-16 but set the trigger to `When: Is Disconnected` and the blueprint to `Car Disconnection`
   17. Execute both blueprints once to select your Home Assistant server
 
+  </details>
 </details>
 
 <details>
-  <summary><h4>Option 3: Android Auto 🍏🔌</h4></summary>
+  <summary><h4>Option 2: Android Auto/CarPlay 🔌</h4></summary>
+
+  <details>
+    <summary><h4>Android Auto 🍏</h4></summary>
 
   #### Setup 🛠️
 
   * Install through the [companion app](https://companion.home-assistant.io/docs/core/sensors#android-auto) settings: Settings > Companion app > Manage sensors > Android Auto ✔
 
-</details>
+  </details>
 
-<details>
-  <summary><h4>Option 4: Apple CarPlay 🍎🔌</h4></summary>
+  <details>
+    <summary><h4>Apple CarPlay 🍎</h4></summary>
 
   #### Setup 🛠️
 
@@ -187,16 +194,20 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
   14. Repeat steps 8-13 but set the trigger to `When: Disconnects` and the blueprint to `Car Disconnection`
   15. Execute both blueprints once to select your Home Assistant server
 
+  </details>
 </details>
 
 <details>
-  <summary><h4>Option 5: Cycling (Android) 🍏🚲</h4></summary>
-  
+  <summary><h4>Option 3: Cycling 🚲</h4></summary>
+
   It is recommended to use a travel time supporting cycling mode, or a BLE tracker
   
   Both opening and closing behaviors on departure should be disabled, as cycling sensors are not reliable
   
   If you are using this blueprint both for cycling and for your vehicles, please use 2 distinct automations running this blueprint, and don't forget to share all of your itinerary sensors in both
+  
+  <details>
+    <summary><h4>Android 🍏</h4></summary>
 
   #### Setup 🛠️
 
@@ -216,16 +227,10 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
 
   > Replace `sensor.user0_detected_activity` with your own sensor entity id, and change `80` if the confidence is too high and the condition is never triggered
 
-</details>
+  </details>
 
-<details>
-  <summary><h4>Option 6: Cycling (iOS) 🍎🚲</h4></summary>
-  
-  It is recommended to use a travel time supporting cycling mode, or a BLE tracker
-  
-  Both opening and closing behaviors on departure should be disabled, as cycling sensors are not reliable
-  
-  If you are using this blueprint both for cycling and for your vehicles, please use 2 distinct automations running this blueprint, and don't forget to share all of your itinerary sensors in both
+  <details>
+    <summary><h4>iOS 🍎</h4></summary>
 
   #### Setup 🛠️
 
@@ -245,17 +250,18 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
 
   > Replace `sensor.user0_detected_activity` with your own sensor entity id, and change `High` to Medium or Low if the confidence is too high and the condition is never triggered
   
+  </details>
 </details>
 
 <details>
-  <summary><h4>Option 7: Smart vehicle 🌐</h4></summary>
+  <summary><h4>Option 4: Smart vehicle 🌐</h4></summary>
 
   Some Home Assistant vehicle integrations or add-ons create a binary_sensor that reports when your vehicle is being driven
 
 </details>
 
 <details>
-  <summary><h4>Combining these sensors 🔗</h4></summary>
+  <summary><h4>Combining sensors 🔗</h4></summary>
 
   If some users have multiple vehicles, you can merge all sensors into one with this template.
   
