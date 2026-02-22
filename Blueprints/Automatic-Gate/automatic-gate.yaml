@@ -13,29 +13,29 @@ blueprint:
     <details>
       <summary><h2>Key Features 🌟</h2></summary>
 
-      * **Multi-User Support**: Manages up to 10 drivers simultaneously 🚗
-      * **Broad Compatibility**: This blueprint is compatible with most vehicles and most travel time providers (Waze, Here, smart vehicles) 🔗
-      * **Notification Translations**: This blueprint ships with built-in and custom translations 🌍
-      * **Security & Reliability**:
-        * Precise ETA calculations to have your gate fully open exactly when you arrive home 🎯
-        * Vehicle status monitoring to cancel the itinerary and close the gate if you stop your vehicle or pass by without entering ✋
-        * Collision prevention to ensure the gate doesn't close on anyone arriving or leaving at the same time 🚧
-        * Built-in timeouts in case of an internet loss ⏳
-        * Maximum entry and leaving time before auto-closing ⌛
-        * Custom forbidden zones to cancel the itinerary when entered ⛔
-        * Notification alerts at each decision of the automation 🚨
-      * **Customizable Settings**:
-        * Open/Close the gate
-          * Automatically 🧠
-          * By asking for a confirmation ✅
-          * By starting a cancellable timer ⏱️
-        * Customizable gate operation timings 🛠️
-        * Customizable travel time refresh rate 🔁
-        * Read notifications aloud on Android 🗣️
-        * Multiple gate support ⛩️
-        * Open/Close with BLE trackers 📡
-      * House locks and alarm support 🔐
-        * Avoid opening when parked near house 🅿️
+    * **Multi-User Support**: Manages up to 10 drivers simultaneously 🚗
+    * **Broad Compatibility**: This blueprint is compatible with most vehicles and most travel time providers (Waze, Here, smart vehicles) 🔗
+    * **Notification Translations**: This blueprint ships with built-in and custom translations 🌍
+    * **Security & Reliability**:
+      * Precise ETA calculations to have your gate fully open exactly when you arrive home 🎯
+      * Vehicle status monitoring to cancel the itinerary and close the gate if you stop your vehicle or pass by without entering ✋
+      * Collision prevention to ensure the gate doesn't close on anyone arriving or leaving at the same time 🚧
+      * Built-in timeouts in case of an internet loss ⏳
+      * Maximum entry and leaving time before auto-closing ⌛
+      * Custom forbidden zones to cancel the itinerary when entered ⛔
+      * Notification alerts at each decision of the automation 🚨
+    * **Customizable Settings**:
+      * Open/Close the gate
+        * Automatically 🧠
+        * By asking for a confirmation ✅
+        * By starting a cancellable timer ⏱️
+      * Customizable gate operation timings 🛠️
+      * Customizable travel time refresh rate 🔁
+      * Read notifications aloud on Android 🗣️
+      * Multiple gate support ⛩️
+      * Open/Close with BLE trackers 📡
+    * House locks and alarm support 🔐
+      * Avoid opening when parked near house 🅿️
 
     </details>
 
