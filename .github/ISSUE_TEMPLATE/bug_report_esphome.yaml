@@ -1,0 +1,62 @@
+name: 🪲 Bug report - ESPHome firmware
+about: Report an issue with an ESPHome firmware of this repository to help me find a fix
+labels: bug
+assignees: etiennec78
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Bug description 🪲
+  - type: textarea
+    validations:
+      required: true
+    attributes:
+      label: Describe the bug
+      description: |
+        Provide a clear and concise description of what the problem is
+  - type: textarea
+    attributes:
+      label: Expected behavior
+      description: |
+        Provide a clear and concise description of what you expected to happen
+  - type: markdown
+    attributes:
+      value: |
+        ## Logs 📜
+  - type: textarea
+    attributes:
+      label: Blueprint traces
+      description: |
+        You can stream your logs by running `esphome logs file.yaml`.
+        Please attach them as a text file.
+      placeholder: Drag and drop your logs file
+  - type: markdown
+    attributes:
+      value: |
+        ## Environment ⚙️
+  - type: input
+    id: esphome-version
+    validations:
+      required: true
+    attributes:
+      label: What version of ESPHome are you running ?
+      description: |
+        Can be found by running `esphome --version`
+  - type: input
+    id: ha-version
+    validations:
+      required: true
+    attributes:
+      label: What version of Home Assistant are you running ?
+      placeholder: core-
+      description: |
+        Can be found in: [Settings > System > Repairs > Three dots at top right > System information](https://my.home-assistant.io/redirect/system_health/).
+  - type: markdown
+    attributes:
+      value: |
+        ## Additional information ➕
+  - type: textarea
+    attributes:
+      label: Additional information
+      description: |
+        Add any other context about the problem here
