@@ -44,7 +44,7 @@ Less frequent location updates can impact ETA accuracy
 ❓: Depending on vehicle model
 
 <details>
-  <summary><h4>Option 1: Android or iPhone 📱</h4></summary>
+  <summary><h4>Android 🍏</h4></summary>
 
   #### Setup 🛠️
 
@@ -78,7 +78,14 @@ Less frequent location updates can impact ETA accuracy
 </details>
 
 <details>
-  <summary><h4>Option 2: Smart vehicle 🌐</h4></summary>
+  <summary><h4>iOS 🍎</h4></summary>
+
+  You can use the [companion app](https://companion.home-assistant.io/docs/core/location/), or the [icloud3 integration](https://github.com/gcobb321/icloud3), or anything else that tracks your phone location
+  
+</details>
+
+<details>
+  <summary><h4>Smart vehicle 🌐</h4></summary>
 
   Some Home Assistant vehicle integrations or add-ons create a device_tracker that can be used to track your vehicle GPS location
 
