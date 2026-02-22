@@ -80,7 +80,7 @@ blueprint:
           description: |-
             Sensor that provides gate error messages
             > *Only needed for error notification type*
-          default: []
+          default: ""
           selector:
             entity:
               domain: sensor
