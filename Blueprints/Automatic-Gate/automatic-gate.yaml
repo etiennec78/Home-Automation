@@ -4281,9 +4281,9 @@ actions:
                             value_template: "{{ wait.trigger.id == 'vehicle_stopped' }}"
                         then:
                           - stop: Arrived to destination
-            - alias: Mark the automation as not failed
-              variables:
-                errored: false
+      - alias: Mark the automation as not failed
+        variables:
+          errored: false
     continue_on_error: true
   - alias: Only continue if the automation errored out
     condition: template
