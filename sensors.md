@@ -44,7 +44,7 @@ Less frequent location updates can impact ETA accuracy
 ❓: Depending on vehicle model
 
 <details>
-  <summary>Option 1: Android or iPhone 📱</summary>
+  <summary><h4>Option 1: Android or iPhone 📱</h4></summary>
 
   #### Setup 🛠️
 
@@ -78,7 +78,7 @@ Less frequent location updates can impact ETA accuracy
 </details>
 
 <details>
-  <summary>Option 2: Smart vehicle 🌐</summary>
+  <summary><h4>Option 2: Smart vehicle 🌐</h4></summary>
 
   Some Home Assistant vehicle integrations or add-ons create a device_tracker that can be used to track your vehicle GPS location
 
@@ -106,7 +106,7 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
 | Smart vehicle 🌐 | ✅ | ❓ | - |
 
 <details>
-  <summary>Option 1: Android Bluetooth 🍏🛜</summary>
+  <summary><h4>Option 1: Android Bluetooth 🍏🛜</h4></summary>
 
   ### Setup 🛠️
 
@@ -133,7 +133,7 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
 </details>
 
 <details>
-  <summary>Option 2: iOS Bluetooth 🍎🛜</summary>
+  <summary><h4>Option 2: iOS Bluetooth 🍎🛜</h4></summary>
 
   #### Setup 🛠️
 
@@ -158,7 +158,7 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
 </details>
 
 <details>
-  <summary>Option 3: Android Auto 🍏🔌</summary>
+  <summary><h4>Option 3: Android Auto 🍏🔌</h4></summary>
 
   #### Setup 🛠️
 
@@ -167,7 +167,7 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
 </details>
 
 <details>
-  <summary>Option 4: Apple CarPlay 🍎🔌</summary>
+  <summary><h4>Option 4: Apple CarPlay 🍎🔌</h4></summary>
 
   #### Setup 🛠️
 
@@ -190,7 +190,7 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
 </details>
 
 <details>
-  <summary>Option 5: Cycling (Android) 🍏🚲</summary>
+  <summary><h4>Option 5: Cycling (Android) 🍏🚲</h4></summary>
   
   It is recommended to use a travel time supporting cycling mode, or a BLE tracker
   
@@ -219,7 +219,7 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
 </details>
 
 <details>
-  <summary>Option 6: Cycling (iOS) 🍎🚲</summary>
+  <summary><h4>Option 6: Cycling (iOS) 🍎🚲</h4></summary>
   
   It is recommended to use a travel time supporting cycling mode, or a BLE tracker
   
@@ -248,14 +248,14 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
 </details>
 
 <details>
-  <summary>Option 7: Smart vehicle 🌐</summary>
+  <summary><h4>Option 7: Smart vehicle 🌐</h4></summary>
 
   Some Home Assistant vehicle integrations or add-ons create a binary_sensor that reports when your vehicle is being driven
 
 </details>
 
 <details>
-  <summary>Combining these sensors 🔗</summary>
+  <summary><h4>Combining these sensors 🔗</h4></summary>
 
   If some users have multiple vehicles, you can merge all sensors into one with this template.
   
@@ -305,7 +305,7 @@ Each travel time sensor monitoring each user's time left before arrival
 > Please note that I am not responsible for any charges incurred by travel time services
 
 <details>
-  <summary>Option 1: Here Travel Time 🚘</summary>
+  <summary><h4>Option 1: Here Travel Time 🚘</h4></summary>
 
   #### Setup 🛠️
 
@@ -326,7 +326,7 @@ Each travel time sensor monitoring each user's time left before arrival
 </details>
 
 <details>
-  <summary>Option 2: Google Travel Time 🚘</summary>
+  <summary><h4>Option 2: Google Travel Time 🚘</h4></summary>
 
   #### Setup 🛠️
 
@@ -345,7 +345,7 @@ Each travel time sensor monitoring each user's time left before arrival
 </details>
 
 <details>
-  <summary>Option 3: Waze Travel Time 🚘</summary>
+  <summary><h4>Option 3: Waze Travel Time 🚘</h4></summary>
 
   Please note that Waze is not reliable and could fail to fetch new travel times
 
@@ -368,7 +368,7 @@ Each travel time sensor monitoring each user's time left before arrival
 </details>
 
 <details>
-  <summary>Option 4: Smart vehicle 🌐</summary>
+  <summary><h4>Option 4: Smart vehicle 🌐</h4></summary>
 
   Some Home Assistant vehicle integrations or add-ons create a sensor that reports your remaining travel time
 
@@ -402,7 +402,7 @@ Each input text helper stores user itinerary states and serves as a trigger for 
 #### Data stored 💾
 
 <details>
-  <summary>Sensor JSON structure 🏗️</summary>
+  <summary><h5>Sensor JSON structure 🏗️</h5></summary>
 
 | Key | Value |
 | :---: | :---: |
@@ -415,7 +415,7 @@ Each input text helper stores user itinerary states and serves as a trigger for 
 </details>
 
 <details>
-  <summary>Possible status ℹ️</summary>
+  <summary><h5>Possible status ℹ️</h5></summary>
 
 | State | Meaning |
 | :---: | :---: |
@@ -427,7 +427,7 @@ Each input text helper stores user itinerary states and serves as a trigger for 
 </details>
 
 <details>
-  <summary>Possible errors 🚨</summary>
+  <summary><h5>Possible errors 🚨</h5></summary>
 
 | Error | Meaning |
 | :---: | :---: |
@@ -453,9 +453,9 @@ Each input text helper stores user itinerary states and serves as a trigger for 
 </details>
 
 <details>
-  <summary>Automation examples 🔗</summary>
+  <summary><h5>Automation examples 🔗</h5></summary>
 
-  ##### Template code to retrieve itinerary sensor data
+  ###### Template code to retrieve itinerary sensor data
 
   ```jinja2
   {# EDIT THESE LINES #}
