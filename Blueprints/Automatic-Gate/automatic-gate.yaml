@@ -7,12 +7,14 @@ blueprint:
     # Automatic Gate ⛩️
 
     ## Description 📝
-    Modular and secure gate automation that opens and closes your gate upon leaving or arriving
-    Makes managing your gate while driving easier: You won't ever have to use your remote again
+    Modular and secure gate automation that opens and closes your gate when you leave or arrive
+    Makes managing your gate while driving easier: You won't ever have to use your remote again!
 
-    ## Key Features 🌟
+    <details>
+      <summary><h2>Key Features 🌟</h2></summary>
+
     * **Multi-User Support**: Manages up to 10 drivers simultaneously 🚗
-    * **Broad Compatibility**: This blueprint is compatible with most vehicles, travel time providers (Waze, Here, smart vehicles) and even bikes 🔗
+    * **Broad Compatibility**: This blueprint is compatible with most vehicles and most travel time providers (Waze, Here, smart vehicles) 🔗
     * **Notification Translations**: This blueprint ships with built-in and custom translations 🌍
     * **Security & Reliability**:
       * Precise ETA calculations to have your gate fully open exactly when you arrive home 🎯
@@ -32,8 +34,10 @@ blueprint:
       * Read notifications aloud on Android 🗣️
       * Multiple gate support ⛩️
       * Open/Close with BLE trackers 📡
-      * House locks and alarm support 🔐
+    * House locks and alarm support 🔐
       * Avoid opening when parked near house 🅿️
+
+    </details>
 
     ## More info ℹ️
     * Version: 2.0.0
@@ -50,8 +54,8 @@ blueprint:
       collapsed: true
       input:
         gate:
-          name: ⛩️ Gate
-          description: The **switch** or **cover** which controls your **[gate](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#gate-%EF%B8%8F)**
+          name: ⛩️ Gates
+          description: The **switch** or **cover** that controls your **[gate](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#gate-%EF%B8%8F)**
           selector:
             entity:
               multiple: true
@@ -61,7 +65,9 @@ blueprint:
                   - cover
         gate_location:
           name: 📍 Gate location
-          description: The zone where your gate is located, to detect whether you are leaving or arriving
+          description: |-
+            The zone where your gate is located
+            Used to detect whether you are leaving or arriving
           default: "zone.home"
           selector:
             entity:
@@ -70,7 +76,7 @@ blueprint:
         arrival_opening_method:
           name: 🔓 Gate opening method on arrival
           description: |-
-            The sensor you want to use do detect your arrival and open your gate
+            Which method should be used to detect your arrival and open the gate
           default: "time"
           selector:
             select:
@@ -81,31 +87,43 @@ blueprint:
                   value: ble
                 - label: Zone (not recommended)
                   value: zone
+        activation_zone:
+          name: 🔒 Gate activation zone
+          description: |-
+            At what **distance** from the gate should the automation start estimating when to **open the gate**?
+            > *The gate will **close** if you **leave** this zone*
+          default: 500
+          selector:
+            number:
+              min: 150
+              max: 5000
+              unit_of_measurement: m
         lead_time:
           name: 🕓 Lead time
-          description: The **lead time** to open the gate **before your arrival** (take your gate movement time & a margin into account)
+          description: |-
+            Time (in seconds) to open the gate **before you arrive**
+            Include the gate movement time + a safety margin
           default: 75
           selector:
             number:
               min: 10
               max: 300
-              unit_of_measurement: seconds
+              unit_of_measurement: s
 
     per_person_sensors:
       name: Per person sensors
       icon: mdi:account-multiple
       collapsed: true
       description: |-
-        ⚠️ Please enter the same number of entries in each input (unless otherwise specified) and place users in the same order
+        ⚠️ Please enter the same number of items in each input (unless otherwise specified), and keep users in the same order
       input:
         persons:
           name: 👤 Persons / GPS trackers
           description: |-
-            Each **user** which should be **[tracked](https://github.com/etiennec78/Home-Automation/blob/master/sensors.gps-location-trackers--persons-)** for **position updates**
-            *Notes :*
-            *⚠️ Use high precision while driving in your ETA zone or you could time out*
-            *If your tracker has report latency (wifi/ble), and you plug Android Auto just after leaving, your gate could open thinking you are still there*
-            *You can only enter one device tracker for multiple users if it is provided by your vehicle*
+            Each **user** to **[track](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#gps-location-trackers--persons-)** for **location updates**
+            > *It is advised to configure [High Accuracy Mode](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#android-) on Android*
+
+            > *You can enter only one device tracker for multiple users if it is provided by your vehicle*
           selector:
             entity:
               multiple: true
@@ -115,7 +133,7 @@ blueprint:
                   - person
         driving_sensors:
           name: 🚗 Driving sensors
-          description: Each **[driving sensor](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#driving-sensors-)** which should trigger the automation
+          description: Each **[driving sensor](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#driving-sensors-)** that should trigger the automation
           selector:
             entity:
               multiple: true
@@ -126,9 +144,9 @@ blueprint:
         travel_time_sensors:
           name: ✈️ Travel time sensors
           description: |-
-            Each **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#travel-time-sensors-%EF%B8%8F)** per person/trackers, monitoring their **time left before arrival**
-            *⚠️ Please set a [custom polling interval](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval) if using an external service (Waze, Maps, Here, ...)*
-            *Note: Optional if open when connected to BLE is true*
+            One **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#travel-time-sensors-%EF%B8%8F)** per person/tracker
+            It should provide the **remaining time before arrival**
+            > *Optional if open when connected to BLE is true*
           default: []
           selector:
             entity:
@@ -142,9 +160,9 @@ blueprint:
           name: 💬 Notify devices
           description: |-
             Each [**device** to **notify**](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#notify-services-)
-            *Notes:*
-            *Optional but highly recommended*
-            *If the driver does not have a notify devices, gate behaviors will be limited to fully auto or disabled*
+            > *Optional but highly recommended*
+
+            > *If a driver does not have a notify device, gate behaviors will be limited to 'Fully automatic' and 'Disabled'*
           default: []
           selector:
             device:
@@ -154,44 +172,32 @@ blueprint:
         itinerary_sensors:
           name: 🗺️ Itinerary sensors
           description: |-
-            Each empty **[itinerary input text](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#itinerary-sensors-%EF%B8%8F)** helper to store each user **itinerary state**
-            *Note: You can use these sensors to sync multiple instances of the Automatic Gate with different configurations by adding sensors from the others at the end of this list*
+            One empty **[itinerary input_text](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#itinerary-sensors-%EF%B8%8F)** helper per user, to store their **itinerary state**
+            > ⚠️ The maximum length must be set to 255
+
+            > 💡 You can sync multiple instances of Automatic Gate by appending sensors from the other instances to the end of this list
           selector:
             entity:
               multiple: true
               filter:
                 domain: input_text
 
-    travel_time_settings:
-      name: Travel time settings
+    refresh_rate:
+      name: Refresh rate
       icon: mdi:timer
       collapsed: true
       input:
-        activation_zone:
-          name: 🔒 Gate activation zone
-          description: |-
-            At which **distance** from the gate should the automation start estimating when to **open your gate** ?
-            Note: It will automatically **close** if you **leave** this zone
-          default: 500
-          selector:
-            number:
-              min: 150
-              max: 5000
-              unit_of_measurement: meters
         travel_time_rate:
           name: 🔄 Travel time refresh rate
           description: |-
-            Calculate the Travel time & ETA
+            Calculate the remaining travel time
 
-              - **Continuously** during the whole itinerary (custom refresh interval while away)
-              - Only while the vehicle is **near home**
-              - Only **once** when the vehicle gets near home
-              - Listen to **external** sensor updates
+            - **Continuously**: can be useful to show an ETA on your dashboard
+            - **While near home**: is the default
+            - **Once when near home**: calls the API once, but it can trigger if you come near your gate without entering
+            - **Listen for updates**: is for vehicles that provide their own travel time sensor
 
-            **"Continuously"** can use more Waze/Maps credits, but can be useful to display a precise ETA on your dashboard when far from your destination
-            **"While near home"** allows to monitor if you drive near your gate without entering to abort the itinerary, or if there are traffic jams near home to open later (recommended)
-            **"Only once"** uses the less amount of credits, but could trigger if you come near your gate without entering (not recommended)
-            **"Listen for updates"** is made for vehicles providing their own travel time sensor. Do not use with an external travel time provider (e.g: Waze, Maps, Here)
+            > ⚠️ Travel time sensor [polling](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval) should be disabled if not using 'Listen for updates'
           default: "near-home"
           selector:
             select:
@@ -205,10 +211,10 @@ blueprint:
                 - label: Listen for updates
                   value: "listen"
         refresh_function:
-          name: ⏳ Refresh function
+          name: ⏳ Travel time refresh function
           description: |-
-            Your travel time **refresh function** to get the delay between two travel time API calls, while taking into account the remaining time
-            *Note: Only active with a refresh rate set to **"Continuously"** or **"While near home"***
+            Template that returns the delay between two travel time API calls
+            > *Only active with a refresh rate set to **'Continuously'** or **'While near home'***
           default: |-
             {{
               max(seconds_before_opening / 5, 5)
@@ -218,35 +224,33 @@ blueprint:
           selector:
             template:
         pause_refresh_driving_away:
-          name: ⏸️ Pause refresh while driving away
-          description: Stop calling the travel time API while the distance of the user from the activation zone is increasing
+          name: ⏸️ Pause travel time refresh while driving away
+          description: Stop calling the travel time API while the user is moving away from the activation zone
           default: true
           selector:
             boolean:
         request_gps_location:
-          name: 🛰️ Request gps location
+          name: 🛰️ Request GPS location
           description: |-
-            Send a request to your phone when its location is outdated (based on the travel time sensor)
+            Request an updated phone location when the current location is outdated (based on the travel time sensor)
 
-            > [!NOTE]
             > If you are using an Android phone, please consider using the [High Accuracy Mode](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#settings-) instead
 
-            > [!WARNING]
-            > GPS needs the [Single accurate location](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#extra-requesting-manual-gps-updates-) sensor turned on in the companion app
+            > ⚠️ GPS requests need the [Single accurate location](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#extra-requesting-manual-gps-updates-) sensor turned on in the companion app
           default: false
           selector:
             boolean:
         gps_request_refresh_function:
           name: ⏳ GPS request refresh function
           description: |-
-            Your GPS request **refresh function** to get the delay between two GPS requests, while taking into account the remaining time
+            Template that returns the delay between two GPS requests, taking the remaining time into account
           default: "{{ max(seconds_before_opening / 3, 5) }}"
           selector:
             template:
         gps_outdated_function:
           name: ⌛ GPS outdated function
           description: |-
-            The function to get the timeframe after which the GPS will be considered outdated and a request will be made to update it
+            Template that returns the age after which GPS is considered outdated, and a refresh request is sent
           default: "{{ max(seconds_before_opening / 10, 5) }}"
           selector:
             template:
@@ -255,16 +259,17 @@ blueprint:
       name: Gate behavior
       icon: mdi:brain
       collapsed: true
+      description: |-
+        Available gate behaviors:
+        - **Fully automatic**: Your gate opens/closes by itself
+        - **Cancelable timer**: A notification with a cancelable timer is sent before opening/closing
+        - **Notification request**: An actionable notification is sent to open/close
+        - **Disabled**: Your gate will not open/close
       input:
         departure_opening_behavior:
           name: 🛫🔓 Departure opening behavior
           description: |-
             Automatic gate **opening** behavior on **departure**
-
-              - **Fully automatic** : Your gate will automatically open
-              - **Cancelable timer** : A notification of a cancelable timer will be sent before opening your gate
-              - **Notification request** : An actionable notification will be sent to open your gate
-              - **Disabled** : Your gate will stay closed
           default: "auto"
           selector:
             select:
@@ -280,12 +285,7 @@ blueprint:
         departure_closing_behavior:
           name: 🛫🔐 Departure closing behavior
           description: |-
-            Automatic gate **closing** behavior on **arrival**
-
-              - **Fully automatic** : Your gate will automatically close
-              - **Cancelable timer** : A notification of a cancelable timer will be sent before opening your gate
-              - **Notification request** : An actionable notification will be sent to close your gate
-              - **Disabled** : Your gate won't close automatically
+            Automatic gate **closing** behavior on **departure**
           default: "notif"
           selector:
             select:
@@ -298,24 +298,10 @@ blueprint:
                   value: "notif"
                 - label: Disabled
                   value: "off"
-        suggest_closing_after:
-          name: 🔐 Suggest closing after
-          description: The time the gate will wait before **suggesting to close** on departure if you are using a **notification request** but don't have a sensor to detect your absence
-          default: 120
-          selector:
-            number:
-              min: 1
-              max: 600
-              unit_of_measurement: seconds
         arrival_opening_behavior:
           name: 🛬🔓 Arrival opening behavior
           description: |-
             Gate automatic **opening** behavior on **arrival**
-
-              - **Fully automatic** : Your gate will automatically open
-              - **Cancelable timer** : A notification of a cancelable timer will be sent before opening your gate
-              - **Notification request** : An actionable notification will be sent to open your gate
-              - **Disabled** : Your gate will stay closed
           default: "auto"
           selector:
             select:
@@ -332,11 +318,6 @@ blueprint:
           name: 🛬🔐 Arrival closing behavior
           description: |-
             Gate automatic **closing** behavior on **arrival**
-
-              - **Fully automatic** : Your gate will automatically close
-              - **Cancelable timer** : A notification of a cancelable timer will be sent before opening your gate
-              - **Notification request** : An actionable notification will be sent to close your gate
-              - **Disabled** : Your gate won't close automatically
           default: "auto"
           selector:
             select:
@@ -351,26 +332,35 @@ blueprint:
                   value: "off"
         timer_opening:
           name: ⏱️🔓 Cancelable timer time for opening
-          description: The time before the gate automatically opens in "cancelable timer" mode without your input
+          description: Delay before the gate opens automatically in 'cancelable timer' mode (if you don't cancel)
           default: 5
           selector:
             number:
               min: 1
               max: 20
-              unit_of_measurement: seconds
+              unit_of_measurement: s
         timer_closing:
           name: ⏱️🔐 Cancelable timer time for closing
-          description: The time before the gate automatically closes in "cancelable timer" mode without your input
+          description: Delay before the gate closes automatically in 'cancelable timer' mode (if you don't cancel)
           default: 15
           selector:
             number:
               min: 1
               max: 120
-              unit_of_measurement: seconds
+              unit_of_measurement: s
+        suggest_closing_after:
+          name: 🔐 Suggest closing after
+          description: Time to wait before **suggesting to close** on departure, if you use **notification request** but don't have a sensor to detect that you left
+          default: 120
+          selector:
+            number:
+              min: 1
+              max: 600
+              unit_of_measurement: s
         partial_open_position:
           name: ↔️ Gate partial opening
           description: |-
-            Define the target position for partial opening (e.g., for bicylces)
+            Define the target position for partial opening (e.g., for bicycles)
             > This feature only works with covers that support setting position
           default: 100
           selector:
@@ -387,30 +377,30 @@ blueprint:
       input:
         security_notif_override:
           name: 🔁 Override notification request for safety feature
-          description: Change the closing behavior from "notification request" to "timer" if triggered by a safety feature
+          description: If a safety feature triggers a close, change the behavior from 'notification request' to 'timer'
           default: true
           selector:
             boolean:
         safety_delay:
           name: 🔐 Auto-close safety delay
-          description: The time the gate will wait before **automatically closing** if your gate is open but you still haven't left or arrived
+          description: Time to wait before **automatically closing** if the gate is open but you still haven't left or arrived
           default: 5
           selector:
             number:
               min: 2
               max: 30
-              unit_of_measurement: minutes
+              unit_of_measurement: min
         timeout_delay:
           name: ⌛ Timeout delay
           description: |-
-            The time the automation will wait before **stopping** if your phone **times out** and doesn't send new position updates, while being in the activation zone
-            *Note : If your position provider doesn't let you use a high accuracy mode (like iOS), please increase this value*
+            How long the automation waits before **stopping** if your phone **times out** and stops sending location updates while you are in the activation zone
+            > *If your position provider doesn't let you use a high accuracy mode (like iOS), please increase this value*
           default: 2
           selector:
             number:
               min: 0.5
               max: 30
-              unit_of_measurement: minutes
+              unit_of_measurement: min
         forbidden_zones:
           name: ⛔ Forbidden zones
           description: If you enter any of these zones while driving home, your itinerary will be canceled
@@ -422,13 +412,13 @@ blueprint:
                 domain: zone
         quick_triggers_reopen_gate:
           name: 🚨 Reopen gate if driving sensor triggers too quickly
-          description: Reopen the gate if your driving sensor keeps turning on and off quickly, to avoid closing on your vehicle
+          description: Reopen the gate if your driving sensor turns on/off too quickly (to avoid closing on your vehicle)
           default: true
           selector:
             boolean:
         ask_reopen_manually_closed:
           name: 🚧 Ask before reopening if manually closed
-          description: If the gate was recently closed, but not automatically, ask the user to confirm before reopening it on departure
+          description: If the gate was closed recently (but not automatically), ask for confirmation before reopening on departure
           default: true
           selector:
             boolean:
@@ -440,7 +430,9 @@ blueprint:
       input:
         language:
           name: Notification language
-          description: The **language** in which **notifications** will be sent to you
+          description: |-
+            The **language** used for **notifications**
+            > *If your language is not supported by this blueprint, please [open a pull request](https://github.com/etiennec78/Home-Automation/pulls)*
           default: "en"
           selector:
             language:
@@ -450,8 +442,8 @@ blueprint:
         custom_translations:
           name: Custom translations
           description: |-
-            A **yaml** dictionary to change the default **notifications translations**
-            *Note : You can find the translation keys in the strings['en'] variable in the code or in your traces*
+            A **YAML** dictionary to override the default **notification translations**
+            > *You can find the translation keys in the `strings['en']` variable in the code, or in your traces*
           default:
             title: {}
             message: {}
@@ -460,7 +452,7 @@ blueprint:
             object:
         itinerary_started_notif:
           name: 🏁 Itinerary started notification
-          description: Whether or not to send a notification informing the user that his itinerary has been started
+          description: Send a notification when the itinerary starts
           default: true
           selector:
             boolean:
@@ -472,7 +464,9 @@ blueprint:
             boolean:
         phone_tts_stream:
           name: 📻 Phone TTS audio stream
-          description: The **audio stream** used for playing the phone TTS. Can be useful to **bypass Do Not Disturb**.
+          description: |-
+            The **audio stream** used to play phone TTS
+            Useful to **bypass Do Not Disturb**
           default: "notification_stream"
           selector:
             select:
@@ -489,11 +483,59 @@ blueprint:
       icon: mdi:leak
       collapsed: true
       input:
+        close_when_disconnected_from:
+          name: 📡 Close on departure when disconnected from
+          description: Close the gate if the driver's BLE device is out of range
+          default: []
+          selector:
+            select:
+              multiple: true
+              options:
+                - label: Bluetooth LE
+                  value: ble
+        only_open_near:
+          name: 🧭 Confirm the location on startup
+          description: |-
+            Wait for a sensor to confirm your location before starting this blueprint
+            > Useful if your vehicle is parked near your home (to avoid opening), or if your phone updates GPS too slowly and may still report you as home after you leave
+
+            > ⚠️ GPS requests need the [Single accurate location](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#extra-requesting-manual-gps-updates-) sensor turned on in the companion app
+
+            > *WiFi can be slow to report new states*
+          default: []
+          selector:
+            select:
+              multiple: true
+              options:
+                - label: GPS
+                  value: gps
+                - label: Wi-Fi (departure)
+                  value: wifi
+                - label: Bluetooth LE (departure)
+                  value: ble
+        only_open_near_timeout:
+          name: ⌛ Location confirmation timeout
+          description: How long the blueprint waits for location confirmation before canceling the sequence
+          default: 60
+          selector:
+            number:
+              min: 0
+              max: 1800
+              unit_of_measurement: s
+        gps_outdated_delay:
+          name: ⌛ Location confirmation outdated GPS delay
+          description: Age after which GPS is considered outdated and a refresh request is sent
+          default: 10
+          selector:
+            number:
+              min: 0
+              max: 300
+              unit_of_measurement: s
         wifi_devices:
           name: 🏠 WiFi devices
           description: |-
-            Each driver's WiFi device tracker
-            *Note : Please place user sensors in the same order*
+            Each driver's Wi‑Fi device tracker
+            > *Please place user sensors in the same order*
           default: []
           selector:
             entity:
@@ -508,7 +550,7 @@ blueprint:
           name: 🔎 BLE tracker entities
           description: |-
             Each **[BLE tracker entity](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-entities-)** to monitor your distance from the gate
-            *Note : Please place user sensors in the same order*
+            > *Please place user sensors in the same order*
           default: []
           selector:
             entity:
@@ -523,19 +565,19 @@ blueprint:
         ble_away_timeout:
           name: ⌛ BLE away timeout
           description: |-
-            Timeout period without receiving updates after which the BLE device will be considered away
-            *Note : Some trackers have a built-in away timeout. In this case, this value can be set to 0.*
+            Time without updates after which the BLE device is considered away
+            > *Some trackers have a built-in away timeout. In this case, this value can be kept at 0.*
           default: 0
           selector:
             number:
               min: 0
               max: 300
-              unit_of_measurement: seconds
+              unit_of_measurement: s
         ble_transmitter_entities:
           name: 📡 iBeacon transmitter entities
           description: |-
-            Each **[iBeacon transmitter entity](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-transmitter-)** to restore previous iBeacon transmitter power settings when iBeacon is not needed anymore
-            *Notes : Let empty if you use iOS, or only use iBeacon for this automation*
+            Each **[iBeacon transmitter entity](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-transmitter-)** used to restore the previous transmitter power settings when iBeacon is not needed anymore
+            > *Optional if your iBeacon transmitter is not your phone, or is always on at high speed*
           default: []
           selector:
             entity:
@@ -548,64 +590,17 @@ blueprint:
           name: ⏯️ BLE scanner activator switch
           description: |-
             The **[switch](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-scanner-switch-)** to automatically **start and stop BLE scanning** when needed
-            *Note : Leave empty if you want your BLE scanner to be always on*
+            > *Leave empty if you want your BLE scanner to be always on*
           default: ""
           selector:
             entity:
               filter:
                 domain: switch
-        only_open_near:
-          name: 🧭 Confirm the location on startup
-          description: |-
-            Wait for a sensor to confirm your location before starting this blueprint
-            Useful in case your vehicle is parked near your house, and you don't want your gate to open, or if your phone is too slow to update its gps and could report you home even though you already left
-            *Notes :*
-            *⚠️ GPS needs the "[Single accurate location](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#extra-requesting-manual-gps-updates-)" sensor turned on in the companion app*
-            *WiFi can be slow to report new states*
-          default: []
-          selector:
-            select:
-              multiple: true
-              options:
-                - label: GPS
-                  value: gps
-                - label: Wi-Fi (departure)
-                  value: wifi
-                - label: Bluetooth LE (departure)
-                  value: ble
-        only_open_near_timeout:
-          name: ⌛ Location confirmation timeout
-          description: The time the blueprint will wait for a sensor to confirm your location before canceling the sequence
-          default: 60
-          selector:
-            number:
-              min: 0
-              max: 1800
-              unit_of_measurement: seconds
-        gps_outdated_delay:
-          name: ⌛ GPS outdated delay
-          description: The timeframe after which the GPS will be considered outdated and a request will be made to update it
-          default: 10
-          selector:
-            number:
-              min: 0
-              max: 300
-              unit_of_measurement: seconds
-        close_when_disconnected_from:
-          name: 📡 Close on departure when disconnected from
-          description: Close the gate if driver's BLE device is out of range
-          default: []
-          selector:
-            select:
-              multiple: true
-              options:
-                - label: Bluetooth LE
-                  value: ble
 
     house_security:
       name: House security
       description: |-
-        The alarm and locks will be armed/locked on departure once your gate is closing, and disarmed/unlocked on arrival after your vehicle has been stopped
+        Arms/locks on departure once the gate starts closing, and disarms/unlocks on arrival after the vehicle has stopped
       icon: mdi:shield-home
       collapsed: true
       input:
@@ -621,7 +616,7 @@ blueprint:
         alarm_code:
           name: 🔑 Alarm code
           description: |-
-            The code that will be used to unlock your alarm
+            The code used to disarm your alarm
           default: ""
           selector:
             text:
@@ -629,6 +624,7 @@ blueprint:
           name: 🔐 Locks
           description: |-
             The **locks** that open your home's **doors**
+            > *They will lock on exit once the gate is closed, and unlock once the vehicle has arrived and been turned off*
           default: []
           selector:
             entity:
@@ -662,10 +658,10 @@ blueprint:
                 - label: Unlatch doors
                   value: "unlatch"
         dont_lock_if_people_remaining:
-          name: 🏠 Do not lock if there are still people home
+          name: 🏠 Do not lock/arm if there are still people home
           description: |-
-            Avoid locking locks and activating the alarm if some person entities are still in the gate zone besides yourself
-            Note : if you drive away with multiple people, they might still be detected home and prevent locking
+            Avoid locking and arming the alarm if some person entities are still in the gate zone (besides yourself)
+            > *If you drive away with multiple people, they might still be detected home and prevent locking*
           default: false
           selector:
             boolean:

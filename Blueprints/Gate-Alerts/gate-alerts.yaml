@@ -14,7 +14,9 @@ blueprint:
     * Has been left open for too long 🔓
     * Has been offline for too long 🌐
 
-    ## Key Features 🌟
+    <details>
+      <summary><h2>Key Features 🌟</h2></summary>
+
     * Compatible with gate switches, covers, and position tracked covers 🔗
     * Companion app notifications 🔔
     * Button to close the gate from notifications 🔐
@@ -23,6 +25,8 @@ blueprint:
     * Media players TTS support 🔊
     * Built-in translations 🌍
     * Customizable extra actions ➕
+
+    </details>
 
     ## More Info ℹ️
     * Version: 2.0.0
@@ -70,13 +74,13 @@ blueprint:
             number:
               min: 0
               max: 30
-              unit_of_measurement: minutes
+              unit_of_measurement: min
         error_message_sensor:
           name: ⚠️ Error Message Sensor
           description: |-
             Sensor that provides gate error messages
-            *Note: Only needed for error notification type*
-          default: []
+            > *Only needed for error notification type*
+          default: ""
           selector:
             entity:
               domain: sensor
@@ -84,7 +88,7 @@ blueprint:
           name: 💬 Notify devices
           description: |-
             Mobile **[devices](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#notify-services-)** to **notify**
-            *Note: Optional*
+            > *Optional*
           default: []
           selector:
             device:
@@ -99,7 +103,9 @@ blueprint:
       input:
         language:
           name: Notification language
-          description: The **language** in which **notifications** will be sent to you
+          description: |-
+            The **language** in which **notifications** will be sent to you
+            > *If your language is not supported by this blueprint, could you please [open a pull request](https://github.com/etiennec78/Home-Automation/pulls) ?*
           default: "en"
           selector:
             language:
@@ -110,7 +116,7 @@ blueprint:
           name: Custom translations
           description: |-
             A **yaml** dictionary to change the default **notifications translations**
-            *Note : You can find the translation keys in the strings['en'] variable in the code or in your traces*
+            > You can find the translation keys in the strings['en'] variable in the code or in your traces*
           default:
             title: {}
             message: {}
@@ -123,7 +129,7 @@ blueprint:
           selector:
             boolean:
         persistent_notification:
-          name: 🔔 Persistent notification
+          name: 🔔 Persistent notifications
           description: Show notifications in Home Assistant **[dashboard](https://www.home-assistant.io/integrations/persistent_notification)**
           default: false
           selector:
@@ -136,7 +142,7 @@ blueprint:
             boolean:
         phone_tts_stream:
           name: 📻 Phone TTS audio stream
-          description: The **audio stream** used for playing the phone TTS. Can be useful to **bypass Do Not Disturb**.
+          description: The **audio stream** used for playing the phone TTS. Can be useful to **bypass Do Not Disturb**
           default: "notification_stream"
           selector:
             select:
@@ -157,7 +163,7 @@ blueprint:
           name: 🔊 TTS speakers
           description: |-
             **Speakers** for **text-to-speech** announcements
-            *Note: Optional*
+            > *Optional*
           default: []
           selector:
             entity:
@@ -167,7 +173,7 @@ blueprint:
           name: 🎙️ TTS service
           description: |-
             **TTS service** you want to use for your speakers
-            *Note: Optional*
+            > *Optional*
           default: ""
           selector:
             entity:
@@ -176,7 +182,7 @@ blueprint:
           name: 🌙 TTS night time start
           description: |-
             The time at which the volume of the TTS will start being lowered
-            *Note: Optional*
+            > *Optional*
           default: ""
           selector:
             time:
@@ -184,7 +190,7 @@ blueprint:
           name: ☀️ TTS night time end
           description: |-
             The time at which the volume of the TTS will stop being lowered
-            *Note: Optional*
+            > *Optional*
           default: ""
           selector:
             time:
@@ -208,7 +214,7 @@ blueprint:
           name: ➕ Extra Actions
           description: |-
             Additional **actions** to execute when **triggered**
-            *Note: Optional*
+            > *Optional*
           default: []
           selector:
             action:
