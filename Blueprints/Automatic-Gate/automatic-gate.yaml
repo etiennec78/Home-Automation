@@ -2591,41 +2591,29 @@ actions:
                                     value: "{{ itinerary_value | to_json }}"
                         - alias: Restore BLE devices
                           sequence: &restore_ble
-                            - alias: If BLE devices were started
-                              if:
-                                - condition: template
-                                  value_template: "{{ ble_started }}"
-                              then:
-                                - alias: Restore iBeacon transmitter states
-                                  repeat:
-                                    for_each: "{{ ibeacon_restore_messages }}"
-                                    sequence:
-                                      - alias: Send a notification to restore the iBeacon previous state
-                                        action: "{{ notify_service }}"
-                                        data: >-
-                                          {{
-                                            repeat.item
-                                            | combine(
-                                              {
-                                                'data': {
-                                                  'importance': 'high',
-                                                  'priority':'high'
-                                                }
-                                              },
-                                              recursive=True
-                                            )
-                                          }}
-                                        continue_on_error: true
-                                - alias: If the BLE scanner was turned on by the blueprint
-                                  if:
-                                    - condition: template
-                                      value_template: "{{ scanner_turned_on }}"
-                                  then:
-                                    - alias: Turn off the BLE scanner
-                                      action: switch.turn_off
-                                      target:
-                                        entity_id: "{{ ble_scanner_switch }}"
-                                      continue_on_error: true
+                            - alias: Only continue if BLE devices were started
+                              condition: template
+                              value_template: "{{ ble_started }}"
+                            - alias: Restore iBeacon transmitter states
+                              repeat:
+                                for_each: "{{ ibeacon_restore_messages }}"
+                                sequence:
+                                  - alias: Send a notification to restore the iBeacon previous state
+                                    action: "{{ notify_service }}"
+                                    data: >-
+                                      {{
+                                        repeat.item
+                                        | combine(
+                                          {
+                                            'data': {
+                                              'importance': 'high',
+                                              'priority':'high'
+                                            }
+                                          },
+                                          recursive=True
+                                        )
+                                      }}
+                                    continue_on_error: true
                             - alias: Check if there is another driver near the gate
                               variables:
                                 someone_near_gate: >-
@@ -2653,6 +2641,7 @@ actions:
                                   value_template: >-
                                     {{
                                       ble_scanner_switch != ''
+                                      and scanner_turned_on
                                       and not someone_near_gate
                                     }}
                               then:
