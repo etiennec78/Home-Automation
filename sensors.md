@@ -2,30 +2,30 @@
 
 The entity representing your gate or garage door
 
-This can come from my [ESPHome firmware](ESPHome-Firmwares/Gate) or from any other integration
+This can come from my [ESPHome firmware](ESPHome-Firmwares/Gate) or any other integration
 
 #### Supported Gate Types ⚙️
 
 There are two main types of gate entities you can use:
 
 1. State-based gates: entities that stay ON while open and OFF when closed
-   These are fully compatible with the Automatic Gate blueprint
+   These are fully compatible with the blueprints from this repo
 
 2. Pulse-triggered gates: entities that briefly turn ON then OFF to send a pulse to the gate motor
-   Read the section below for more information
+   These need workarounds to make them work with the blueprints from this repo
+    <details>
+      <summary>Read more</summary>
+      These gates cannot reliably handle the closing sequence automatically, because they do not know their own position
 
-#### Notes for Pulse-Triggered Gates ⚠️
+      Sending another pulse while still opening may simply stop the gate instead of closing it
 
-If your gate uses a pulse trigger for all actions, it cannot reliably handle the closing sequence automatically, because it does not know its own position
+      To use such gates:
 
-Sending another pulse while still opening may simply stop the gate instead of closing it
-
-To use such gates:
-
-* Option 1: Disable the closing behavior in the blueprint settings
-* Option 2: Use the [ESPHome Gate Firmware](ESPHome-Firmwares/Gate), which supports pulse-triggered gates correctly
-* Option 3: If you have three separate pulse triggers (for open / close / stop), you can combine them into a single gate entity using a [state-based template cover](https://www.home-assistant.io/integrations/template/#state-based-cover---garage-door)
-
+      * Option 1: Disable the closing behavior in the blueprint settings
+      * Option 2: Use the [ESPHome Gate Firmware](ESPHome-Firmwares/Gate), which supports pulse-triggered gates correctly
+      * Option 3: If you have three separate pulse triggers (for open / close / stop), you can combine them into a single gate entity using a [state-based template cover](https://www.home-assistant.io/integrations/template/#state-based-cover---garage-door)
+    </details>
+  
 
 ## GPS location trackers / Persons 🌎
 
@@ -44,7 +44,7 @@ Less frequent location updates can impact ETA accuracy
 ❓: Depending on vehicle model
 
 <details>
-  <summary>Option 1: Android or iPhone 📱</summary>
+  <summary><h4>Android 🍏</h4></summary>
 
   #### Setup 🛠️
 
@@ -72,14 +72,19 @@ Less frequent location updates can impact ETA accuracy
 
   To make this work, you need to enable the "Single accurate location" sensor : Settings > Companion app > Manage sensors > Single accurate location ✔
 
-  #### Notes 📌
-
-  * If high precision mode does not trigger, please increase its range or check its conditions
+  > 💡 Tip: If high precision mode does not trigger, please increase its range or check its conditions
 
 </details>
 
 <details>
-  <summary>Option 2: Smart vehicle 🌐</summary>
+  <summary><h4>iOS 🍎</h4></summary>
+
+  You can use the [companion app](https://companion.home-assistant.io/docs/core/location/), or the [icloud3 integration](https://github.com/gcobb321/icloud3), or anything else that tracks your phone location
+  
+</details>
+
+<details>
+  <summary><h4>Smart vehicle 🌐</h4></summary>
 
   Some Home Assistant vehicle integrations or add-ons create a device_tracker that can be used to track your vehicle GPS location
 
@@ -107,7 +112,10 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
 | Smart vehicle 🌐 | ✅ | ❓ | - |
 
 <details>
-  <summary>Option 1: Android Bluetooth 🍏🛜</summary>
+  <summary><h4>Option 1: Bluetooth 🛜</h4></summary>
+  
+  <details>
+    <summary><h4>Android 🍏</h4></summary>
 
   ### Setup 🛠️
 
@@ -131,10 +139,10 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
   * `sensor.user0_bluetooth_connection` is your Bluetooth companion app sensor
   * `connected_paired_devices` needs to be left untouched
 
-</details>
+  </details>
 
-<details>
-  <summary>Option 2: iOS Bluetooth 🍎🛜</summary>
+  <details>
+    <summary><h4>iOS🍎</h4></summary>
 
   #### Setup 🛠️
 
@@ -156,19 +164,23 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
   16. Repeat steps 8-16 but set the trigger to `When: Is Disconnected` and the blueprint to `Car Disconnection`
   17. Execute both blueprints once to select your Home Assistant server
 
+  </details>
 </details>
 
 <details>
-  <summary>Option 3: Android Auto 🍏🔌</summary>
+  <summary><h4>Option 2: Android Auto/CarPlay 🔌</h4></summary>
+
+  <details>
+    <summary><h4>Android Auto 🍏</h4></summary>
 
   #### Setup 🛠️
 
   * Install through the [companion app](https://companion.home-assistant.io/docs/core/sensors#android-auto) settings: Settings > Companion app > Manage sensors > Android Auto ✔
 
-</details>
+  </details>
 
-<details>
-  <summary>Option 4: Apple CarPlay 🍎🔌</summary>
+  <details>
+    <summary><h4>Apple CarPlay 🍎</h4></summary>
 
   #### Setup 🛠️
 
@@ -188,16 +200,20 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
   14. Repeat steps 8-13 but set the trigger to `When: Disconnects` and the blueprint to `Car Disconnection`
   15. Execute both blueprints once to select your Home Assistant server
 
+  </details>
 </details>
 
 <details>
-  <summary>Option 5: Cycling (Android) 🍏🚲</summary>
-  
+  <summary><h4>Option 3: Cycling 🚲</h4></summary>
+
   It is recommended to use a travel time supporting cycling mode, or a BLE tracker
   
   Both opening and closing behaviors on departure should be disabled, as cycling sensors are not reliable
   
   If you are using this blueprint both for cycling and for your vehicles, please use 2 distinct automations running this blueprint, and don't forget to share all of your itinerary sensors in both
+  
+  <details>
+    <summary><h4>Android 🍏</h4></summary>
 
   #### Setup 🛠️
 
@@ -217,16 +233,10 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
 
   > Replace `sensor.user0_detected_activity` with your own sensor entity id, and change `80` if the confidence is too high and the condition is never triggered
 
-</details>
+  </details>
 
-<details>
-  <summary>Option 6: Cycling (iOS) 🍎🚲</summary>
-  
-  It is recommended to use a travel time supporting cycling mode, or a BLE tracker
-  
-  Both opening and closing behaviors on departure should be disabled, as cycling sensors are not reliable
-  
-  If you are using this blueprint both for cycling and for your vehicles, please use 2 distinct automations running this blueprint, and don't forget to share all of your itinerary sensors in both
+  <details>
+    <summary><h4>iOS 🍎</h4></summary>
 
   #### Setup 🛠️
 
@@ -246,19 +256,22 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
 
   > Replace `sensor.user0_detected_activity` with your own sensor entity id, and change `High` to Medium or Low if the confidence is too high and the condition is never triggered
   
+  </details>
 </details>
 
 <details>
-  <summary>Option 7: Smart vehicle 🌐</summary>
+  <summary><h4>Option 4: Smart vehicle 🌐</h4></summary>
 
   Some Home Assistant vehicle integrations or add-ons create a binary_sensor that reports when your vehicle is being driven
 
 </details>
 
 <details>
-  <summary>Combining these sensors 🔗</summary>
+  <summary><h4>Combining sensors 🔗</h4></summary>
 
-  If some people drive several cars, combine their sensors so there is only one per person
+  If some users have multiple vehicles, you can merge all sensors into one with this template.
+  
+  Also, for the same car, some driving sensors can be quick but less reliable (e.g.: Bluetooth vs plugged CarPlay). By merging them you can benefit form the reactivity and the reliability.
 
   #### Setup 🛠️
 
@@ -271,7 +284,7 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
   | Setting | Parameter |
   | :--- | :---: |
   | Name | `User0 driving` |
-  | State template | `{{ is_state('sensor.first_sensor', 'on') and is_state('sensor.second_sensor', 'on') }}` |
+  | State template | `{{ is_state('sensor.first_sensor', 'on') or is_state('sensor.second_sensor', 'on') }}` |
   | Device class | `Moving` |
   | Device | *Your phone* |
 
@@ -297,12 +310,14 @@ Each travel time sensor monitoring each user's time left before arrival
 
 🟢: Free until a limit is reached
 
-> ⚠️ Please [disable sensor auto-polling (steps 1, 2)](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval), as the Automatic Gate will refresh the sensor itself
+> [!WARNING]
+> Please [disable sensor auto-polling (steps 1, 2)](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval), as the Automatic Gate will refresh the sensor itself
 
-> ⚠️ Please note that I am not responsible for any charges incurred by travel time services
+> [!WARNING]
+> Please note that I am not responsible for any charges incurred by travel time services
 
 <details>
-  <summary>Option 1: Here Travel Time 🚘</summary>
+  <summary><h4>Option 1: Here Travel Time 🚘</h4></summary>
 
   #### Setup 🛠️
 
@@ -323,9 +338,7 @@ Each travel time sensor monitoring each user's time left before arrival
 </details>
 
 <details>
-  <summary>Option 2: Google Travel Time 🚘</summary>
-
-  ⚠️ Work in progress, the current integration is not compatible
+  <summary><h4>Option 2: Google Travel Time 🚘</h4></summary>
 
   #### Setup 🛠️
 
@@ -344,7 +357,7 @@ Each travel time sensor monitoring each user's time left before arrival
 </details>
 
 <details>
-  <summary>Option 3: Waze Travel Time 🚘</summary>
+  <summary><h4>Option 3: Waze Travel Time 🚘</h4></summary>
 
   Please note that Waze is not reliable and could fail to fetch new travel times
 
@@ -367,7 +380,7 @@ Each travel time sensor monitoring each user's time left before arrival
 </details>
 
 <details>
-  <summary>Option 4: Smart vehicle 🌐</summary>
+  <summary><h4>Option 4: Smart vehicle 🌐</h4></summary>
 
   Some Home Assistant vehicle integrations or add-ons create a sensor that reports your remaining travel time
 
@@ -395,12 +408,13 @@ Each input text helper stores user itinerary states and serves as a trigger for 
 | Maximum length | `255` |
 | Display mode | `Text` |
 
-> ⚠️ Don't forget to set the maximum length to 255
+> [!NOTE]
+> Don't forget to set the maximum length to 255
 
 #### Data stored 💾
 
 <details>
-  <summary>Sensor JSON structure 🏗️</summary>
+  <summary><h5>Sensor JSON structure 🏗️</h5></summary>
 
 | Key | Value |
 | :---: | :---: |
@@ -413,47 +427,47 @@ Each input text helper stores user itinerary states and serves as a trigger for 
 </details>
 
 <details>
-  <summary>Possible status ℹ️</summary>
+  <summary><h5>Possible status ℹ️</h5></summary>
 
 | State | Meaning |
 | :---: | :---: |
-| `{{none}}` | The automation is not running for this user |
-| `leaving` | The user is currently leaving home |
-| `arriving` | The user is driving and being tracked by the automation |
-| `on_approach` | The user has triggered the gate opening, and will arrive soon |
+| `null` | The automation is not running for this user |
+| `'leaving'` | The user is currently leaving home |
+| `'arriving'` | The user is driving and being tracked by the automation |
+| `'on_approach'` | The user has triggered the gate opening, and will arrive soon |
 
 </details>
 
 <details>
-  <summary>Possible errors 🚨</summary>
+  <summary><h5>Possible errors 🚨</h5></summary>
 
 | Error | Meaning |
 | :---: | :---: |
-| `{{none}}` | No error occurred |
-| `vehicle_stopped` | The driver stopped his vehicle unexpectedly |
-| `canceling_order` | The driver pressed the cancel itinerary button |
-| `did_not_leave` | The driver did not leave home on time |
-| `did_not_arrive` | The driver did not arrive home on time with the gate open |
-| `timed_out` | The driver's phone did not report a new position in time |
-| `vehicle_away` | The gate was waiting for an event to open upon departure, but the user left the activation zone |
-| `travel_time_did_not_respond` | The travel time sensor did not update its value in time |
-| `not_home` | The driver enabled the home presence check before opening, but was not detected at home |
-| `triggered_frequently` | This driver triggered the blueprint multiple times too quickly |
-| `updated_frequently` | The blueprint tried to update the travel time sensor too frequently and was stopped to prevent costs |
-| `forbidden_zone` | The driver entered a forbidden zone upon arrival |
-| `invalid_travel_time_sensor` | The travel time sensor provided does not exist |
-| `unsupported_tt_integration` | The travel time sensor provided is not compatible with this blueprint |
-| `too_close` | The driver started his vehicle in the activation zone, but outside his home |
-| `gate_closed` | While waiting for the driver's location to be confirmed, the gate was manually opened and then closed |
-| `location_not_confirmed` | The driver enabled the location request input, but the phone did not receive the request |
-| `got_no_gps_data` | The phone received the location request but did not send back any GPS coordinates |
+| `null` | No error occurred |
+| `'vehicle_stopped'` | The driver stopped his vehicle unexpectedly |
+| `'canceling_order'` | The driver pressed the cancel itinerary button |
+| `'did_not_leave'` | The driver did not leave home on time |
+| `'did_not_arrive'` | The driver did not arrive home on time with the gate open |
+| `'timed_out'` | The driver's phone did not report a new position in time |
+| `'vehicle_away'` | The gate was waiting for an event to open upon departure, but the user left the activation zone |
+| `'travel_time_did_not_respond'` | The travel time sensor did not update its value in time |
+| `'not_home'` | The driver enabled the home presence check before opening, but was not detected at home |
+| `'triggered_frequently'` | This driver triggered the blueprint multiple times too quickly |
+| `'updated_frequently'` | The blueprint tried to update the travel time sensor too frequently and was stopped to prevent costs |
+| `'forbidden_zone'` | The driver entered a forbidden zone upon arrival |
+| `'invalid_travel_time_sensor'` | The travel time sensor provided does not exist |
+| `'unsupported_tt_integration'` | The travel time sensor provided is not compatible with this blueprint |
+| `'too_close'` | The driver started his vehicle in the activation zone, but outside his home |
+| `'gate_closed'` | While waiting for the driver's location to be confirmed, the gate was manually opened and then closed |
+| `'location_not_confirmed'` | The driver enabled the location request input, but the phone did not receive the request |
+| `'got_no_gps_data'` | The phone received the location request but did not send back any GPS coordinates |
 
 </details>
 
 <details>
-  <summary>Automation examples 🔗</summary>
+  <summary><h5>Automation examples 🔗</h5></summary>
 
-  ##### Template code to retrieve itinerary sensor data
+  ###### Template code to retrieve itinerary sensor data
 
   ```jinja2
   {# EDIT THESE LINES #}
@@ -495,6 +509,12 @@ Companion app BLE transmitter lets a scanner automatically close your gate upon 
 
 The automation will automatically turn the transmitter off if not needed
 
+> [!NOTE]
+> Your Bluetooth transmitter should mark your devices as unavailable or away after a short time or this will have no effect
+
+> [!WARNING]
+> Please set the closing behavior to 'Notification request', or the gate could close on your vehicle if your ble tracker is unreliable
+
 #### Setup 🛠️
 
 1. Install through the [companion app](https://www.home-assistant.io/integrations/mobile_app/) settings: Settings > Companion app > Manage sensors > BLE Transmitter
@@ -513,23 +533,20 @@ The automation will automatically turn the transmitter off if not needed
 | Transmit power | - |
 | UUID | [Random UUID](https://www.uuidgenerator.net/) |
 
-#### Notes 📌
-
-* Automatic Gate turns on the iBeacon itself with the right settings when needed
-* Your Bluetooth transmitter should mark your devices as unavailable after a short time or this will have no effect
-* ⚠️ Be aware that placing your BLE transmitter too far from your gate could cause the gate to close on your vehicle if it loses connection
+> [!NOTE]
+> Automatic Gate turns on the iBeacon itself with the right settings when needed if 'iBeacon transmitter entities' are provided
 
 
 ## Bluetooth entities 🔎
 
 Each BLE tracker entity to monitor your distance from the gate while leaving, and close it when you're out of reach
 
-Could be from my [ESPHome firmware](ESPHome-Firmwares/Gate) or any other bluetooth iBeacon scanner near your gate
+Could be from my [ESPHome firmware](ESPHome-Firmwares/Gate) [configured](ESPHome-Firmwares/README.md#setup-ble-tracking-%EF%B8%8F), or any other BLE tracker near your gate
 
 Supported types: device_tracker, rssi sensor, distance sensor, bermuda area sensor
 
 
-## Bluetooth scanner switch ⏻
+## Bluetooth scanner switch ⏯️
 
 A switch which can turn on/off your BLE scanner. Not needed if your BLE scanner runs 24/7
 
