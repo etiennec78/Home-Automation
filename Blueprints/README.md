@@ -59,5 +59,6 @@ Refer to the table below to fix the errors
   | #23 | Your travel time refresh function makes too many calls to the API: ... for a 2-hour trip | Make sure your refresh function returns longer intervals. It should call the API less than 120 times per 2-hour trip. |
   | #24 | You have enabled GPS requests, but your travel time refresh is neither set to 'Continuously' nor 'Listen' | Either untick 'Request gps location', or add a travel time sensor and set the refresh rate to 'Continuously' or 'Listen' |
   | #25 | You have set some gate behaviors to 'Notification request' or 'Cancelable timer', but some users are missing a notify device. These behaviors will be switched to 'Fully Automatic' | Either set these behaviors to 'Off' or 'Fully Automatic', or add missing notification devices |
+  | #26 | These iBeacon transmitter entities: '{data}' do not come the associated notification device | Either make sure that these transmitter entities come from your notification device, or remove them (but you will have to always keep your iBeacon on) |
   
 </details>
