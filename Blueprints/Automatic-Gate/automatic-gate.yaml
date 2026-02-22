@@ -3842,6 +3842,7 @@ actions:
                                     variables:
                                       closing_behavior: "timer"
                                       timer_reset_timestamp: "{{ now() | as_timestamp }}"
+                                      wait_notif_reception: "{{ not ios_device }}"
                           - choose:
                               - alias: If this is the first loop or the behavior just switched to timer
                                 conditions:
