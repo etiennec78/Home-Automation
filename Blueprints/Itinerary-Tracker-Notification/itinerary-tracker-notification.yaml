@@ -103,7 +103,7 @@ blueprint:
       name: Persons to notify
       icon: mdi:bell-ring
       collapsed: true
-      description: If notify everyone is disabled, the bluprint will check for any of these conditions per user
+      description: If notify everyone is disabled, the blueprint will check for any of these conditions per user
       input:
         notify_everyone:
           name: 🔔🧩 Notify everyone
