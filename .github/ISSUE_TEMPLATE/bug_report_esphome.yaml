@@ -1,0 +1,78 @@
+name: 🪲 Bug report - ESPHome firmware
+description: Report an issue with an ESPHome firmware of this repository to help me find a fix
+labels: bug
+assignees: etiennec78
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Firmware concerned 🎯
+  - type: dropdown
+    id: firmware
+    attributes:
+      label: Firmware
+      description: Which esphome firmware is concerned by this bug ?
+      options:
+        - Gate
+        - Philips LivingColors
+        - Velux shade
+    validations:
+      required: true
+  - type: input
+    id: branch
+    attributes:
+      label: Which branch of the repositoy are you using ?
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        ## Bug description 🪲
+  - type: textarea
+    validations:
+      required: true
+    attributes:
+      label: Describe the bug
+      description: |
+        Provide a clear and concise description of what the problem is
+  - type: markdown
+    attributes:
+      value: |
+        ## Logs 📜
+  - type: textarea
+    attributes:
+      label: Esphome logs
+      description: |
+        You can stream your logs by running `esphome logs <file>.yaml`.
+        Please attach them as a text file if they are relevant.
+      placeholder: Drag and drop your logs file
+  - type: markdown
+    attributes:
+      value: |
+        ## Environment ⚙️
+  - type: input
+    id: esphome-version
+    validations:
+      required: true
+    attributes:
+      label: What version of ESPHome is your device running ?
+      description: |
+        Can be found under "Device Info" by accessing your [ESPHome devices list](https://my.home-assistant.io/redirect/integration/?domain=esphome) and selecting the relevant device.
+  - type: input
+    id: ha-version
+    validations:
+      required: true
+    attributes:
+      label: What version of Home Assistant are you running ?
+      placeholder: core-
+      description: |
+        Can be found in: [Settings > System > Repairs > Three dots at top right > System information](https://my.home-assistant.io/redirect/system_health/).
+  - type: markdown
+    attributes:
+      value: |
+        ## Additional information ➕
+  - type: textarea
+    attributes:
+      label: Additional information
+      description: |
+        Add any other context about the problem here

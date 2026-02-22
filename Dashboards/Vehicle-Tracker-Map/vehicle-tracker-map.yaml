@@ -1,0 +1,118 @@
+# Itinerary tab to let you display drivers' ETAs, disable Automatic Gate and view people's locations
+# Please search for "EDIT" comments and modify each corresponding line
+title: Itinerary
+path: vehicle-tracker-map
+icon: mdi:map
+subview: false
+type: sections
+max_columns: 4
+cards: []
+sections:
+  - type: grid
+    column_span: 1
+    cards:
+      # Let users disable Automatic Gate
+      - type: entities
+        entities:
+          - entity: automation.automatic_gate # EDIT
+            secondary_info: none
+            name: Automatic Gate
+            icon: mdi:car-connected
+
+      # EDIT: Duplicate this card as many times as you have drivers set in Automatic Gate
+      - type: custom:mushroom-template-card
+        # Show the ETA only if someone is driving
+        visibility:
+          - condition: state
+            entity: sensor.user0_driving_sensor # EDIT
+            state: on
+        # Estimated time remaining
+        primary: >-
+          {# EDIT #}
+          {% set travel_time_sensor = 'sensor.user0_travel_time_duration' %}
+
+          Time remaining :
+          {% if travel_time_sensor | has_value %}
+            {% if state_attr(travel_time_sensor, 'unit_of_measurement') in ['min', 's'] %}
+              {% set value = states(travel_time_sensor) | float %}
+              {% if state_attr(travel_time_sensor, 'unit_of_measurement') == 'min' %}
+                {% set value = value * 60 %}
+              {% endif %}
+
+              {% set remaining = (
+                  states[travel_time_sensor].last_updated | as_timestamp
+                  - now() | as_timestamp
+                  + value
+                )
+              %}
+
+              {% if remaining >= 60 %}
+                {{ (remaining / 60) | round(0) }}min
+              {% elif remaining > 0 %}
+                {{ remaining | round(0) }}s
+              {% elif remaining > 120 %}
+                Soon
+              {% else %}
+                Time passed
+              {% endif %}
+
+            {% else %}
+              Unsupported sensor
+            {% endif %}
+          {% else %}
+            Unknown
+          {% endif %}
+        # Estimated time of arrival
+        secondary: >-
+          {# EDIT #}
+          {% set travel_time_sensor = 'sensor.user0_travel_time_duration' %}
+
+          Arrival :
+          {% if travel_time_sensor | has_value %}
+            {% if state_attr(travel_time_sensor, 'unit_of_measurement') in ['min', 's'] %}
+              {% set value = states(travel_time_sensor) | float %}
+              {% if state_attr(travel_time_sensor, 'unit_of_measurement') == 'min' %}
+                {% set value = value * 60 %}
+              {% endif %}
+
+              {% set eta = states[travel_time_sensor].last_updated | as_timestamp + value %}
+              {{ eta | timestamp_custom('%R') }}
+
+              {% set eta_date = eta | timestamp_custom('%D') %}
+              {% set now_date = now() | as_timestamp | timestamp_custom('%D') %}
+              {{ eta_date if eta_date != now_date }}
+
+            {% else %}
+              Unsupported sensor
+            {% endif %}
+          {% else %}
+            Unknown
+          {% endif %}
+        icon: mdi:map-clock
+        entity: sensor.user0_travel_time_duration # EDIT
+        color: blue
+        # Refresh travel time sensor on tap
+        tap_action:
+          action: call-service
+          service: homeassistant.update_entity
+          target:
+            entity_id: sensor.user0_travel_time_duration # EDIT
+        hold_action:
+          action: more-info
+        double_tap_action:
+          action: none
+        features_position: bottom
+        layout_options:
+          grid_columns: 4
+          grid_rows: 1
+
+      # Display users' position history for the last 1 hour
+      - type: map
+        entities:
+          - entity: person.user0 # EDIT
+          - entity: person.user1 # EDIT
+          - entity: person.user2 # EDIT
+        hours_to_show: 1
+        layout_options:
+          grid_columns: 4
+          grid_rows: 8

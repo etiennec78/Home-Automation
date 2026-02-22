@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Device xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Name>Philips LivingColors Micro</Name>
+  <Description />
+  <Author>etiennec78</Author>
+  <Type>LedStripe</Type>
+  <Vendor>Philips</Vendor>
+  <Model>LivingColors Micro</Model>
+  <Width>108.52</Width>
+  <Height>110</Height>
+  <LedUnitWidth>1</LedUnitWidth>
+  <LedUnitHeight>1</LedUnitHeight>
+  <Leds>
+    <Led Id="LedStripe1">
+      <Shape>M 0.88637769,0.93319728 C 0.71112193,1.0437903 0.39606142,0.93949562 0.18267089,0.70024606 -0.03071962,0.46099761 -0.06163363,0.17739528 0.11362217,0.06680245 0.28887791,-0.04379043 0.60393844,0.06050554 0.81732895,0.29975386 1.0307195,0.53900253 1.0616338,0.82260429 0.88637769,0.93319728 Z</Shape>
+      <X>44</X>
+      <Y>0.1</Y>
+      <Width>63.5mm</Width>
+      <Height>63mm</Height>
+    </Led>
+  </Leds>
+  <CustomData>
+    <DeviceImage>LivingColors_Micro.png</DeviceImage>
+  </CustomData>
+</Device>

@@ -1,0 +1,303 @@
+esphome:
+  name: velux-shutter
+  friendly_name: Velux Roller Shutter
+
+esp32:
+  board: esp32-c3-devkitm-1 # Adapt this to your board type
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+  level: WARN # Change to DEBUG if needed
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_key
+  on_client_connected:
+    - switch.turn_on: ble_switch
+  on_client_disconnected:
+    - switch.turn_off: ble_switch
+
+# Enable OTA updates
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+globals:
+  # Constants
+  - id: MOVEMENT_DURATION
+    type: int
+    initial_value: !secret movement_duration
+
+  # Internal variables
+  - id: remote_interractive
+    type: bool
+    initial_value: "1"
+    restore_value: yes
+  - id: direction
+    type: int
+    initial_value: "0"
+    restore_value: yes
+
+
+output:
+  - id: open_cover_pin
+    platform: gpio
+    pin:
+      number: !secret open_cover_pin
+      allow_other_uses: true
+    inverted: yes
+
+  - id: close_cover_pin
+    platform: gpio
+    pin:
+      number: !secret close_cover_pin
+      allow_other_uses: true
+    inverted: yes
+
+  - id: stop_cover_pin
+    platform: gpio
+    pin:
+      number: !secret stop_cover_pin
+      allow_other_uses: true
+    inverted: yes
+
+
+button:
+  # Hidden buttons to simulate presses on the remote
+  - platform: output
+    id: open_cover_button
+    output: open_cover_pin
+    duration: 500ms
+    internal: true
+    on_press:
+      - script.execute: disable_buttons
+  - platform: output
+    id: close_cover_button
+    output: close_cover_pin
+    duration: 500ms
+    internal: true
+    on_press:
+      - script.execute: disable_buttons
+  - platform: output
+    id: stop_cover_button
+    output: stop_cover_pin
+    duration: 500ms
+    internal: true
+    on_press:
+      - script.execute: disable_buttons
+
+
+binary_sensor:
+  # Binary sensors to detect physical presses on the remote
+  - platform: gpio
+    id: open_button_sensor
+    pin:
+      number: !secret open_cover_pin
+      mode:
+        input: true
+        output: true
+        pullup: true
+      inverted: yes
+      allow_other_uses: true
+    internal: true
+    on_press:
+      - if:
+          condition:
+            lambda: "return id(remote_interractive);"
+          then:
+            - script.execute:
+                id: move_shutter
+                position_requested: 1.0
+                physical_press: true
+
+  - platform: gpio
+    id: close_button_sensor
+    pin:
+      number: !secret close_cover_pin
+      mode:
+        input: true
+        output: true
+        pullup: true
+      inverted: yes
+      allow_other_uses: true
+    internal: true
+    on_press:
+      - if:
+          condition:
+            lambda: "return id(remote_interractive);"
+          then:
+            - script.execute:
+                id: move_shutter
+                position_requested: 0.0
+                physical_press: true
+
+  - platform: gpio
+    id: stop_button_sensor
+    pin:
+      number: !secret stop_cover_pin
+      mode:
+        input: true
+        output: true
+        pullup: true
+      inverted: yes
+      allow_other_uses: true
+    internal: true
+    on_press:
+      - if:
+          condition:
+            lambda: "return id(remote_interractive);"
+          then:
+            - script.stop:
+                id: move_shutter
+            - cover.template.publish:
+                id: shutter
+                current_operation: IDLE
+
+
+# Cover to group buttons into one entity
+cover:
+  - platform: template
+    id: shutter
+    name: None
+    device_class: shutter
+    has_position: true
+    open_action:
+      - script.execute:
+          id: move_shutter
+          position_requested: 1.0
+          physical_press: false
+    close_action:
+      - script.execute:
+          id: move_shutter
+          position_requested: 0.0
+          physical_press: false
+    stop_action:
+      - script.stop:
+          id: move_shutter
+      - button.press: stop_cover_button
+      - cover.template.publish:
+          id: shutter
+          current_operation: IDLE
+    position_action:
+      - script.execute:
+          id: move_shutter
+          position_requested: !lambda "return pos;" # Call the function with the position requested
+          physical_press: false
+
+
+script:
+  # Script to disable physical button sensors when a pulse is sent remotly
+  - id: disable_buttons
+    mode: restart
+    then:
+      - globals.set:
+          id: remote_interractive
+          value: "0"
+      - delay: 1s
+      - globals.set:
+          id: remote_interractive
+          value: "1"
+
+
+  - id: move_shutter
+    parameters:
+      position_requested: float
+      physical_press: bool
+    mode: restart
+    then:
+      # Only continue if the position needs to change
+      - if:
+          condition:
+            lambda: "return round(id(shutter).position*100) != round(position_requested*100);"
+          then:
+            # If the shutter is currently moving in the wrong direction, then make it stop
+            - if:
+                condition:
+                  lambda: "return id(shutter).current_operation == COVER_OPERATION_CLOSING and position_requested > id(shutter).position or
+                          id(shutter).current_operation == COVER_OPERATION_OPENING and position_requested < id(shutter).position;"
+                then:
+                  - button.press: stop_cover_button
+
+            # If the position requested needs to open the shutter, then open the shutter
+            - if:
+                condition:
+                  lambda: "return position_requested > id(shutter).position;"
+                then:
+                  - cover.template.publish:
+                      id: shutter
+                      current_operation: OPENING
+                  - globals.set:
+                      id: direction
+                      value: "0"
+                  # Only press buttons if the request was from the UI
+                  - if:
+                      condition:
+                        lambda: "return !physical_press;"
+                      then:
+                        - button.press: open_cover_button
+
+                # If the position requested needs to close the shutter, then close the shutter
+                else:
+                  - cover.template.publish:
+                      id: shutter
+                      current_operation: CLOSING
+                  - globals.set:
+                      id: direction
+                      value: "1"
+                  # Only press buttons if the request was from the UI
+                  - if:
+                      condition:
+                        lambda: "return !physical_press;"
+                      then:
+                        - button.press: close_cover_button
+
+            # While the shutter has not finished moving, update its position
+            - while:
+                  condition:
+                    lambda: "return round(id(shutter).position*100) != round(position_requested*100);"
+                  then:
+                    - delay: !lambda  "return id(MOVEMENT_DURATION) * 10;" # Divided by 100 (steps) but multiplied by 1000 to get milliseconds
+                    - cover.template.publish:
+                        id: shutter
+                        position: !lambda "return id(shutter).position + 0.01 * pow(-1, id(direction));"
+
+            # If the shutter has reached the requested position and needs to stop, then stop it
+            - if:
+                condition:
+                  lambda: "return !physical_press and id(shutter).current_operation != COVER_OPERATION_IDLE and position_requested != 1.0 or position_requested != 0.0;"
+                then:
+                  - button.press: stop_cover_button
+
+            # Report the shutter as idle
+            - cover.template.publish:
+                id: shutter
+                current_operation: IDLE
+                state: !lambda "return position_requested;"
+
+# Enable ble tracker
+esp32_ble_tracker:
+  scan_parameters:
+    continuous: false
+
+# Send received packets to HA
+bluetooth_proxy:
+
+switch:
+  # Virtual switch to enable the internal ble tracker
+  - platform: template
+    id: ble_switch
+    name: "BLE tracker"
+    icon: "mdi:access-point"
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    turn_on_action:
+      - esp32_ble_tracker.start_scan:
+    turn_off_action:
+      - esp32_ble_tracker.stop_scan:

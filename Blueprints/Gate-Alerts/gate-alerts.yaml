@@ -1,0 +1,1017 @@
+blueprint:
+  name: Gate Alerts 🚨
+  source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Blueprints/Gate-Alerts/gate-alerts.yaml"
+  domain: automation
+  author: etiennec78
+  description: |-
+    # Gate Alerts 🚨
+
+    ## Description 📝
+    A blueprint that notifies selected users when the gate:
+    * Opens 🔓
+    * Closes 🔐
+    * Encounters an error ⚠️
+    * Has been left open for too long 🔓
+    * Has been offline for too long 🌐
+
+    <details>
+      <summary><h2>Key Features 🌟</h2></summary>
+
+    * Compatible with gate switches, covers, and position tracked covers 🔗
+    * Companion app notifications 🔔
+    * Button to close the gate from notifications 🔐
+    * Dashboard persistent notifications 📢
+    * Android TTS support 📳
+    * Media players TTS support 🔊
+    * Built-in translations 🌍
+    * Customizable extra actions ➕
+
+    </details>
+
+    ## More Info ℹ️
+    * Version: 2.0.0
+    * Set up sensors: [click here](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md)
+    * GitHub: [click here](https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/Gate-Alerts)
+    * Discord: @etiennec78
+    [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
+  homeassistant:
+    min_version: 2024.10.0
+  input:
+    common_settings:
+      name: Essential inputs
+      icon: "mdi:cog"
+      input:
+        gate:
+          name: ⛩️ Gate
+          description: Your gate entity
+          selector:
+            entity:
+              filter:
+                domain:
+                  - switch
+                  - cover
+                  - input_boolean
+                  - binary_sensor
+        notification_type:
+          name: 🔔 Notification type
+          description: Type of **event** that should trigger notifications
+          selector:
+            select:
+              options:
+                - label: Opening
+                  value: "open"
+                - label: Closing
+                  value: "close"
+                - label: Error
+                  value: "error"
+                - label: Offline
+                  value: "offline"
+        notification_delay:
+          name: ⌛ Notification delay
+          description: Wait **time** in minutes before sending notifications
+          default: 0
+          selector:
+            number:
+              min: 0
+              max: 30
+              unit_of_measurement: min
+        error_message_sensor:
+          name: ⚠️ Error Message Sensor
+          description: |-
+            Sensor that provides gate error messages
+            > *Only needed for error notification type*
+          default: ""
+          selector:
+            entity:
+              domain: sensor
+        notify_devices:
+          name: 💬 Notify devices
+          description: |-
+            Mobile **[devices](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#notify-services-)** to **notify**
+            > *Optional*
+          default: []
+          selector:
+            device:
+              multiple: true
+              filter:
+                integration: mobile_app
+
+    notification_settings:
+      name: Notification settings
+      icon: mdi:bell
+      collapsed: true
+      input:
+        language:
+          name: Notification language
+          description: |-
+            The **language** in which **notifications** will be sent to you
+            > *If your language is not supported by this blueprint, could you please [open a pull request](https://github.com/etiennec78/Home-Automation/pulls) ?*
+          default: "en"
+          selector:
+            language:
+              languages:
+                - en
+                - fr
+        custom_translations:
+          name: Custom translations
+          description: |-
+            A **yaml** dictionary to change the default **notifications translations**
+            > You can find the translation keys in the strings['en'] variable in the code or in your traces*
+          default:
+            title: {}
+            message: {}
+          selector:
+            object:
+        car_visible:
+          name: 🚗 Visible in Android Auto/CarPlay
+          description: Show notifications on your **car's dashboard**
+          default: true
+          selector:
+            boolean:
+        persistent_notification:
+          name: 🔔 Persistent notifications
+          description: Show notifications in Home Assistant **[dashboard](https://www.home-assistant.io/integrations/persistent_notification)**
+          default: false
+          selector:
+            boolean:
+        phone_tts:
+          name: 📳 Phone TTS
+          description: Read notifications **aloud** on selected **Android** phones
+          default: false
+          selector:
+            boolean:
+        phone_tts_stream:
+          name: 📻 Phone TTS audio stream
+          description: The **audio stream** used for playing the phone TTS. Can be useful to **bypass Do Not Disturb**
+          default: "notification_stream"
+          selector:
+            select:
+              options:
+                - label: Notification stream
+                  value: "notification_stream"
+                - label: Alarm stream
+                  value: "alarm_stream"
+                - label: Alarm stream (max volume)
+                  value: "alarm_stream_max"
+
+    speakers:
+      name: Speakers
+      icon: mdi:speaker-multiple
+      collapsed: true
+      input:
+        speaker_tts_devices:
+          name: 🔊 TTS speakers
+          description: |-
+            **Speakers** for **text-to-speech** announcements
+            > *Optional*
+          default: []
+          selector:
+            entity:
+              multiple: true
+              domain: media_player
+        speaker_tts_service:
+          name: 🎙️ TTS service
+          description: |-
+            **TTS service** you want to use for your speakers
+            > *Optional*
+          default: ""
+          selector:
+            entity:
+              domain: tts
+        tts_volume_night_time_start:
+          name: 🌙 TTS night time start
+          description: |-
+            The time at which the volume of the TTS will start being lowered
+            > *Optional*
+          default: ""
+          selector:
+            time:
+        tts_volume_night_time_end:
+          name: ☀️ TTS night time end
+          description: |-
+            The time at which the volume of the TTS will stop being lowered
+            > *Optional*
+          default: ""
+          selector:
+            time:
+        tts_volume_at_night:
+          name: 🔇 TTS sound volume at night
+          description: |-
+            The **sound volume** you want to apply to your speakers before reading TTS **at night**
+          default: 10
+          selector:
+            number:
+              min: 0
+              max: 100
+              unit_of_measurement: "%"
+
+    extra_actions:
+      name: Extra actions
+      icon: mdi:plus-circle
+      collapsed: true
+      input:
+        extra_actions:
+          name: ➕ Extra Actions
+          description: |-
+            Additional **actions** to execute when **triggered**
+            > *Optional*
+          default: []
+          selector:
+            action:
+
+    config_checker:
+      name: Config checker
+      icon: mdi:shield-check
+      collapsed: true
+      input:
+        run_checks_when_enabled:
+          name: 🧪 Run tests when blueprint enabled
+          description: Run tests after adding the blueprint, updating inputs, and after HA startup
+          default: true
+          selector:
+            boolean:
+        always_run_checks:
+          name: 🧪 Run tests when triggered
+          description: Run tests when the blueprint is triggered by a driving sensor
+          default: true
+          selector:
+            boolean:
+
+variables:
+  MAX_INT: 2147483647
+  gate: !input gate
+  notification_type: !input notification_type
+  notification_delay: !input notification_delay
+  notify_devices: !input notify_devices
+  notify_services: >-
+    {{
+      notify_devices
+      | map('device_attr', 'name')
+      | map('slugify')
+      | map('regex_replace', '^', 'notify.mobile_app_')
+      | list
+    }}
+  persistent_notification: !input persistent_notification
+  speaker_tts_devices: !input speaker_tts_devices
+  speaker_tts_service: !input speaker_tts_service
+  tts_volume_night_time_start: !input tts_volume_night_time_start
+  tts_volume_night_time_end: !input tts_volume_night_time_end
+  tts_volume_at_night: !input tts_volume_at_night
+  error_message_sensor: !input error_message_sensor
+  car_visible: !input car_visible
+  language: !input language
+  custom_translations: !input custom_translations
+  notification_tag: "gate-{{ notification_type }}"
+  config_checker_tag: "{{ 'config-checker-' ~ this.attributes.id }}"
+  closing_order_id: "{{ 'closing_order_' ~ this.context.id }}"
+  error_checker_ran: false
+  blueprint_name: "{{ state_attr(this.entity_id, 'friendly_name') }}"
+  strings:
+    en:
+      title:
+        open: Gate opening 🔓
+        still_open: Gate open 🔓
+        left_open: Gate left open 🔓
+        close: Gate closing 🔐
+        error: Gate error ⚠️
+        offline: Gate offline 🌐
+        valid_config: "{{blueprint_name}}: Valid configuration 🛠️✅"
+        invalid_config: "{{blueprint_name}}: Invalid configuration 🛠️❌"
+      message:
+        open: The gate is opening
+        still_open: The gate is open
+        left_open: The gate has been left open for {{notification_delay}} minutes
+        close: The gate is closing
+        error: "The gate has encountered an error: {error}"
+        offline: The gate has been offline for {{notification_delay}} minutes
+        something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
+        valid_config: "Your configuration seems valid"
+        more_info: "More info"
+        invalid_translations: "Your custom translations are not valid. Check the following keys: '{data}'. (#1)"
+        missing_error_sensor: "You have not entered the sensor containing gate error codes (#15)"
+        invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service (#16)"
+        no_notification_method: "You have not entered any method for receiving notifications (#17)"
+        night_mode_missing_bound: "A bound for the speakers' night mode schedule is missing (#18)"
+        deprecated_translations: "Custom translations now use a yaml dictionnary instead of json. Please update your old config. (#21)"
+      button:
+        close: Close 🔐
+    fr:
+      title:
+        open: Ouverture portail 🔓
+        still_open: Portail ouvert 🔓
+        left_open: Portail laissé ouvert 🔓️
+        close: Fermeture portail 🔐
+        error: Erreur portail ⚠️
+        offline: Portail hors ligne 🌐
+        valid_config: "{{blueprint_name}}: Configuration valide 🛠️✅"
+        invalid_config: "{{blueprint_name}}: Configuration invalide 🛠️❌"
+      message:
+        open: Ouverture du portail en cours
+        still_open: Le portail est ouvert
+        left_open: Le portail est ouvert depuis {{notification_delay}} minutes
+        close: Fermeture du portail en cours
+        error: "Le portail a rencontré une erreur: {error}"
+        offline: Le portail est hors ligne depuis {{notification_delay}} minutes
+        something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
+        valid_config: "Votre configuration semble valide"
+        more_info: "Plus d'infos"
+        invalid_translations: "Vos traductions personnalisées ne sont pas valides. Vérifiez les valeurs suivantes: '{data}'. (#1)"
+        missing_error_sensor: "Vous n'avez pas entré le capteur contenant les codes d'erreur du portail (#15)"
+        invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS (#16)"
+        no_notification_method: "Vous n'avez entré aucune méthode pour recevoir les notifications (#17)"
+        night_mode_missing_bound: "Il manque une borne des horaires du mode nuit des enceintes (#18)"
+        deprecated_translations: "Les traductions personnalisés utilisent maintenant un dictionnaire yaml au lieu de json. Mettez à jour votre configuration svp. (#21)"
+      button:
+        close: Refermer 🔐
+
+trigger_variables:
+  notification_type: !input notification_type
+  gate: !input gate
+
+triggers:
+  - alias: Wait for gate opening or fully open
+    trigger: state
+    id: open
+    entity_id: !input gate
+    to:
+      - "on"
+      - "open"
+      - "opening"
+    not_from:
+      - "unknown"
+      - "unavailable"
+    for:
+      minutes: !input notification_delay
+    enabled: "{{ notification_type == 'open' }}"
+
+  - alias: Wait for gate closing
+    trigger: state
+    id: close
+    entity_id: !input gate
+    to:
+      - "off"
+      - "closing"
+      - "closed"
+    not_from:
+      - "unknown"
+      - "unavailable"
+    for:
+      minutes: !input notification_delay
+    enabled: "{{ notification_type == 'close' }}"
+
+  - alias: Wait for error
+    trigger: state
+    id: error
+    entity_id: !input error_message_sensor
+    not_to:
+      - "unknown"
+      - "unavailable"
+      - ""
+    enabled: "{{ notification_type == 'error' }}"
+
+  - alias: Wait for gate unavailable for duration
+    trigger: state
+    id: offline
+    entity_id: !input gate
+    to: "unavailable"
+    for:
+      minutes: !input notification_delay
+    enabled: "{{ notification_type == 'offline' }}"
+
+  - alias: Trigger when the blueprint the user added the blueprint, updated inputs, or HA started
+    trigger: template
+    id: blueprint_enabled
+    value_template: "{{ is_state(this.entity_id, 'on') }}"
+    enabled: !input run_checks_when_enabled
+
+conditions:
+  - alias: If triggered by gate fully closed, only continue if it does not support position tracking
+    condition: template
+    value_template: >-
+      {% set features = state_attr(gate, 'supported_features') %}
+      {{
+        trigger.id == 'blueprint_enabled'
+        or notification_type != 'close'
+        or not is_state(gate, 'closed')
+        or (
+          (0 if features is none else features)
+          | bitwise_and(4) == 0
+        )
+      }}
+
+actions:
+  - alias: Check that custom strings are valid
+    variables:
+      custom_translations_error: "{{ custom_translations is not mapping }}"
+  - alias: If the custom translations is not a mapping
+    if:
+      - condition: template
+        value_template: "{{ custom_translations_error }}"
+    then:
+      - alias: Reset the custom translations
+        variables:
+          custom_translations: {}
+  - alias: If the config checker should run checks
+    if:
+      - condition: or
+        conditions:
+          - alias: If the blueprint was executed manually
+            condition: template
+            value_template: "{{ trigger.platform is none }}"
+          - alias: If checks should be run when triggered by a driving sensor
+            condition: and
+            conditions:
+              - condition: trigger
+                id: vehicle_started
+              - condition: template
+                value_template: !input always_run_checks
+          - alias: If the user added the blueprint, updated inputs, or HA started
+            condition: trigger
+            id: blueprint_enabled
+    then:
+      ##################
+      # ERROR CHECKING #
+      ##################
+
+      - alias: Initialize variables for the error checker
+        variables:
+          error_checker_ran: true
+          successfull_check: false
+          messages: []
+          error_level: 0
+      - alias: Run the error checker in an error-safe sequence
+        sequence:
+          - alias: Check for errors
+            repeat:
+              for_each:
+                - alias: Check custom translations
+                  error: >-
+                    {% set data = namespace(invalid=[]) %}
+                    {% for key, sub_items in custom_translations.items() %}
+                      {% if key not in strings['en'] %}
+                        {% set data.invalid = data.invalid + [key] %}
+                      {% else %}
+                        {% for subkey, value in sub_items.items() %}
+                          {%
+                            if value is not string
+                            or subkey not in strings['en'][key]
+                          %}
+                            {% set data.invalid = data.invalid + [subkey] %}
+                          {% endif %}
+                        {% endfor %}
+                      {% endif %}
+                    {% endfor %}
+                    {{ data.invalid }}
+                  message_id: "invalid_translations"
+                  level: 1
+                - alias: Check gate error sensor presence
+                  error: "{{ notification_type == 'error' and not error_message_sensor }}"
+                  message_id: "missing_error_sensor"
+                  level: 2
+                - alias: Check for tts and media player sensors presence
+                  error: "{{ (speaker_tts_devices | length < 1) != (speaker_tts_service == '') }}"
+                  message_id: "invalid_speakers"
+                  level: 1
+                - alias: Check that there is a way to notify the user
+                  error: >-
+                    {{
+                      notify_devices | length == 0
+                      and speaker_tts_devices | length == 0
+                      and not persistent_notification
+                    }}
+                  message_id: "no_notification_method"
+                  level: 2
+                - alias: Check that both or neither night time end and start have been entered
+                  error: >-
+                    {{
+                      (tts_volume_night_time_start == '')
+                      != (tts_volume_night_time_end == '')
+                    }}
+                  message_id: "night_mode_missing_bound"
+                  level: 1
+                - alias: Check custom translations depreciation
+                  error: "{{ custom_translations_error }}"
+                  message_id: "deprecated_translations"
+                  level: 0
+              sequence:
+                - alias: If a check failed
+                  if:
+                    - condition: template
+                      value_template: >-
+                        {% set error = repeat.item.error %}
+                        {{ error != [] if error is list else error }}
+                  then:
+                    - alias: If the error level is higher than the current highest
+                      if:
+                        - condition: template
+                          value_template: "{{ repeat.item.level > error_level }}"
+                      then:
+                        - alias: Save the new highest error level
+                          variables:
+                            error_level: "{{ repeat.item.level }}"
+                    - alias: Append the error message to the list
+                      variables:
+                        message_id: "{{ repeat.item.message_id }}"
+                        message: &get_message >-
+                          {# Custom translation #}
+                          {%
+                            if 'message' in custom_translations
+                            and message_id in custom_translations['message']
+                          %}
+                            {{ custom_translations['message'][message_id] }}
+
+                          {# Selected language #}
+                          {% elif message_id in strings[language]['message'] %}
+                            {{ strings[language]['message'][message_id] }}
+
+                          {# Fallback to english #}
+                          {% else %}
+                            {{ strings['en']['message'][message_id] }}
+                          {% endif %}
+                    - alias: If the error variable contains a list
+                      if:
+                        - condition: template
+                          value_template: "{{ repeat.item.error is list }}"
+                      then:
+                        - alias: Format the string with error data
+                          variables:
+                            message: >-
+                              {{
+                                message.format(
+                                  data=(
+                                    ', '.join(repeat.item.error)
+                                  )
+                                )
+                              }}
+                    - alias: Append the error message to the list
+                      variables:
+                        messages: "{{ messages | union([message]) }}"
+          - alias: If the config is valid
+            if:
+              - condition: template
+                value_template: "{{ messages | length == 0 }}"
+            then:
+              - alias: If the blueprint was triggered manually
+                if:
+                  - condition: template
+                    value_template: "{{ trigger.platform is none }}"
+                then:
+                  - alias: Set message ids
+                    variables:
+                      title_id: "valid_config"
+                      message_id: "valid_config"
+                  - alias: Get notification translation
+                    variables: &get_translation
+                      message: *get_message
+                      title: &get_title >-
+                        {# Custom translation #}
+                        {%
+                          if 'title' in custom_translations
+                          and title_id in custom_translations['title']
+                        %}
+                          {{ custom_translations['title'][title_id] }}
+
+                        {# Selected language #}
+                        {% elif title_id in strings[language]['title'] %}
+                          {{ strings[language]['title'][title_id] }}
+
+                        {# Fallback to english #}
+                        {% else %}
+                          {{ strings['en']['title'][title_id] }}
+                        {% endif %}
+                  - alias: Notify all users on the dashboard that the config is valid
+                    action: persistent_notification.create
+                    data:
+                      title: "{{ title }}"
+                      message: "{{ message }}"
+                      notification_id: "{{ config_checker_tag }}"
+                    continue_on_error: true
+                else:
+                  - alias: Remove the previous dashboard notification
+                    action: persistent_notification.dismiss
+                    data:
+                      notification_id: "{{ config_checker_tag }}"
+                    continue_on_error: true
+            else:
+              - alias: Build the notification
+                variables:
+                  title_id: "invalid_config"
+                  title: *get_title
+                  message: "{{ '• ' ~ '\n• '.join(messages) }}"
+              - alias: Build the more info link
+                variables:
+                  message_id: "more_info"
+                  more_info: *get_message
+                  link: "https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/README.md#error-codes-table-%EF%B8%8F"
+                  more_info_md: "[{{more_info}}]({{link}})"
+              - alias: Notify all users on the dashboard that the config is invalid
+                action: persistent_notification.create
+                data:
+                  title: "{{ title }}"
+                  message: "{{ message ~ '\n\n' ~ more_info_md }}"
+                  notification_id: "{{ config_checker_tag }}"
+                continue_on_error: true
+          - alias: Confirm that no error occured while the config checker was running
+            variables:
+              successful_check: true
+        continue_on_error: true
+      - alias: If an error occured while the config checker was running
+        if:
+          - condition: template
+            value_template: "{{ not successful_check }}"
+        then:
+          - alias: Set notification ids
+            variables:
+              title_id: "invalid_config"
+              message_id: "something_went_wrong"
+          - alias: Get notification translation
+            variables: *get_translation
+          - alias: Notify all users on the dashboard that an error occured
+            action: persistent_notification.create
+            data:
+              title: "{{ title }}"
+              message: "{{ message }}"
+              notification_id: "{{ config_checker_tag }}"
+            continue_on_error: true
+          - stop: Config checker failed
+            error: true
+
+  - alias: Only continue if the blueprint was triggered by an alert and tests passed
+    condition: template
+    value_template: >-
+      {{
+        trigger.platform is not none
+        and trigger.id != 'blueprint_enabled'
+        and (not error_checker_ran or error_level < 2)
+      }}
+
+  - alias: If gate paused or fully open, and supporting position
+    if:
+      condition: template
+      value_template: >-
+        {% set features = state_attr(gate, 'supported_features') %}
+        {{
+          notification_type == 'open'
+          and is_state(gate, 'open')
+          and notification_delay == 0
+          and (
+            (0 if features is none else features)
+            | bitwise_and(4) == 4
+          )
+        }}
+    then:
+      - alias: Set notification ids
+        variables:
+          title_id: "still_open"
+          message_id: "still_open"
+          button_id: "close"
+      - alias: Get notification translation
+        variables: *get_translation
+      - alias: Get button translation
+        variables: &get_translation_button
+          button_text: >-
+            {# Custom translation #}
+            {%
+              if 'button' in custom_translations
+              and button_id in custom_translations['button']
+            %}
+              {{ custom_translations['button'][button_id] }}
+
+            {# Selected language #}
+            {% elif button_id in strings[language]['button'] %}
+              {{ strings[language]['button'][button_id] }}
+
+            {# Fallback to english #}
+            {% else %}
+              {{ strings['en']['button'][button_id] }}
+            {% endif %}
+      - alias: Replace opening notif on each phone silently
+        repeat:
+          for_each: "{{ notify_services }}"
+          sequence:
+            - action: "{{ repeat.item }}"
+              data:
+                title: "{{ title }}"
+                message: "{{ message }}"
+                data:
+                  notification_icon: mdi:gate-alert
+                  channel: Gate alerts
+                  importance: high
+                  priority: high
+                  ttl: 0
+                  sticky: true
+                  persistent: true
+                  tag: "{{ notification_tag }}"
+                  alert_once: true
+                  actions:
+                    - action: "{{ closing_order_id }}"
+                      title: "{{ button_text }}"
+                      icon: sfsymbols:lock
+              continue_on_error: true
+
+      - alias: Replace opening persistent notification if enabled
+        if:
+          condition: template
+          value_template: !input persistent_notification
+        then:
+          - action: persistent_notification.create
+            data:
+              title: "{{ title }}"
+              message: "{{ message }}"
+              notification_id: "{{ notification_tag }}"
+            continue_on_error: true
+    else:
+      - alias: Set notification ids
+        variables:
+          title_id: >-
+            {%
+              if notification_type == 'open'
+              and notification_delay != 0
+            %}
+              left_open
+            {% else %}
+              {{ notification_type }}
+            {% endif %}
+          message_id: "{{ title_id }}"
+          button_id: "close"
+      - alias: Get notification translation
+        variables: *get_translation
+      - alias: Get button translation
+        variables: *get_translation_button
+      - alias: If the notification type is 'error'
+        if:
+          - condition: template
+            value_template: "{{ notification_type == 'error' }}"
+        then:
+          - alias: Format the notification message
+            variables:
+              message: >-
+                {{
+                  message.format(
+                    error=states(error_message_sensor)
+                  )
+                }}
+
+      - parallel:
+          - alias: Notify each user
+            repeat:
+              for_each: "{{ notify_services }}"
+              sequence:
+                - action: "{{ repeat.item }}"
+                  data:
+                    title: "{{ title }}"
+                    message: "{{ message }}"
+                    data:
+                      car_ui: "{{ car_visible }}"
+                      notification_icon: mdi:gate-alert
+                      channel: Gate alerts
+                      importance: high
+                      priority: high
+                      ttl: 0
+                      sticky: true
+                      persistent: "{{ notification_type == 'open' }}"
+                      push:
+                        sound:
+                          name: "default"
+                          critical: "{{ int(car_visible) }}"
+                      tag: "{{ notification_tag }}"
+                      timeout: >-
+                        {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
+                          30
+                        {% else %}
+                          {{ MAX_INT }}
+                        {% endif %}
+                      chronometer: "{{ notification_delay != 0 }}"
+                      when: >-
+                        {{
+                          (utcnow() - timedelta(minutes=notification_delay))
+                          | as_timestamp
+                          | int
+                        }}
+                      actions: >-
+                        {%
+                          if notification_type == 'open'
+                          and states[gate].domain in ['cover', 'switch']
+                        %}
+                          {{
+                            [
+                              {
+                                'action': closing_order_id,
+                                'title': button_text,
+                                'icon': 'sfsymbols:lock'
+                              }
+                            ]
+                          }}
+                        {% else %}
+                          {{ [] }}
+                        {% endif %}
+                  continue_on_error: true
+
+                - alias: Play TTS on each phone, if enabled
+                  if:
+                    condition: template
+                    value_template: !input phone_tts
+                  then:
+                    - action: "{{ repeat.item }}"
+                      data:
+                        message: TTS
+                        data:
+                          tts_text: "{{ message }}"
+                          channel: Gate alerts
+                          importance: high
+                          priority: high
+                          ttl: 0
+                          media_stream: !input phone_tts_stream
+                      continue_on_error: true
+
+          - alias: If the user has entered a TTS service
+            if:
+              - condition: template
+                value_template: "{{ speaker_tts_service != '' }}"
+            then:
+              - alias: Play TTS on each speaker
+                repeat:
+                  for_each: "{{ speaker_tts_devices }}"
+                  sequence:
+                    - alias: Run the night mode in an error-safe sequence
+                      sequence:
+                        - alias: Initialize a variable to store the speaker volume later
+                          variables:
+                            old_volume: null
+
+                        - alias: If the tts night mode is currently active
+                          if:
+                            - condition: template
+                              value_template: >-
+                                {% set start = today_at(tts_volume_night_time_start) %}
+                                {% set end = today_at(tts_volume_night_time_end) %}
+                                {% set time = now() %}
+                                {{
+                                  tts_volume_night_time_start != ''
+                                  and tts_volume_night_time_end != ''
+                                  and (
+                                    start <= end and start <= time <= end
+                                    or start > end and (time >= start or time <= end)
+                                  )
+                                }}
+                          then:
+                            - alias: If the speaker is not exposing its volume because it is turned off
+                              if:
+                                - condition: template
+                                  value_template: >-
+                                    {{
+                                      is_state(repeat.item, 'off')
+                                      and state_attr(repeat.item, 'volume_level') is none
+                                    }}
+                              then:
+                                - alias: Turn on the speaker
+                                  action: media_player.turn_on
+                                  target:
+                                    entity_id: "{{ repeat.item }}"
+                                - alias: Wait for the speaker to turn on
+                                  wait_template: "{{ not is_state(repeat.item, 'off') }}"
+                                  timeout: 3
+
+                            - alias: Only continue if the speaker has a higher volume than night mode
+                              condition: template
+                              value_template: >-
+                                {{
+                                  state_attr(repeat.item, 'volume_level') is none
+                                  or (
+                                    state_attr(repeat.item, 'volume_level') * 100
+                                  ) | int > tts_volume_at_night
+                                }}
+
+                            - alias: Save the current volume
+                              variables:
+                                old_volume: "{{ state_attr(repeat.item, 'volume_level') }}"
+
+                            - alias: Lower the volume
+                              action: media_player.volume_set
+                              target:
+                                entity_id: "{{ repeat.item }}"
+                              data:
+                                volume_level: "{{ tts_volume_at_night / 100 }}"
+
+                        - alias: Play the TTS
+                          action: tts.speak
+                          data:
+                            cache: true
+                            media_player_entity_id: "{{ repeat.item }}"
+                            message: "{{ message }}"
+                          target:
+                            entity_id: "{{ speaker_tts_service }}"
+
+                        - alias: If the old volume could be saved
+                          if:
+                            - condition: template
+                              value_template: "{{ old_volume is not none }}"
+                          then:
+                            - alias: Restore the old volume
+                              action: media_player.volume_set
+                              target:
+                                entity_id: "{{ repeat.item }}"
+                              data:
+                                volume_level: "{{ old_volume }}"
+                      continue_on_error: true
+
+          - alias: Send persistent notification to dashboard, if enabled
+            if:
+              condition: template
+              value_template: !input persistent_notification
+            then:
+              - action: persistent_notification.create
+                data:
+                  title: "{{ title }}"
+                  message: "{{ message }}"
+                  notification_id: "{{ notification_tag }}"
+                continue_on_error: true
+
+          - alias: Exec user extra actions
+            sequence: !input extra_actions
+            continue_on_error: true
+
+  - wait_for_trigger:
+    - alias: Wait for gate closed
+      trigger: template
+      id: closed
+      value_template: "{{ is_state(gate, ['off', 'closed']) }}"
+
+    - alias: Wait for gate opening
+      trigger: template
+      id: started_opening
+      value_template: "{{ is_state(gate, ['on', 'opening']) }}"
+      enabled: "{{ notification_type == 'close' }}"
+
+    - alias: Wait for gate closing
+      trigger: template
+      id: started_closing
+      value_template: "{{ is_state(gate, 'closing') }}"
+      enabled: "{{ notification_type == 'open' }}"
+
+    - alias: Wait for closing button press
+      trigger: event
+      id: closing_order
+      event_type: mobile_app_notification_action
+      event_data:
+        action: "{{ closing_order_id }}"
+      enabled: "{{ notification_type == 'open' }}"
+
+    # Remove notification after 30s in case of an error or gate closing without position tracking
+    timeout: >-
+      {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
+        30
+      {% else %}
+        {{ MAX_INT }}
+      {% endif %}
+
+  - alias: Stop if timer ran out but problem still present
+    if:
+      condition: template
+      value_template: >-
+        {{
+          not(
+            wait.completed
+            or notification_type == 'error'
+            or is_state(gate, ['off', 'closed'])
+          )
+        }}
+    then:
+      - stop: Timer ran out
+
+  - alias: Close gate if user pressed closing button
+    if:
+      condition: template
+      value_template: "{{ wait.trigger.id == 'closing_order' }}"
+    then:
+      - action: >-
+          {% if states[gate].domain == 'switch' %}
+            switch.turn_off
+          {% elif states[gate].domain == 'cover' %}
+            cover.close_cover
+          {% endif %}
+        target:
+          entity_id: "{{ gate }}"
+
+  - alias: Remove notification sent to users
+    repeat:
+      for_each: "{{ notify_services }}"
+      sequence:
+        - action: "{{ repeat.item }}"
+          data:
+            message: clear_notification
+            data:
+              tag: "{{ notification_tag }}"
+          continue_on_error: true
+
+  - alias: Remove persistent notification
+    if:
+      condition: template
+      value_template: !input persistent_notification
+    then:
+      - action: persistent_notification.dismiss
+        data:
+          notification_id: "{{ notification_tag }}"
+        continue_on_error: true
+
+mode: restart

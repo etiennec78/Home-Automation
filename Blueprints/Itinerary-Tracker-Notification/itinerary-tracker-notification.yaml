@@ -1,0 +1,1275 @@
+blueprint:
+  name: Itinerary Tracker Notification 📍
+  source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Blueprints/Itinerary-Tracker-Notification/itinerary-tracker-notification.yaml"
+  domain: automation
+  author: etiennec78
+  description: |-
+    # Itinerary Tracker Notification 📍
+
+    ## Description 📝
+    A blueprint that notifies all selected users when another one is driving home
+
+    <details>
+      <summary><h2>Key Features 🌟</h2></summary>
+
+    * Travel time and ETA notification updates 🔁
+    * Companion app notifications 🔔
+    * Custom link on notification tap 👆
+    * Dashboard persistent notifications 📢
+    * Media players TTS support 🔊
+    * Notification limiter ⌛
+    * Built-in translations 🌍
+    * State-based notification filtering 📍
+
+    </details>
+
+    ## More info ℹ️
+    * Version: 2.0.0
+    * Set up sensors: [click here](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md)
+    * Github: [click here](https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/Automatic-Gate)
+    * Discord: @etiennec78
+    [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
+  homeassistant:
+    min_version: 2025.4.0
+  input:
+    per_person_sensors:
+      name: Per person sensors
+      icon: mdi:account-multiple
+      collapsed: true
+      description: ⚠️ Please sort the sensors in the same order as their users
+      input:
+        persons:
+          name: 👤 Users
+          description: |-
+            Each **user** which should be **tracked** or **notified** when an itinerary is in progress (same order)
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain: person
+        notify_devices:
+          name: 💬 Notify devices
+          description: |-
+            Each [**device** to **notify**](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#notify-services-)
+            > *Optional*
+          default: []
+          selector:
+            device:
+              multiple: true
+              filter:
+                integration: mobile_app
+        driving_sensors:
+          name: 🚗 Driving sensors
+          description: |-
+            Each **[driving sensor](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#driving-sensors-)** which should trigger the automation (same order)
+            > *There can be less driving sensors than users to notify. Place users with driving sensors first.*
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain:
+                  - binary_sensor
+                  - input_boolean
+        travel_time_sensors:
+          name: ✈️ Travel time sensors
+          description: |-
+            Each **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#travel-time-sensors-%EF%B8%8F)** monitoring each user **time left before arrival** (same order)
+            > *Optional*
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain: sensor
+                device_class: duration
+
+    dead_zone:
+      name: Dead zone
+      icon: mdi:map-marker-radius
+      collapsed: true
+      input:
+        dead_zone:
+          name: 📍 Dead zone
+          description: |-
+            **Minimum distance** between the driver and home to trigger the automation
+          default: 500
+          selector:
+            number:
+              min: 300
+              max: 5000
+              unit_of_measurement: m
+
+    persons_to_notify:
+      name: Persons to notify
+      icon: mdi:bell-ring
+      collapsed: true
+      description: If notify everyone is disabled, the blueprint will check for any of these conditions per user (OR)
+      input:
+        notify_everyone:
+          name: 🔔🧩 Notify everyone
+          description: Should the automation notify everyone ?
+          default: false
+          selector:
+            boolean:
+        zones_to_notify:
+          name: 🔔📍 Zones to notify
+          description: Persons in these zones will be notified
+          default:
+            - zone.home
+          selector:
+            entity:
+              multiple: true
+              domain: zone
+        notify_persons_away:
+          name: 🔔🚪 Notify persons away
+          description: Should the automation notify persons that are not in any zone ?
+          default: false
+          selector:
+            boolean:
+        notify_persons_driving:
+          name: 🔔🚗 Notify persons driving
+          description: Should the automation notify other drivers ?
+          default: false
+          selector:
+            boolean:
+
+    notification_settings:
+      name: Notification settings
+      icon: mdi:cog
+      collapsed: true
+      input:
+        language:
+          name: Notification language
+          description: |-
+            The **language** in which **notifications** will be sent to you
+            > *If your language is not supported by this blueprint, could you please [open a pull request](https://github.com/etiennec78/Home-Automation/pulls) ?*
+          default: "en"
+          selector:
+            language:
+              languages:
+                - en
+                - fr
+        custom_translations:
+          name: Custom translations
+          description: |-
+            A **yaml** dictionary to change the default **notifications translations**
+            > *You can find the translation keys in the strings['en'] variable in the code or in your traces*
+          default:
+            title: {}
+            message: {}
+          selector:
+            object:
+        notif_refresh_rate_ftn:
+          name: 🔁 Notification refresh rate function
+          description: |-
+            The function used to calculate the **seconds** between two tracking notifications to lower your quota consumptio
+            > *`remaining` will be replaced by the seconds remaining until the arrival*
+          default: "{{ max(10, remaining/4) }}"
+          selector:
+            template:
+        on_tap_link:
+          name: 👆 On tap link
+          description: |-
+            The **link** you will go to if you **tap** on the notification
+            > *Can be Home Assistant relative links*
+          default: "/lovelace/vehicle-tracker-map"
+          selector:
+            text:
+        persistent_notification:
+          name: 🔔 Persistent notifications
+          description: Show notifications in Home Assistant **[dashboard](https://www.home-assistant.io/integrations/persistent_notification)**
+          default: false
+          selector:
+            boolean:
+
+    speakers:
+      name: Speakers
+      icon: mdi:speaker-multiple
+      collapsed: true
+      input:
+        speaker_tts_devices:
+          name: 🔊 TTS speakers
+          description: |-
+            The **home speakers** your want to play TTS on
+            > *Optional*
+          default: []
+          selector:
+            entity:
+              multiple: true
+              domain: media_player
+        speaker_tts_service:
+          name: 🎙️ TTS service
+          description: |-
+            The **TTS service** you want to use for your speakers
+            > *Optional*
+          default: ""
+          selector:
+            entity:
+              domain: tts
+        drive_start_tts:
+          name: 🚀 Drive start TTS
+          description: Notify over TTS when someone starts driving
+          default: True
+          selector:
+            boolean:
+        nearly_arrived_tts:
+          name: 🛬 Nearly arrived TTS
+          description: Notify over TTS when the driver has nearly arrived
+          default: True
+          selector:
+            boolean:
+        driver_arrived_tts:
+          name: 🏁 Arrived TTS
+          description: Notify over TTS when the driver has arrived
+          default: True
+          selector:
+            boolean:
+        nearly_arrived_time:
+          name: ⏱️ Nearly arrived time trigger
+          description: The remaining time at which the automation will send a nearly arrived TTS
+          default: 3
+          selector:
+            number:
+              min: 0
+              max: 60
+              unit_of_measurement: min
+        tts_volume_night_time_start:
+          name: 🌙 TTS night time start
+          description: |-
+            The time at which the volume of the TTS will start being lowered
+            > *Optional*
+          default: ""
+          selector:
+            time:
+        tts_volume_night_time_end:
+          name: ☀️ TTS night time end
+          description: |-
+            The time at which the volume of the TTS will stop being lowered
+            > *Optional*
+          default: ""
+          selector:
+            time:
+        tts_volume_at_night:
+          name: 🔇 TTS sound volume at night
+          description: |-
+            The **sound volume** you want to apply to your speakers before reading TTS **at night**
+          default: 10
+          selector:
+            number:
+              min: 0
+              max: 100
+              unit_of_measurement: "%"
+
+    config_checker:
+      name: Config checker
+      icon: mdi:shield-check
+      collapsed: true
+      input:
+        run_checks_when_enabled:
+          name: 🧪 Run tests when blueprint enabled
+          description: Run tests after adding the blueprint, updating inputs, and after HA startup
+          default: true
+          selector:
+            boolean:
+        always_run_checks:
+          name: 🧪 Run tests when triggered
+          description: Run tests when the blueprint is triggered by a driving sensor
+          default: true
+          selector:
+            boolean:
+
+variables:
+  MAX_INT: 2147483647
+  dead_zone: !input dead_zone
+  persons: !input persons
+  notify_devices: !input notify_devices
+  notify_services: >-
+    {{
+      notify_devices
+      | map('device_attr', 'name')
+      | map('slugify')
+      | map('regex_replace', '^', 'notify.mobile_app_')
+      | list
+    }}
+  driving_sensors: !input driving_sensors
+  travel_time_sensors: !input travel_time_sensors
+  notify_everyone: !input notify_everyone
+  zones_to_notify: !input zones_to_notify
+  notify_persons_away: !input notify_persons_away
+  notify_persons_driving: !input notify_persons_driving
+  speaker_tts_devices: !input speaker_tts_devices
+  speaker_tts_service: !input speaker_tts_service
+  drive_start_tts: !input drive_start_tts
+  nearly_arrived_tts: !input nearly_arrived_tts
+  nearly_arrived_time: !input nearly_arrived_time
+  tts_volume_night_time_start: !input tts_volume_night_time_start
+  tts_volume_night_time_end: !input tts_volume_night_time_end
+  tts_volume_at_night: !input tts_volume_at_night
+  language: !input language
+  custom_translations: !input custom_translations
+  dismissed_idx: []
+  notification_tag: "{{ 'itinerary-tracker-' ~ this.context.id }}"
+  config_checker_tag: "{{ 'config-checker-' ~ this.attributes.id }}"
+  persistent_active: !input persistent_notification
+  error_checker_ran: false
+  blueprint_name: "{{ state_attr(this.entity_id, 'friendly_name') }}"
+  strings:
+    en:
+      title:
+        valid_config: "{{blueprint_name}}: Valid configuration 🛠️✅"
+        invalid_config: "{{blueprint_name}}: Invalid configuration 🛠️❌"
+      message:
+        itinerary_started: "{driver_name} just got into their car"
+        itinerary_ongoing: "{driver_name} will arrive arround {arrival}"
+        nearly_arrived: "{driver_name} will arrive in {remaining_minutes} minutes"
+        soon_arrived: "{driver_name} will arrive soon"
+        driver_arrived: "{driver_name} just arrived home"
+        something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
+        unsupported_tt_integration: "Your travel time integration is not supported !"
+        valid_config: "Your configuration seems valid"
+        more_info: "More info"
+        invalid_translations: "Your custom translations are not valid. Check the following keys: '{data}'. (#1)"
+        invalid_per_person_sensors: "You have not entered a consistent number of sensors in the per person sensor inputs (#11)"
+        invalid_speakers: "Invalid speaker configuration: you need at least a speaker and a TTS service (#16)"
+        per_person_sensors_mismatch: "These persons: '{data}' appear to have mixed up per person sensors (#12)"
+        no_notification_method: "You have not entered any method for receiving notifications (#17)"
+        night_mode_missing_bound: "A bound for the speakers' night mode schedule is missing (#18)"
+        deprecated_translations: "Custom translations now use a yaml dictionnary instead of json. Please update your old config. (#21)"
+    fr:
+      title:
+        valid_config: "{{blueprint_name}}: Configuration valide 🛠️✅"
+        invalid_config: "{{blueprint_name}}: Configuration invalide 🛠️❌"
+      message:
+        itinerary_started: "{driver_name} vient de monter dans sa voiture"
+        itinerary_ongoing: "{driver_name} arrivera vers {arrival}"
+        nearly_arrived: "{driver_name} arrivera dans {remaining_minutes} minutes"
+        soon_arrived: "{driver_name} arrivera bientôt"
+        driver_arrived: "{driver_name} vient d'arriver à la maison"
+        something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
+        unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
+        valid_config: "Votre configuration semble valide"
+        more_info: "Plus d'infos"
+        invalid_translations: "Vos traductions personnalisées ne sont pas valides. Vérifiez les valeurs suivantes: '{data}'. (#1)"
+        invalid_per_person_sensors: "Vous n'avez pas entré le bon nombre de capteurs dans les champs de capteurs par personne (#11)"
+        invalid_speakers: "Mauvaise configuration de haut-parleurs: vous avez besoin d'au moins un haut-parleur et d'un service TTS (#16)"
+        per_person_sensors_mismatch: "Ces personnes: '{data}' semblent avoir des capteurs par personne mélangés (#12)"
+        no_notification_method: "Vous n'avez entré aucune méthode pour recevoir les notifications (#17)"
+        night_mode_missing_bound: "Il manque une borne des horaires du mode nuit des enceintes (#18)"
+        deprecated_translations: "Les traductions personnalisés utilisent maintenant un dictionnaire yaml au lieu de json. Mettez à jour votre configuration svp. (#21)"
+
+triggers:
+  - alias: Trigger when user connects to vehicle
+    trigger: state
+    id: vehicle_started
+    entity_id: !input driving_sensors
+    from: "off"
+    to: "on"
+  - alias: Trigger when the blueprint the user added the blueprint, updated inputs, or HA started
+    trigger: template
+    id: blueprint_enabled
+    value_template: "{{ is_state(this.entity_id, 'on') }}"
+    enabled: !input run_checks_when_enabled
+
+actions:
+  - alias: If the blueprint was triggered by a driving sensor
+    if:
+      - condition: trigger
+        id: vehicle_started
+    then:
+      - alias: Set variables containing data related to the driver
+        variables:
+          idx: "{{ driving_sensors.index(trigger.entity_id) }}"
+          active_notify_services: &get_active_services >-
+            {% set data = namespace(services_list=[]) %}
+
+              {% for notify_idx in range(notify_services | length) %}
+                {% if notify_idx != idx and notify_idx not in dismissed_idx %}
+                  {% if notify_everyone
+                    or zones_to_notify
+                      and notify_idx < persons | length
+                      and is_state(persons[notify_idx],
+                        zones_to_notify | map('state_attr', 'friendly_name') | list
+                        + zones_to_notify | map('replace', 'zone.', '') | list
+                      )
+
+                    or notify_persons_away
+                      and notify_idx < persons | length
+                      and is_state(persons[notify_idx], 'not_home')
+
+                    or notify_persons_driving
+                      and notify_idx < driving_sensors | length
+                      and is_state(driving_sensors[notify_idx], 'on')
+                  %}
+                    {% set data.services_list = data.services_list + [notify_services[notify_idx]] %}
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+
+            {{ data.services_list }}
+          driving_sensor: "{{ trigger.entity_id }}"
+          driver: "{{ persons[idx] }}"
+          driver_name: "{{ state_attr(driver, 'friendly_name') }}"
+          travel_time_sensor: >-
+            {{
+              travel_time_sensors[idx]
+              if idx < travel_time_sensors | length
+              else none
+            }}
+  - alias: Check that custom strings are valid
+    variables:
+      custom_translations_error: "{{ custom_translations is not mapping }}"
+  - alias: If the custom translations is not a mapping
+    if:
+      - condition: template
+        value_template: "{{ custom_translations_error }}"
+    then:
+      - alias: Reset the custom translations
+        variables:
+          custom_translations: {}
+  - alias: If the config checker should run checks
+    if:
+      - condition: or
+        conditions:
+          - alias: If the blueprint was executed manually
+            condition: template
+            value_template: "{{ trigger.platform is none }}"
+          - alias: If checks should be run when triggered by a driving sensor
+            condition: and
+            conditions:
+              - condition: trigger
+                id: vehicle_started
+              - condition: template
+                value_template: !input always_run_checks
+          - alias: If the user added the blueprint, updated inputs, or HA started
+            condition: trigger
+            id: blueprint_enabled
+    then:
+      ##################
+      # ERROR CHECKING #
+      ##################
+
+      - alias: Initialize variables for the error checker
+        variables:
+          error_checker_ran: true
+          successfull_check: false
+          messages: []
+          error_level: 0
+      - alias: Run the error checker in an error-safe sequence
+        sequence:
+          - alias: Check for errors
+            repeat:
+              for_each:
+                - alias: Check custom translations
+                  error: >-
+                    {% set data = namespace(invalid=[]) %}
+                    {% for key, sub_items in custom_translations.items() %}
+                      {% if key not in strings['en'] %}
+                        {% set data.invalid = data.invalid + [key] %}
+                      {% else %}
+                        {% for subkey, value in sub_items.items() %}
+                          {%
+                            if value is not string
+                            or subkey not in strings['en'][key]
+                          %}
+                            {% set data.invalid = data.invalid + [subkey] %}
+                          {% endif %}
+                        {% endfor %}
+                      {% endif %}
+                    {% endfor %}
+                    {{ data.invalid }}
+                  message_id: "invalid_translations"
+                  level: 1
+                - alias: Check that all per person sensors have been entered
+                  error: >-
+                    {{
+                      not(
+                        travel_time_sensors | length
+                        <= driving_sensors | length
+                        <= persons | length
+                      )
+                    }}
+                  message_id: "invalid_per_person_sensors"
+                  level: 2
+                - alias: Check for tts and media player sensors presence
+                  error: "{{ (speaker_tts_devices | length < 1) != (speaker_tts_service == '') }}"
+                  message_id: "invalid_speakers"
+                  level: 1
+                - alias: Check that per person sensors are in the right order
+                  error: >-
+                    {%
+                      set per_person_phone_sensors = [
+                        driving_sensors
+                      ]
+                    %}
+                    {% set data = namespace(invalid=[], entities_to_check=[]) %}
+                    {% for device_idx in range(notify_devices | length) %}
+                      {% set data.entities_to_check = [] %}
+                      {% set related_entities = device_entities(
+                          notify_devices[device_idx]
+                        )
+                      %}
+                      {% for checker_idx in range(notify_devices | length) %}
+                        {% if device_idx == checker_idx %}
+                          {% continue %}
+                        {% endif %}
+
+                        {# Append device trackers to the list #}
+                        {% if checker_idx < persons | length %}
+                          {% set trackers = [persons[checker_idx]] %}
+                          {% if states[trackers[0]].domain == 'person' %}
+                            {% set trackers = state_attr(trackers[0], 'device_trackers') %}
+                          {% endif %}
+                          {% set data.entities_to_check = data.entities_to_check + trackers %}
+                        {% endif %}
+
+                        {# Append all other per person sensors #}
+                        {% for sensors in per_person_phone_sensors %}
+                          {% if sensors | length > checker_idx %}
+                            {%
+                              set data.entities_to_check = (
+                                data.entities_to_check
+                                + [sensors[checker_idx]]
+                              )
+                            %}
+                          {% endif %}
+                        {% endfor %}
+                      {% endfor %}
+
+                      {# Append sensors belonging to the wrong users #}
+                        {%
+                          if (
+                            data.entities_to_check
+                            | select('in', related_entities)
+                            | list
+                            | length
+                            != 0
+                          )
+                        %}
+                          {% set data.invalid = data.invalid + [persons[device_idx]] %}
+                        {% endif %}
+                    {% endfor %}
+                    {{
+                      data.invalid
+                      | map('state_attr', 'friendly_name')
+                      | list
+                    }}
+                  message_id: "per_person_sensors_mismatch"
+                  level: 2
+                - alias: Check that there is a way to notify the user
+                  error: >-
+                    {{
+                      notify_devices | length == 0
+                      and speaker_tts_devices | length == 0
+                      and not persistent_active
+                    }}
+                  message_id: "no_notification_method"
+                  level: 2
+                - alias: Check that both or neither night time end and start have been entered
+                  error: >-
+                    {{
+                      (tts_volume_night_time_start == '')
+                      != (tts_volume_night_time_end == '')
+                    }}
+                  message_id: "night_mode_missing_bound"
+                  level: 1
+                - alias: Check custom translations depreciation
+                  error: "{{ custom_translations_error }}"
+                  message_id: "deprecated_translations"
+                  level: 0
+              sequence:
+                - alias: If a check failed
+                  if:
+                    - condition: template
+                      value_template: >-
+                        {% set error = repeat.item.error %}
+                        {{ error != [] if error is list else error }}
+                  then:
+                    - alias: If the error level is higher than the current highest
+                      if:
+                        - condition: template
+                          value_template: "{{ repeat.item.level > error_level }}"
+                      then:
+                        - alias: Save the new highest error level
+                          variables:
+                            error_level: "{{ repeat.item.level }}"
+                    - alias: Get notification translation
+                      variables:
+                        message_id: "{{ repeat.item.message_id }}"
+                        message: &get_message >-
+                          {# Custom translation #}
+                          {%
+                            if 'message' in custom_translations
+                            and message_id in custom_translations['message']
+                          %}
+                            {{ custom_translations['message'][message_id] }}
+
+                          {# Selected language #}
+                          {% elif message_id in strings[language]['message'] %}
+                            {{ strings[language]['message'][message_id] }}
+
+                          {# Fallback to english #}
+                          {% else %}
+                            {{ strings['en']['message'][message_id] }}
+                          {% endif %}
+                    - alias: If the error variable contains a list
+                      if:
+                        - condition: template
+                          value_template: "{{ repeat.item.error is list }}"
+                      then:
+                        - alias: Format the string with error data
+                          variables:
+                            message: >-
+                              {{
+                                message.format(
+                                  data=(
+                                    ', '.join(repeat.item.error)
+                                  )
+                                )
+                              }}
+                    - alias: Append the error message to the list
+                      variables:
+                        messages: "{{ messages | union([message]) }}"
+          - alias: If the config is valid
+            if:
+              - condition: template
+                value_template: "{{ messages | length == 0 }}"
+            then:
+              - alias: If the blueprint was triggered manually
+                if:
+                  - condition: template
+                    value_template: "{{ trigger.platform is none }}"
+                then:
+                  - alias: Set message ids
+                    variables:
+                      title_id: "valid_config"
+                      message_id: "valid_config"
+                  - alias: Get notification translation
+                    variables:
+                      message: *get_message
+                      title: &get_title >-
+                        {# Custom translation #}
+                        {%
+                          if 'title' in custom_translations
+                          and title_id in custom_translations['title']
+                        %}
+                          {{ custom_translations['title'][title_id] }}
+
+                        {# Selected language #}
+                        {% elif title_id in strings[language]['title'] %}
+                          {{ strings[language]['title'][title_id] }}
+
+                        {# Fallback to english #}
+                        {% else %}
+                          {{ strings['en']['title'][title_id] }}
+                        {% endif %}
+                  - alias: Notify all users on the dashboard that the config is valid
+                    action: persistent_notification.create
+                    data:
+                      title: "{{ title }}"
+                      message: "{{ message }}"
+                      notification_id: "{{ config_checker_tag }}"
+                    continue_on_error: true
+                else:
+                  - alias: Remove the previous dashboard notification
+                    action: persistent_notification.dismiss
+                    data:
+                      notification_id: "{{ config_checker_tag }}"
+                    continue_on_error: true
+            else:
+              - alias: Build the notification
+                variables:
+                  title_id: "invalid_config"
+                  title: *get_title
+                  message: "{{ '• ' ~ '\n• '.join(messages) }}"
+              - alias: Build the more info link
+                variables:
+                  message_id: "more_info"
+                  more_info: *get_message
+                  link: "https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/README.md#error-codes-table-%EF%B8%8F"
+                  more_info_md: "[{{more_info}}]({{link}})"
+              - alias: Notify all users on the dashboard that the config is invalid
+                action: persistent_notification.create
+                data:
+                  title: "{{ title }}"
+                  message: "{{ message ~ '\n\n' ~ more_info_md }}"
+                  notification_id: "{{ config_checker_tag }}"
+                continue_on_error: true
+          - alias: Confirm that no error occured while the config checker was running
+            variables:
+              successful_check: true
+        continue_on_error: true
+      - alias: If an error occured while the config checker was running
+        if:
+          - condition: template
+            value_template: "{{ not successful_check }}"
+        then:
+          - alias: Build notification
+            variables:
+              title_id: "invalid_config"
+              message_id: "something_went_wrong"
+              title: *get_title
+              message: *get_message
+          - alias: Notify all users on the dashboard that an error occured
+            action: persistent_notification.create
+            data:
+              title: "{{ title }}"
+              message: "{{ message }}"
+              notification_id: "{{ config_checker_tag }}"
+            continue_on_error: true
+          - stop: Config checker failed
+            error: true
+
+  - alias: Only continue if the blueprint was triggered by a driving sensor and tests passed
+    condition: template
+    value_template: >-
+      {{
+        trigger.platform is not none
+        and trigger.id == 'vehicle_started'
+        and (not error_checker_ran or error_level < 2)
+      }}
+
+  - alias: Only continue if driver not in the dead zone
+    condition: template
+    value_template: >-
+      {% if state_attr(driver, 'gps_accuracy') is none %}
+        {% set accuracy = 100 %}
+      {% else %}
+        {% set accuracy = state_attr(driver, 'gps_accuracy') %}
+      {% endif %}
+      {% set home_distance = distance(driver, 'zone.home')*1000 - accuracy %}
+      {{ home_distance >= dead_zone }}
+  - alias: Get notification translation
+    variables:
+      message_id: "itinerary_started"
+      message: *get_message
+  - alias: Format the notification message
+    variables:
+      message: "{{ message.format(driver_name=driver_name) }}"
+  - parallel:
+      - alias: Notify each user except the driver about itinerary start
+        repeat:
+          for_each: "{{ active_notify_services }}"
+          sequence:
+            - action: "{{ repeat.item }}"
+              data:
+                message: "{{ message }}"
+                data: &notification_data
+                  notification_icon: mdi:car
+                  tag: "{{ notification_tag }}"
+                  channel: Itinerary status
+                  sticky: true
+                  # Hack to retrieve notification service when dismissed
+                  confirmation: "{{ repeat.item }}"
+                  url: !input on_tap_link
+                  clickAction: !input on_tap_link
+                  alert_once: true
+              continue_on_error: true
+      - alias: Send an itinerary started persistent notification
+        action: persistent_notification.create
+        data:
+          message: "{{ message }}"
+          notification_id: "{{ notification_tag }}"
+        enabled: !input persistent_notification
+        continue_on_error: true
+      - alias: If drive_start_tts is enabled
+        if:
+          - condition: template
+            value_template: !input drive_start_tts
+        then: &play_speaker_tts
+          - alias: Only continue if someone is home
+            condition: template
+            value_template: >-
+              {{
+                persons
+                | select('is_state', 'home')
+                | list
+                != []
+              }}
+          - alias: Play TTS on each speaker
+            repeat:
+              for_each: "{{ speaker_tts_devices }}"
+              sequence:
+                - alias: Run the night mode in an error-safe sequence
+                  sequence:
+                    - alias: Initialize a variable to store the speaker volume later
+                      variables:
+                        old_volume: null
+                    - alias: If the tts night mode is currently active
+                      if:
+                        - condition: template
+                          value_template: >-
+                            {% set start = today_at(tts_volume_night_time_start) %}
+                            {% set end = today_at(tts_volume_night_time_end) %}
+                            {% set time = now() %}
+                            {{
+                              tts_volume_night_time_start != ''
+                              and tts_volume_night_time_end != ''
+                              and (
+                                start <= end and start <= time <= end
+                                or start > end and (time >= start or time <= end)
+                              )
+                            }}
+                      then:
+                        - alias: If the speaker is not exposing its volume because it is turned off
+                          if:
+                            - condition: template
+                              value_template: >-
+                                {{
+                                  is_state(repeat.item, 'off')
+                                  and state_attr(repeat.item, 'volume_level') is none
+                                }}
+                          then:
+                            - alias: Turn on the speaker
+                              action: media_player.turn_on
+                              target:
+                                entity_id: "{{ repeat.item }}"
+                            - alias: Wait for the speaker to turn on
+                              wait_template: "{{ not is_state(repeat.item, 'off') }}"
+                              timeout: 3
+                        - alias: Only continue if the speaker has a higher volume than night mode
+                          condition: template
+                          value_template: >-
+                            {{
+                              state_attr(repeat.item, 'volume_level') is none
+                              or (
+                                state_attr(repeat.item, 'volume_level') * 100
+                              ) | int > tts_volume_at_night
+                            }}
+                        - alias: Save the current volume
+                          variables:
+                            old_volume: "{{ state_attr(repeat.item, 'volume_level') }}"
+                        - alias: Lower the volume
+                          action: media_player.volume_set
+                          target:
+                            entity_id: "{{ repeat.item }}"
+                          data:
+                            volume_level: "{{ tts_volume_at_night / 100 }}"
+                    - alias: Play the TTS
+                      action: tts.speak
+                      data:
+                        cache: true
+                        media_player_entity_id: "{{ repeat.item }}"
+                        message: "{{ message }}"
+                      target:
+                        entity_id: "{{ speaker_tts_service }}"
+                    - alias: If the old volume could be saved
+                      if:
+                        - condition: template
+                          value_template: "{{ old_volume is not none }}"
+                      then:
+                        - alias: Restore the old volume
+                          action: media_player.volume_set
+                          target:
+                            entity_id: "{{ repeat.item }}"
+                          data:
+                            volume_level: "{{ old_volume }}"
+                  continue_on_error: true
+  - alias: If travel time sensors set
+    if:
+      condition: template
+      value_template: "{{ travel_time_sensor is not none }}"
+    then:
+      - alias: Initialize variables for the following sequence
+        variables:
+          next_refresh: 0
+          nearly_arrived_sent: false
+          last_arrival_timestamp: 0
+          nearly_arrived_timestamp: null
+          arrival_timestamp: null
+          timer_removed: false
+      - alias: Repeat while driver still driving
+        repeat:
+          while:
+            - condition: template
+              value_template: "{{ is_state(driving_sensor, 'on') }}"
+          sequence:
+            - alias: Wait for travel time update, vehicle left, or notification cleared
+              wait_for_trigger:
+                - alias: Travel time sensor updated
+                  trigger: event
+                  id: travel_time
+                  event_type: state_changed
+                  event_data:
+                    entity_id: "{{ travel_time_sensor }}"
+                - alias: Vehicle stopped
+                  trigger: template
+                  id: vehicle_left
+                  value_template: "{{ is_state(driving_sensor, 'off') }}"
+                - alias: Notification cleared
+                  trigger: event
+                  id: notification_cleared
+                  event_type: mobile_app_notification_cleared
+                  event_data:
+                    tag: "{{ notification_tag }}"
+                - alias: Persistent notification cleared
+                  trigger: persistent_notification
+                  id: persistent_cleared
+                  notification_id: "{{ notification_tag }}"
+                  update_type: removed
+                  enabled: "{{ persistent_active }}"
+                - alias: Notification conditions changed
+                  trigger: template
+                  id: conditions_changed
+                  value_template: >-
+                    {% set data = namespace(services_list=[]) %}
+
+                    {% for notify_idx in range(notify_services | length) %}
+                      {% if notify_idx != idx and notify_idx not in dismissed_idx %}
+                        {% if notify_everyone
+                          or zones_to_notify
+                            and notify_idx < persons | length
+                            and is_state(persons[notify_idx],
+                              zones_to_notify | map('state_attr', 'friendly_name') | list
+                              + zones_to_notify | map('replace', 'zone.', '') | list
+                            )
+
+                          or notify_persons_away
+                            and notify_idx < persons | length
+                            and is_state(persons[notify_idx], 'not_home')
+
+                          or notify_persons_driving
+                            and notify_idx < driving_sensors | length
+                            and is_state(driving_sensors[notify_idx], 'on')
+                        %}
+                          {% set data.services_list = data.services_list + [notify_services[notify_idx]] %}
+                        {% endif %}
+                      {% endif %}
+                    {% endfor %}
+
+                    {{ data.services_list != active_notify_services }}
+                  enabled: "{{ not notify_everyone }}"
+              timeout:
+                # Wait for the end of the cooldown, or for the nearly arrived TTS, or indefinitely
+                seconds: >-
+                  {% set values = [MAX_INT] %}
+
+                  {# End of cooldown #}
+                  {% if next_refresh > now() | as_timestamp %}
+                    {% set values = values | union([next_refresh - now() | as_timestamp]) %}
+                  {% endif %}
+
+                  {# Nearly arrived TTS #}
+                  {%
+                    if nearly_arrived_tts
+                    and not nearly_arrived_sent
+                    and nearly_arrived_timestamp is not none
+                  %}
+                    {%
+                      set values = values | union(
+                        [
+                          nearly_arrived_timestamp - now() | as_timestamp
+                        ]
+                      )
+                    %}
+                  {% endif %}
+
+                  {# Remaining time reached zero #}
+                  {% if arrival_timestamp is not none and not timer_removed %}
+                    {%
+                      set values = values | union(
+                        [
+                          arrival_timestamp - now() | as_timestamp
+                        ]
+                      )
+                    %}
+                  {% endif %}
+
+                  {{ max(min(values), 0) }}
+            - choose:
+                - alias: If triggered by a mobile notification cleared
+                  conditions:
+                    - condition: template
+                      value_template: "{{ wait.trigger.id == 'notification_cleared' }}"
+                  sequence:
+                    - alias: Remove the notification service
+                      variables:
+                        active_notify_services: >-
+                          {{ active_notify_services | difference([wait.trigger.event.data.confirmation]) }}
+                        dismissed_idx: >-
+                          {{
+                            dismissed_idx | union(
+                              [
+                                notify_services.index(
+                                  wait.trigger.event.data.confirmation
+                                )
+                              ]
+                            )
+                          }}
+                - alias: If triggered by a persistent notification cleared
+                  conditions:
+                    - condition: template
+                      value_template: "{{ wait.trigger.id == 'persistent_cleared' }}"
+                  sequence:
+                    alias: Disable persistent notifications
+                    variables:
+                      persistent_active: false
+                - alias: If triggered by a notify condition change
+                  conditions:
+                    - condition: template
+                      value_template: "{{ wait.trigger.id == 'conditions_changed' }}"
+                  sequence:
+                    - variables:
+                        old_notify_services: "{{ active_notify_services }}"
+                        active_notify_services: *get_active_services
+                    - choose:
+                        - alias: If a user needs to be removed from the list
+                          conditions:
+                            - condition: template
+                              value_template: "{{ old_notify_services | length > active_notify_services | length }}"
+                          sequence:
+                            - alias: Remove itinerary notification for each removed user
+                              repeat:
+                                for_each: "{{ active_notify_services | difference(old_notify_services) }}"
+                                sequence: &clear_notification
+                                  - action: "{{ repeat.item }}"
+                                    data:
+                                      message: clear_notification
+                                      data:
+                                        tag: "{{ notification_tag }}"
+                                    continue_on_error: true
+                        - alias: If a user has been added back and arrival values exist
+                          conditions:
+                            - condition: template
+                              value_template: "{{ arrival_timestamp is not none }}"
+                          sequence: &send_eta
+                            - alias: Get notification translation
+                              variables:
+                                message_id: "itinerary_ongoing"
+                                message: *get_message
+                            - alias: Format the notification message
+                              variables:
+                                message: >-
+                                  {{
+                                    message.format(
+                                      arrival=arrival,
+                                      driver_name=driver_name
+                                    )
+                                  }}
+                            - alias: Send ETA notification to each user
+                              repeat:
+                                for_each: "{{ active_notify_services }}"
+                                sequence:
+                                  - action: "{{ repeat.item }}"
+                                    data:
+                                      message: "{{ message }}"
+                                      data:
+                                        <<: *notification_data
+                                        notification_icon: mdi:map-marker-account
+                                        chronometer: true
+                                        when: "{{ arrival_timestamp | int }}"
+                                    continue_on_error: true
+                - alias: If travel time remaining needs to trigger nearly arrived TTS
+                  conditions:
+                    - condition: template
+                      value_template: >-
+                        {{
+                          nearly_arrived_tts
+                          and not nearly_arrived_sent
+                          and nearly_arrived_timestamp is not none
+                          and nearly_arrived_timestamp <= now() | as_timestamp
+                          and speaker_tts_service != ''
+                        }}
+                  sequence:
+                    - alias: Get TTS translation
+                      variables:
+                        message_id: "nearly_arrived"
+                        message: *get_message
+                    - alias: Format the notification message
+                      variables:
+                        message: >-
+                          {{
+                            message.format(
+                              driver_name=driver_name,
+                              remaining_minutes=(
+                                (
+                                  arrival_timestamp
+                                  - now() | as_timestamp
+                                ) / 60
+                              ) | round
+                            )
+                          }}
+                    - sequence: *play_speaker_tts
+                    - alias: Mark nearly arrived TTS as already sent
+                      variables:
+                        nearly_arrived_sent: true
+                - alias: If triggered by travel time update and notifications are not on cooldown
+                  conditions:
+                    - condition: template
+                      value_template: >-
+                        {{
+                          wait.trigger.id == 'travel_time'
+                          and next_refresh <= now() | as_timestamp
+                        }}
+                  sequence:
+                    - alias: Calculate ETA
+                      variables:
+                        remaining: >-
+                            {% if state_attr(travel_time_sensor, 'duration') is not none %}
+                              {{ state_attr(travel_time_sensor, 'duration') | float * 60 }}
+                            {% elif state_attr(travel_time_sensor, 'unit_of_measurement') == "min" %}
+                              {{ states(travel_time_sensor) | float * 60 }}
+                            {% elif state_attr(travel_time_sensor, 'unit_of_measurement') == "s" %}
+                              {{ states(travel_time_sensor) | float }}
+                            {% else %}
+                              {{ none }}
+                            {% endif %}
+                    - alias: Stop if travel time integration is not supported
+                      if:
+                        - condition: template
+                          value_template: "{{ remaining is none }}"
+                      then:
+                        - alias: Get notification translation
+                          variables:
+                            message_id: "unsupported_tt_integration"
+                            message: *get_message
+                        - alias: Notify all users on the dashboard that the integration is unsupported
+                          action: persistent_notification.create
+                          data:
+                            title: "{{ title }}"
+                            message: "{{ message }}"
+                            notification_id: "{{ notification_tag }}"
+                          continue_on_error: true
+                        - stop: Travel time integration not supported
+                          error: true
+                    - alias: Calculate next refresh
+                      variables:
+                        cooldown: !input notif_refresh_rate_ftn
+                        next_refresh: "{{ now() | as_timestamp + cooldown }}"
+                    - alias: Convert ETA to needed types
+                      variables:
+                        arrival_timestamp: "{{ as_timestamp(now()) + remaining }}"
+                        arrival: "{{ arrival_timestamp | timestamp_custom('%H:%M') }}"
+                    - alias: If the nearly arrived tts has not been triggered yet
+                      if:
+                        - condition: template
+                          value_template: >-
+                            {{
+                              nearly_arrived_tts
+                              and not nearly_arrived_sent
+                            }}
+                      then:
+                        - alias: Calculate the timestamp for the nearly arrived tts trigger
+                          variables:
+                            nearly_arrived_timestamp: "{{ arrival_timestamp - nearly_arrived_time*60 }}"
+                    - alias: Do not send notification if the time of arrival did not change
+                      condition: template
+                      value_template: >-
+                        {# If the next notification will be sent near the arrival #}
+                        {% if arrival_timestamp - next_refresh < 120 %}
+                          {# Refresh notification if eta differs by at least 5s #}
+                          {{
+                            (
+                              last_arrival_timestamp | int
+                              - arrival_timestamp | int
+                            ) | abs > 5
+                          }}
+                        {% else %}
+                          {# Refresh notification if eta differs by at least 1min #}
+                          {{
+                            (last_arrival_timestamp / 60) | int
+                            != (arrival_timestamp / 60) | int
+                          }}
+                        {% endif %}
+                    - alias: Save the current time of arrival
+                      variables:
+                        last_arrival_timestamp: "{{ arrival_timestamp }}"
+                    - alias: Send an ETA notification
+                      sequence: *send_eta
+                    - alias: If persistent notifications are still active
+                      if:
+                        - condition: template
+                          value_template: "{{ persistent_active }}"
+                      then:
+                        - alias: Update the persistent notification
+                          action: persistent_notification.create
+                          data:
+                            message: "{{ message }}"
+                            notification_id: "{{ notification_tag }}"
+                          continue_on_error: true
+                - alias: If the timer needs to be removed from the notification
+                  conditions: >-
+                    {{
+                      arrival_timestamp is not none
+                      and arrival_timestamp <= now() | as_timestamp
+                      and not timer_removed
+                    }}
+                  sequence:
+                    - alias: Get notification translation
+                      variables:
+                        message_id: "soon_arrived"
+                        message: *get_message
+                    - alias: Format the notification message
+                      variables:
+                        message: "{{ message.format(driver_name=driver_name) }}"
+                    - alias: Send soon arrived notification to each user
+                      repeat:
+                        for_each: "{{ active_notify_services }}"
+                        sequence:
+                          - action: "{{ repeat.item }}"
+                            data:
+                              message: "{{ message }}"
+                              data:
+                                <<: *notification_data
+                                notification_icon: mdi:map-marker-account
+                            continue_on_error: true
+                    - alias: Remember that the timer was removed
+                      variables:
+                        timer_removed: true
+    else:
+      - alias: Wait for user to leave vehicle
+        wait_for_trigger:
+          - alias: Vehicle stopped
+            trigger: template
+            id: vehicle_left
+            value_template: "{{ is_state(driving_sensor, 'off') }}"
+  - alias: If driver arrived home
+    if:
+      condition: template
+      value_template: "{{ is_state(driver, 'home') }}"
+    then:
+      - alias: Get notification translation
+        variables:
+          message_id: "driver_arrived"
+          message: *get_message
+      - alias: Format the notification message
+        variables:
+          message: "{{ message.format(driver_name=driver_name) }}"
+      - parallel:
+          - alias: Send arrival notification to each user
+            repeat:
+              for_each: "{{ active_notify_services }}"
+              sequence:
+                - action: "{{ repeat.item }}"
+                  data:
+                    message: "{{ message }}"
+                    data:
+                      notification_icon: mdi:home-map-marker
+                      tag: "{{ notification_tag }}"
+                      channel: Itinerary status
+                      url: !input on_tap_link
+                      clickAction: !input on_tap_link
+                      timeout: 300
+                  continue_on_error: true
+          - alias: If persistent notifications are still active
+            if:
+              - condition: template
+                value_template: "{{ persistent_active }}"
+            then:
+              - alias: Update the persistent notification
+                action: persistent_notification.create
+                data:
+                  message: "{{ message }}"
+                  notification_id: "{{ notification_tag }}"
+                continue_on_error: true
+
+          - alias: If driver_arrived_tts is enabled
+            if:
+              - condition: template
+                value_template: !input driver_arrived_tts
+            then: *play_speaker_tts
+    else:
+      - alias: Remove itinerary notification for each user
+        repeat:
+          for_each: "{{ active_notify_services }}"
+          sequence: *clear_notification
+mode: parallel

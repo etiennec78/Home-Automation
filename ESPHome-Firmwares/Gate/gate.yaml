@@ -1,0 +1,411 @@
+esphome:
+  name: gate
+  friendly_name: Gate
+  on_boot:
+    priority: 0
+    then:
+        - text_sensor.template.publish:
+            id: error_message
+            state: "unknown"
+
+esp32:
+  board: esp32dev #ESP32-WROOM-32E (version printed on the chip)
+  framework:
+    type: esp-idf
+
+# Enable logging
+logger:
+  level: WARN # Change to DEBUG if needed
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_key
+  on_client_connected:
+    - switch.turn_on: ble_switch
+  on_client_disconnected:
+    - switch.turn_off: ble_switch
+
+# Enable OTA updates
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+# Enable wifi
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+# Enable ble tracker
+esp32_ble_tracker:
+  scan_parameters:
+    continuous: false
+
+# Send received packets to HA
+bluetooth_proxy:
+
+sensor:
+  # Sensors for nearest device distance
+  - platform: homeassistant
+    id: nearest_distance
+    entity_id: !secret nearest_distance_sensor
+
+text_sensor:
+  - platform: template
+    id: error_message
+    name: "Error message"
+    icon: "mdi:chat-alert"
+    on_value:
+      then:
+        - if:
+            condition:
+              - lambda: 'return id(error_message).state != "unknown";'
+            then:
+              - delay: 2s
+              - text_sensor.template.publish:
+                  id: error_message
+                  state: "unknown"
+
+  # Optional device trackers to let devices open the gate if they're connected to home wifi but aren't reporting their position
+  # - platform: homeassistant
+  #   id: device_tracker_1
+  #   entity_id: !secret device_tracker_1_id
+  # - platform: homeassistant
+  #   id: device_tracker_2
+  #   entity_id: !secret device_tracker_2_id
+
+binary_sensor:
+  # Binary sensor to monitor when the gate isn't able to accept new requests
+  - platform: template
+    id: standby
+    name: "Standby"
+    icon: "mdi:sleep"
+    disabled_by_default: true
+
+globals:
+  # Constants
+  - id: MOVEMENT_DURATION
+    type: int
+    initial_value: !secret movement_duration
+  - id: ACTIVATION_ZONE
+    type: int
+    initial_value: !secret activation_zone
+  - id: INVERTED_MODE
+    type: bool
+    initial_value: !secret inverted_mode
+
+  # Internal variables
+  - id: direction
+    type: int
+    initial_value: "0"
+    restore_value: yes
+  - id: pulses_needed
+    type: int
+    initial_value: "0"
+
+output:
+  # Output for the real relay connected to your gate
+  - id: open_cover_pin
+    platform: gpio
+    pin:
+      number: !secret open_gate_pin
+      mode:
+        output: true
+
+button:
+  # Hidden button to activate the real relay connected to your gate
+  - platform: output
+    id: gate_relay
+    output: open_cover_pin
+    duration: 500ms
+    internal: true
+    on_press:
+      - script.execute:
+          id: set_standby
+
+  # A button to restart the gate (the current state will be remembered)
+  - platform: restart
+    name: "Restart firmware"
+
+switch:
+  # Virtual switch to enable the internal ble tracker
+  - platform: template
+    id: ble_switch
+    name: "BLE tracker"
+    icon: "mdi:access-point"
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    turn_on_action:
+      - esp32_ble_tracker.start_scan:
+    turn_off_action:
+      - esp32_ble_tracker.stop_scan:
+
+cover:
+  # Cover to group buttons into one entity
+  - platform: template
+    id: gate
+    name: None
+    device_class: gate
+    has_position: true
+    open_action:
+      - script.execute:
+          id: validate_movement
+          position_requested: 1.0
+    close_action:
+      - script.execute:
+          id: validate_movement
+          position_requested: 0.0
+    stop_action:
+      - script.execute:
+          id: validate_movement
+          position_requested: -1.0
+    position_action:
+      - script.execute:
+          id: validate_movement
+          position_requested: !lambda "return pos;"
+
+script:
+  - id: set_standby
+    # Set the mode to restart to avoid having an old instance mark the gate as ready too soon
+    mode: restart
+    then:
+      - binary_sensor.template.publish:
+          id: standby
+          state: ON
+      - delay: 2s
+      - binary_sensor.template.publish:
+          id: standby
+          state: OFF
+
+
+  - id: validate_movement
+    parameters:
+      position_requested: float
+    # Set the mode to parallel to continue the old request if the new one was rejected or delayed
+    mode: parallel
+    then:
+      # Check if a GPS device tracker is near home, only if this is not a closing request
+      - if:
+          condition:
+              - lambda: "return id(nearest_distance).state < id(ACTIVATION_ZONE)
+                        or position_requested*100 < round(id(gate).position*100) and position_requested != -1.0;"
+
+              # Optional, let your gate open if a router device tracker is home (comment the lambda above if used)
+              # - lambda: |-
+              #     return id(nearest_distance).state < id(ACTIVATION_ZONE)
+              #         or position_requested*100 < round(id(gate).position*100) and position_requested != -1.0
+              #         or id(device_tracker_1).state == "home"
+              #         or id(device_tracker_2).state == "home";
+          then:
+            # Check that the gate is ready to take new requests
+            - if:
+                condition:
+                  - binary_sensor.is_off: standby
+                then:
+                  # Check if this is a stopping request
+                  - if:
+                      condition:
+                        - lambda: "return position_requested == -1.0 or round(position_requested*100) == round(id(gate).position*100);"
+                      then:
+                        - script.execute: stop_gate
+                      else:
+                        - script.execute:
+                            id: count_pulses
+                            position_requested: !lambda "return position_requested;"
+                        - script.wait: count_pulses
+                        # Check that the position requested is far enough to make the pin not pulse twice in a too short period, making it continuous
+                        - if:
+                            condition:
+                              - lambda: |-
+                                  return position_requested == 0.0 or position_requested == 1.0
+                                        or round(id(gate).position*100) == round(position_requested*100) or position_requested == -1.0
+                                        or id(MOVEMENT_DURATION)*abs(position_requested-id(gate).position) > 1;
+                            then:
+                              # Accept the request and start moving the gate
+                              - script.execute:
+                                  id: move_gate
+                                  position_requested: !lambda "return position_requested;"
+                                  pulses_needed: !lambda "return id(pulses_needed);"
+                            else:
+                              # Stop the gate when possible
+                              - script.execute:
+                                  id: validate_movement
+                                  position_requested: -1.0
+                else:
+                  # Add the request to the queue
+                  - script.execute:
+                      id: wait_until_ready
+                      position_requested: !lambda "return position_requested;"
+          else:
+            - text_sensor.template.publish:
+                id: error_message
+                state: "nobody-near-home"
+
+
+  - id: wait_until_ready
+    parameters:
+      position_requested: float
+    # Set the mode to restart to only let the latest request be sent after being ready
+    mode: restart
+    then:
+      # Wait until the gate is ready to move
+      - wait_until:
+          binary_sensor.is_off: standby
+      # Move the gate
+      - script.execute:
+          id: validate_movement
+          position_requested: !lambda "return position_requested;"
+
+
+  - id: stop_gate
+    mode: single
+    then:
+      - if:
+          condition:
+            - lambda: "return id(gate).current_operation != COVER_OPERATION_IDLE;"
+          then:
+            # Stop updating the position
+            - script.stop: move_gate
+            # Pulse to stop
+            - button.press: gate_relay
+            # If inverted mode is enabled and the gate is closing, pulse to invert
+            - if:
+                condition:
+                  - lambda: "return id(INVERTED_MODE) and id(direction) == 1;"
+                then:
+                  - delay: 1s
+                  - button.press: gate_relay
+            # Report the gate as idle
+            - cover.template.publish:
+                id: gate
+                current_operation: IDLE
+
+
+  - id: count_pulses
+    parameters:
+      position_requested: float
+    # Set the mode to single to only have one instance running and avoid sending wrong values
+    mode: single
+    then:
+      # Reset the number of pulses needed
+      - globals.set:
+          id: pulses_needed
+          value: "0"
+      # If the gate is fully closed or fully open, then start it with one pulse
+      - if:
+          condition:
+            - lambda: "return round(id(gate).position*100) == 0 or round(id(gate).position*100) == 100;"
+          then:
+            - globals.set:
+                id: pulses_needed
+                value: "1"
+
+          # If the gate is not fully closed or open
+          else:
+            # If the gate operates in "inverted" mode
+            - if:
+                condition:
+                  - lambda: "return id(INVERTED_MODE);"
+                then:
+                  # Only continue if the gate is not already moving in the requested direction
+                  - if:
+                      condition:
+                        - lambda: "return id(gate).current_operation == COVER_OPERATION_IDLE
+                                      or id(direction) == 0 and position_requested < id(gate).position
+                                      or id(direction) == 1 and position_requested > id(gate).position;"
+                      then:
+                        # Invert the direction
+                        - globals.set:
+                            id: pulses_needed
+                            value: "1"
+                        # If this is an opening request an the gate is idle,
+                        # or this is a closing request and the gate is moving
+                        - if:
+                            condition:
+                              - lambda: "return (position_requested > id(gate).position) == (id(gate).current_operation == COVER_OPERATION_IDLE);"
+                            then:
+                              # Start/Pause the gate
+                              - globals.set:
+                                  id: pulses_needed
+                                  value: !lambda "return id(pulses_needed) + 1;"
+                # If the gate doesn't operate in "inverted" mode
+                else:
+                  # If the gate is not moving, then start it
+                  - if:
+                      condition:
+                        - lambda: "return id(gate).current_operation == COVER_OPERATION_IDLE;"
+                      then:
+                        - globals.set:
+                            id: pulses_needed
+                            value: "1"
+                        - globals.set:
+                            id: direction
+                            value: !lambda "return not id(direction);"
+
+                  # If the last gate direction is opposite to the one requested
+                  - if:
+                      condition:
+                        - lambda: "return id(direction) == 0 and position_requested < id(gate).position
+                                or id(direction) == 1 and position_requested > id(gate).position;"
+                      then:
+                        - globals.set:
+                            id: pulses_needed
+                            value: !lambda "return id(pulses_needed) + 2;"
+
+
+  - id: move_gate
+    parameters:
+      position_requested: float
+      pulses_needed: int
+    # Set the mode to restart to cancel the current movement if a new one was requested and accepted
+    mode: restart
+    then:
+      - repeat:
+          count: !lambda "return pulses_needed;"
+          then:
+            - button.press: gate_relay
+            - delay: 1s
+
+      # If the position requested will open the gate, then mark the gate as opening
+      - if:
+          condition:
+            - lambda: "return position_requested > id(gate).position;"
+          then:
+            - cover.template.publish:
+                id: gate
+                current_operation: OPENING
+            - globals.set:
+                id: direction
+                value: "0"
+
+          # If the position requested will close the gate, then mark the gate as closing
+          else:
+            - cover.template.publish:
+                id: gate
+                current_operation: CLOSING
+            - globals.set:
+                id: direction
+                value: "1"
+
+      # While the gate has not finished moving, update its position
+      - while:
+            condition:
+              - lambda: "return round(id(gate).position*100) != round(position_requested*100);"
+            then:
+              - delay: !lambda  "return id(MOVEMENT_DURATION) * 10;" # Divided by 100 (steps) but multiplied by 1000 to get milliseconds
+              - cover.template.publish:
+                  id: gate
+                  position: !lambda "return id(gate).position + 0.01 * pow(-1, id(direction));"
+
+      # If the requested position wasn't an extremity, then send a pulse to stop the gate
+      - if:
+          condition:
+            - lambda: "return not(position_requested == 1.0 or position_requested == 0.0);"
+          then:
+            - script.execute: stop_gate
+          else:
+            # Report the gate as idle and set its state to the position requested to avoid unprecisions
+            - cover.template.publish:
+                id: gate
+                current_operation: IDLE
+                state: !lambda "return position_requested;"

@@ -1,8 +1,11 @@
 esphome:
-  name: phillips-livingcolors
-  friendly_name: Phillips LivingColors
-  platform: esp32
-  board: esp32dev #ESP32-WROOM-32 (version printed on the chip)
+  name: philips-livingcolors
+  friendly_name: Philips LivingColors
+
+esp32:
+  board: esp32dev #ESP32-WROOM-32E (version printed on the chip)
+  framework:
+    type: esp-idf
 
 # Enable logging
 logger:
@@ -12,9 +15,14 @@ logger:
 api:
   encryption:
     key: !secret api_key
+  on_client_connected:
+    - switch.turn_on: ble_switch
+  on_client_disconnected:
+    - switch.turn_off: ble_switch
 
 ota:
-  password: !secret ota_password
+  - platform: esphome
+    password: !secret ota_password
 
 wifi:
   ssid: !secret wifi_ssid
@@ -25,23 +33,41 @@ wifi:
     gateway: 192.168.0.254
     subnet: 255.255.255.0
 
+# Enable ble tracker
+esp32_ble_tracker:
+  scan_parameters:
+    continuous: false
+
+# Send received packets to HA
+bluetooth_proxy:
+
+switch:
+  # Virtual switch to enable the internal ble tracker
+  - platform: template
+    id: ble_switch
+    name: "BLE tracker"
+    icon: "mdi:access-point"
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    turn_on_action:
+      - esp32_ble_tracker.start_scan:
+    turn_off_action:
+      - esp32_ble_tracker.stop_scan:
+
 # Enable E1.31 lighting protocol
 e131:
   method: unicast
-
-# Enable wled lighting protocol
-wled:
 
 # Each led GPIO address
 output:
   - platform: ledc
     id: led_R
-    pin: GPIO15
+    pin: !secret red_led_gpio
   - platform: ledc
     id: led_G
-    pin: GPIO21
+    pin: !secret green_led_gpio
   - platform: ledc
-    pin: GPIO17
+    pin: !secret blue_led_gpio
     id: led_B
 
 light:
@@ -56,7 +82,7 @@ light:
   # Fake light component to simulate a led strip
   - platform: partition
     id: livingcolors
-    name: Phillips LivingColors
+    name: None
     segments:
       - single_light_id: base_light
     effects:
@@ -67,4 +93,3 @@ light:
       - e131:
           universe: 1
           channels: RGB
-      - wled:
