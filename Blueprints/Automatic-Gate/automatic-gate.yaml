@@ -2828,6 +2828,8 @@ actions:
                   conditions:
                     - condition: template
                       value_template: *activation_zone_in_condition
+                    - condition: template
+                      value_template: "{{ repeat.first }}"
                   sequence:
                     - alias: Set error id
                       variables:
