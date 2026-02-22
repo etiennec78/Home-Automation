@@ -176,7 +176,7 @@ blueprint:
           selector:
             text:
         persistent_notification:
-          name: 🔔 Persistent notification
+          name: 🔔 Persistent notifications
           description: Show notifications in Home Assistant **[dashboard](https://www.home-assistant.io/integrations/persistent_notification)**
           default: false
           selector:
