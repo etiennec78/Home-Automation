@@ -87,6 +87,17 @@ blueprint:
                   value: ble
                 - label: Zone (not recommended)
                   value: zone
+        activation_zone:
+          name: 🔒 Gate activation zone
+          description: |-
+            At what **distance** from the gate should the automation start estimating when to **open the gate**?
+            > *The gate will **close** if you **leave** this zone*
+          default: 500
+          selector:
+            number:
+              min: 150
+              max: 5000
+              unit_of_measurement: m
         lead_time:
           name: 🕓 Lead time
           description: |-
@@ -171,22 +182,11 @@ blueprint:
               filter:
                 domain: input_text
 
-    travel_time_settings:
-      name: Travel time settings
+    refresh_rate:
+      name: Refresh rate
       icon: mdi:timer
       collapsed: true
       input:
-        activation_zone:
-          name: 🔒 Gate activation zone
-          description: |-
-            At what **distance** from the gate should the automation start estimating when to **open the gate**?
-            > *The gate will **close** if you **leave** this zone*
-          default: 500
-          selector:
-            number:
-              min: 150
-              max: 5000
-              unit_of_measurement: m
         travel_time_rate:
           name: 🔄 Travel time refresh rate
           description: |-
@@ -211,7 +211,7 @@ blueprint:
                 - label: Listen for updates
                   value: "listen"
         refresh_function:
-          name: ⏳ Refresh function
+          name: ⏳ Travel time refresh function
           description: |-
             Template that returns the delay between two travel time API calls
             > *Only active with a refresh rate set to **'Continuously'** or **'While near home'***
@@ -224,13 +224,13 @@ blueprint:
           selector:
             template:
         pause_refresh_driving_away:
-          name: ⏸️ Pause refresh while driving away
+          name: ⏸️ Pause travel time refresh while driving away
           description: Stop calling the travel time API while the user is moving away from the activation zone
           default: true
           selector:
             boolean:
         request_gps_location:
-          name: 🛰️ Request gps location
+          name: 🛰️ Request GPS location
           description: |-
             Request an updated phone location when the current location is outdated (based on the travel time sensor)
 
@@ -298,15 +298,6 @@ blueprint:
                   value: "notif"
                 - label: Disabled
                   value: "off"
-        suggest_closing_after:
-          name: 🔐 Suggest closing after
-          description: Time to wait before **suggesting to close** on departure, if you use **notification request** but don't have a sensor to detect that you left
-          default: 120
-          selector:
-            number:
-              min: 1
-              max: 600
-              unit_of_measurement: s
         arrival_opening_behavior:
           name: 🛬🔓 Arrival opening behavior
           description: |-
@@ -356,6 +347,15 @@ blueprint:
             number:
               min: 1
               max: 120
+              unit_of_measurement: s
+        suggest_closing_after:
+          name: 🔐 Suggest closing after
+          description: Time to wait before **suggesting to close** on departure, if you use **notification request** but don't have a sensor to detect that you left
+          default: 120
+          selector:
+            number:
+              min: 1
+              max: 600
               unit_of_measurement: s
         partial_open_position:
           name: ↔️ Gate partial opening
@@ -483,6 +483,54 @@ blueprint:
       icon: mdi:leak
       collapsed: true
       input:
+        close_when_disconnected_from:
+          name: 📡 Close on departure when disconnected from
+          description: Close the gate if the driver's BLE device is out of range
+          default: []
+          selector:
+            select:
+              multiple: true
+              options:
+                - label: Bluetooth LE
+                  value: ble
+        only_open_near:
+          name: 🧭 Confirm the location on startup
+          description: |-
+            Wait for a sensor to confirm your location before starting this blueprint
+            > Useful if your vehicle is parked near your home (to avoid opening), or if your phone updates GPS too slowly and may still report you as home after you leave
+
+            > ⚠️ GPS requests need the [Single accurate location](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#extra-requesting-manual-gps-updates-) sensor turned on in the companion app
+
+            > *WiFi can be slow to report new states*
+          default: []
+          selector:
+            select:
+              multiple: true
+              options:
+                - label: GPS
+                  value: gps
+                - label: Wi-Fi (departure)
+                  value: wifi
+                - label: Bluetooth LE (departure)
+                  value: ble
+        only_open_near_timeout:
+          name: ⌛ Location confirmation timeout
+          description: How long the blueprint waits for location confirmation before canceling the sequence
+          default: 60
+          selector:
+            number:
+              min: 0
+              max: 1800
+              unit_of_measurement: s
+        gps_outdated_delay:
+          name: ⌛ Location confirmation outdated GPS delay
+          description: Age after which GPS is considered outdated and a refresh request is sent
+          default: 10
+          selector:
+            number:
+              min: 0
+              max: 300
+              unit_of_measurement: s
         wifi_devices:
           name: 🏠 WiFi devices
           description: |-
@@ -548,53 +596,6 @@ blueprint:
             entity:
               filter:
                 domain: switch
-        only_open_near:
-          name: 🧭 Confirm the location on startup
-          description: |-
-            Wait for a sensor to confirm your location before starting this blueprint
-            Useful if your vehicle is parked near your home (to avoid opening), or if your phone updates GPS too slowly and may still report you as home after you leave
-            > ⚠️ GPS requests need the [Single accurate location](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#extra-requesting-manual-gps-updates-) sensor turned on in the companion app
-
-            > *WiFi can be slow to report new states*
-          default: []
-          selector:
-            select:
-              multiple: true
-              options:
-                - label: GPS
-                  value: gps
-                - label: Wi-Fi (departure)
-                  value: wifi
-                - label: Bluetooth LE (departure)
-                  value: ble
-        only_open_near_timeout:
-          name: ⌛ Location confirmation timeout
-          description: How long the blueprint waits for location confirmation before canceling the sequence
-          default: 60
-          selector:
-            number:
-              min: 0
-              max: 1800
-              unit_of_measurement: s
-        gps_outdated_delay:
-          name: ⌛ GPS outdated delay
-          description: Age after which GPS is considered outdated and a refresh request is sent
-          default: 10
-          selector:
-            number:
-              min: 0
-              max: 300
-              unit_of_measurement: s
-        close_when_disconnected_from:
-          name: 📡 Close on departure when disconnected from
-          description: Close the gate if the driver's BLE device is out of range
-          default: []
-          selector:
-            select:
-              multiple: true
-              options:
-                - label: Bluetooth LE
-                  value: ble
 
     house_security:
       name: House security
@@ -657,7 +658,7 @@ blueprint:
                 - label: Unlatch doors
                   value: "unlatch"
         dont_lock_if_people_remaining:
-          name: 🏠 Do not lock if there are still people home
+          name: 🏠 Do not lock/arm if there are still people home
           description: |-
             Avoid locking and arming the alarm if some person entities are still in the gate zone (besides yourself)
             > *If you drive away with multiple people, they might still be detected home and prevent locking*
