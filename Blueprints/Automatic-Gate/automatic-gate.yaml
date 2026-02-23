@@ -103,6 +103,7 @@ blueprint:
           description: |-
             Time (in seconds) to open the gate **before you arrive**
             Include the gate movement time + a safety margin
+            > *Only needed if the opening method is set to travel time*
           default: 75
           selector:
             number:
@@ -146,7 +147,7 @@ blueprint:
           description: |-
             One **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#travel-time-sensors-%EF%B8%8F)** per person/tracker
             It should provide the **remaining time before arrival**
-            > *Optional if open when connected to BLE is true*
+            > *Optional if the opening method is not set to travel time*
           default: []
           selector:
             entity:
