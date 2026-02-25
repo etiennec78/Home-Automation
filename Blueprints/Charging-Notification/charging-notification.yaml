@@ -1,0 +1,107 @@
+blueprint:
+  name: Charging Notification 🔋
+  source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Blueprints/Charging-Notification/charging-notification.yaml"
+  domain: automation
+  author: etiennec78
+  description: |-
+    # Charging Notification 🔋
+
+    ## Description 📝
+    Automation to track the progress of device charging
+
+    <details>
+      <summary><h2>Key Features 🌟</h2></summary>
+      * Easy configuration, only one device needed 🛠️
+
+    </details>
+
+    ## More info ℹ️
+    * Version: 2.0.0
+    * Set up sensors: [click here](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md)
+    * Github: [click here](https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/Charging-Notification)
+    * Discord: @etiennec78
+    [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/etiennec78)
+  homeassistant:
+    min_version: 2024.6.0
+  input:
+    charging_device:
+      name: 🔋 Charging device
+      description: |-
+        The **device** whose **charging** should be monitored
+      selector:
+        device:
+    notify_devices:
+      name: 💬 Notify devices
+      description: |-
+        Each [**device** to **notify**](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#notify-services-)
+      selector:
+        device:
+          multiple: true
+          filter:
+            integration: mobile_app
+
+triggers:
+  - alias: Trigger when the the user updated inputs or enabled the blueprint
+    trigger: template
+    id: blueprint_enabled
+    value_template: "{{ is_state(this.entity_id, 'on') }}"
+  - alias: Trigger when HA starts
+    trigger: homeassistant
+    id: ha_started
+    event: start
+
+variables:
+  notify_devices: !input notify_devices
+  notify_services: >-
+    {{
+      notify_devices
+      | map('device_attr', 'name')
+      | map('slugify')
+      | map('regex_replace', '^', 'notify.mobile_app_')
+      | list
+    }}
+  charging_device: !input charging_device
+  plug_entity: >-
+    {{
+      charging_device
+      | device_entities
+      | select('is_state_attr', 'device_class', 'plug')
+      | list
+      | first
+    }}
+
+actions:
+  - alias: Repeat undefinetly
+    repeat:
+      while: "{{ true }}"
+      sequence:
+        - alias: Wait for the device to start charging
+          wait_for_trigger:
+            - alias: Device starts charging
+              trigger: template
+              id: charging_started
+              value_template: "{{ is_state(plug_entity, 'on') }}"
+        - alias: For each notify service
+          repeat:
+            for_each: "{{ notify_services }}"
+            sequence:
+              - alias: Send a charging notification
+                action: "{{ repeat.item }}"
+                data:
+                  title: "Charging ⚡"
+                  message: "Charging started"
+        - alias: Wait for the charging to stop
+          wait_for_trigger:
+            - alias: Device starts charging
+              trigger: template
+              id: stopped_started
+              value_template: "{{ is_state(plug_entity, ['off', 'unknown', 'unavailable']) }}"
+        - alias: For each notify service
+          repeat:
+            for_each: "{{ notify_services }}"
+            sequence:
+              - alias: Send a charging stopped notification
+                action: "{{ repeat.item }}"
+                data:
+                  title: "Charging 🚫"
+                  message: "Charging stopped"
