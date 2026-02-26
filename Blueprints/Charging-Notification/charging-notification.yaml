@@ -69,6 +69,14 @@ variables:
       | list
       | first
     }}
+  battery_entity: >-
+    {{
+      charging_device
+      | device_entities
+      | select('is_state_attr', 'device_class', 'battery')
+      | list
+      | first
+    }}
 
 actions:
   - alias: Repeat undefinetly
@@ -81,6 +89,11 @@ actions:
               trigger: template
               id: charging_started
               value_template: "{{ is_state(plug_entity, 'on') }}"
+        - alias: Get the current charging value
+          variables: &get_charging_value
+            state: "{{ states(battery_entity) }}"
+            unit: "{{ state_attr(battery_entity, 'unit_of_measurement') or '%' }}"
+            value: "{{ state ~ unit }}"
         - alias: For each notify service
           repeat:
             for_each: "{{ notify_services }}"
@@ -89,13 +102,15 @@ actions:
                 action: "{{ repeat.item }}"
                 data:
                   title: "Charging ⚡"
-                  message: "Charging started"
+                  message: "Charging started ({{value}})"
         - alias: Wait for the charging to stop
           wait_for_trigger:
             - alias: Device starts charging
               trigger: template
               id: stopped_started
               value_template: "{{ is_state(plug_entity, ['off', 'unknown', 'unavailable']) }}"
+        - alias: Get the current charging value
+          variables: *get_charging_value
         - alias: For each notify service
           repeat:
             for_each: "{{ notify_services }}"
@@ -104,4 +119,4 @@ actions:
                 action: "{{ repeat.item }}"
                 data:
                   title: "Charging 🚫"
-                  message: "Charging stopped"
+                  message: "Charging stopped ({{value}})"
