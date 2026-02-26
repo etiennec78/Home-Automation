@@ -203,4 +203,5 @@ actions:
                   message: "{{ message }}"
                   data:
                     tag: "{{ notification_tag }}"
+                    channel: Charging notification
                 continue_on_error: true
