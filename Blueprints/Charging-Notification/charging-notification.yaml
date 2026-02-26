@@ -34,6 +34,8 @@ blueprint:
       name: 💬 Notify devices
       description: |-
         Each [**device** to **notify**](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#notify-services-)
+        > Optional
+      default: []
       selector:
         device:
           multiple: true
@@ -65,6 +67,12 @@ blueprint:
             message: {}
           selector:
             object:
+        persistent_notification:
+          name: 🔔 Persistent notifications
+          description: Show notifications in Home Assistant **[dashboard](https://www.home-assistant.io/integrations/persistent_notification)**
+          default: false
+          selector:
+            boolean:
 
 triggers:
   - alias: Trigger when the the user updated inputs or enabled the blueprint
@@ -212,3 +220,11 @@ actions:
                     tag: "{{ notification_tag }}"
                     channel: Charging notification
                 continue_on_error: true
+        - alias: Send a persistent notification
+          action: persistent_notification.create
+          data:
+            title: "{{ title }}"
+            message: "{{ message }}"
+            notification_id: "{{ notification_tag }}"
+          continue_on_error: true
+          enable: !input persistent_notification
