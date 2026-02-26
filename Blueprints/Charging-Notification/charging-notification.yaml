@@ -126,16 +126,25 @@ actions:
     repeat:
       while: "{{ true }}"
       sequence:
-        - alias: Wait for the device to start or stop charging
-          wait_for_trigger:
-            - alias: Device starts charging
-              trigger: template
-              id: charging_started
-              value_template: "{{ is_state(plug_entity, 'on') }}"
-            - alias: Device stops charging
-              trigger: template
-              id: charging_stopped
-              value_template: "{{ not is_state(plug_entity, 'on') }}"
+        - alias: Don't wait if this is the first loop and the device is already charging
+          if: "{{ not(repeat.first and is_state(plug_entity, 'on')) }}"
+          then:
+            - alias: Wait for the device to start or stop charging
+              wait_for_trigger:
+                - alias: Device starts charging
+                  trigger: template
+                  id: charging_started
+                  value_template: "{{ is_state(plug_entity, 'on') }}"
+                - alias: Device stops charging
+                  trigger: template
+                  id: charging_stopped
+                  value_template: "{{ not is_state(plug_entity, 'on') }}"
+          else:
+            - alias: Trigger the device charging notification
+              variables:
+                wait:
+                  trigger:
+                    id: "charging_started"
         - alias: Get the current charging value
           variables:
             state: "{{ states(battery_entity) }}"
