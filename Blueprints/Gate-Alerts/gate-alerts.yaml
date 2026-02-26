@@ -128,6 +128,15 @@ blueprint:
           default: true
           selector:
             boolean:
+        camera_entity:
+          name: 🎥 Camera
+          description: |-
+            Show the feed of a camera in the notificaiton
+            > Only available on iOS
+          default: ""
+          selector:
+            entity:
+              domain: camera
         persistent_notification:
           name: 🔔 Persistent notifications
           description: Show notifications in Home Assistant **[dashboard](https://www.home-assistant.io/integrations/persistent_notification)**
@@ -259,6 +268,7 @@ variables:
   tts_volume_at_night: !input tts_volume_at_night
   error_message_sensor: !input error_message_sensor
   car_visible: !input car_visible
+  camera_entity: !input camera_entity
   language: !input language
   custom_translations: !input custom_translations
   notification_tag: "gate-{{ notification_type }}"
@@ -686,11 +696,9 @@ actions:
         repeat:
           for_each: "{{ notify_services }}"
           sequence:
-            - action: "{{ repeat.item }}"
-              data:
-                title: "{{ title }}"
-                message: "{{ message }}"
-                data:
+            - alias: Set the notification data
+              variables:
+                notification_data:
                   notification_icon: mdi:gate-alert
                   channel: Gate alerts
                   importance: high
@@ -704,6 +712,30 @@ actions:
                     - action: "{{ closing_order_id }}"
                       title: "{{ button_text }}"
                       icon: sfsymbols:lock
+
+            - alias: Add the camera feed to the notification if needed
+              variables:
+                notification_data: >-
+                  {{
+                    notification_data
+                    | combine(
+                      {
+                        'entity_id': camera_entity,
+                        'push': {
+                          'category': 'camera'
+                        }
+                      },
+                      recursive=True
+                    )
+                  }}
+              enabled: !input camera_entity
+
+            - alias: Send the notification
+              action: "{{ repeat.item }}"
+              data:
+                title: "{{ title }}"
+                message: "{{ message }}"
+                data: "{{ notification_data }}"
               continue_on_error: true
 
       - alias: Replace opening persistent notification if enabled
@@ -754,11 +786,9 @@ actions:
             repeat:
               for_each: "{{ notify_services }}"
               sequence:
-                - action: "{{ repeat.item }}"
-                  data:
-                    title: "{{ title }}"
-                    message: "{{ message }}"
-                    data:
+                - alias: Set the notification data
+                  variables:
+                    notification_data:
                       car_ui: "{{ car_visible }}"
                       notification_icon: mdi:gate-alert
                       channel: Gate alerts
@@ -802,6 +832,30 @@ actions:
                         {% else %}
                           {{ [] }}
                         {% endif %}
+
+                - alias: Add the camera feed to the notification if needed
+                  variables:
+                    notification_data: >-
+                      {{
+                        notification_data
+                        | combine(
+                          {
+                            'entity_id': camera_entity,
+                            'push': {
+                              'category': 'camera'
+                            }
+                          },
+                          recursive=True
+                        )
+                      }}
+                  enabled: !input camera_entity
+
+                - alias: Send the notification
+                  action: "{{ repeat.item }}"
+                  data:
+                    title: "{{ title }}"
+                    message: "{{ message }}"
+                    data: "{{ notification_data }}"
                   continue_on_error: true
 
                 - alias: Play TTS on each phone, if enabled
