@@ -39,6 +39,22 @@ blueprint:
           multiple: true
           filter:
             integration: mobile_app
+    notification_settings:
+      name: Notification settings
+      icon: mdi:bell
+      collapsed: true
+      input:
+        language:
+          name: 🌍 Notification language
+          description: |-
+            The **language** used for **notifications**
+            > *If your language is not supported by this blueprint, please [open a pull request](https://github.com/etiennec78/Home-Automation/pulls)*
+          default: "en"
+          selector:
+            language:
+              languages:
+                - en
+                - fr
 
 triggers:
   - alias: Trigger when the the user updated inputs or enabled the blueprint
@@ -52,6 +68,7 @@ triggers:
 
 variables:
   notify_devices: !input notify_devices
+  language: !input language
   notify_services: >-
     {{
       notify_devices
@@ -77,6 +94,21 @@ variables:
       | list
       | first
     }}
+  strings:
+    en:
+      title:
+        charging_started: Charging ⚡
+        charging_stopped: Charging 🚫
+      message:
+        charging_started: Charging started ({value})
+        charging_stopped: Charging stopped at {value}
+    fr:
+      title:
+        charging_started: Chargement ⚡
+        charging_stopped: Chargement 🚫
+      message:
+        charging_started: Le chargement a démarré ({value})
+        charging_stopped: Le chargement a été arrêté à {value}
 
 actions:
   - alias: Repeat undefinetly
@@ -94,6 +126,33 @@ actions:
             state: "{{ states(battery_entity) }}"
             unit: "{{ state_attr(battery_entity, 'unit_of_measurement') or '%' }}"
             value: "{{ state ~ unit }}"
+        - alias: Set message ids
+          variables:
+            title_id: "charging_started"
+            message_id: "charging_started"
+        - alias: Get the notification translation
+          variables: &get_translation
+            message: >-
+              {# Selected language #}
+              {% if message_id in strings[language]['message'] %}
+                {{ strings[language]['message'][message_id] }}
+
+              {# Fallback to english #}
+              {% else %}
+                {{ strings['en']['message'][message_id] }}
+              {% endif %}
+            title: >-
+              {# Selected language #}
+              {% if title_id in strings[language]['title'] %}
+                {{ strings[language]['title'][title_id] }}
+
+              {# Fallback to english #}
+              {% else %}
+                {{ strings['en']['title'][title_id] }}
+              {% endif %}
+        - alias: Format the notification
+          variables:
+            message: "{{ message.format(value=value) }}"
         - alias: For each notify service
           repeat:
             for_each: "{{ notify_services }}"
@@ -101,8 +160,8 @@ actions:
               - alias: Send a charging notification
                 action: "{{ repeat.item }}"
                 data:
-                  title: "Charging ⚡"
-                  message: "Charging started ({{value}})"
+                  title: "{{ title }}"
+                  message: "{{ message }}"
         - alias: Wait for the charging to stop
           wait_for_trigger:
             - alias: Device starts charging
@@ -111,12 +170,21 @@ actions:
               value_template: "{{ is_state(plug_entity, ['off', 'unknown', 'unavailable']) }}"
         - alias: Get the current charging value
           variables: *get_charging_value
+        - alias: Set message ids
+          variables:
+            title_id: "charging_stopped"
+            message_id: "charging_stopped"
+        - alias: Get the notification translation
+          variables: *get_translation
+        - alias: Format the notification
+          variables:
+            message: "{{ message.format(value=value) }}"
         - alias: For each notify service
           repeat:
             for_each: "{{ notify_services }}"
             sequence:
-              - alias: Send a charging stopped notification
+              - alias: Send a charging notification
                 action: "{{ repeat.item }}"
                 data:
-                  title: "Charging 🚫"
-                  message: "Charging stopped ({{value}})"
+                  title: "{{ title }}"
+                  message: "{{ message }}"
