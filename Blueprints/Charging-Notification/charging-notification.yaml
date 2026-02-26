@@ -55,6 +55,16 @@ blueprint:
               languages:
                 - en
                 - fr
+        custom_translations:
+          name: 🈂️ Custom translations
+          description: |-
+            A **YAML** dictionary to override the default **notification translations**
+            > *You can find the translation keys in the `strings['en']` variable in the code, or in your traces*
+          default:
+            title: {}
+            message: {}
+          selector:
+            object:
 
 triggers:
   - alias: Trigger when the the user updated inputs or enabled the blueprint
@@ -69,6 +79,7 @@ triggers:
 variables:
   notify_devices: !input notify_devices
   language: !input language
+  custom_translations: !input custom_translations
   notify_services: >-
     {{
       notify_devices
@@ -133,8 +144,15 @@ actions:
         - alias: Get the notification translation
           variables: &get_translation
             message: >-
+              {# Custom translation #}
+              {%
+                if 'message' in custom_translations
+                and message_id in custom_translations['message']
+              %}
+                {{ custom_translations['message'][message_id] }}
+
               {# Selected language #}
-              {% if message_id in strings[language]['message'] %}
+              {% elif message_id in strings[language]['message'] %}
                 {{ strings[language]['message'][message_id] }}
 
               {# Fallback to english #}
@@ -142,8 +160,15 @@ actions:
                 {{ strings['en']['message'][message_id] }}
               {% endif %}
             title: >-
+              {# Custom translation #}
+              {%
+                if 'title' in custom_translations
+                and title_id in custom_translations['title']
+              %}
+                {{ custom_translations['title'][title_id] }}
+
               {# Selected language #}
-              {% if title_id in strings[language]['title'] %}
+              {% elif title_id in strings[language]['title'] %}
                 {{ strings[language]['title'][title_id] }}
 
               {# Fallback to english #}
