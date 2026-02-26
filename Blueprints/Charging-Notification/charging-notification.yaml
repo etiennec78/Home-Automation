@@ -126,23 +126,27 @@ actions:
     repeat:
       while: "{{ true }}"
       sequence:
-        - alias: Wait for the device to start charging
+        - alias: Wait for the device to start or stop charging
           wait_for_trigger:
             - alias: Device starts charging
               trigger: template
               id: charging_started
               value_template: "{{ is_state(plug_entity, 'on') }}"
+            - alias: Device stops charging
+              trigger: template
+              id: charging_stopped
+              value_template: "{{ not is_state(plug_entity, 'on') }}"
         - alias: Get the current charging value
-          variables: &get_charging_value
+          variables:
             state: "{{ states(battery_entity) }}"
             unit: "{{ state_attr(battery_entity, 'unit_of_measurement') or '%' }}"
             value: "{{ state ~ unit }}"
-        - alias: Set message ids
+        - alias: Set the message ids
           variables:
-            title_id: "charging_started"
-            message_id: "charging_started"
+            title_id: "{{ wait.trigger.id }}"
+            message_id: "{{ title_id }}"
         - alias: Get the notification translation
-          variables: &get_translation
+          variables:
             message: >-
               {# Custom translation #}
               {%
@@ -175,32 +179,6 @@ actions:
               {% else %}
                 {{ strings['en']['title'][title_id] }}
               {% endif %}
-        - alias: Format the notification
-          variables:
-            message: "{{ message.format(value=value) }}"
-        - alias: For each notify service
-          repeat:
-            for_each: "{{ notify_services }}"
-            sequence:
-              - alias: Send a charging notification
-                action: "{{ repeat.item }}"
-                data:
-                  title: "{{ title }}"
-                  message: "{{ message }}"
-        - alias: Wait for the charging to stop
-          wait_for_trigger:
-            - alias: Device starts charging
-              trigger: template
-              id: stopped_started
-              value_template: "{{ is_state(plug_entity, ['off', 'unknown', 'unavailable']) }}"
-        - alias: Get the current charging value
-          variables: *get_charging_value
-        - alias: Set message ids
-          variables:
-            title_id: "charging_stopped"
-            message_id: "charging_stopped"
-        - alias: Get the notification translation
-          variables: *get_translation
         - alias: Format the notification
           variables:
             message: "{{ message.format(value=value) }}"
