@@ -200,3 +200,4 @@ actions:
                 data:
                   title: "{{ title }}"
                   message: "{{ message }}"
+                continue_on_error: true
