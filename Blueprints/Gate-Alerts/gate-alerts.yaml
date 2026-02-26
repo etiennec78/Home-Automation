@@ -326,6 +326,7 @@ variables:
 
 trigger_variables:
   notification_type: !input notification_type
+  error_message_sensor: !input error_message_sensor
   gate: !input gate
 
 triggers:
@@ -360,13 +361,9 @@ triggers:
     enabled: "{{ notification_type == 'close' }}"
 
   - alias: Wait for error
-    trigger: state
+    trigger: template
     id: error
-    entity_id: !input error_message_sensor
-    not_to:
-      - "unknown"
-      - "unavailable"
-      - ""
+    value_template: "{{ error_message_sensor | has_value }}"
     enabled: "{{ notification_type == 'error' }}"
 
   - alias: Wait for gate unavailable for duration
