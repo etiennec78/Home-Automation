@@ -113,6 +113,14 @@ variables:
       | list
       | first
     }}
+  remaining_sensor: >-
+    {{
+      charging_device
+      | device_entities
+      | select('is_state_attr', 'device_class', 'duration')
+      | list
+      | first
+    }}
   notification_tag: "charging-{{ this.attributes.id }}"
   device_name: "{{ device_attr(charging_device, 'name') }}"
   strings:
@@ -136,8 +144,11 @@ actions:
     repeat:
       while: "{{ true }}"
       sequence:
+        - alias: Get whether the device was plugged
+          variables:
+            plugged: "{{ is_state(plug_entity, 'on') }}"
         - alias: Don't wait if this is the first loop and the device is already charging
-          if: "{{ not(repeat.first and is_state(plug_entity, 'on')) }}"
+          if: "{{ not(repeat.first and plugged) }}"
           then:
             - alias: Wait for the device to start or stop charging
               wait_for_trigger:
@@ -145,10 +156,26 @@ actions:
                   trigger: template
                   id: charging_started
                   value_template: "{{ is_state(plug_entity, 'on') }}"
+                  enabled: "{{ not plugged }}"
+                - alias: Charge got updated
+                  trigger: event
+                  id: charging_started
+                  event_type: state_changed
+                  event_data:
+                    entity_id: "{{ battery_entity }}"
+                  enabled: "{{ plugged }}"
+                - alias: Remaining time got updated
+                  trigger: event
+                  id: charging_started
+                  event_type: state_changed
+                  event_data:
+                    entity_id: "{{ remaining_sensor }}"
+                  enabled: "{{ plugged }}"
                 - alias: Device stops charging
                   trigger: template
                   id: charging_stopped
                   value_template: "{{ not is_state(plug_entity, 'on') }}"
+                  enabled: "{{ plugged }}"
           else:
             - alias: Trigger the device charging notification
               variables:
@@ -218,6 +245,20 @@ actions:
                         if wait.trigger.id == 'charging_started'
                         else 'off'
                       -}}
+                    chronometer: "{{ remaining_sensor | has_value }}"
+                    when: >-
+                      {% if remaining_sensor | has_value %}
+                        {% set value = states(remaining_sensor) | float %}
+                        {% if is_state_attr(remaining_sensor, 'unit_of_measurement', 'min') %}
+                          {% set value = value * 60 %}
+                        {% elif is_state_attr(remaining_sensor, 'unit_of_measurement', 'h') %}
+                          {% set value = value * 3600 %}
+                        {% endif %}
+                        {{ value }}
+                      {% else %}
+                        0
+                      {% endif %}
+                    when_relative: true
                     tag: "{{ notification_tag }}"
                     channel: Charging notification
                 continue_on_error: true
