@@ -241,7 +241,11 @@ actions:
                     notification_icon: >-
                       mdi:battery-
                       {{-
-                        'charging'
+                        'charging' ~ (
+                          '-' ~ state | round(-1) | int
+                          if battery_entity | has_value
+                          else ''
+                        )
                         if wait.trigger.id == 'charging_started'
                         else 'off'
                       -}}
