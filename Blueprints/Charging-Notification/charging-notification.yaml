@@ -133,6 +133,7 @@ variables:
       | first
     }}
   error_checker_ran: false
+  active: true
   notification_tag: "charging-{{ this.attributes.id }}"
   config_checker_tag: "config-checker-{{ this.attributes.id }}"
   device_name: "{{ device_attr(charging_device, 'name') }}"
@@ -395,14 +396,14 @@ actions:
                   event_type: state_changed
                   event_data:
                     entity_id: "{{ battery_entity }}"
-                  enabled: "{{ plugged }}"
+                  enabled: "{{ plugged and active }}"
                 - alias: Remaining time got updated
                   trigger: event
                   id: eta_updated
                   event_type: state_changed
                   event_data:
                     entity_id: "{{ remaining_sensor }}"
-                  enabled: "{{ plugged }}"
+                  enabled: "{{ plugged and active }}"
                 - alias: Device stops charging
                   trigger: template
                   id: charging_stopped
@@ -414,10 +415,11 @@ actions:
                   event_type: mobile_app_notification_cleared
                   event_data:
                     tag: "{{ notification_tag }}"
+                  enabled: "{{ active }}"
                 - alias: Persistent notification cleared
                   trigger: persistent_notification
                   id: persistent_cleared
-                  notification_id: "{{ notification_tag }}"
+                  notification_id: "{{ notification_tag and active }}"
                   update_type: removed
           else:
             - alias: Trigger the device charging notification
@@ -435,6 +437,9 @@ actions:
                     notification_id: "{{ notification_tag }}"
                   continue_on_error: true
                   enabled: !input persistent_notification
+                - alias: Stop listening to updates
+                  variables:
+                    active: false
             - alias: If the dashboard notification was cleared
               conditions: "{{ wait.trigger.id == 'persistent_cleared' }}"
               sequence:
@@ -448,10 +453,23 @@ actions:
                           data:
                             tag: "{{ notification_tag }}"
                         continue_on_error: true
+                - alias: Stop listening to updates
+                  variables:
+                    active: false
           default:
-            - alias: Get whether the device was plugged
+            - alias: Get whether the device was plugged and if notifications were not dismissed
               variables:
                 plugged: "{{ is_state(plug_entity, 'on') }}"
+                not_dismissed: "{{ active }}"
+            - alias: If the charging stopped
+              if: "{{ wait.trigger.id == 'charging_stopped' }}"
+              then:
+                - alias: Start listening for updates
+                  variables:
+                    active: true
+            - alias: Only continue if the notifications were not dismissed
+              condition: template
+              value_template: "{{ not_dismissed }}"
             - alias: Get the current charging value
               variables:
                 state: "{{ states(battery_entity) }}"
