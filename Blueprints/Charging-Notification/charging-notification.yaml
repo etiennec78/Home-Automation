@@ -414,6 +414,11 @@ actions:
                   event_type: mobile_app_notification_cleared
                   event_data:
                     tag: "{{ notification_tag }}"
+                - alias: Persistent notification cleared
+                  trigger: persistent_notification
+                  id: persistent_cleared
+                  notification_id: "{{ notification_tag }}"
+                  update_type: removed
           else:
             - alias: Trigger the device charging notification
               variables:
@@ -430,6 +435,19 @@ actions:
                     notification_id: "{{ notification_tag }}"
                   continue_on_error: true
                   enabled: !input persistent_notification
+            - alias: If the dashboard notification was cleared
+              conditions: "{{ wait.trigger.id == 'persistent_cleared' }}"
+              sequence:
+                - alias: Remove the notification on all devices
+                  repeat:
+                    for_each: "{{ notify_services }}"
+                    sequence:
+                      - action: "{{ repeat.item }}"
+                        data:
+                          message: clear_notification
+                          data:
+                            tag: "{{ notification_tag }}"
+                        continue_on_error: true
           default:
             - alias: Get whether the device was plugged
               variables:
