@@ -73,6 +73,17 @@ blueprint:
           default: false
           selector:
             boolean:
+    config_checker:
+      name: Config checker
+      icon: mdi:shield-check
+      collapsed: true
+      input:
+        run_checks_when_enabled:
+          name: 🧪 Run tests when blueprint enabled
+          description: Run tests after adding the blueprint, updating inputs, and after HA startup
+          default: true
+          selector:
+            boolean:
 
 triggers:
   - alias: Trigger when the the user updated inputs or enabled the blueprint
@@ -121,25 +132,244 @@ variables:
       | list
       | first
     }}
+  error_checker_ran: false
   notification_tag: "charging-{{ this.attributes.id }}"
+  config_checker_tag: "config-checker-{{ this.attributes.id }}"
   device_name: "{{ device_attr(charging_device, 'name') }}"
+  blueprint_name: "{{ state_attr(this.entity_id, 'friendly_name') }}"
   strings:
     en:
       title:
         charging_started: "{{ device_name }} ⚡"
         charging_stopped: "{{ device_name }} 🚫"
+        valid_config: "{{blueprint_name}}: Valid configuration 🛠️✅"
+        invalid_config: "{{blueprint_name}}: Invalid configuration 🛠️❌"
       message:
         charging_started: Charging started ({value})
         charging_stopped: Charging stopped at {value}
+        something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
+        valid_config: "Your configuration seems valid"
+        more_info: "More info"
+        invalid_translations: "Your custom translations are not valid. Check the following keys: '{data}'. (#1)"
     fr:
       title:
         charging_started: "{{ device_name }} ⚡"
         charging_stopped: "{{ device_name }} 🚫"
+        valid_config: "{{blueprint_name}}: Configuration valide 🛠️✅"
+        invalid_config: "{{blueprint_name}}: Configuration invalide 🛠️❌"
       message:
         charging_started: Le chargement a démarré ({value})
         charging_stopped: Le chargement a été arrêté à {value}
+        something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
+        valid_config: "Votre configuration semble valide"
+        more_info: "Plus d'infos"
+        invalid_translations: "Vos traductions personnalisées ne sont pas valides. Vérifiez les valeurs suivantes: '{data}'. (#1)"
 
 actions:
+  - alias: Check that custom strings are valid
+    variables:
+      custom_translations_error: "{{ custom_translations is not mapping }}"
+  - alias: If the custom translations is not a mapping
+    if:
+      - condition: template
+        value_template: "{{ custom_translations_error }}"
+    then:
+      - alias: Reset the custom translations
+        variables:
+          custom_translations: {}
+  - alias: If the config checker should run checks
+    if:
+      - condition: or
+        conditions:
+          - alias: If the blueprint was executed manually
+            condition: template
+            value_template: "{{ trigger.platform is none }}"
+          - alias: If the user wants errors to be checked when the blueprint is enabled
+            condition: template
+            value_template: !input run_checks_when_enabled
+    then:
+      ##################
+      # ERROR CHECKING #
+      ##################
+
+      - alias: Initialize variables for the error checker
+        variables:
+          error_checker_ran: true
+          successfull_check: false
+          messages: []
+          error_level: 0
+      - alias: Run the error checker in an error-safe sequence
+        sequence:
+          - alias: Check for errors
+            repeat:
+              for_each:
+                - alias: Check custom translations
+                  error: >-
+                    {% set data = namespace(invalid=[]) %}
+                    {% for key, sub_items in custom_translations.items() %}
+                      {% if key not in strings['en'] %}
+                        {% set data.invalid = data.invalid + [key] %}
+                      {% else %}
+                        {% for subkey, value in sub_items.items() %}
+                          {%
+                            if value is not string
+                            or subkey not in strings['en'][key]
+                          %}
+                            {% set data.invalid = data.invalid + [subkey] %}
+                          {% endif %}
+                        {% endfor %}
+                      {% endif %}
+                    {% endfor %}
+                    {{ data.invalid }}
+                  message_id: "invalid_translations"
+                  level: 1
+              sequence:
+                - alias: If a check failed
+                  if:
+                    - condition: template
+                      value_template: >-
+                        {% set error = repeat.item.error %}
+                        {{ error != [] if error is list else error }}
+                  then:
+                    - alias: If the error level is higher than the current highest
+                      if:
+                        - condition: template
+                          value_template: "{{ repeat.item.level > error_level }}"
+                      then:
+                        - alias: Save the new highest error level
+                          variables:
+                            error_level: "{{ repeat.item.level }}"
+                    - alias: Append the error message to the list
+                      variables:
+                        message_id: "{{ repeat.item.message_id }}"
+                        message: &get_message >-
+                          {# Custom translation #}
+                          {%
+                            if 'message' in custom_translations
+                            and message_id in custom_translations['message']
+                          %}
+                            {{ custom_translations['message'][message_id] }}
+
+                          {# Selected language #}
+                          {% elif message_id in strings[language]['message'] %}
+                            {{ strings[language]['message'][message_id] }}
+
+                          {# Fallback to english #}
+                          {% else %}
+                            {{ strings['en']['message'][message_id] }}
+                          {% endif %}
+                    - alias: If the error variable contains a list
+                      if:
+                        - condition: template
+                          value_template: "{{ repeat.item.error is list }}"
+                      then:
+                        - alias: Format the string with error data
+                          variables:
+                            message: >-
+                              {{
+                                message.format(
+                                  data=(
+                                    ', '.join(repeat.item.error)
+                                  )
+                                )
+                              }}
+                    - alias: Append the error message to the list
+                      variables:
+                        messages: "{{ messages | union([message]) }}"
+          - alias: If the config is valid
+            if:
+              - condition: template
+                value_template: "{{ messages | length == 0 }}"
+            then:
+              - alias: If the blueprint was triggered manually
+                if:
+                  - condition: template
+                    value_template: "{{ trigger.platform is none }}"
+                then:
+                  - alias: Set message ids
+                    variables:
+                      title_id: "valid_config"
+                      message_id: "valid_config"
+                  - alias: Get notification translation
+                    variables: &get_translation
+                      message: *get_message
+                      title: &get_title >-
+                        {# Custom translation #}
+                        {%
+                          if 'title' in custom_translations
+                          and title_id in custom_translations['title']
+                        %}
+                          {{ custom_translations['title'][title_id] }}
+
+                        {# Selected language #}
+                        {% elif title_id in strings[language]['title'] %}
+                          {{ strings[language]['title'][title_id] }}
+
+                        {# Fallback to english #}
+                        {% else %}
+                          {{ strings['en']['title'][title_id] }}
+                        {% endif %}
+                  - alias: Notify all users on the dashboard that the config is valid
+                    action: persistent_notification.create
+                    data:
+                      title: "{{ title }}"
+                      message: "{{ message }}"
+                      notification_id: "{{ config_checker_tag }}"
+                    continue_on_error: true
+                else:
+                  - alias: Remove the previous dashboard notification
+                    action: persistent_notification.dismiss
+                    data:
+                      notification_id: "{{ config_checker_tag }}"
+                    continue_on_error: true
+            else:
+              - alias: Build the notification
+                variables:
+                  title_id: "invalid_config"
+                  title: *get_title
+                  message: "{{ '• ' ~ '\n• '.join(messages) }}"
+              - alias: Build the more info link
+                variables:
+                  message_id: "more_info"
+                  more_info: *get_message
+                  link: "https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/README.md#error-codes-table-%EF%B8%8F"
+                  more_info_md: "[{{more_info}}]({{link}})"
+              - alias: Notify all users on the dashboard that the config is invalid
+                action: persistent_notification.create
+                data:
+                  title: "{{ title }}"
+                  message: "{{ message ~ '\n\n' ~ more_info_md }}"
+                  notification_id: "{{ config_checker_tag }}"
+                continue_on_error: true
+          - alias: Confirm that no error occured while the config checker was running
+            variables:
+              successful_check: true
+        continue_on_error: true
+      - alias: If an error occured while the config checker was running
+        if:
+          - condition: template
+            value_template: "{{ not successful_check }}"
+        then:
+          - alias: Set notification ids
+            variables:
+              title_id: "invalid_config"
+              message_id: "something_went_wrong"
+          - alias: Get notification translation
+            variables: *get_translation
+          - alias: Notify all users on the dashboard that an error occured
+            action: persistent_notification.create
+            data:
+              title: "{{ title }}"
+              message: "{{ message }}"
+              notification_id: "{{ config_checker_tag }}"
+            continue_on_error: true
+          - stop: Config checker failed
+            error: true
+
+  - alias: Only continue if the error checker did not run, or no critical error was raised
+    condition: template
+    value_template: "{{ not error_checker_ran or error_level < 2 }}"
+
   - alias: Repeat undefinetly
     repeat:
       while: "{{ true }}"
@@ -192,39 +422,7 @@ actions:
             title_id: "{{ wait.trigger.id }}"
             message_id: "{{ title_id }}"
         - alias: Get the notification translation
-          variables:
-            message: >-
-              {# Custom translation #}
-              {%
-                if 'message' in custom_translations
-                and message_id in custom_translations['message']
-              %}
-                {{ custom_translations['message'][message_id] }}
-
-              {# Selected language #}
-              {% elif message_id in strings[language]['message'] %}
-                {{ strings[language]['message'][message_id] }}
-
-              {# Fallback to english #}
-              {% else %}
-                {{ strings['en']['message'][message_id] }}
-              {% endif %}
-            title: >-
-              {# Custom translation #}
-              {%
-                if 'title' in custom_translations
-                and title_id in custom_translations['title']
-              %}
-                {{ custom_translations['title'][title_id] }}
-
-              {# Selected language #}
-              {% elif title_id in strings[language]['title'] %}
-                {{ strings[language]['title'][title_id] }}
-
-              {# Fallback to english #}
-              {% else %}
-                {{ strings['en']['title'][title_id] }}
-              {% endif %}
+          variables: *get_translation
         - alias: Format the notification
           variables:
             message: "{{ message.format(value=value) }}"
@@ -274,3 +472,4 @@ actions:
             notification_id: "{{ notification_tag }}"
           continue_on_error: true
           enable: !input persistent_notification
+mode: restart
