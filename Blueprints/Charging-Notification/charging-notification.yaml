@@ -505,6 +505,40 @@ actions:
             - alias: Format the notification
               variables:
                 message: "{{ message.format(value=value) }}"
+            - alias: Get the notification data
+              variables:
+                notification_data:
+                  notification_icon: >-
+                    mdi:battery-
+                    {{-
+                      'charging' ~ (
+                        '-' ~ state | round(-1) | int
+                        if battery_entity | has_value
+                        else ''
+                      )
+                      if wait.trigger.id == 'charging_started'
+                      else 'off'
+                    -}}
+                  sticky: true
+                  tag: "{{ notification_tag }}"
+                  channel: Charging notification
+            - alias: If the device is currently charging
+              if: "{{ plugged }}"
+              then:
+                - alias: Add charging progress to the notification
+                  variables:
+                    notification_data: >-
+                      {{
+                        notification_data
+                        | combine({
+                          'progress_indeterminate': not battery_entity | has_value,
+                          'progress': state if battery_entity | has_value else 0,
+                          'progress_max': 100,
+                          'chronometer': remaining > 0,
+                          'when': remaining,
+                          'when_relative': true
+                        })
+                      }}
             - alias: For each notify service
               repeat:
                 for_each: "{{ notify_services }}"
@@ -514,27 +548,7 @@ actions:
                     data:
                       title: "{{ title }}"
                       message: "{{ message }}"
-                      data:
-                        notification_icon: >-
-                          mdi:battery-
-                          {{-
-                            'charging' ~ (
-                              '-' ~ state | round(-1) | int
-                              if battery_entity | has_value
-                              else ''
-                            )
-                            if wait.trigger.id == 'charging_started'
-                            else 'off'
-                          -}}
-                        sticky: true
-                        progress_indeterminate: '{{ not battery_entity | has_value }}'
-                        progress: "{{ state if battery_entity | has_value else 0 }}"
-                        progress_max: 100
-                        chronometer: "{{ remaining > 0 }}"
-                        when: "{{ remaining }}"
-                        when_relative: true
-                        tag: "{{ notification_tag }}"
-                        channel: Charging notification
+                      data: "{{ notification_data }}"
                     continue_on_error: true
             - alias: Send a persistent notification
               action: persistent_notification.create
