@@ -475,6 +475,18 @@ actions:
                 state: "{{ states(battery_entity) }}"
                 unit: "{{ state_attr(battery_entity, 'unit_of_measurement') or '%' }}"
                 value: "{{ state ~ unit }}"
+                remaining: >-
+                  {% if remaining_sensor | has_value %}
+                    {% set value = states(remaining_sensor) | float %}
+                    {% if is_state_attr(remaining_sensor, 'unit_of_measurement', 'min') %}
+                      {% set value = value * 60 %}
+                    {% elif is_state_attr(remaining_sensor, 'unit_of_measurement', 'h') %}
+                      {% set value = value * 3600 %}
+                    {% endif %}
+                    {{ value }}
+                  {% else %}
+                    {{ 0 }}
+                  {% endif %}
             - alias: Set the message ids
               variables:
                 title_id: "{{ 'charging' if plugged else 'charging_stopped' }}"
@@ -518,19 +530,8 @@ actions:
                         progress_indeterminate: '{{ not battery_entity | has_value }}'
                         progress: "{{ state if battery_entity | has_value else 0 }}"
                         progress_max: 100
-                        chronometer: "{{ remaining_sensor | has_value }}"
-                        when: >-
-                          {% if remaining_sensor | has_value %}
-                            {% set value = states(remaining_sensor) | float %}
-                            {% if is_state_attr(remaining_sensor, 'unit_of_measurement', 'min') %}
-                              {% set value = value * 60 %}
-                            {% elif is_state_attr(remaining_sensor, 'unit_of_measurement', 'h') %}
-                              {% set value = value * 3600 %}
-                            {% endif %}
-                            {{ value }}
-                          {% else %}
-                            0
-                          {% endif %}
+                        chronometer: "{{ remaining > 0 }}"
+                        when: "{{ remaining }}"
                         when_relative: true
                         tag: "{{ notification_tag }}"
                         channel: Charging notification
