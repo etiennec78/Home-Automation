@@ -514,6 +514,7 @@ actions:
                             if wait.trigger.id == 'charging_started'
                             else 'off'
                           -}}
+                        sticky: true
                         chronometer: "{{ remaining_sensor | has_value }}"
                         when: >-
                           {% if remaining_sensor | has_value %}
