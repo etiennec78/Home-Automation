@@ -515,6 +515,9 @@ actions:
                             else 'off'
                           -}}
                         sticky: true
+                        progress_indeterminate: '{{ not battery_entity | has_value }}'
+                        progress: "{{ state if battery_entity | has_value else 0 }}"
+                        progress_max: 100
                         chronometer: "{{ remaining_sensor | has_value }}"
                         when: >-
                           {% if remaining_sensor | has_value %}
