@@ -140,12 +140,13 @@ variables:
   strings:
     en:
       title:
-        charging_started: "{{ device_name }} ⚡"
+        charging: "{{ device_name }} ⚡"
         charging_stopped: "{{ device_name }} 🚫"
         valid_config: "{{blueprint_name}}: Valid configuration 🛠️✅"
         invalid_config: "{{blueprint_name}}: Invalid configuration 🛠️❌"
       message:
-        charging_started: Charging started ({value})
+        charging_started: Charging started
+        charging_ongoing: "Battery charge: {value}"
         charging_stopped: Charging stopped at {value}
         something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
         valid_config: "Your configuration seems valid"
@@ -153,12 +154,13 @@ variables:
         invalid_translations: "Your custom translations are not valid. Check the following keys: '{data}'. (#1)"
     fr:
       title:
-        charging_started: "{{ device_name }} ⚡"
+        charging: "{{ device_name }} ⚡"
         charging_stopped: "{{ device_name }} 🚫"
         valid_config: "{{blueprint_name}}: Configuration valide 🛠️✅"
         invalid_config: "{{blueprint_name}}: Configuration invalide 🛠️❌"
       message:
-        charging_started: Le chargement a démarré ({value})
+        charging_started: Le chargement a démarré
+        charging_ongoing: "Chargement en cours: {value}"
         charging_stopped: Le chargement a été arrêté à {value}
         something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
         valid_config: "Votre configuration semble valide"
@@ -389,14 +391,14 @@ actions:
                   enabled: "{{ not plugged }}"
                 - alias: Charge got updated
                   trigger: event
-                  id: charging_started
+                  id: charge_updated
                   event_type: state_changed
                   event_data:
                     entity_id: "{{ battery_entity }}"
                   enabled: "{{ plugged }}"
                 - alias: Remaining time got updated
                   trigger: event
-                  id: charging_started
+                  id: eta_updated
                   event_type: state_changed
                   event_data:
                     entity_id: "{{ remaining_sensor }}"
@@ -412,6 +414,9 @@ actions:
                 wait:
                   trigger:
                     id: "charging_started"
+        - alias: Get whether the device was plugged
+          variables:
+            plugged: "{{ is_state(plug_entity, 'on') }}"
         - alias: Get the current charging value
           variables:
             state: "{{ states(battery_entity) }}"
@@ -419,8 +424,17 @@ actions:
             value: "{{ state ~ unit }}"
         - alias: Set the message ids
           variables:
-            title_id: "{{ wait.trigger.id }}"
-            message_id: "{{ title_id }}"
+            title_id: "{{ 'charging' if plugged else 'charging_stopped' }}"
+            message_id: >-
+              {% if plugged %}
+                {% if battery_entity | has_value %}
+                  charging_ongoing
+                {% else %}
+                  charging_started
+                {% endif %}
+              {% else %}
+                charging_stopped
+              {% endif %}
         - alias: Get the notification translation
           variables: *get_translation
         - alias: Format the notification
