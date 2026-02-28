@@ -408,82 +408,99 @@ actions:
                   id: charging_stopped
                   value_template: "{{ not is_state(plug_entity, 'on') }}"
                   enabled: "{{ plugged }}"
+                - alias: Mobile notification cleared
+                  trigger: event
+                  id: notification_cleared
+                  event_type: mobile_app_notification_cleared
+                  event_data:
+                    tag: "{{ notification_tag }}"
           else:
             - alias: Trigger the device charging notification
               variables:
                 wait:
                   trigger:
                     id: "charging_started"
-        - alias: Get whether the device was plugged
-          variables:
-            plugged: "{{ is_state(plug_entity, 'on') }}"
-        - alias: Get the current charging value
-          variables:
-            state: "{{ states(battery_entity) }}"
-            unit: "{{ state_attr(battery_entity, 'unit_of_measurement') or '%' }}"
-            value: "{{ state ~ unit }}"
-        - alias: Set the message ids
-          variables:
-            title_id: "{{ 'charging' if plugged else 'charging_stopped' }}"
-            message_id: >-
-              {% if plugged %}
-                {% if battery_entity | has_value %}
-                  charging_ongoing
-                {% else %}
-                  charging_started
-                {% endif %}
-              {% else %}
-                charging_stopped
-              {% endif %}
-        - alias: Get the notification translation
-          variables: *get_translation
-        - alias: Format the notification
-          variables:
-            message: "{{ message.format(value=value) }}"
-        - alias: For each notify service
-          repeat:
-            for_each: "{{ notify_services }}"
-            sequence:
-              - alias: Send a charging notification
-                action: "{{ repeat.item }}"
-                data:
-                  title: "{{ title }}"
-                  message: "{{ message }}"
+        - choose:
+            - alias: If the mobile notification was cleared
+              conditions: "{{ wait.trigger.id == 'notification_cleared' }}"
+              sequence:
+                - alias: Remove the dashboard notification
+                  action: persistent_notification.dismiss
                   data:
-                    notification_icon: >-
-                      mdi:battery-
-                      {{-
-                        'charging' ~ (
-                          '-' ~ state | round(-1) | int
-                          if battery_entity | has_value
-                          else ''
-                        )
-                        if wait.trigger.id == 'charging_started'
-                        else 'off'
-                      -}}
-                    chronometer: "{{ remaining_sensor | has_value }}"
-                    when: >-
-                      {% if remaining_sensor | has_value %}
-                        {% set value = states(remaining_sensor) | float %}
-                        {% if is_state_attr(remaining_sensor, 'unit_of_measurement', 'min') %}
-                          {% set value = value * 60 %}
-                        {% elif is_state_attr(remaining_sensor, 'unit_of_measurement', 'h') %}
-                          {% set value = value * 3600 %}
-                        {% endif %}
-                        {{ value }}
-                      {% else %}
-                        0
-                      {% endif %}
-                    when_relative: true
-                    tag: "{{ notification_tag }}"
-                    channel: Charging notification
-                continue_on_error: true
-        - alias: Send a persistent notification
-          action: persistent_notification.create
-          data:
-            title: "{{ title }}"
-            message: "{{ message }}"
-            notification_id: "{{ notification_tag }}"
-          continue_on_error: true
-          enable: !input persistent_notification
+                    notification_id: "{{ notification_tag }}"
+                  continue_on_error: true
+                  enabled: !input persistent_notification
+          default:
+            - alias: Get whether the device was plugged
+              variables:
+                plugged: "{{ is_state(plug_entity, 'on') }}"
+            - alias: Get the current charging value
+              variables:
+                state: "{{ states(battery_entity) }}"
+                unit: "{{ state_attr(battery_entity, 'unit_of_measurement') or '%' }}"
+                value: "{{ state ~ unit }}"
+            - alias: Set the message ids
+              variables:
+                title_id: "{{ 'charging' if plugged else 'charging_stopped' }}"
+                message_id: >-
+                  {% if plugged %}
+                    {% if battery_entity | has_value %}
+                      charging_ongoing
+                    {% else %}
+                      charging_started
+                    {% endif %}
+                  {% else %}
+                    charging_stopped
+                  {% endif %}
+            - alias: Get the notification translation
+              variables: *get_translation
+            - alias: Format the notification
+              variables:
+                message: "{{ message.format(value=value) }}"
+            - alias: For each notify service
+              repeat:
+                for_each: "{{ notify_services }}"
+                sequence:
+                  - alias: Send a charging notification
+                    action: "{{ repeat.item }}"
+                    data:
+                      title: "{{ title }}"
+                      message: "{{ message }}"
+                      data:
+                        notification_icon: >-
+                          mdi:battery-
+                          {{-
+                            'charging' ~ (
+                              '-' ~ state | round(-1) | int
+                              if battery_entity | has_value
+                              else ''
+                            )
+                            if wait.trigger.id == 'charging_started'
+                            else 'off'
+                          -}}
+                        chronometer: "{{ remaining_sensor | has_value }}"
+                        when: >-
+                          {% if remaining_sensor | has_value %}
+                            {% set value = states(remaining_sensor) | float %}
+                            {% if is_state_attr(remaining_sensor, 'unit_of_measurement', 'min') %}
+                              {% set value = value * 60 %}
+                            {% elif is_state_attr(remaining_sensor, 'unit_of_measurement', 'h') %}
+                              {% set value = value * 3600 %}
+                            {% endif %}
+                            {{ value }}
+                          {% else %}
+                            0
+                          {% endif %}
+                        when_relative: true
+                        tag: "{{ notification_tag }}"
+                        channel: Charging notification
+                    continue_on_error: true
+            - alias: Send a persistent notification
+              action: persistent_notification.create
+              data:
+                title: "{{ title }}"
+                message: "{{ message }}"
+                notification_id: "{{ notification_tag }}"
+              continue_on_error: true
+              enabled: !input persistent_notification
 mode: restart
