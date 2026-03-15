@@ -89,7 +89,7 @@ blueprint:
       collapsed: true
       input:
         dead_zone:
-          name: 📍 Dead zone
+          name: 📍 Minimum distance
           description: |-
             **Minimum distance** between the driver and home to trigger the automation
           default: 500
@@ -97,6 +97,15 @@ blueprint:
             number:
               min: 300
               max: 5000
+              unit_of_measurement: m
+        dead_zone_max:
+          name: 📍 Maximum distance
+          description: |-
+            **Maximum distance** between the driver and home to trigger the automation
+            > This will be disabled if set to 0
+          default: 0
+          selector:
+            number:
               unit_of_measurement: m
 
     persons_to_notify:
@@ -281,6 +290,7 @@ blueprint:
 variables:
   MAX_INT: 2147483647
   dead_zone: !input dead_zone
+  dead_zone_max: !input dead_zone_max
   persons: !input persons
   notify_devices: !input notify_devices
   notify_services: >-
@@ -728,20 +738,53 @@ actions:
         and (not error_checker_ran or error_level < 2)
       }}
 
+  - alias: Get the distance from home of the driver
+    variables:
+      home_distance: >-
+        {% if state_attr(driver, 'gps_accuracy') is none %}
+          {% set accuracy = 100 %}
+        {% else %}
+          {% set accuracy = state_attr(driver, 'gps_accuracy') %}
+        {% endif %}
+        {{ distance(driver, 'zone.home')*1000 - accuracy }}
   - alias: Only continue if driver not in the dead zone
     condition: template
     value_template: >-
-      {% if state_attr(driver, 'gps_accuracy') is none %}
-        {% set accuracy = 100 %}
-      {% else %}
-        {% set accuracy = state_attr(driver, 'gps_accuracy') %}
-      {% endif %}
-      {% set home_distance = distance(driver, 'zone.home')*1000 - accuracy %}
       {{ home_distance >= dead_zone }}
   - alias: Get notification translation
     variables:
       message_id: "itinerary_started"
       message: *get_message
+  - alias: If the driver is too far away from home
+    if:
+      - condition: template
+        value_template: >-
+          {{
+            dead_zone_max != 0
+            and dead_zone_max < home_distance
+          }}
+    then:
+      - alias: Wait for the user to come back into the zone
+        wait_for_trigger:
+          - alias: Returned in zone
+            trigger: template
+            id: returned_in_zone
+            value_template: >-
+              {% if state_attr(driver, 'gps_accuracy') is none %}
+                {% set accuracy = 100 %}
+              {% else %}
+                {% set accuracy = state_attr(driver, 'gps_accuracy') %}
+              {% endif %}
+              {% set home_distance = distance(driver, 'zone.home')*1000 - accuracy %}
+              {{ dead_zone <= home_distance <= dead_zone_max }}
+          - alias: Vehicle stopped
+            trigger: template
+            id: vehicle_stopped
+            value_template: "{{ is_state(driving_sensor, 'off') }}"
+      - alias: Only continue this sequence if the driver stopped his vehicle
+        condition: template
+        value_template: "{{ wait.trigger.id == 'vehicle_stopped' }}"
+      - stop: Vehicle left
   - alias: Format the notification message
     variables:
       message: "{{ message.format(driver_name=driver_name) }}"
