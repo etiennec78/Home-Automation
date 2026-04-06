@@ -2760,6 +2760,26 @@ actions:
                     )
                   }}
             - choose:
+                - alias: Stop if driver started driving in activation zone
+                  conditions:
+                    - condition: template
+                      value_template: *activation_zone_in_condition
+                    - condition: template
+                      value_template: "{{ repeat.first }}"
+                  sequence:
+                    - alias: Set error id
+                      variables:
+                        message_id: "too_close"
+                    - alias: Send a silent error if the behaviors are set to off
+                      variables:
+                        silent_error: >-
+                          {{
+                            behavior.departure.opening == 'off'
+                            and behavior.departure.closing == 'off'
+                          }}
+                    - alias: Create error
+                      sequence: *create_error
+                    - stop: Started too close to home
                 - alias: If driver at gate location
                   conditions:
                     - condition: template
@@ -2848,26 +2868,6 @@ actions:
                                   recursive=True
                                 )
                               }}
-                - alias: Stop if driver started driving in activation zone
-                  conditions:
-                    - condition: template
-                      value_template: *activation_zone_in_condition
-                    - condition: template
-                      value_template: "{{ repeat.first }}"
-                  sequence:
-                    - alias: Set error id
-                      variables:
-                        message_id: "too_close"
-                    - alias: Send a silent error if the behaviors are set to off
-                      variables:
-                        silent_error: >-
-                          {{
-                            behavior.departure.opening == 'off'
-                            and behavior.departure.closing == 'off'
-                          }}
-                    - alias: Create error
-                      sequence: *create_error
-                    - stop: Started too close to home
               default:
                 ###########
                 # ARRIVAL #
