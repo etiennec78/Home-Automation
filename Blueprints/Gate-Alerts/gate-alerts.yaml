@@ -128,11 +128,19 @@ blueprint:
           default: true
           selector:
             boolean:
+        on_tap_link:
+          name: 👆 On tap link
+          description: |-
+            The **link** you will go to if you **tap** on the notification
+            > *Can be Home Assistant relative links*
+          default: "/lovelace/garage-camera"
+          selector:
+            text:
         camera_entity:
           name: 🎥 Camera
           description: |-
             Show the feed of a camera in the notificaiton
-            > Only available on iOS
+            > *Only available on iOS*
           default: ""
           selector:
             entity:
@@ -707,6 +715,8 @@ actions:
                   sticky: true
                   persistent: true
                   tag: "{{ notification_tag }}"
+                  url: !input on_tap_link
+                  clickAction: !input on_tap_link
                   alert_once: true
                   actions:
                     - action: "{{ closing_order_id }}"
@@ -802,6 +812,8 @@ actions:
                           name: "default"
                           critical: "{{ int(car_visible) }}"
                       tag: "{{ notification_tag }}"
+                      url: !input on_tap_link
+                      clickAction: !input on_tap_link
                       timeout: >-
                         {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
                           30

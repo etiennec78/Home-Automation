@@ -66,5 +66,6 @@ Refer to the table below to fix the errors
   | #24 | You have enabled GPS requests, but your travel time refresh is neither set to 'Continuously' nor 'Listen' | Either untick 'Request gps location', or add a travel time sensor and set the refresh rate to 'Continuously' or 'Listen' |
   | #25 | You have set some gate behaviors to 'Notification request' or 'Cancelable timer', but some users are missing a notify device. These behaviors will be switched to 'Fully Automatic' | Either set these behaviors to 'Off' or 'Fully Automatic', or add missing notification devices |
   | #26 | These iBeacon transmitter entities: '...' do not come the associated notification device | Either make sure that these transmitter entities come from your notification device, or remove them (but you will have to always keep your iBeacon on) |
+  | #27 | Your dead zone is invalid | Either set the 'Maximum distance' input to 0, or set a value higher than the 'Minimum distance' |
   
 </details>

@@ -3821,29 +3821,47 @@ actions:
                             enabled: "{{ wait_notif_reception }}"
                         timeout:
                           seconds: "{{ trigger_timeout }}"
-                      - alias: If a safety feature needs to change the closing behavior from notif to timer
-                        if:
-                          - condition: template
-                            value_template: >-
-                              {{
-                                security_notif_override
-                                and closing_behavior == 'notif'
-                                and (
-                                  not wait.completed
-                                    and timeout_type == 'safety_delay'
-                                  or wait.completed and wait.trigger.id in [
-                                    'vehicle_stopped',
-                                    'vehicle_away',
-                                    'forbidden_zone',
-                                  ]
-                                )
-                              }}
-                        then:
-                          - alias: Change closing behavior to timer
-                            variables:
-                              closing_behavior: "timer"
-                              timer_reset_timestamp: "{{ now() | as_timestamp }}"
-                              wait_notif_reception: "{{ not ios_device }}"
+                      - choose:
+                          - alias: If a safety feature needs to change the closing behavior from notif to timer
+                            conditions:
+                              - condition: template
+                                value_template: >-
+                                  {{
+                                    security_notif_override
+                                    and closing_behavior == 'notif'
+                                    and (
+                                      not wait.completed
+                                        and timeout_type == 'safety_delay'
+                                      or wait.completed and wait.trigger.id in [
+                                        'vehicle_stopped',
+                                        'vehicle_away',
+                                        'forbidden_zone',
+                                      ]
+                                    )
+                                  }}
+                            sequence:
+                              - alias: Change closing behavior to timer
+                                variables:
+                                  closing_behavior: "timer"
+                                  timer_reset_timestamp: "{{ now() | as_timestamp }}"
+                                  wait_notif_reception: "{{ not ios_device }}"
+                          - alias: If the trigger needs to close the gate
+                            conditions:
+                              - condition: template
+                                value_template: >-
+                                  {{
+                                    wait.completed and wait.trigger.id in [
+                                      'manual', 'closing_order'
+                                    ]
+                                    or (
+                                      not wait.completed
+                                      and timeout_type == 'timer'
+                                    )
+                                  }}
+                            sequence:
+                              - alias: Break the loop
+                                variables:
+                                  break: true
                       - choose:
                           - alias: If this is the first loop or the behavior just switched to timer
                             conditions:
@@ -3951,23 +3969,6 @@ actions:
                                       message: "{{ message }}"
                                       data: "{{ notification_data }}"
                                   - sequence: *tts
-                          - alias: If the trigger needs to close the gate
-                            conditions:
-                              - condition: template
-                                value_template: >-
-                                  {{
-                                    wait.completed and wait.trigger.id in [
-                                      'manual', 'closing_order'
-                                    ]
-                                    or (
-                                      not wait.completed
-                                      and timeout_type == 'timer'
-                                    )
-                                  }}
-                            sequence:
-                              - alias: Break the loop
-                                variables:
-                                  break: true
                           - alias: If the itinerary needs to be canceled
                             conditions:
                               - condition: template
