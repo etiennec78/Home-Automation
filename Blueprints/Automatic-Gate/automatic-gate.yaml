@@ -4272,6 +4272,12 @@ actions:
                 - condition: template
                   value_template: "{{ departure_mode }}"
               then:
+                - alias: Avoid looping if the driver has stopped his vehicle on departure
+                  if:
+                    - condition: template
+                      value_template: "{{ is_state(driving_sensor, 'off') }}"
+                  then:
+                    - stop: Vehicle stopped
                 - alias: Wait for driver to travel 250m away from activation zone, then return, to start itinerary
                   repeat:
                     count: 2
