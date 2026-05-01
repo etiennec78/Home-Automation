@@ -1,4 +1,4 @@
-name: 🪲 Bug report - blueprint
+name: 🪲 Bug report - Blueprint
 description: Report an issue with a blueprint of this repository to help me find a fix
 labels: bug
 assignees: etiennec78
@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        ## Blueprint concerned 🎯
+        ## Blueprint concerned
   - type: dropdown
     id: blueprint
     attributes:
@@ -27,7 +27,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        ## Bug description 🪲
+        ## Bug description
   - type: textarea
     validations:
       required: true
@@ -38,7 +38,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        ## Logs 📜
+        ## Logs
   - type: textarea
     attributes:
       label: Blueprint traces
@@ -46,16 +46,14 @@ body:
         You can download your blueprint traces by going into :
         *[Settings > Automations & scenes](https://my.home-assistant.io/redirect/automations) > Blueprint name > Traces (top right) > Three dots (top right) > Download trace*
 
-        > [!WARNING]
-        > Your logs will likely contain GPS coordinates
+        > ⚠️ Your logs will likely contain GPS coordinates
 
-        > [!TIP]
-        > You can remove sensitive information by running [this script](https://github.com/etiennec78/Home-Automation/blob/master/.github/ISSUE_TEMPLATE/traces_redactor.py) with the following command : `python3 traces_redactor.py trace.json`
+        > You can remove sensitive information by running [this script](https://github.com/etiennec78/Home-Automation/blob/master/.github/ISSUE_TEMPLATE/traces_redactor.py) with the following command : `python3 traces_redactor.py <trace_file>.json`
       placeholder: Drag and drop your traces
   - type: markdown
     attributes:
       value: |
-        ## Environment ⚙️
+        ## Environment
   - type: input
     id: version
     validations:
@@ -68,7 +66,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        ## Additional information ➕
+        ## Additional information
   - type: textarea
     attributes:
       label: Additional information
