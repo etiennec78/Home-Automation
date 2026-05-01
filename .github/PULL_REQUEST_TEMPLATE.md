@@ -1,5 +1,6 @@
 <!--
   Thanks for your contribution ! Please fill in the inputs below.
+  ⚠️ ALSO, PLEASE BASE YOUR BRANCH ON DEV, NOT MASTER
 -->
 
 ## PR category
@@ -26,6 +27,7 @@
 - [ ] Code quality improvements
 - [ ] Documentation update
 - [ ] New project
+- [ ] Other
 
 ## Proposed change
 <!--
