@@ -440,6 +440,7 @@ blueprint:
               languages:
                 - en
                 - fr
+                - es
         custom_translations:
           name: 🈂️ Custom translations
           description: |-
@@ -846,6 +847,99 @@ variables:
         open: "Open 🔓"
         close: "Close 🔐"
         cancel: "Cancel ❌"
+    es:
+      title:
+        itinerary_started: "Ruta iniciada 🏁"
+        open_gate: "¿Abrir puerta? 🔓"
+        close_gate: "¿Cerrar puerta? 🔐"
+        timer_opening: "La puerta se abrirá en {{timer_opening}}s 🔓"
+        timer_closing: "La puerta se cerrará en {{timer_closing}}s 🔐"
+        gate_reopening: "Reabriendo puerta 🔓"
+        itinerary_canceled: "Automatic Gate detenido ❌"
+        awaiting: "Puerta esperando a {awaited_persons} 💤"
+        disabled: "Automatic Gate desactivado 🚫"
+        valid_config: "{{blueprint_name}}: Configuración válida 🛠️✅"
+        invalid_config: "{{blueprint_name}}: Configuración no válida 🛠️❌"
+
+      message:
+        leaving_home: "Estás saliendo de casa"
+        vehicle_started: "Has arrancado el vehículo"
+        soon_arrived: "Estás llegando a casa"
+        arrived: "Has llegado"
+        closing_suggestion: "Han pasado {{suggest_closing_after}} segundos"
+        ble_out_of_range: "Tu dispositivo BLE está fuera de alcance"
+        awaiting: "La puerta se cerrará cuando todos los usuarios hayan entrado o salido"
+        something_went_wrong: "Algo ha fallado. El blueprint se ha detenido inesperadamente."
+        fatal_error: |-
+          Algo ha fallado.
+          El blueprint se ha detenido inesperadamente. Esto no debería haber ocurrido.
+          Por favor, informa de este problema en GitHub.
+        automation_crashed: |-
+          La ejecución anterior del blueprint para este conductor parece haberse detenido de forma inesperada.
+          Por favor, informa de este problema en GitHub.
+        vehicle_stopped: "El vehículo se ha detenido"
+        canceling_order: "Has pulsado el botón de cancelar"
+        did_not_leave: "El vehículo no salió en menos de {{safety_delay}} minutos"
+        did_not_arrive: "El vehículo no llegó en menos de {{safety_delay}} minutos"
+        timed_out: "Tu posición no se ha actualizado en {{timeout_delay}} minutos"
+        vehicle_away: "El vehículo ya no está dentro de la zona de activación"
+        travel_time_did_not_respond: "La integración de tiempo de viaje no respondió durante la ruta"
+        not_home: "No se te ha detectado en casa"
+        location_not_confirmed: "No se ha podido confirmar tu ubicación"
+        got_no_gps_data: |-
+          Tu teléfono responde, pero no está enviando su ubicación.
+          Comprueba que el sensor 'Single Accurate Location' está habilitado.
+        gate_closed: "La puerta se ha cerrado manualmente"
+        triggered_frequently: "El blueprint se está ejecutando repetidamente"
+        disabled_triggered_frequently: |-
+          El blueprint se ha ejecutado {quick_triggers} veces seguidas.
+          Actívalo manualmente cuando el problema esté resuelto.
+        disabled_updated_frequently: |-
+          La automatización ha realizado demasiadas peticiones a la API de tiempo de viaje.
+          Por favor, informa de este problema en GitHub.
+        forbidden_zone: "Has entrado en una zona prohibida"
+        invalid_travel_time_sensor: "El sensor de tiempo de viaje no existe"
+        unsupported_tt_integration: "La integración de tiempo de viaje no está soportada"
+        too_close: "Has empezado a conducir demasiado cerca de la zona de la puerta"
+        valid_config: "Tu configuración parece válida"
+        more_info: "Más información"
+        invalid_translations: |-
+          Las traducciones personalizadas no son válidas.
+          Revisa estas claves: '{data}' (#1)
+        missing_ble_entities: "No has indicado ningún tracker BLE (#2)"
+        ble_not_used: "Has indicado estos trackers BLE: '{data}', pero no los estás usando (#3)"
+        missing_wifi_trackers: "No has indicado ningún tracker Wi-Fi (#4)"
+        wifi_not_used: "Has indicado estos trackers Wi-Fi: '{data}', pero no los estás usando (#5)"
+        missing_gps_data: "Estos trackers/personas no soportan seguimiento GPS: '{data}' (#6)"
+        ble_not_unknown: |-
+          Estos trackers BLE: '{data}' no están reportando actualmente estado 'unknown'.
+          Si estás cerca de ellos ahora mismo, puedes ignorar este error (#7)
+        missing_travel_time_sensors: "El método de apertura al llegar está configurado como 'Travel Time', pero no se han indicado suficientes sensores de tiempo de viaje (#8)"
+        zone_too_large: "La zona de activación es demasiado grande para el método de apertura por zona (#9)"
+        invalid_itinerary_sensor_length: "Estos sensores itinerary tienen una longitud máxima inferior a 255: '{data}' (#10)"
+        invalid_per_person_sensors: "El número de sensores indicado por persona no es coherente (#11)"
+        per_person_sensors_mismatch: "Estas personas parecen tener sensores por persona mezclados: '{data}' (#12)"
+        no_gate_area: "Estás usando trackers BLE por área: '{data}', pero la puerta no está asignada a ningún área (#13)"
+        wifi_tracker_is_gps: "Estos trackers son GPS, no basados en router/Wi-Fi: '{data}' (#14)"
+        invalid_ibeacon_transmitter: "Estos transmisores iBeacon no son válidos: '{data}' (#19)"
+        no_compatible_gps_tracker: "No se puede solicitar la ubicación de estas personas: '{data}', porque no tienen trackers GPS o pertenecen a una app móvil distinta al dispositivo de notificación (#20)"
+        deprecated_translations: |-
+          Las traducciones personalizadas ahora usan un diccionario YAML en lugar de JSON.
+          Actualiza tu configuración antigua (#21)
+        update_polling_enabled: |-
+          Estos sensores de tiempo de viaje tienen el sondeo automático activado: '{data}'
+          Desactívalo para evitar demasiadas llamadas a la API (#22)
+        quick_refresh_function: "La función de refresco de tiempo de viaje hace demasiadas llamadas a la API: {data} para un trayecto de 2 horas (#23)"
+        tt_not_continuous_listen: "Has activado peticiones GPS, pero el refresco de tiempo de viaje no está configurado como 'Continuously' ni como 'Listen' (#24)"
+        notif_behavior_no_device: |-
+          Has configurado algunos comportamientos de puerta como 'Notification request' o 'Cancelable timer', pero algunos usuarios no tienen dispositivo de notificación.
+          Estos comportamientos se cambiarán a 'Fully Automatic' (#25)
+        wrong_transmitter_entities: "Estos transmisores iBeacon no pertenecen al dispositivo de notificación asociado: '{data}' (#26)"
+
+      button:
+        open: "Abrir 🔓"
+        close: "Cerrar 🔐"
+        cancel: "Cancelar ❌"
     fr:
       title:
         itinerary_started: "Itinéraire démarré 🏁"
