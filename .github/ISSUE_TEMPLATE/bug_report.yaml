@@ -1,5 +1,5 @@
-name: Bug report
-description: Report an issue with a project of this repository to help me find a fix
+name: 🪲 Bug report - Other
+description: Report an issue with any other project of this repository to help me find a fix
 labels: bug
 assignees: etiennec78
 body:
@@ -11,55 +11,36 @@ body:
     validations:
       required: true
     attributes:
+      label: Project of this repo containing the bug
+      description: >-
+        Write the name of the project of this repository that has an issue
+  - type: textarea
+    validations:
+      required: true
+    attributes:
       label: Describe the bug
       description: >-
         Provide a clear and concise description of what the problem is
-  - type: textarea
-    attributes:
-      label: Expected behavior
-      description: >-
-        Provide a clear and concise description of what you expected to happen
   - type: markdown
     attributes:
       value: |
         ## Logs
   - type: textarea
     attributes:
-      label: Blueprint configuration
+      label: Related logs
       description: >-
-        You can get your blueprint configuration by going into :
-        *[Settings > Automations & scenes](https://my.home-assistant.io/redirect/automations) > Blueprint name > Three dots (top right) > Edit in YAML*
-  - type: textarea
-    attributes:
-      label: Blueprint traces
-      description: >-
-        You can download your blueprint traces by going into :
-        *[Settings > Automations & scenes](https://my.home-assistant.io/redirect/automations) > Blueprint name > Traces (top right) > Three dots (top right) > Download trace*
+        Check eyour Home Assistant [logs](https://my.home-assistant.io/redirect/logs/) and report any error related to your issue
   - type: markdown
     attributes:
       value: |
         ## Environment
   - type: input
     id: version
-    validations:
-      required: true
     attributes:
       label: What version of Home Assistant are you running ?
       placeholder: core-
       description: >
-        Can be found in: [Settings > System > Repairs > Three Dots in Upper Right > System information](https://my.home-assistant.io/redirect/system_health/).
-  - type: dropdown
-    validations:
-      required: true
-    attributes:
-      label: What type of installation are you running?
-      description: >
-        Can be found in: [Settings > System > Repairs > Three Dots in Upper Right > System information](https://my.home-assistant.io/redirect/system_health/).
-      options:
-        - Home Assistant OS
-        - Home Assistant Container
-        - Home Assistant Supervised
-        - Home Assistant Core
+        Can be found in: [Settings > System > Repairs > Three Dots in Upper Right > System information](https://my.home-assistant.io/redirect/system_health/)
   - type: markdown
     attributes:
       value: |
