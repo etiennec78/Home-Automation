@@ -27,6 +27,7 @@
 - [ ] Code quality improvements
 - [ ] Documentation update
 - [ ] New project
+- [ ] Other
 
 ## Proposed change
 <!--
