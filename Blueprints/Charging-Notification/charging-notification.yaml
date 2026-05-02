@@ -427,36 +427,50 @@ actions:
                 wait:
                   trigger:
                     id: "charging_started"
-        - choose:
-            - alias: If the mobile notification was cleared
-              conditions: "{{ wait.trigger.id == 'notification_cleared' }}"
-              sequence:
+        - alias: If a notification was cleared (dashboard or mobile)
+          if:
+            - condition: template
+              value_template: "{{ 'cleared' in wait.trigger.id }}"
+          then:
+            - variables:
+                services_to_clear: "{{ notify_services }}"
+            - alias: If a mobile notification was cleared
+              if:
+                - condition: template
+                  value_template: "{{ wait.trigger.id == 'notification_cleared' }}"
+              then:
                 - alias: Remove the dashboard notification
                   action: persistent_notification.dismiss
                   data:
                     notification_id: "{{ notification_tag }}"
                   continue_on_error: true
                   enabled: !input persistent_notification
-                - alias: Stop listening to updates
+                - alias: Only continue if the notification cleared event contains the service id of the device
+                  condition: template
+                  value_template: "{{ 'confirmation' in wait.trigger.event.data }}"
+                - alias: Remove the dismissed notification service from the list of services to clear
                   variables:
-                    active: false
-            - alias: If the dashboard notification was cleared
-              conditions: "{{ wait.trigger.id == 'persistent_cleared' }}"
-              sequence:
-                - alias: Remove the notification on all devices
-                  repeat:
-                    for_each: "{{ notify_services }}"
-                    sequence:
-                      - action: "{{ repeat.item }}"
-                        data:
-                          message: clear_notification
-                          data:
-                            tag: "{{ notification_tag }}"
-                        continue_on_error: true
-                - alias: Stop listening to updates
-                  variables:
-                    active: false
-          default:
+                    services_to_clear: >-
+                      {{
+                        services_to_clear
+                        | difference(
+                          [wait.trigger.event.data.confirmation]
+                        )
+                      }}
+            - alias: Remove the notification on all mobile devices
+              repeat:
+                for_each: "{{ notify_services }}"
+                sequence:
+                  - action: "{{ repeat.item }}"
+                    data:
+                      message: clear_notification
+                      data:
+                        tag: "{{ notification_tag }}"
+                    continue_on_error: true
+            - alias: Stop listening to updates
+              variables:
+                active: false
+          else:
             - alias: Get whether the device was plugged and if notifications were not dismissed
               variables:
                 plugged: "{{ is_state(plug_entity, 'on') }}"
@@ -520,6 +534,8 @@ actions:
                       else 'off'
                     -}}
                   sticky: true
+                  # Hack to retrieve notification service when dismissed
+                  confirmation: "{{ repeat.item }}"
                   tag: "{{ notification_tag }}"
                   channel: Charging notification
             - alias: If the device is currently charging
