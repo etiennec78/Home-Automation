@@ -73,6 +73,23 @@ blueprint:
           default: false
           selector:
             boolean:
+        notifications_enabled:
+          name: 💬 Notifications enabled
+          description: Notifications that this blueprint **will send**
+          default:
+            - charging_started
+            - charging_ongoing
+            - charging_stopped
+          selector:
+            select:
+              multiple: true
+              options:
+                - label: Charging start
+                  value: charging_started
+                - label: Charging updates
+                  value: charging_ongoing
+                - label: Charging stop
+                  value: charging_stopped
     config_checker:
       name: Config checker
       icon: mdi:shield-check
@@ -99,6 +116,7 @@ variables:
   notify_devices: !input notify_devices
   language: !input language
   custom_translations: !input custom_translations
+  notifications_enabled: !input notifications_enabled
   notify_services: >-
     {{
       notify_devices
@@ -134,6 +152,8 @@ variables:
     }}
   error_checker_ran: false
   active: true
+  charging_started_sent: false
+  follow_updates: "{{ 'charging_ongoing' in notifications_enabled }}"
   notification_tag: "charging-{{ this.attributes.id }}"
   config_checker_tag: "config-checker-{{ this.attributes.id }}"
   device_name: "{{ device_attr(charging_device, 'name') }}"
@@ -396,14 +416,14 @@ actions:
                   event_type: state_changed
                   event_data:
                     entity_id: "{{ battery_entity }}"
-                  enabled: "{{ plugged and active }}"
+                  enabled: "{{ plugged and active and follow_updates }}"
                 - alias: Remaining time got updated
                   trigger: event
                   id: eta_updated
                   event_type: state_changed
                   event_data:
                     entity_id: "{{ remaining_sensor }}"
-                  enabled: "{{ plugged and active }}"
+                  enabled: "{{ plugged and active and follow_updates }}"
                 - alias: Device stops charging
                   trigger: template
                   id: charging_stopped
@@ -427,17 +447,32 @@ actions:
                 wait:
                   trigger:
                     id: "charging_started"
-        - alias: If a notification was cleared (dashboard or mobile)
+        - alias: If the charging stopped
+          if: "{{ wait.trigger.id == 'charging_stopped' }}"
+          then:
+            - alias: Start listening for updates
+              variables:
+                active: true
+                charging_started_sent: false
+        - alias: If some notifications must be cleared
           if:
             - condition: template
-              value_template: "{{ 'cleared' in wait.trigger.id }}"
+              value_template: >-
+                {{
+                  'cleared' in wait.trigger.id
+                  or (
+                    wait.trigger.id == 'charging_stopped'
+                    and 'charging_stopped' not in notifications_enabled
+                  )
+                }}
           then:
-            - variables:
+            - alias: By default, clear notifications on all devices
+              variables:
                 services_to_clear: "{{ notify_services }}"
-            - alias: If a mobile notification was cleared
+            - alias: If no dashboard notification was dismissed
               if:
                 - condition: template
-                  value_template: "{{ wait.trigger.id == 'notification_cleared' }}"
+                  value_template: "{{ wait.trigger.id != 'persistent_cleared' }}"
               then:
                 - alias: Remove the dashboard notification
                   action: persistent_notification.dismiss
@@ -445,18 +480,31 @@ actions:
                     notification_id: "{{ notification_tag }}"
                   continue_on_error: true
                   enabled: !input persistent_notification
-                - alias: Only continue if the notification cleared event contains the service id of the device
-                  condition: template
-                  value_template: "{{ 'confirmation' in wait.trigger.event.data }}"
-                - alias: Remove the dismissed notification service from the list of services to clear
+            - alias: If a notification was cleared (dashboard or mobile)
+              if:
+                - condition: template
+                  value_template: "{{ 'cleared' in wait.trigger.id }}"
+              then:
+                - alias: If a mobile notification was cleared
+                  if:
+                    - condition: template
+                      value_template: "{{ wait.trigger.id == 'notification_cleared' }}"
+                  then:
+                    - alias: Only continue if the notification cleared event contains the service id of the device
+                      condition: template
+                      value_template: "{{ 'confirmation' in wait.trigger.event.data }}"
+                    - alias: Remove the dismissed notification service from the list of services to clear
+                      variables:
+                        services_to_clear: >-
+                          {{
+                            services_to_clear
+                            | difference(
+                              [wait.trigger.event.data.confirmation]
+                            )
+                          }}
+                - alias: Stop listening to updates
                   variables:
-                    services_to_clear: >-
-                      {{
-                        services_to_clear
-                        | difference(
-                          [wait.trigger.event.data.confirmation]
-                        )
-                      }}
+                    active: false
             - alias: Remove the notification on all mobile devices
               repeat:
                 for_each: "{{ notify_services }}"
@@ -467,20 +515,11 @@ actions:
                       data:
                         tag: "{{ notification_tag }}"
                     continue_on_error: true
-            - alias: Stop listening to updates
-              variables:
-                active: false
           else:
             - alias: Get whether the device was plugged and if notifications were not dismissed
               variables:
                 plugged: "{{ is_state(plug_entity, 'on') }}"
                 not_dismissed: "{{ active }}"
-            - alias: If the charging stopped
-              if: "{{ wait.trigger.id == 'charging_stopped' }}"
-              then:
-                - alias: Start listening for updates
-                  variables:
-                    active: true
             - alias: Only continue if the notifications were not dismissed
               condition: template
               value_template: "{{ not_dismissed }}"
@@ -506,7 +545,12 @@ actions:
                 title_id: "{{ 'charging' if plugged else 'charging_stopped' }}"
                 message_id: >-
                   {% if plugged %}
-                    {% if battery_entity | has_value %}
+                    {% if not (
+                      charging_started_sent
+                      or 'charging_ongoing' in notifications_enabled
+                    ) %}
+                      charging_started
+                    {% elif battery_entity | has_value %}
                       charging_ongoing
                     {% else %}
                       charging_started
@@ -514,6 +558,21 @@ actions:
                   {% else %}
                     charging_stopped
                   {% endif %}
+            - alias: Only continue if this notification is accepted
+              condition: template
+              value_template: "{{ message_id in notifications_enabled }}"
+            - alias: If this is the first charging started notification
+              if:
+                - condition: template
+                  value_template: >-
+                    {{
+                      charging_started_sent
+                      and message_id == 'charging_started'
+                    }}
+              then:
+                - alias: Remember that the charging started notification has been sent
+                  variables:
+                    charging_started_sent: true
             - alias: Get the notification translation
               variables: *get_translation
             - alias: Format the notification
