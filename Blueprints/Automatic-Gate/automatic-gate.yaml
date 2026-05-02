@@ -430,7 +430,7 @@ blueprint:
       collapsed: true
       input:
         language:
-          name: Notification language
+          name: 🌍 Notification language
           description: |-
             The **language** used for **notifications**
             > *If your language is not supported by this blueprint, please [open a pull request](https://github.com/etiennec78/Home-Automation/pulls)*
@@ -441,7 +441,7 @@ blueprint:
                 - en
                 - fr
         custom_translations:
-          name: Custom translations
+          name: 🈂️ Custom translations
           description: |-
             A **YAML** dictionary to override the default **notification translations**
             > *You can find the translation keys in the `strings['en']` variable in the code, or in your traces*
