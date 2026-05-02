@@ -66,9 +66,13 @@ blueprint:
                   value: "error"
                 - label: Offline
                   value: "offline"
+                - label: Back online
+                  value: "online"
         notification_delay:
           name: ⌛ Notification delay
-          description: Wait **time** in minutes before sending notifications
+          description: |-
+            Wait **time** in minutes before sending notifications
+            > *For the "Back online" mode, this variable represents the down time needed before sending a notification when reconnected*
           default: 0
           selector:
             number:
@@ -139,7 +143,7 @@ blueprint:
         camera_entity:
           name: 🎥 Camera
           description: |-
-            Show the feed of a camera in the notificaiton
+            Show the feed of a camera in the notification
             > *Only available on iOS*
           default: ""
           selector:
@@ -292,7 +296,8 @@ variables:
         left_open: Gate left open 🔓
         close: Gate closing 🔐
         error: Gate error ⚠️
-        offline: Gate offline 🌐
+        offline: Gate offline 🌐❌
+        online: Gate online 🌐✅
         valid_config: "{{blueprint_name}}: Valid configuration 🛠️✅"
         invalid_config: "{{blueprint_name}}: Invalid configuration 🛠️❌"
       message:
@@ -302,6 +307,7 @@ variables:
         close: The gate is closing
         error: "The gate has encountered an error: {error}"
         offline: The gate has been offline for {{notification_delay}} minutes
+        online: The gate is back online !
         something_went_wrong: "Something went wrong ! The blueprint stopped unexpectedly."
         valid_config: "Your configuration seems valid"
         more_info: "More info"
@@ -320,7 +326,8 @@ variables:
         left_open: Portail laissé ouvert 🔓️
         close: Fermeture portail 🔐
         error: Erreur portail ⚠️
-        offline: Portail hors ligne 🌐
+        offline: Portail hors ligne 🌐❌
+        online: Portail en ligne 🌐✅
         valid_config: "{{blueprint_name}}: Configuration valide 🛠️✅"
         invalid_config: "{{blueprint_name}}: Configuration invalide 🛠️❌"
       message:
@@ -330,6 +337,7 @@ variables:
         close: Fermeture du portail en cours
         error: "Le portail a rencontré une erreur: {error}"
         offline: Le portail est hors ligne depuis {{notification_delay}} minutes
+        online: Le portail est de nouveau en ligne !
         something_went_wrong: "Un problème est survenu ! Le blueprint s'est arrêté de manière inattendue."
         valid_config: "Votre configuration semble valide"
         more_info: "Plus d'infos"
@@ -392,6 +400,13 @@ triggers:
     for:
       minutes: !input notification_delay
     enabled: "{{ notification_type == 'offline' }}"
+
+  - alias: Wait for the gate to be back online
+    trigger: state
+    id: online
+    entity_id: !input gate
+    not_to: "unavailable"
+    enabled: "{{ notification_type == 'online' }}"
 
   - alias: Trigger when the blueprint the user added the blueprint, updated inputs, or HA started
     trigger: template
@@ -660,6 +675,18 @@ actions:
         and (not error_checker_ran or error_level < 2)
       }}
 
+  - alias: Only send a back online notification if the gate was offline for too long
+    condition: template
+    value_template: >-
+      {{
+        notification_type != 'online'
+        or (
+          trigger.to_state.last_changed
+          - trigger.from_state.last_changed
+          >= timedelta(minutes=notification_delay)
+        )
+      }}
+
   - alias: If gate paused or fully open, and supporting position
     if:
       condition: template
@@ -815,12 +842,15 @@ actions:
                       url: !input on_tap_link
                       clickAction: !input on_tap_link
                       timeout: >-
-                        {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
+                        {%
+                          if notification_type == 'error'
+                          or is_state(gate, ['off', 'closed'])
+                        %}
                           30
                         {% else %}
                           {{ MAX_INT }}
                         {% endif %}
-                      chronometer: "{{ notification_delay != 0 }}"
+                      chronometer: "{{ notification_delay != 0 and notification_type != 'online' }}"
                       when: >-
                         {{
                           (utcnow() - timedelta(minutes=notification_delay))
@@ -993,6 +1023,10 @@ actions:
           - alias: Exec user extra actions
             sequence: !input extra_actions
             continue_on_error: true
+
+  - alias: Only continue if an event needs to be listened to to remove the notification
+    condition: template
+    value_template: "{{ notification_type != 'online' }}"
 
   - wait_for_trigger:
     - alias: Wait for gate closed
