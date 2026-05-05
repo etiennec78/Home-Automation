@@ -101,7 +101,7 @@ blueprint:
         lead_time:
           name: 🕓 Lead time
           description: |-
-            Time (in seconds) to open the gate **before you arrive**
+            Time to open the gate **before you arrive**
             Include the gate movement time + a safety margin
             > *Only needed if the opening method is set to travel time*
           default: 75
