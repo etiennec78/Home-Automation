@@ -85,7 +85,7 @@ blueprint:
                   value: time
                 - label: Bluetooth LE
                   value: ble
-                - label: Zone (not recommended)
+                - label: Only zone (not recommended)
                   value: zone
         activation_zone:
           name: 🔒 Gate activation zone
