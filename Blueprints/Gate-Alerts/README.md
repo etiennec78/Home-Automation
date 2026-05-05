@@ -8,8 +8,8 @@ A blueprint that notifies selected users when the gate:
 * Closes 🔐
 * Encounters an error ⚠️
 * Has been left open for too long 🔓
-* Has been offline for too long 🌐
-
+* Has been offline for too long 🌐❌
+* Is back online 🌐✅
 
 ## Key Features 🌟
 
