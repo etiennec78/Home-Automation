@@ -1,8 +1,9 @@
 <!--
   Thanks for your contribution ! Please fill in the inputs below.
+  ⚠️ ALSO, PLEASE BASE YOUR BRANCH ON DEV, NOT MASTER
 -->
 
-## PR category 🏷️
+## PR category
 <!--
   What will be impacted by your PR ?
 -->
@@ -13,7 +14,7 @@
 - [ ] Extra
 - [ ] Other
 
-## Type of change ✏️
+## Type of change
 <!--
   What type of change does your PR introduce to this repository ?
 -->
@@ -26,21 +27,22 @@
 - [ ] Code quality improvements
 - [ ] Documentation update
 - [ ] New project
+- [ ] Other
 
-## Proposed change 🛠️
+## Proposed change
 <!--
   What will this PR change in this repository ?
 -->
 
 
-## Breaking change 💥
+## Breaking change
 <!--
   What will this PR break for current users ?
   Note: Remove this section if your PR does not contain any breaking change
 -->
 
 
-## Related issue ⚠️
+## Related issue
 <!--
   Please mention the issue related to this PR
   Note: Remove this section if your PR is not related to any issue

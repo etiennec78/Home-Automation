@@ -24,7 +24,7 @@ blueprint:
     </details>
 
     ## More info ℹ️
-    * Version: 2.0.0
+    * Version: 2.0.1
     * Set up sensors: [click here](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md)
     * Github: [click here](https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/Automatic-Gate)
     * Discord: @etiennec78
@@ -89,7 +89,7 @@ blueprint:
       collapsed: true
       input:
         dead_zone:
-          name: 📍 Dead zone
+          name: 📍 Minimum distance
           description: |-
             **Minimum distance** between the driver and home to trigger the automation
           default: 500
@@ -97,6 +97,15 @@ blueprint:
             number:
               min: 300
               max: 5000
+              unit_of_measurement: m
+        dead_zone_max:
+          name: 📍 Maximum distance
+          description: |-
+            **Maximum distance** between the driver and home to trigger the automation
+            > This will be disabled if set to 0
+          default: 0
+          selector:
+            number:
               unit_of_measurement: m
 
     persons_to_notify:
@@ -139,7 +148,7 @@ blueprint:
       collapsed: true
       input:
         language:
-          name: Notification language
+          name: 🌍 Notification language
           description: |-
             The **language** in which **notifications** will be sent to you
             > *If your language is not supported by this blueprint, could you please [open a pull request](https://github.com/etiennec78/Home-Automation/pulls) ?*
@@ -150,7 +159,7 @@ blueprint:
                 - en
                 - fr
         custom_translations:
-          name: Custom translations
+          name: 🈂️ Custom translations
           description: |-
             A **yaml** dictionary to change the default **notifications translations**
             > *You can find the translation keys in the strings['en'] variable in the code or in your traces*
@@ -281,6 +290,7 @@ blueprint:
 variables:
   MAX_INT: 2147483647
   dead_zone: !input dead_zone
+  dead_zone_max: !input dead_zone_max
   persons: !input persons
   notify_devices: !input notify_devices
   notify_services: >-
@@ -335,6 +345,7 @@ variables:
         no_notification_method: "You have not entered any method for receiving notifications (#17)"
         night_mode_missing_bound: "A bound for the speakers' night mode schedule is missing (#18)"
         deprecated_translations: "Custom translations now use a yaml dictionnary instead of json. Please update your old config. (#21)"
+        invalid_dead_zone: "Your dead zone is invalid (#27)"
     fr:
       title:
         valid_config: "{{blueprint_name}}: Configuration valide 🛠️✅"
@@ -356,6 +367,7 @@ variables:
         no_notification_method: "Vous n'avez entré aucune méthode pour recevoir les notifications (#17)"
         night_mode_missing_bound: "Il manque une borne des horaires du mode nuit des enceintes (#18)"
         deprecated_translations: "Les traductions personnalisés utilisent maintenant un dictionnaire yaml au lieu de json. Mettez à jour votre configuration svp. (#21)"
+        invalid_dead_zone: "Votre zone morte est invalide (#27)"
 
 triggers:
   - alias: Trigger when user connects to vehicle
@@ -576,6 +588,10 @@ actions:
                   error: "{{ custom_translations_error }}"
                   message_id: "deprecated_translations"
                   level: 0
+                - alias: Check dead zone values
+                  error: "{{ dead_zone_max != 0 and dead_zone_max <= dead_zone }}"
+                  message_id: "invalid_dead_zone"
+                  level: 2
               sequence:
                 - alias: If a check failed
                   if:
@@ -728,20 +744,53 @@ actions:
         and (not error_checker_ran or error_level < 2)
       }}
 
+  - alias: Get the distance from home of the driver
+    variables:
+      home_distance: >-
+        {% if state_attr(driver, 'gps_accuracy') is none %}
+          {% set accuracy = 100 %}
+        {% else %}
+          {% set accuracy = state_attr(driver, 'gps_accuracy') %}
+        {% endif %}
+        {{ distance(driver, 'zone.home')*1000 - accuracy }}
   - alias: Only continue if driver not in the dead zone
     condition: template
     value_template: >-
-      {% if state_attr(driver, 'gps_accuracy') is none %}
-        {% set accuracy = 100 %}
-      {% else %}
-        {% set accuracy = state_attr(driver, 'gps_accuracy') %}
-      {% endif %}
-      {% set home_distance = distance(driver, 'zone.home')*1000 - accuracy %}
       {{ home_distance >= dead_zone }}
   - alias: Get notification translation
     variables:
       message_id: "itinerary_started"
       message: *get_message
+  - alias: If the driver is too far away from home
+    if:
+      - condition: template
+        value_template: >-
+          {{
+            dead_zone_max != 0
+            and dead_zone_max < home_distance
+          }}
+    then:
+      - alias: Wait for the user to come back into the zone
+        wait_for_trigger:
+          - alias: Returned in zone
+            trigger: template
+            id: returned_in_zone
+            value_template: >-
+              {% if state_attr(driver, 'gps_accuracy') is none %}
+                {% set accuracy = 100 %}
+              {% else %}
+                {% set accuracy = state_attr(driver, 'gps_accuracy') %}
+              {% endif %}
+              {% set home_distance = distance(driver, 'zone.home')*1000 - accuracy %}
+              {{ dead_zone <= home_distance <= dead_zone_max }}
+          - alias: Vehicle stopped
+            trigger: template
+            id: vehicle_stopped
+            value_template: "{{ is_state(driving_sensor, 'off') }}"
+      - alias: Only continue this sequence if the driver stopped his vehicle
+        condition: template
+        value_template: "{{ wait.trigger.id == 'vehicle_stopped' }}"
+      - stop: Vehicle left
   - alias: Format the notification message
     variables:
       message: "{{ message.format(driver_name=driver_name) }}"

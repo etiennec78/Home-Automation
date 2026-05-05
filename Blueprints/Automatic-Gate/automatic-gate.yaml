@@ -40,7 +40,7 @@ blueprint:
     </details>
 
     ## More info ℹ️
-    * Version: 2.0.0
+    * Version: 2.0.1
     * Set up sensors: [click here](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md)
     * Github: [click here](https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/Automatic-Gate)
     * Discord: @etiennec78
@@ -85,7 +85,7 @@ blueprint:
                   value: time
                 - label: Bluetooth LE
                   value: ble
-                - label: Zone (not recommended)
+                - label: Only zone (not recommended)
                   value: zone
         activation_zone:
           name: 🔒 Gate activation zone
@@ -101,8 +101,9 @@ blueprint:
         lead_time:
           name: 🕓 Lead time
           description: |-
-            Time (in seconds) to open the gate **before you arrive**
+            Time to open the gate **before you arrive**
             Include the gate movement time + a safety margin
+            > *Only needed if the opening method is set to travel time*
           default: 75
           selector:
             number:
@@ -146,7 +147,7 @@ blueprint:
           description: |-
             One **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#travel-time-sensors-%EF%B8%8F)** per person/tracker
             It should provide the **remaining time before arrival**
-            > *Optional if open when connected to BLE is true*
+            > *Optional if the opening method is not set to travel time*
           default: []
           selector:
             entity:
@@ -429,7 +430,7 @@ blueprint:
       collapsed: true
       input:
         language:
-          name: Notification language
+          name: 🌍 Notification language
           description: |-
             The **language** used for **notifications**
             > *If your language is not supported by this blueprint, please [open a pull request](https://github.com/etiennec78/Home-Automation/pulls)*
@@ -442,7 +443,7 @@ blueprint:
                 - es
                 - it
         custom_translations:
-          name: Custom translations
+          name: 🈂️ Custom translations
           description: |-
             A **YAML** dictionary to override the default **notification translations**
             > *You can find the translation keys in the `strings['en']` variable in the code, or in your traces*
@@ -4009,29 +4010,47 @@ actions:
                             enabled: "{{ wait_notif_reception }}"
                         timeout:
                           seconds: "{{ trigger_timeout }}"
-                      - alias: If a safety feature needs to change the closing behavior from notif to timer
-                        if:
-                          - condition: template
-                            value_template: >-
-                              {{
-                                security_notif_override
-                                and closing_behavior == 'notif'
-                                and (
-                                  not wait.completed
-                                    and timeout_type == 'safety_delay'
-                                  or wait.completed and wait.trigger.id in [
-                                    'vehicle_stopped',
-                                    'vehicle_away',
-                                    'forbidden_zone',
-                                  ]
-                                )
-                              }}
-                        then:
-                          - alias: Change closing behavior to timer
-                            variables:
-                              closing_behavior: "timer"
-                              timer_reset_timestamp: "{{ now() | as_timestamp }}"
-                              wait_notif_reception: "{{ not ios_device }}"
+                      - choose:
+                          - alias: If a safety feature needs to change the closing behavior from notif to timer
+                            conditions:
+                              - condition: template
+                                value_template: >-
+                                  {{
+                                    security_notif_override
+                                    and closing_behavior == 'notif'
+                                    and (
+                                      not wait.completed
+                                        and timeout_type == 'safety_delay'
+                                      or wait.completed and wait.trigger.id in [
+                                        'vehicle_stopped',
+                                        'vehicle_away',
+                                        'forbidden_zone',
+                                      ]
+                                    )
+                                  }}
+                            sequence:
+                              - alias: Change closing behavior to timer
+                                variables:
+                                  closing_behavior: "timer"
+                                  timer_reset_timestamp: "{{ now() | as_timestamp }}"
+                                  wait_notif_reception: "{{ not ios_device }}"
+                          - alias: If the trigger needs to close the gate
+                            conditions:
+                              - condition: template
+                                value_template: >-
+                                  {{
+                                    wait.completed and wait.trigger.id in [
+                                      'manual', 'closing_order'
+                                    ]
+                                    or (
+                                      not wait.completed
+                                      and timeout_type == 'timer'
+                                    )
+                                  }}
+                            sequence:
+                              - alias: Break the loop
+                                variables:
+                                  break: true
                       - choose:
                           - alias: If this is the first loop or the behavior just switched to timer
                             conditions:
@@ -4139,23 +4158,6 @@ actions:
                                       message: "{{ message }}"
                                       data: "{{ notification_data }}"
                                   - sequence: *tts
-                          - alias: If the trigger needs to close the gate
-                            conditions:
-                              - condition: template
-                                value_template: >-
-                                  {{
-                                    wait.completed and wait.trigger.id in [
-                                      'manual', 'closing_order'
-                                    ]
-                                    or (
-                                      not wait.completed
-                                      and timeout_type == 'timer'
-                                    )
-                                  }}
-                            sequence:
-                              - alias: Break the loop
-                                variables:
-                                  break: true
                           - alias: If the itinerary needs to be canceled
                             conditions:
                               - condition: template
@@ -4459,6 +4461,12 @@ actions:
                 - condition: template
                   value_template: "{{ departure_mode }}"
               then:
+                - alias: Avoid looping if the driver has stopped his vehicle on departure
+                  if:
+                    - condition: template
+                      value_template: "{{ is_state(driving_sensor, 'off') }}"
+                  then:
+                    - stop: Vehicle stopped
                 - alias: Wait for driver to travel 250m away from activation zone, then return, to start itinerary
                   repeat:
                     count: 2
