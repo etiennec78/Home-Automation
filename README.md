@@ -39,6 +39,14 @@ To implement any of them in your home, you'll have to [install Home Assistant](h
 | :---: | :---: | :---: |
 | ESP Bluetooth Dummie 🚗 | [Read More](Extra/ESP-Bluetooth-Dummie) | [File](Extra/ESP-Bluetooth-Dummie/esp-bluetooth-dummie.ino) |
 
+## AI Disclosure 🤖
+
+All the code in this repository is 100% human-made by me (etiennec78)
+
+I **only** use AI to improve my English grammar in the documentation and descriptions
+
+Even emojis are handpicked by me on [emojidb](https://emojidb.org/)
+
 ## Consider supporting ? 🩷
 
 If you enjoyed the work put into this repository, don't hesitate to **star it** ! ⭐
