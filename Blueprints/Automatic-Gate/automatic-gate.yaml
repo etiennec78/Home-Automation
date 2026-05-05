@@ -85,7 +85,7 @@ blueprint:
                   value: time
                 - label: Bluetooth LE
                   value: ble
-                - label: Zone (not recommended)
+                - label: Only zone (not recommended)
                   value: zone
         activation_zone:
           name: 🔒 Gate activation zone
@@ -101,8 +101,9 @@ blueprint:
         lead_time:
           name: 🕓 Lead time
           description: |-
-            Time (in seconds) to open the gate **before you arrive**
+            Time to open the gate **before you arrive**
             Include the gate movement time + a safety margin
+            > *Only needed if the opening method is set to travel time*
           default: 75
           selector:
             number:
@@ -146,7 +147,7 @@ blueprint:
           description: |-
             One **[travel time sensor](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#travel-time-sensors-%EF%B8%8F)** per person/tracker
             It should provide the **remaining time before arrival**
-            > *Optional if open when connected to BLE is true*
+            > *Optional if the opening method is not set to travel time*
           default: []
           selector:
             entity:
@@ -429,7 +430,7 @@ blueprint:
       collapsed: true
       input:
         language:
-          name: Notification language
+          name: 🌍 Notification language
           description: |-
             The **language** used for **notifications**
             > *If your language is not supported by this blueprint, please [open a pull request](https://github.com/etiennec78/Home-Automation/pulls)*
@@ -440,7 +441,7 @@ blueprint:
                 - en
                 - fr
         custom_translations:
-          name: Custom translations
+          name: 🈂️ Custom translations
           description: |-
             A **YAML** dictionary to override the default **notification translations**
             > *You can find the translation keys in the `strings['en']` variable in the code, or in your traces*
