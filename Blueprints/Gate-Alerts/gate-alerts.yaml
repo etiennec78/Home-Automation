@@ -12,7 +12,8 @@ blueprint:
     * Closes 🔐
     * Encounters an error ⚠️
     * Has been left open for too long 🔓
-    * Has been offline for too long 🌐
+    * Has been offline for too long 🌐❌
+    * Is back online 🌐✅
 
     <details>
       <summary><h2>Key Features 🌟</h2></summary>
