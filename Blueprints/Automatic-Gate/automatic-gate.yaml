@@ -441,6 +441,7 @@ blueprint:
                 - en
                 - fr
                 - es
+                - it
         custom_translations:
           name: 🈂️ Custom translations
           description: |-
@@ -1031,6 +1032,99 @@ variables:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
         cancel: "Annuler ❌"
+    it:
+      title:
+        itinerary_started: "Itinerario avviato 🏁"
+        open_gate: "Aprire il cancello ? 🔓"
+        close_gate: "Chiudere il cancello ? 🔐"
+        timer_opening: "Apertura cancello in {{timer_opening}}s 🔓"
+        timer_closing: "Chiusura cancello in {{timer_closing}}s 🔐"
+        gate_reopening: "Riapertura cancello 🔓"
+        itinerary_canceled: "Automatic Gate interrotto ❌"
+        awaiting: "Cancello in attesa di {awaited_persons} 💤"
+        disabled: "Automatic Gate disabilitato 🚫"
+        valid_config: "{{blueprint_name}}: Configurazione valida 🛠️✅"
+        invalid_config: "{{blueprint_name}}: Configurazione non valida 🛠️❌"
+        
+      message:
+        leaving_home: "Stai uscendo di casa"
+        vehicle_started: "Hai avviato il veicolo"
+        soon_arrived: "Stai per arrivare a breve"
+        arrived: "Sei arrivato"
+        closing_suggestion: "Sono trascorsi {{suggest_closing_after}} secondi"
+        ble_out_of_range: "Il tuo dispositivo BLE è fuori portata"
+        awaiting: "Il cancello si chiuderà quando tutti gli utenti saranno entrati/usciti"
+        something_went_wrong: "Qualcosa è andato storto ! Il blueprint si è interrotto inaspettatamente."
+        fatal_error: |-
+          Qualcosa è andato storto !
+          Il blueprint si è interrotto inaspettatamente. Questo non sarebbe dovuto accadere.
+          Segnala questo problema su Github.
+        automation_crashed: |-
+          La precedente istanza del blueprint per questo conducente sembra essersi bloccata.
+          Segnala questo problema su Github.
+        vehicle_stopped: "Il tuo veicolo è stato spento"
+        canceling_order: "Hai premuto il pulsante annulla"
+        did_not_leave: "Il tuo veicolo non è uscito in meno di {{safety_delay}} minuti"
+        did_not_arrive: "Il tuo veicolo non è arrivato in meno di {{safety_delay}} minuti"
+        timed_out: "La tua posizione non viene aggiornata da {{timeout_delay}} minuti"
+        vehicle_away: "Il tuo veicolo non è più nella zona di attivazione"
+        travel_time_did_not_respond: "L'integrazione del tempo di percorrenza non ha risposto durante il tuo itinerario"
+        not_home: "Non sei stato rilevato a casa"
+        location_not_confirmed: "Non è stato possibile confermare la tua posizione"
+        got_no_gps_data: |-
+          Il tuo telefono è raggiungibile, ma non sta inviando la sua posizione !
+          Controlla che il sensore 'Posizione accurata' sia abilitato
+        gate_closed: "Il cancello è stato chiuso manualmente"
+        triggered_frequently: "Il blueprint viene attivato ripetutamente !"
+        disabled_triggered_frequently: |-
+          Il blueprint è stato attivato {quick_triggers} volte di fila
+          Riabilita il blueprint manualmente una volta risolto il problema
+        disabled_updated_frequently: |-
+          L'automazione ha saturato l'API del tempo di percorrenza con richieste troppo rapide
+          Segnala questo problema su GitHub !
+        forbidden_zone: "Sei entrato in una zona vietata"
+        invalid_travel_time_sensor: "Il tuo sensore del tempo di percorrenza non esiste !"
+        unsupported_tt_integration: "La tua integrazione del tempo di percorrenza non è supportata !"
+        too_close: "Hai iniziato a guidare troppo vicino alla zona del cancello"
+        valid_config: "La tua configurazione sembra valida"
+        more_info: "Ulteriori informazioni"
+        invalid_translations: |-
+          Le tue traduzioni personalizzate non sono valide
+          Controlla le seguenti chiavi: '{data}' (#1)
+        missing_ble_entities: "Non hai inserito alcun tracker BLE (#2)"
+        ble_not_used: "Hai inserito questi tracker BLE: '{data}' ma non li stai usando (#3)"
+        missing_wifi_trackers: "Non hai inserito alcun tracker Wi-Fi (#4)"
+        wifi_not_used: "Hai inserito questi tracker Wi-Fi: '{data}' ma non li stai usando (#5)"
+        missing_gps_data: "Questi tracker/persone: '{data}' non supportano il tracciamento GPS (#6)"
+        ble_not_unknown: |-
+          Questi tracker BLE: '{data}' non stanno riportando uno stato 'unknown'
+          Se sei attualmente vicino a loro, puoi ignorare questo errore (#7)
+        missing_travel_time_sensors: "Il metodo di apertura all'arrivo è impostato su 'Travel Time' ma non hai fornito abbastanza sensori del tempo di percorrenza (#8)"
+        zone_too_large: "La tua zona di attivazione è troppo grande per il metodo di apertura 'Zone' (#9)"
+        invalid_itinerary_sensor_length: "Questi sensori di itinerario: '{data}' hanno una lunghezza massima inferiore a 255 (#10)"
+        invalid_per_person_sensors: "Hai inserito un numero inconsistente di sensori negli input dei sensori per persona (#11)"
+        per_person_sensors_mismatch: "Queste persone: '{data}' sembrano avere sensori per persona mescolati (#12)"
+        no_gate_area: "Stai usando tracker BLE per area: '{data}', ma il tuo cancello non è stato posizionato in un'area (#13)"
+        wifi_tracker_is_gps: "Questi tracker: '{data}' funzionano tramite GPS, non tramite router (#14)"
+        invalid_ibeacon_transmitter: "Questi trasmettitori iBeacon: '{data}' non sono validi (#19)"
+        no_compatible_gps_tracker: "La posizione di queste persone: '{data}' non può essere richiesta perché non hanno tracker GPS, o provengono da un'app mobile diversa dal dispositivo di notifica (#20)"
+        deprecated_translations: |-
+          Le traduzioni personalizzate ora usano un dizionario yaml invece di json
+          Aggiorna la tua vecchia configurazione (#21)
+        update_polling_enabled: |-
+          Questi sensori del tempo di percorrenza hanno il polling di aggiornamento abilitato: '{data}'
+          Disabilitalo per evitare di chiamare l'API troppo spesso (#22)
+        quick_refresh_function: "La tua funzione di aggiornamento del tempo di percorrenza effettua troppe chiamate all'API: {data} per un viaggio di 2 ore (#23)"
+        tt_not_continuous_listen: "Hai abilitato le richieste GPS, ma l'aggiornamento del tempo di percorrenza non è impostato né su 'Continuously' né su 'Listen' (#24)"
+        notif_behavior_no_device: |-
+          Hai impostato alcuni comportamenti del cancello su 'Notification request' o 'Cancelable timer', ma alcuni utenti non hanno un dispositivo di notifica
+          Questi comportamenti verranno cambiati in 'Fully Automatic' (#25)
+        wrong_transmitter_entities: "Questi trasmettitori iBeacon: '{data}' non provengono dal dispositivo di notifica associato (#26)"
+
+      button:
+        open: "Apri 🔓"
+        close: "Chiudi 🔐"
+        cancel: "Annulla ❌"
 
 triggers:
   - alias: Trigger when user connects to vehicle
