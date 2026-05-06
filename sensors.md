@@ -9,9 +9,11 @@ This can come from my [ESPHome firmware](ESPHome-Firmwares/Gate) or any other in
 There are two main types of gate entities you can use:
 
 1. State-based gates: entities that stay ON while open and OFF when closed
+
    These are fully compatible with the blueprints from this repo
 
 2. Pulse-triggered gates: entities that briefly turn ON then OFF to send a pulse to the gate motor
+
    These need workarounds to make them work with the blueprints from this repo
     <details>
       <summary>Read more</summary>
@@ -206,7 +208,7 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
 <details>
   <summary><h4>Option 3: Cycling 🚲</h4></summary>
 
-  It is recommended to use a travel time supporting cycling mode, or a BLE tracker
+  It is recommended to use a travel time provider supporting cycling mode (e.g.: [Google Maps](https://github.com/etiennec78/Home-Automation/edit/master/sensors.md#option-2-google-travel-time-)), or a BLE tracker
   
   Both opening and closing behaviors on departure should be disabled, as cycling sensors are not reliable
   
@@ -332,8 +334,10 @@ Each travel time sensor monitoring each user's time left before arrival
   | :--- | :---: |
   | Name | `User0 Travel Time` |
   | Origin | `person.user0` |
-  | Destination | `zone.home` *(your gate zone)* |
-  | Region | Select your region |
+  | Destination | `zone.home` |
+  | Region | *your_region* |
+  
+  > Replace user0, zone.home, your_region by real values
 
 </details>
 
@@ -350,9 +354,11 @@ Each travel time sensor monitoring each user's time left before arrival
   | Setting | Parameter |
   | :--- | :---: |
   | Name | `User0 Travel Time` |
-  | API key | *Your api key* |
+  | API key | *api_key* |
   | Origin | `person.user0` |
-  | Destination | `zone.home` *(your gate zone)* |
+  | Destination | `zone.home` |
+  
+  > Replace user0, api_key, zone.home by real values
 
 </details>
 
@@ -374,8 +380,10 @@ Each travel time sensor monitoring each user's time left before arrival
   | :--- | :---: |
   | Name | `User0 Travel Time` |
   | Origin | `person.user0` |
-  | Destination | `zone.home` *(your gate zone)* |
-  | Region | Select your region |
+  | Destination | `zone.home` |
+  | Region | *your_region* |
+  
+  > Replace user0, zone.home, your_region by real values
 
 </details>
 
