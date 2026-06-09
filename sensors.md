@@ -559,7 +559,7 @@ Supported types: device_tracker, rssi sensor, distance sensor, bermuda area sens
 A switch which can turn on/off your BLE scanner. Not needed if your BLE scanner runs 24/7
 
 
-## Nearest distance sensor 🤏
+## Nearest distance sensor 📏
 
 Only necessary for [ESPHome firmware](ESPHome-Firmwares/Gate)
 
