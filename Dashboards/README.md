@@ -1,10 +1,10 @@
 # Home Assistant Dashboards 🖥️
 
-## Description 📝
+## Description
 
 Home Assistant dashboards to display information to users
 
-## Content 📁
+## Content
 
 | Dashboard | Description | File |
 | :---: | :---: | :---: |

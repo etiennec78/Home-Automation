@@ -1,14 +1,14 @@
 # ESP Bluetooth Dummie 🚗
 
-## Description 📝
+## Description
 
 A small Arduino sketch for an [ESP32](https://amzn.to/4kNCDHc) installed in your car so your phone detects it as a Bluetooth device and reports when you're driving
 
 Useful if your car does not support Bluetooth, Android Auto, or CarPlay
 
-## Installation Guide 🚀
+## Installation Guide
 
-### Setup 🛠️
+### Setup
 
 1. [Download Arduino IDE](https://www.arduino.cc/en/software)
 2. Add ESP32 to your board library (Tools > Board > Board Manager > Install 'esp32 by Espressif Systems')

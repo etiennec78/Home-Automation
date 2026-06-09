@@ -1,10 +1,10 @@
-# Extra ➕
+# Extra
 
-## Description 📝
+## Description
 
 Miscellaneous content used for other projects of this repo
 
-## Content 📁
+## Content
 
 | Item | Description | File |
 | :---: | :---: | :---: |

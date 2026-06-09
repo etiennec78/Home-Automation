@@ -1,10 +1,10 @@
 # ESPHome Firmwares ⚙️
 
-## Description 📝
+## Description
 
 ESPHome firmware for automating devices by connecting and flashing ESP boards
 
-## Content 📁
+## Content
 
 | Firmware | Description | File |
 | :---: | :---: | :---: |
@@ -12,7 +12,7 @@ ESPHome firmware for automating devices by connecting and flashing ESP boards
 | Philips LivingColors 💡 | [Read More](ESPHome-Firmwares/Philips-LivingColors) | [File](ESPHome-Firmwares/Philips-LivingColors/livingcolors.yaml) |
 | Velux Shutter 🪟 | [Read More](ESPHome-Firmwares/Velux-Shutter) | [File](ESPHome-Firmwares/Velux-Shutter/velux-shutter.yaml) |
 
-### Setup BLE tracking 🛠️
+### Setup BLE tracking
 
 All of these ESPHome firmware come with the [Bluetooth Proxy](https://esphome.io/components/bluetooth_proxy/) component
 

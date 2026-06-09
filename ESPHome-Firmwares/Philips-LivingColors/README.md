@@ -1,30 +1,30 @@
 # ESPHome Philips LivingColors firmware 💡
 
-## Description 📝
+## Description
 
 A simple ESPHome configuration to hack a Philips LivingColors Mini with an ESP32
 
 
-## Key Features 🌟
+## Key Features
 
-* **E1.31 protocol**: Control the light with software like [Artemis RGB](https://github.com/Artemis-RGB/Artemis) 💡
-* **Artemis layout files**: Easily Import your light into [Artemis RGB](https://github.com/Artemis-RGB/Artemis) 📥
-* **BLE Integration**: Built-in BLE tracker for automations 📡
+* **E1.31 protocol**: Control the light with software like [Artemis RGB](https://github.com/Artemis-RGB/Artemis)
+* **Artemis layout files**: Easily Import your light into [Artemis RGB](https://github.com/Artemis-RGB/Artemis)
+* **BLE Integration**: Built-in BLE tracker for automations
 
 
-## Buy Me a Coffee ☕
+## Buy Me a Coffee
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
 
 
-## Installation Guide 🚀
+## Installation Guide
 
-### Requirements 📝
+### Requirements
 
 1. An [ESP32](https://amzn.to/4kNCDHc)
 2. [ESPHome installed](https://esphome.io/guides/installing_esphome.html)
 
-### Setup 🛠️
+### Setup
 
 1. Clone the repository:
    ```bash
@@ -53,7 +53,7 @@ A simple ESPHome configuration to hack a Philips LivingColors Mini with an ESP32
    * Home Assistant should detect your ESPHome device
    * Enter API key when prompted
 
-### Artemis RGB setup 💡
+### Artemis RGB setup
 
 [Artemis RGB](https://artemis-rgb.com/) is open-source lighting software which aims at grouping all peripherals into a single app to synchronize effects
 
@@ -81,7 +81,7 @@ With the E1.31 effect enabled by default, you can add the device to Artemis by f
 14. Select the [./Artemis-Layout/LivingColors_Micro.xml](Artemis-Layout/LivingColors_Micro.xml) file from this repo
 
 
-## Pictures 📷
+## Pictures
 
 | | | |
 | :---: | :---: | :---: |

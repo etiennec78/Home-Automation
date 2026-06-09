@@ -4,7 +4,7 @@ The entity representing your gate or garage door
 
 This can come from my [ESPHome firmware](ESPHome-Firmwares/Gate) or any other integration
 
-#### Supported Gate Types ⚙️
+#### Supported Gate Types
 
 There are two main types of gate entities you can use:
 
@@ -33,60 +33,60 @@ There are two main types of gate entities you can use:
 
 Each GPS device tracker needed to track your position
 
-#### Summary 📝
+#### Summary
 
 Less frequent location updates can impact ETA accuracy
 
 | Service | Location frequency |
 | :--- | :---: |
-| Android 📱 | 🟩 |
-| iPhone 📱 | 🟨 |
-| Smart vehicle 🌐 | ❓ |
+| Android | 🟩 |
+| iPhone | 🟨 |
+| Smart vehicle | ❓ |
 
 ❓: Depending on vehicle model
 
 <details>
-  <summary><h4>Android 🍏</h4></summary>
+  <summary><h4>Android</h4></summary>
 
-  #### Setup 🛠️
+  #### Setup
 
   1. Install through the [companion app](https://companion.home-assistant.io/docs/core/location/) settings: Settings > Companion app > Manage sensors > Background location ✔
   2. Apply the settings from below
   3. Assign the trackers to a person: [Settings > People](https://my.home-assistant.io/redirect/people/) > *Select a user* > Track devices > *Your new device tracker*
   4. Repeat steps 1-3 for each user
 
-  #### Settings 🔧
+  #### Settings
 
   | Setting | Parameter |
   | :--- | :---: |
-  | High accuracy mode | ✅ |
+  | High accuracy mode | ✔ |
   | High accuracy mode only when connected to BT devices | *Select vehicles bluetooth devices* |
   | High accuracy mode only when entering zone | `zone.home` *(your gate zone)* |
   | High accuracy mode trigger range for zone | *The range in which you want your phone to send frequent location updates when arriving (suggested: 1000m)* |
   | High accuracy interval | `5s` |
-  | High accuracy mode only when connected to BT devices | ✅ |
+  | High accuracy mode only when connected to BT devices | ✔ |
   | Minimal precision | *If your position seems off, please decrease this value* |
   | Location sent | `Exact` |
 
-  #### Extra: Requesting manual GPS updates 🧭
+  #### Extra: Requesting manual GPS updates
 
   Some blueprint inputs can be enabled to request manual GPS updates from the mobile app.
 
   To make this work, you need to enable the "Single accurate location" sensor : Settings > Companion app > Manage sensors > Single accurate location ✔
 
-  > 💡 Tip: If high precision mode does not trigger, please increase its range or check its conditions
+  > Tip: If high precision mode does not trigger, please increase its range or check its conditions
 
 </details>
 
 <details>
-  <summary><h4>iOS 🍎</h4></summary>
+  <summary><h4>iOS</h4></summary>
 
   You can use the [companion app](https://companion.home-assistant.io/docs/core/location/), or the [icloud3 integration](https://github.com/gcobb321/icloud3), or anything else that tracks your phone location
   
 </details>
 
 <details>
-  <summary><h4>Smart vehicle 🌐</h4></summary>
+  <summary><h4>Smart vehicle</h4></summary>
 
   Some Home Assistant vehicle integrations or add-ons create a device_tracker that can be used to track your vehicle GPS location
 
@@ -101,31 +101,31 @@ Use Android Auto, Apple CarPlay, Bluetooth, or a combination of these
 
 If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack adapter](https://amzn.to/3G0vOCT), a [Bluetooth-to-radio adapter](https://amzn.to/4jVEoRp), or use an [ESP32 emulating a Bluetooth keyboard](./Extra/ESP-Bluetooth-Dummie)
 
-#### Summary 📝
+#### Summary
 
 | Service | Wireless | Reliability | Compatibility |
 | :--- | :---: | :---: | :---: |
-| Android Bluetooth 🍏🛜 | ✅ | 🟩 | Android 5+ |
-| iOS Bluetooth 🍎🛜 | ✅ | 🟩 | iOS 15+ |
-| Android Auto 🍏🔌 | ❓ | 🟩 | Android 9+ |
-| Apple CarPlay 🍎🔌 | ❓ | 🟩 | iOS 15+ |
-| Cycling (Android) 🍏🚲 | ✅ | 🟧 | Android 10+, with Google Services |
-| Cycling (iOS) 🍎🚲 | ✅ | 🟧 | ❓ |
-| Smart vehicle 🌐 | ✅ | ❓ | - |
+| Android Bluetooth | ✅ | 🟩 | Android 5+ |
+| iOS Bluetooth | ✅ | 🟩 | iOS 15+ |
+| Android Auto | ❓ | 🟩 | Android 9+ |
+| Apple CarPlay | ❓ | 🟩 | iOS 15+ |
+| Cycling (Android) | ✅ | 🟧 | Android 10+, with Google Services |
+| Cycling (iOS) | ✅ | 🟧 | ❓ |
+| Smart vehicle | ✅ | ❓ | - |
 
 <details>
-  <summary><h4>Option 1: Bluetooth 🛜</h4></summary>
+  <summary><h4>Option 1: Bluetooth</h4></summary>
   
   <details>
-    <summary><h4>Android 🍏</h4></summary>
+    <summary><h4>Android</h4></summary>
 
-  ### Setup 🛠️
+  ### Setup
 
   1. Install through the [companion app](https://companion.home-assistant.io/docs/core/sensors/#bluetooth-sensors) settings: Settings > Companion app > Manage sensors > Bluetooth connection ✔
   2. Install a [template helper](https://www.home-assistant.io/integrations/template/) through the UI: [Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Template > Binary sensor
   3. Apply the settings from below
 
-  #### Settings 🔧
+  #### Settings
 
   | Setting | Parameter |
   | :--- | :---: |
@@ -144,9 +144,9 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
   </details>
 
   <details>
-    <summary><h4>iOS🍎</h4></summary>
+    <summary><h4>iOS</h4></summary>
 
-  #### Setup 🛠️
+  #### Setup
 
   1. Add an [input boolean helper](https://www.home-assistant.io/integrations/input_boolean/) through the UI: [Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Toggle
   2. Name the sensor as you wish
@@ -170,21 +170,21 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
 </details>
 
 <details>
-  <summary><h4>Option 2: Android Auto/CarPlay 🔌</h4></summary>
+  <summary><h4>Option 2: Android Auto/CarPlay</h4></summary>
 
   <details>
-    <summary><h4>Android Auto 🍏</h4></summary>
+    <summary><h4>Android Auto</h4></summary>
 
-  #### Setup 🛠️
+  #### Setup
 
   * Install through the [companion app](https://companion.home-assistant.io/docs/core/sensors#android-auto) settings: Settings > Companion app > Manage sensors > Android Auto ✔
 
   </details>
 
   <details>
-    <summary><h4>Apple CarPlay 🍎</h4></summary>
+    <summary><h4>Apple CarPlay</h4></summary>
 
-  #### Setup 🛠️
+  #### Setup
 
   1. Add an [input boolean helper](https://www.home-assistant.io/integrations/input_boolean/) through the UI: [Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Toggle
   2. Name the sensor as you wish
@@ -215,16 +215,16 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
   If you are using this blueprint both for cycling and for your vehicles, please use 2 distinct automations running this blueprint, and don't forget to share all of your itinerary sensors in both
   
   <details>
-    <summary><h4>Android 🍏</h4></summary>
+    <summary><h4>Android</h4></summary>
 
-  #### Setup 🛠️
+  #### Setup
 
   1. Install through the [companion app](https://companion.home-assistant.io/docs/core/location/) settings: Settings > Companion app > Manage sensors > Detected Activity ✔
   2. Install a [template helper](https://www.home-assistant.io/integrations/template/) through the UI: [Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Template > Binary sensor
   3. Apply the settings from below
   4. Repeat steps 1-3 for each cyclist
 
-  #### Settings 🔧
+  #### Settings
 
   | Setting | Parameter |
   | :--- | :---: |
@@ -238,16 +238,16 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
   </details>
 
   <details>
-    <summary><h4>iOS 🍎</h4></summary>
+    <summary><h4>iOS</h4></summary>
 
-  #### Setup 🛠️
+  #### Setup
 
   1. Install through the [companion app](https://companion.home-assistant.io/docs/core/location/) settings: Settings > Companion app > Manage sensors > Activity Sensor ✔
   2. Install a [template helper](https://www.home-assistant.io/integrations/template/) through the UI: [Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Template > Binary sensor
   3. Apply the settings from below
   4. Repeat steps 1-3 for each cyclist
 
-  #### Settings 🔧
+  #### Settings
 
   | Setting | Parameter |
   | :--- | :---: |
@@ -262,26 +262,26 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
 </details>
 
 <details>
-  <summary><h4>Option 4: Smart vehicle 🌐</h4></summary>
+  <summary><h4>Option 4: Smart vehicle</h4></summary>
 
   Some Home Assistant vehicle integrations or add-ons create a binary_sensor that reports when your vehicle is being driven
 
 </details>
 
 <details>
-  <summary><h4>Combining sensors 🔗</h4></summary>
+  <summary><h4>Combining sensors</h4></summary>
 
   If some users have multiple vehicles, you can merge all sensors into one with this template.
   
   Also, for the same car, some driving sensors can be quick but less reliable (e.g.: Bluetooth vs plugged CarPlay). By merging them you can benefit form the reactivity and the reliability.
 
-  #### Setup 🛠️
+  #### Setup
 
   1. Install sensors from any option above
   2. Install a [template helper](https://www.home-assistant.io/integrations/template/) through the UI: [Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Template > Binary sensor
   3. Apply the settings from below
 
-  #### Settings 🔧
+  #### Settings
 
   | Setting | Parameter |
   | :--- | :---: |
@@ -299,7 +299,7 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
 
 Each travel time sensor monitoring each user's time left before arrival
 
-#### Summary 📝
+#### Summary
 
 | Service | Supported | Reliability | Free | No credit card required |
 | :--- | :---: | :---: | :---: | :---: |
@@ -319,16 +319,16 @@ Each travel time sensor monitoring each user's time left before arrival
 > Please note that I am not responsible for any charges incurred by travel time services
 
 <details>
-  <summary><h4>Option 1: Here Travel Time 🚘</h4></summary>
+  <summary><h4>Option 1: Here Travel Time</h4></summary>
 
-  #### Setup 🛠️
+  #### Setup
 
   1. Install [HERE Travel Time](https://www.home-assistant.io/integrations/here_travel_time/) integration through the UI: [Settings > Devices & services > Add integration > HERE Travel Time](https://my.home-assistant.io/redirect/config_flow_start/?domain=here_travel_time)
   2. Apply the settings from below
   3. ⚠️ [Disable sensor auto-polling (steps 1, 2)](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)
   4. Repeat steps 1-3 for each user
 
-  #### Settings 🔧
+  #### Settings
 
   | Setting | Parameter |
   | :--- | :---: |
@@ -342,9 +342,9 @@ Each travel time sensor monitoring each user's time left before arrival
 </details>
 
 <details>
-  <summary><h4>Option 2: Google Travel Time 🚘</h4></summary>
+  <summary><h4>Option 2: Google Travel Time</h4></summary>
 
-  #### Setup 🛠️
+  #### Setup
 
   1. Install [Google Maps Travel Time](https://www.home-assistant.io/integrations/google_travel_time/) integration through the UI: [Settings > Devices & services > Add integration > Google Maps Travel Time](https://my.home-assistant.io/redirect/config_flow_start/?domain=google_travel_time)
   2. Apply the settings from below
@@ -363,18 +363,18 @@ Each travel time sensor monitoring each user's time left before arrival
 </details>
 
 <details>
-  <summary><h4>Option 3: Waze Travel Time 🚘</h4></summary>
+  <summary><h4>Option 3: Waze Travel Time</h4></summary>
 
   Please note that Waze is not reliable and could fail to fetch new travel times
 
-  #### Setup 🛠️
+  #### Setup
 
   1. Install [Waze Travel Time](https://www.home-assistant.io/integrations/waze_travel_time/) integration through the UI: [Settings > Devices & services > Add integration > Waze Travel Time](https://my.home-assistant.io/redirect/config_flow_start/?domain=waze_travel_time)
   2. Apply the settings from below
   3. ⚠️ [Disable sensor auto-polling (steps 1, 2)](https://www.home-assistant.io/integrations/waze_travel_time/#defining-a-custom-polling-interval)
   4. Repeat steps 1-3 for each user
 
-  #### Settings 🔧
+  #### Settings
 
   | Setting | Parameter |
   | :--- | :---: |
@@ -401,12 +401,12 @@ Each travel time sensor monitoring each user's time left before arrival
 
 Each input text helper stores user itinerary states and serves as a trigger for third-party automations
 
-#### Setup 🛠️
+#### Setup
 
 1. Add an [input text helper](https://www.home-assistant.io/integrations/input_text/) through the UI: [Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Text
 2. Apply the settings from below
 
-#### Settings 🔧
+#### Settings
 
 | Setting | Parameter |
 | :--- | :---: |
@@ -419,10 +419,10 @@ Each input text helper stores user itinerary states and serves as a trigger for 
 > [!NOTE]
 > Don't forget to set the maximum length to 255
 
-#### Data stored 💾
+#### Data stored
 
 <details>
-  <summary><h5>Sensor JSON structure 🏗️</h5></summary>
+  <summary><h5>Sensor JSON structure</h5></summary>
 
 | Key | Value |
 | :---: | :---: |
@@ -447,7 +447,7 @@ Each input text helper stores user itinerary states and serves as a trigger for 
 </details>
 
 <details>
-  <summary><h5>Possible errors 🚨</h5></summary>
+  <summary><h5>Possible errors</h5></summary>
 
 | Error | Meaning |
 | :---: | :---: |
@@ -473,7 +473,7 @@ Each input text helper stores user itinerary states and serves as a trigger for 
 </details>
 
 <details>
-  <summary><h5>Automation examples 🔗</h5></summary>
+  <summary><h5>Automation examples</h5></summary>
 
   ###### Template code to retrieve itinerary sensor data
 
@@ -523,12 +523,12 @@ The automation will automatically turn the transmitter off if not needed
 > [!WARNING]
 > Please set the closing behavior to 'Notification request', or the gate could close on your vehicle if your ble tracker is unreliable
 
-#### Setup 🛠️
+#### Setup
 
 1. Install through the [companion app](https://www.home-assistant.io/integrations/mobile_app/) settings: Settings > Companion app > Manage sensors > BLE Transmitter
 2. Apply the settings from below
 
-#### Settings 🔧
+#### Settings
 
 | Setting | Parameter |
 | :--- | :---: |
@@ -565,13 +565,13 @@ Only necessary for [ESPHome firmware](ESPHome-Firmwares/Gate)
 
 Provides the distance of the nearest person to your gate, to open only if someone is close enough
 
-#### Setup 🛠️
+#### Setup
 
 1. Install the [Proximity](https://www.home-assistant.io/integrations/proximity/) integration through the UI: [Settings > Devices & services > Add integration > Proximity](https://my.home-assistant.io/redirect/config_flow_start/?domain=proximity)
 2. Apply the settings from below
 3. Optional: Disable all sensors except `sensor.nearest_distance`
 
-#### Settings 🔧
+#### Settings
 
 | Setting | Parameter |
 | :--- | :---: |

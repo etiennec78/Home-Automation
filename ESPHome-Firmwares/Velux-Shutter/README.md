@@ -1,35 +1,35 @@
 # ESPHome Velux Roller Shutter 🪟
 
-## Description 📝
+## Description
 
 An ESPHome firmware for automating roller shutters using an [ESP32 C3](https://amzn.to/4ncZw8H) microcontroller
 
 Compatible with [KLI 310](https://amzn.to/4eJeVcS) and 860963 Velux remotes
 
 
-## Key Features 🌟
+## Key Features
 
-* **Physical & Remote Input**: Handles both controls with proper state feedback 👆
-* **Bidirectional Control**: Supports opening/closing even while the shutter is in motion 🔄
-* **Position Control**: Precise shutter positioning through cover entity 🎯
-* **Real-Time Position**: Continuously reports position as the shutter moves 🚩
-* **BLE Integration**: Built-in BLE tracker for automations 📡
+* **Physical & Remote Input**: Handles both controls with proper state feedback
+* **Bidirectional Control**: Supports opening/closing even while the shutter is in motion
+* **Position Control**: Precise shutter positioning through cover entity
+* **Real-Time Position**: Continuously reports position as the shutter moves
+* **BLE Integration**: Built-in BLE tracker for automations
 
 
-## Buy Me a Coffee ☕
+## Buy Me a Coffee
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
 
 
-## Installation Guide 🚀
+## Installation Guide
 
-### Requirements 📝
+### Requirements
 
 * An [ESP32 C3](https://amzn.to/4ncZw8H)
 * [ESPHome](https://esphome.io/guides/installing_esphome.html) installed
 * A [Velux KLI 310](https://amzn.to/4eJeVcS) remote
 
-### Setup 🛠️
+### Setup
 
 1. Clone the repository:
    ```bash
@@ -59,7 +59,7 @@ Compatible with [KLI 310](https://amzn.to/4eJeVcS) and 860963 Velux remotes
    * Enter API key when prompted
 
 
-## Pictures 📷
+## Pictures
 
 | Internals | Cover | Demo |
 | :---: | :---: | :---: |
