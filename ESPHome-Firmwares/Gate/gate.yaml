@@ -134,7 +134,7 @@ switch:
     name: "BLE tracker"
     icon: "mdi:access-point"
     optimistic: true
-    restore_mode: ALWAYS_OFF
+    restore_mode: RESTORE_DEFAULT_ON
     turn_on_action:
       - esp32_ble_tracker.start_scan:
     turn_off_action:
