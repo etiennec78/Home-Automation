@@ -2340,13 +2340,28 @@ actions:
                 > 0
               )
             }}
+          icloud3_gps_trackers: >-
+            {% set data = namespace(i3_trackers=[]) %}
+            {% for tracker in gps_trackers %}
+              {% set entry_id = config_entry_id(tracker) %}
+              {% if entry_id is not none %}
+                {% set domain = config_entry_attr(entry_id, 'domain') %}
+                {% if domain == 'icloud3' %}
+                  {% set data.i3_trackers = data.i3_trackers + [tracker] %}
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+            {{ data.i3_trackers }}
           other_gps_to_wait_for: >-
             {% set data = namespace(not_mobile=[]) %}
             {% for tracker in gps_trackers %}
               {% set ids = device_attr(tracker, 'identifiers') %}
               {%
-                if ids is none
-                or ids | first | first != 'mobile_app'
+                if tracker not in icloud3_gps_trackers
+                and (
+                  ids is none
+                  or ids | first | first != 'mobile_app'
+                )
               %}
                 {% set data.not_mobile = data.not_mobile + [tracker] %}
               {% endif %}
@@ -2357,6 +2372,7 @@ actions:
               'gps' in only_open_near
               and (
                 wait_for_mobile_gps
+                or icloud3_gps_trackers | length > 0
                 or other_gps_to_wait_for | length > 0
               )
             }}
@@ -2440,6 +2456,15 @@ actions:
                 data:
                   entity_id: "{{ other_gps_to_wait_for }}"
                 continue_on_error: true
+              - alias: Update the driver's location by refreshing his icloud3 device trackers
+                repeat:
+                  for_each: "{{ icloud3_gps_trackers }}"
+                  sequence:
+                    - action: "{{ 'icloud3.action' }}"
+                      data:
+                        command: location
+                        device_name: "{{ device_id(repeat.item) }}"
+                      continue_on_error: true
           - alias: If a BLE tracker has been provided
             if:
               - condition: template
