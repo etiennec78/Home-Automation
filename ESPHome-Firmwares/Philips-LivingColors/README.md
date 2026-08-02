@@ -12,7 +12,7 @@ A simple ESPHome configuration to hack a Philips LivingColors Mini with an ESP32
 * **BLE Integration**: Built-in BLE tracker for automations
 
 
-## Buy Me a Coffee
+## Support me
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
 

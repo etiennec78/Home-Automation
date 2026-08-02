@@ -17,7 +17,7 @@ A blueprint that notifies all selected users when another one is driving home
 * State-based notification filtering
 
 
-## Buy Me a Coffee
+## Support me
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
 

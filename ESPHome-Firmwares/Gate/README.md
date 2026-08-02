@@ -20,7 +20,7 @@ An ESPHome firmware for automating gates using an [ESP32](https://amzn.to/3y2UtC
 > ⚠️ Be aware that this firmware could contain bugs, so please read the code carefully and try it on a bare ESP32 first
 
 
-## Buy Me a Coffee
+## Support me
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
 

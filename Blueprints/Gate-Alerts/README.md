@@ -23,7 +23,7 @@ A blueprint that notifies selected users when the gate:
 * Customizable extra actions
 
 
-## Buy Me a Coffee
+## Support me
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
 

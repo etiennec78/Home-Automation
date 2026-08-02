@@ -16,7 +16,7 @@ Compatible with [KLI 310](https://amzn.to/4eJeVcS) and 860963 Velux remotes
 * **BLE Integration**: Built-in BLE tracker for automations
 
 
-## Buy Me a Coffee
+## Support me
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
 

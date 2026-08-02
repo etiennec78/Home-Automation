@@ -34,7 +34,7 @@ Makes managing your gate while driving easier: You won't ever have to use your r
   * Avoid opening when parked near house
 
 
-## Buy Me a Coffee
+## Support me
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
 

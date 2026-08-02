@@ -4,7 +4,7 @@
 
 A small dashboard showing a user's position history on a map and displaying both the ETA and remaining time when an itinerary is in progress
 
-## Buy Me a Coffee
+## Support me
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
 
