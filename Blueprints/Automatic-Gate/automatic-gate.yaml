@@ -2435,12 +2435,12 @@ actions:
             if:
               - condition: template
                 value_template: "{{ wait_for_gps and not gps_confirmed }}"
-            then:
+            then: &gps_request
               - alias: If one of the device trackers related to the driver is his phone
                 if:
                   - condition: template
                     value_template: "{{ wait_for_mobile_gps }}"
-                then: &gps_request
+                then:
                   - alias: Update the driver's location with a mobile app location request
                     action: "{{ notify_service }}"
                     data:
