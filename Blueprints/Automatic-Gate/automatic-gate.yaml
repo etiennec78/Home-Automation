@@ -3889,65 +3889,61 @@ actions:
                 - alias: Set variables for the following repeat sequence
                   variables:
                     break: "{{ closing_behavior in ['auto', 'off'] }}"
-                    suggest_closing: >-
-                      {{
-                        closing_behavior == 'notif'
-                        and departure_mode
-                        and 'ble' not in close_when_disconnected_from
-                      }}
                     wait_trigger_start: "{{ now() | as_timestamp }}"
                     wait_notif_reception: "{{ not ios_device and closing_behavior == 'timer' }}"
                     timer_reset_timestamp: null
                     timer_notif_sent: false
-                    timeouts:
-                      closing_suggestion: !input suggest_closing_after
-                      safety_delay: "{{ safety_delay * 60 }}"
-                      timer: !input timer_closing
-                      default: "{{ MAX_INT }}"
                 - alias: Wait for events at least once, then while the gate closing has not been triggered
                   repeat:
                     until: "{{ break }}"
                     sequence:
                       - alias: Set the timeout
                         variables:
-                          timeout_type: >-
-                            {% if repeat.first %}
-                              {% if suggest_closing %}
-                                closing_suggestion
-                              {% else %}
-                                safety_delay
-                              {% endif %}
-                            {% else %}
-                              {% if closing_behavior == 'timer' %}
-                                timer
-                              {% else %}
-                                {% if security_notif_override %}
-                                  safety_delay
-                                {% else %}
-                                  default
-                                {% endif %}
-                              {% endif %}
-                            {% endif %}
-                          trigger_timeout: >-
-                            {% if timeout_type == 'safety_delay' %}
-                              {% set start_time = wait_trigger_start %}
-                            {% elif timer_reset_timestamp is not none %}
-                              {% set start_time = timer_reset_timestamp %}
-                            {% else %}
-                              {% set start_time = none %}
-                            {% endif %}
-                            {%
-                              set remaining_timeout = timeouts[timeout_type]
-                            %}
-                            {% if start_time is not none %}
-                              {% set remaining_timeout = (
-                                  remaining_timeout
-                                  + start_time
+                          timeouts:
+                            closing_suggestion: >-
+                              {{
+                                suggest_closing_after
+                                if (
+                                    repeat.first
+                                    and closing_behavior == 'notif'
+                                    and departure_mode
+                                    and 'ble' not in close_when_disconnected_from
+                                )
+                                else MAX_INT
+                              }}
+                            safety_delay: >-
+                              {{
+                                (
+                                  safety_delay * 60
+                                  + wait_trigger_start
                                   - now() | as_timestamp
                                 )
-                              %}
-                            {% endif %}
-                            {{ max(remaining_timeout, 0) }}
+                                if repeat.first or security_notif_override
+                                else MAX_INT
+                              }}
+                            timer: >-
+                              {% if not repeat.first and closing_behavior == 'timer' %}
+                                {% if timer_reset_timestamp is none %}
+                                  {{ timer_closing }}
+                                {% else %}
+                                  {{
+                                    timer_closing
+                                    + timer_reset_timestamp
+                                    - now() | as_timestamp
+                                  }}
+                                {% endif %}
+                              {% else %}
+                               {{ MAX_INT }}
+                              {% endif %}
+                          timeout_type: >-
+                            {{
+                              timeouts
+                              | items
+                              | sort(attribute='1')
+                              | first
+                              | first
+                            }}
+                          trigger_timeout: "{{ max(timeouts[timeout_type], 0) }}"
                       - alias: Wait for events before closing the gate
                         wait_for_trigger:
                           - alias: Manual closing
