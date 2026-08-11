@@ -233,7 +233,7 @@ blueprint:
         request_gps_location:
           name: 🛰️ Request GPS location
           description: |-
-            Request an updated phone location when the current location is outdated (based on the travel time sensor)
+            Request an updated phone location when the current location is outdated
 
             > If you are using an Android phone, please consider using the [High Accuracy Mode](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#settings-) instead
 
@@ -241,8 +241,19 @@ blueprint:
           default: false
           selector:
             boolean:
+        gps_request_while_open:
+          name: ⏳ GPS request refresh rate while open
+          description: |-
+            The delay between two GPS requests while the gate is open, to close it if you leave the zone
+            Disabled if set to 0
+          default: 30
+          selector:
+            number:
+              min: 0
+              max: 300
+              unit_of_measurement: s
         gps_request_refresh_function:
-          name: ⏳ GPS request refresh function
+          name: ⏳ GPS request refresh function on arrival
           description: |-
             Template that returns the delay between two GPS requests, taking the remaining time into account
           default: "{{ max(seconds_before_opening / 3, 5) }}"
@@ -713,6 +724,7 @@ variables:
   itinerary_sensors: !input itinerary_sensors
   travel_time_rate: !input travel_time_rate
   request_gps_location: !input request_gps_location
+  gps_request_while_open: !input gps_request_while_open
   behavior:
     departure:
       opening: !input departure_opening_behavior
@@ -3894,6 +3906,7 @@ actions:
                     waiting_for_reception: false
                     wait_trigger_start: "{{ now() | as_timestamp }}"
                     timer_reset_timestamp: null
+                    last_gps_request: "{{ now() | as_timestamp }}"
                 - alias: Keep waiting for events until the gate should close
                   repeat:
                     until: "{{ break }}"
@@ -3936,6 +3949,22 @@ actions:
                               {% else %}
                                {{ MAX_INT }}
                               {% endif %}
+                            gps_request: >-
+                              {{
+                                (
+                                  gps_request_while_open
+                                  + max(
+                                    states[driver].last_updated | as_timestamp,
+                                    last_gps_request
+                                  )
+                                  - now() | as_timestamp
+                                )
+                                if (
+                                  request_gps_location
+                                  and gps_request_while_open != 0
+                                )
+                                else MAX_INT
+                              }}
                           timeout_type: >-
                             {{
                               timeouts
@@ -4032,6 +4061,15 @@ actions:
                               - alias: Create error
                                 sequence: *create_error
                               - stop: Closing canceled
+                          - alias: If a GPS request should be made
+                            conditions:
+                              - condition: template
+                                value_template: "{{ not wait.completed and timeout_type == 'gps_request' }}"
+                            sequence:
+                              - sequence: *gps_request
+                              - alias: Save the gps request timestamp
+                                variables:
+                                  last_gps_request: "{{ now() | as_timestamp }}"
                         default:
                           - alias: Set message id
                             variables:
