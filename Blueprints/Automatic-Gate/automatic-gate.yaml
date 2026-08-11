@@ -3612,7 +3612,7 @@ actions:
               then:
                 - alias: Initialize a variable to wait for the phone to receive the notification before starting the timer
                   variables:
-                    wait_notif_reception: "{{ not ios_device and opening_behavior == 'timer' }}"
+                    waiting_for_reception: "{{ not ios_device and opening_behavior == 'timer' }}"
                 - alias: If opening behavior is set to cancelable timer or notification request
                   if:
                     - condition: template
@@ -3780,7 +3780,7 @@ actions:
                                 event_type: mobile_app_notification_received
                                 event_data:
                                   action_2_key: "{{ opening_order_id }}"
-                                enabled: "{{ wait_notif_reception }}"
+                                enabled: "{{ waiting_for_reception }}"
                             timeout: >-
                               {% if opening_behavior == 'timer' %}
                                 {{ timer_opening }}
@@ -3810,7 +3810,7 @@ actions:
                                 sequence:
                                   - alias: Stop waiting for notification reception
                                     variables:
-                                      wait_notif_reception: false
+                                      waiting_for_reception: false
                               - alias: If an error needs to be raised
                                 conditions:
                                   - condition: template
@@ -3888,12 +3888,13 @@ actions:
                   then: *start_ble
                 - alias: Set variables for the following repeat sequence
                   variables:
-                    break: "{{ closing_behavior in ['auto', 'off'] }}"
+                    break: false
+                    waiting_for_suggestion: true  # If false we are waiting for the notification (buttons or timer)
+                    waiting_for_safety: true
+                    waiting_for_reception: false
                     wait_trigger_start: "{{ now() | as_timestamp }}"
-                    wait_notif_reception: "{{ not ios_device and closing_behavior == 'timer' }}"
                     timer_reset_timestamp: null
-                    timer_notif_sent: false
-                - alias: Wait for events at least once, then while the gate closing has not been triggered
+                - alias: Keep waiting for events until the gate should close
                   repeat:
                     until: "{{ break }}"
                     sequence:
@@ -3904,7 +3905,7 @@ actions:
                               {{
                                 suggest_closing_after
                                 if (
-                                    repeat.first
+                                    waiting_for_suggestion
                                     and closing_behavior == 'notif'
                                     and departure_mode
                                     and 'ble' not in close_when_disconnected_from
@@ -3918,11 +3919,11 @@ actions:
                                   + wait_trigger_start
                                   - now() | as_timestamp
                                 )
-                                if repeat.first or security_notif_override
+                                if waiting_for_safety
                                 else MAX_INT
                               }}
                             timer: >-
-                              {% if not repeat.first and closing_behavior == 'timer' %}
+                              {% if not waiting_for_suggestion and closing_behavior == 'timer' %}
                                 {% if timer_reset_timestamp is none %}
                                   {{ timer_closing }}
                                 {% else %}
@@ -3964,7 +3965,8 @@ actions:
                               }}
                             enabled: >-
                               {{
-                                departure_mode
+                                waiting_for_suggestion
+                                and departure_mode
                                 and 'ble' in close_when_disconnected_from
                                 and idx < ble_entities | length
                               }}
@@ -3973,6 +3975,7 @@ actions:
                             trigger: template
                             id: vehicle_stopped
                             value_template: "{{ is_state(driving_sensor, 'off') }}"
+                            enabled: "{{ waiting_for_safety }}"
                           - alias: Vehicle restarted
                             trigger: template
                             id: vehicle_restarted
@@ -3981,179 +3984,43 @@ actions:
                             trigger: template
                             id: vehicle_away
                             value_template: *activation_zone_out_trigger
+                            enabled: "{{ waiting_for_safety }}"
                           - alias: Forbidden zone
                             trigger: template
                             id: forbidden_zone
                             value_template: *in_forbidden_zone
+                            enabled: "{{ waiting_for_safety }}"
                           - alias: Closing button pressed
                             trigger: event
                             id: closing_order
                             event_type: mobile_app_notification_action
                             event_data:
                               action: "{{ closing_order_id }}"
+                            enabled: "{{ not waiting_for_suggestion }}"
                           - alias: Canceling button pressed
                             trigger: event
                             id: canceling_order
                             event_type: mobile_app_notification_action
                             event_data:
                               action: "{{ canceling_order_id }}"
+                            enabled: "{{ not waiting_for_suggestion }}"
                           - alias: Notification received
                             trigger: event
                             id: notification_received
                             event_type: mobile_app_notification_received
                             event_data:
                               action_2_key: "{{ closing_order_id }}"
-                            enabled: "{{ wait_notif_reception }}"
+                            enabled: "{{ waiting_for_reception }}"
                         timeout:
                           seconds: "{{ trigger_timeout }}"
-                      - choose:
-                          - alias: If a safety feature needs to change the closing behavior from notif to timer
+                      - alias: Manage events unrelated to gate closing
+                        choose:
+                          - alias: If the vehicle was restarted
                             conditions:
                               - condition: template
-                                value_template: >-
-                                  {{
-                                    security_notif_override
-                                    and closing_behavior == 'notif'
-                                    and (
-                                      not wait.completed
-                                        and timeout_type == 'safety_delay'
-                                      or wait.completed and wait.trigger.id in [
-                                        'vehicle_stopped',
-                                        'vehicle_away',
-                                        'forbidden_zone',
-                                      ]
-                                    )
-                                  }}
+                                value_template: "{{ wait.trigger.id == 'vehicle_restarted' }}"
                             sequence:
-                              - alias: Change closing behavior to timer
-                                variables:
-                                  closing_behavior: "timer"
-                                  timer_reset_timestamp: "{{ now() | as_timestamp }}"
-                                  wait_notif_reception: "{{ not ios_device }}"
-                          - alias: If the trigger needs to close the gate
-                            conditions:
-                              - condition: template
-                                value_template: >-
-                                  {{
-                                    wait.completed and wait.trigger.id in [
-                                      'manual', 'closing_order'
-                                    ]
-                                    or (
-                                      not wait.completed
-                                      and timeout_type == 'timer'
-                                    )
-                                  }}
-                            sequence:
-                              - alias: Break the loop
-                                variables:
-                                  break: true
-                      - choose:
-                          - alias: If this is the first loop or the behavior just switched to timer
-                            conditions:
-                              - condition: template
-                                value_template: >-
-                                  {{
-                                    repeat.first
-                                    or closing_behavior == 'timer'
-                                      and not timer_notif_sent
-                                  }}
-                            sequence:
-                              - alias: Restore BLE devices
-                                sequence: *restore_ble
-                              - alias: Set message id
-                                variables:
-                                  message_id: >-
-                                    {% if not wait.completed %}
-                                      {% if timeout_type == 'safety_delay' %}
-                                        {{ 'did_not_' ~ ('leave' if departure_mode else 'arrive') }}
-                                      {% else %}
-                                        {{ timeout_type }}
-                                      {% endif %}
-                                    {% elif wait.trigger.id in ['manual', 'closing_order'] %}
-                                      {{ none }}
-                                    {%
-                                      elif wait.trigger.id == 'vehicle_stopped'
-                                      and not departure_mode
-                                    %}
-                                      arrived
-                                    {% else %}
-                                      {{ wait.trigger.id }}
-                                    {% endif %}
-                              - alias: If a closing notification needs to be sent
-                                if:
-                                  - condition: template
-                                    value_template: "{{ not break }}"
-                                then:
-                                  - alias: Get button translation
-                                    variables:
-                                      button_ids:
-                                        - "close"
-                                        - "cancel"
-                                      <<: *get_button_translations
-                                  - alias: Build notification actions
-                                    variables:
-                                      closing_action:
-                                        action: "{{ closing_order_id }}"
-                                        title: "{{ buttons[0] }}"
-                                        icon: sfsymbols:lock
-                                      canceling_action:
-                                        action: "{{ canceling_order_id }}"
-                                        title: "{{ buttons[1] }}"
-                                        icon: sfsymbols:xmark
-                                  - choose:
-                                      - alias: If closing behavior is set to cancelable timer
-                                        conditions:
-                                          - condition: template
-                                            value_template: "{{ closing_behavior == 'timer' }}"
-                                        sequence:
-                                          - alias: Set title id
-                                            variables:
-                                              title_id: "timer_closing"
-                                          - alias: Format the notification
-                                            variables:
-                                              notification_data:
-                                                <<: *notification_data
-                                                notification_icon: mdi:lock-question
-                                                sticky: true
-                                                persistent: true
-                                                confirmation: "{{ not ios_device }}"
-                                                timeout: "{{ timer_closing }}"
-                                                chronometer: true
-                                                when: "{{ timer_closing }}"
-                                                when_relative: true
-                                                actions:
-                                                  - "{{ canceling_action }}"
-                                                  - "{{ closing_action }}"
-                                          - alias: Remember that the timer notification was sent
-                                            variables:
-                                              timer_notif_sent: true
-                                      - alias: If closing behavior is set to notification request
-                                        conditions:
-                                          - condition: template
-                                            value_template: "{{ closing_behavior == 'notif' }}"
-                                        sequence:
-                                          - alias: Set title id
-                                            variables:
-                                              title_id: "close_gate"
-                                          - alias: Format the notification
-                                            variables:
-                                              notification_data:
-                                                <<: *notification_data
-                                                notification_icon: mdi:lock-question
-                                                sticky: true
-                                                persistent: true
-                                                actions:
-                                                  - "{{ closing_action }}"
-                                                  - "{{ canceling_action }}"
-                                  - alias: Get notification translation
-                                    variables: *get_translation
-                                  - alias: Send the timer notification or closing request
-                                    action: "{{ notify_service }}"
-                                    data:
-                                      title: "{{ title }}"
-                                      message: "{{ message }}"
-                                      data: "{{ notification_data }}"
-                                  - sequence: *tts
+                              - stop: Letting the new instance take over
                           - alias: If the itinerary needs to be canceled
                             conditions:
                               - condition: template
@@ -4165,12 +4032,168 @@ actions:
                               - alias: Create error
                                 sequence: *create_error
                               - stop: Closing canceled
-                          - alias: If the vehicle was restarted
-                            conditions:
+                        default:
+                          - alias: Set message id
+                            variables:
+                              message_id: >-
+                                {% if not wait.completed %}
+                                  {% if timeout_type == 'safety_delay' %}
+                                    {{ 'did_not_' ~ ('leave' if departure_mode else 'arrive') }}
+                                  {% else %}
+                                    {{ timeout_type }}
+                                  {% endif %}
+                                {%
+                                  elif wait.trigger.id == 'vehicle_stopped'
+                                  and not departure_mode
+                                %}
+                                  arrived
+                                {% else %}
+                                  {{ wait.trigger.id }}
+                                {% endif %}
+                          - alias: Check if the trigger is a safety or suggestion event
+                            variables:
+                              safety_event: >-
+                                {{
+                                  wait.completed and wait.trigger.id in [
+                                    'vehicle_stopped',
+                                    'vehicle_away',
+                                    'forbidden_zone'
+                                  ]
+                                  or not wait.completed and timeout_type == 'safety_delay'
+                                }}
+                              suggestion_event: >-
+                                {{
+                                  wait.completed and wait.trigger.id == 'ble_out_of_range'
+                                  or not wait.completed and timeout_type == 'closing_suggestion'
+                                }}
+                          - alias: If a safety feature needs to change the closing behavior from notif to timer
+                            if:
                               - condition: template
-                                value_template: "{{ wait.trigger.id == 'vehicle_restarted' }}"
-                            sequence:
-                              - stop: Letting the new instance take over
+                                value_template: >-
+                                  {{
+                                    security_notif_override
+                                    and closing_behavior == 'notif'
+                                    and safety_event
+                                  }}
+                            then:
+                              - alias: Change closing behavior to timer
+                                variables:
+                                  closing_behavior: "timer"
+                                  timer_reset_timestamp: "{{ now() | as_timestamp }}"
+                                  waiting_for_reception: "{{ not ios_device }}"
+                          - alias: Restore BLE devices
+                            sequence: *restore_ble
+                          - choose:
+                              - alias: If the trigger needs to close the gate
+                                conditions:
+                                  - condition: template
+                                    value_template: >-
+                                      {{
+                                        wait.completed and wait.trigger.id in [
+                                          'manual', 'closing_order'
+                                        ]
+                                        or (
+                                          not wait.completed
+                                          and timeout_type == 'timer'
+                                        )
+                                      }}
+                                sequence:
+                                  - alias: Break the loop
+                                    variables:
+                                      break: true
+                              - alias: If an important event occured
+                                conditions:
+                                  - condition: template
+                                    value_template: "{{ safety_event or suggestion_event }}"
+                                sequence:
+                                  - alias: If the gate closing behavior is set to auto or off
+                                    if:
+                                      - condition: template
+                                        value_template: "{{ closing_behavior in ['auto', 'off'] }}"
+                                    then:
+                                      - alias: Break the loop
+                                        variables:
+                                          break: true
+                                    else:
+                                      - alias: Wait for the closing confirmation and reception, stop waiting for a closing suggestion event
+                                        variables:
+                                          waiting_for_reception: "{{ not ios_device and closing_behavior == 'timer' }}"
+                                          waiting_for_suggestion: false
+                                      - alias: If a safety event occured
+                                        if:
+                                          - condition: template
+                                            value_template: "{{ safety_event }}"
+                                        then:
+                                          - alias: Stop waiting for a safety event
+                                            variables:
+                                              waiting_for_safety: false
+                                      - alias: Get button translation
+                                        variables:
+                                          button_ids:
+                                            - "close"
+                                            - "cancel"
+                                          <<: *get_button_translations
+                                      - alias: Build notification actions
+                                        variables:
+                                          closing_action:
+                                            action: "{{ closing_order_id }}"
+                                            title: "{{ buttons[0] }}"
+                                            icon: sfsymbols:lock
+                                          canceling_action:
+                                            action: "{{ canceling_order_id }}"
+                                            title: "{{ buttons[1] }}"
+                                            icon: sfsymbols:xmark
+                                      - choose:
+                                          - alias: If closing behavior is set to cancelable timer
+                                            conditions:
+                                              - condition: template
+                                                value_template: "{{ closing_behavior == 'timer' }}"
+                                            sequence:
+                                              - alias: Set title id
+                                                variables:
+                                                  title_id: "timer_closing"
+                                              - alias: Format the notification
+                                                variables:
+                                                  notification_data:
+                                                    <<: *notification_data
+                                                    notification_icon: mdi:lock-question
+                                                    sticky: true
+                                                    persistent: true
+                                                    confirmation: "{{ not ios_device }}"
+                                                    timeout: "{{ timer_closing }}"
+                                                    chronometer: true
+                                                    when: "{{ timer_closing }}"
+                                                    when_relative: true
+                                                    actions:
+                                                      - "{{ canceling_action }}"
+                                                      - "{{ closing_action }}"
+                                          - alias: If closing behavior is set to notification request
+                                            conditions:
+                                              - condition: template
+                                                value_template: "{{ closing_behavior == 'notif' }}"
+                                            sequence:
+                                              - alias: Set title id
+                                                variables:
+                                                  title_id: "close_gate"
+                                              - alias: Format the notification
+                                                variables:
+                                                  notification_data:
+                                                    <<: *notification_data
+                                                    notification_icon: mdi:lock-question
+                                                    sticky: true
+                                                    persistent: true
+                                                    actions:
+                                                      - "{{ closing_action }}"
+                                                      - "{{ canceling_action }}"
+                                      - alias: Get notification translation
+                                        variables: *get_translation
+                                      - alias: Send the timer notification or closing request
+                                        action: "{{ notify_service }}"
+                                        data:
+                                          title: "{{ title }}"
+                                          message: "{{ message }}"
+                                          data: "{{ notification_data }}"
+                                      - sequence: *tts
                 - alias: If gate not closed manually
                   if:
                     - condition: template
