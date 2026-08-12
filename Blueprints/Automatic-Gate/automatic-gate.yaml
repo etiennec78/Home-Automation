@@ -844,6 +844,7 @@ variables:
           You have set some gate behaviors to 'Notification request' or 'Cancelable timer', but some users are missing a notify device
           These behaviors will be switched to 'Fully Automatic' (#25)
         wrong_transmitter_entities: "These iBeacon transmitter entities: '{data}' do not come the associated notification device (#26)"
+        no_gps_coordinates: "These device tracker: '{data}' are not reporting GPS coordinates (#28)"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -1028,6 +1029,7 @@ variables:
           Vous avez réglé certains comportements de portail sur 'Notification request' ou 'Cancelable timer', mais certains utilisateurs n'ont pas d'appareil de notification associé
           Ces comportements basculeront sur le mode 'Fully Automatic' (#25)
         wrong_transmitter_entities: "Ces transmetteurs iBeacon: '{data}' ne viennent pas de l'appareil de notifications associé (#26)"
+        no_gps_coordinates: "Ces traceurs: '{data}' ne renvoient pas de coordonnées GPS (#28)"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -1794,6 +1796,31 @@ actions:
                         {{ data.invalid }}
                       message_id: "wrong_transmitter_entities"
                       level: 1
+                    - alias: Check that all person entities have gps coordinates as attributes
+                      error: >-
+                        {%
+                          set driver_trigger = (
+                            trigger.platform is not none
+                            and trigger.id == 'vehicle_started'
+                          )
+                        %}
+                        {% set targets = [driver] if driver_trigger else persons %}
+                        {% set data = namespace(invalid=[]) %}
+                        {% for person in targets %}
+                          {%
+                            if state_attr(person, 'latitude') is none
+                            or state_attr(person, 'longitude') is none
+                          %}
+                            {% set data.invalid = data.invalid + [person] %}
+                          {% endif %}
+                        {% endfor %}
+                        {{
+                          data.invalid
+                          | map('state_attr', 'friendly_name')
+                          | list
+                        }}
+                      message_id: "no_gps_coordinates"
+                      level: 2
                   sequence:
                     - alias: If a check failed
                       if:

@@ -67,5 +67,6 @@ Refer to the table below to fix the errors
   | #25 | You have set some gate behaviors to 'Notification request' or 'Cancelable timer', but some users are missing a notify device. These behaviors will be switched to 'Fully Automatic' | Either set these behaviors to 'Off' or 'Fully Automatic', or add missing notification devices |
   | #26 | These iBeacon transmitter entities: '...' do not come the associated notification device | Either make sure that these transmitter entities come from your notification device, or remove them (but you will have to always keep your iBeacon on) |
   | #27 | Your dead zone is invalid | Either set the 'Maximum distance' input to 0, or set a value higher than the 'Minimum distance' |
+  | #28 | These device tracker: '...' are not reporting GPS coordinates | Check that these trackers are online and currently holding latitude and longitude attributes |
   
 </details>
