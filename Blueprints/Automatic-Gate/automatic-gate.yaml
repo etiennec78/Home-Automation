@@ -3754,7 +3754,7 @@ actions:
                               - alias: Activation zone left
                                 trigger: template
                                 id: vehicle_away
-                                value_template: &activation_zone_out_trigger >-
+                                value_template: >-
                                   {% if state_attr(driver, 'gps_accuracy') is none %}
                                     {% set accuracy = 100 %}
                                   {% else %}
@@ -3766,7 +3766,7 @@ actions:
                               - alias: Forbidden zone entered
                                 trigger: template
                                 id: forbidden_zone
-                                value_template: &in_forbidden_zone >-
+                                value_template: >-
                                   {{
                                     driver in (
                                       expand(forbidden_zones)
@@ -3906,6 +3906,11 @@ actions:
                     waiting_for_reception: false
                     wait_trigger_start: "{{ now() | as_timestamp }}"
                     timer_reset_timestamp: null
+                    send_gps_requests: >-
+                      {{
+                        request_gps_location
+                        and gps_request_departure != 0
+                      }}
                     last_gps_request: "{{ now() | as_timestamp }}"
                 - alias: Keep waiting for events until the gate should close
                   repeat:
@@ -4009,16 +4014,13 @@ actions:
                             trigger: template
                             id: vehicle_restarted
                             value_template: "{{ is_state(driving_sensor, 'on') }}"
-                          - alias: Activation zone left
-                            trigger: template
-                            id: vehicle_away
-                            value_template: *activation_zone_out_trigger
-                            enabled: "{{ waiting_for_safety }}"
-                          - alias: Forbidden zone
-                            trigger: template
-                            id: forbidden_zone
-                            value_template: *in_forbidden_zone
-                            enabled: "{{ waiting_for_safety }}"
+                          - alias: New position
+                            id: position
+                            trigger: event
+                            event_type: state_changed
+                            event_data:
+                              entity_id: "{{ driver }}"
+                            enabled: "{{ waiting_for_safety or send_gps_requests }}"
                           - alias: Closing button pressed
                             trigger: event
                             id: closing_order
@@ -4042,6 +4044,44 @@ actions:
                             enabled: "{{ waiting_for_reception }}"
                         timeout:
                           seconds: "{{ trigger_timeout }}"
+                      - alias: If the device tracker was updated while waiting for a safety event
+                        if:
+                          - condition: template
+                            value_template: >-
+                              {{
+                                waiting_for_safety
+                                and wait.completed
+                                and wait.trigger.id == 'position'
+                              }}
+                        then:
+                          - alias: Change the trigger id if safety event conditions are met
+                            variables:
+                              wait:
+                                completed: true
+                                trigger:
+                                  id: >-
+                                    {% if state_attr(driver, 'gps_accuracy') is none %}
+                                      {% set accuracy = 100 %}
+                                    {% else %}
+                                      {% set accuracy = state_attr(driver, 'gps_accuracy') %}
+                                    {% endif %}
+                                    {% set gate_distance = distance(driver, gate_location)*1000 - accuracy %}
+
+                                    {% if gate_distance > activation_zone %}
+                                      vehicle_away
+                                    {% elif driver in (
+                                        expand(forbidden_zones)
+                                        | map(attribute='entity_id')
+                                        | list
+                                      )
+                                    %}
+                                      forbidden_zone
+                                    {% else %}
+                                      position
+                                    {% endif %}
+                      - alias: Skip to recalculate the GPS request timeout if the trigger id was just a location update
+                        condition: template
+                        value_template: "{{ not wait.completed or wait.trigger.id != 'position' }}"
                       - alias: Manage events unrelated to gate closing
                         choose:
                           - alias: If the vehicle was restarted
