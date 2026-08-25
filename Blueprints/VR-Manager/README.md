@@ -11,6 +11,7 @@ When a VR session starts:
 
 * Turn on computer
 * Turn on lights for inside-out tracking, based on:
+  * illuminance sensor
   * sun elevation
 
 When the session ends:

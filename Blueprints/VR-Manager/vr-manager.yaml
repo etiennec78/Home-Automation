@@ -15,6 +15,7 @@ blueprint:
     When a VR session starts:
     * Turn on computer
     * Turn on lights for inside-out tracking, based on:
+      * illuminance sensor
       * sun elevation
 
     When the session ends:
@@ -86,6 +87,26 @@ blueprint:
               multiple: true
               filter:
                 domain: light
+        illuminance_sensor:
+          name: 🛋️ Room illuminance sensor
+          description: |-
+            A sensor to turn on the **lights** based on its value
+          default: ""
+          selector:
+            entity:
+              filter:
+                domain: sensor
+                device_class: illuminance
+        illuminance_trigger:
+          name: 🛋️ Room illuminance sensor target
+          description: |-
+            **Turn on** the lights **below** this illuminance level
+          default: 100
+          selector:
+            number:
+              min: 0
+              max: 200
+              unit_of_measurement: lux
         sun:
           name: ☀️ Sun
           description: |-
@@ -121,6 +142,8 @@ variables:
   pc_wol: !input pc_wol
   sun: !input sun
   sun_elevation: !input sun_elevation
+  illuminance_sensor: !input illuminance_sensor
+  illuminance_trigger: !input illuminance_trigger
 
 actions:
   - alias: If the PC is off
@@ -148,6 +171,11 @@ actions:
         value_template: >-
           {% set elevation = state_attr(sun, 'elevation') %}
           {{ not is_number(elevation) or elevation < sun_elevation }}
+      - alias: The room illuminance level is low enough
+        condition: template
+        value_template: >-
+          {% set illuminance = states(illuminance_sensor) %}
+          {{ not is_number(illuminance) or illuminance < illuminance_trigger }}
     then:
       - repeat:
           for_each: !input lights
