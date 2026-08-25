@@ -91,8 +91,11 @@ actions:
       - condition: template
         value_template: >-
           {{
-            pc_router_tracker == ''
-            or is_state(pc_router_tracker, 'off')
+            pc_router_tracker ~ pc_wol == ''
+            or pc_router_tracker != ''
+              and is_state(pc_router_tracker, 'not_home')
+            or pc_wol != ''
+              and is_state(pc_wol, 'off')
           }}
     then:
       - alias: Turn on PC
