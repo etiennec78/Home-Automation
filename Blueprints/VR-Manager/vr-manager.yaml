@@ -12,7 +12,9 @@ blueprint:
     <details>
       <summary><h2>Key Features 🌟</h2></summary>
 
-    * Turn on computer when VR headset is powered on
+    When a VR session starts:
+    * Turn on computer
+    * Turn on lights for room tracking
 
     </details>
 
@@ -48,11 +50,24 @@ blueprint:
                 domain: device_tracker
         pc_wol:
           name: 💤 Wake On LAN entity
+          default: []
           selector:
             entity:
               filter:
                 integration: wake_on_lan
                 domain: button
+    lights:
+      name: Lights
+      icon: mdi:lightbulb-group
+      input:
+        lights:
+          name: 💡 Room lights
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain: light
 
 triggers:
   - alias: VR headset turns on
@@ -64,15 +79,24 @@ triggers:
       - unavailable
       - unknown
 
-conditions:
-  - alias: PC is off
-    condition: state
-    entity_id: !input pc_router_tracker
-    state: not_home
-    enabled: !input pc_router_tracker
+variables:
+  pc_router_tracker: !input pc_router_tracker
 
 actions:
-  - alias: Turn on PC
-    action: button.press
+  - alias: If the PC is off
+    if:
+      - condition: template
+        value_template: >-
+          {{
+            pc_router_tracker == ''
+            or is_state(pc_router_tracker, 'off')
+          }}
+    then:
+      - alias: Turn on PC
+        action: button.press
+        target:
+          entity_id: !input pc_wol
+  - alias: Turn on lights
+    action: light.turn_on
     target:
-      entity_id: !input pc_wol
+      entity_id: !input lights
