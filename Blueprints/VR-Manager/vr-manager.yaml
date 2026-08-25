@@ -42,6 +42,15 @@ blueprint:
       name: Computer
       icon: mdi:desktop-tower-monitor
       input:
+        pc_router_tracker:
+          name: 🖥️ PC router device tracker
+          description: |-
+            Your PC **device tracker** to only turn it on if it was off
+          default: ""
+          selector:
+            entity:
+              filter:
+                domain: device_tracker
         pc_wol:
           name: 💤 Wake On LAN entity
           description: |-
@@ -61,6 +70,13 @@ triggers:
       - not_home
       - unavailable
       - unknown
+
+conditions:
+  - alias: PC is off
+    condition: state
+    entity_id: !input pc_router_tracker
+    state: not_home
+    enabled: !input pc_router_tracker
 
 actions:
   - alias: Turn on PC
