@@ -36,7 +36,7 @@ blueprint:
     * Discord: @etiennec78
     [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
   homeassistant:
-    min_version: 2024.10.0
+    min_version: 2025.4.0
   input:
     common_settings:
       name: Essential inputs
