@@ -12,6 +12,10 @@ When a VR session starts:
 * Turn on computer
 * Turn on lights for inside-out tracking
 
+When the session ends:
+
+* Turn off the lights
+
 
 ## Support me
 
