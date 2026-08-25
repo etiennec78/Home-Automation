@@ -87,6 +87,14 @@ blueprint:
               multiple: true
               filter:
                 domain: light
+        light_brightness_pct:
+          name: ✨ Light brightness
+          default: 20
+          selector:
+            number:
+              min: 0
+              max: 100
+              unit_of_measurement: "%"
         illuminance_sensor:
           name: 🛋️ Room illuminance sensor
           description: |-
@@ -144,6 +152,7 @@ variables:
   sun_elevation: !input sun_elevation
   illuminance_sensor: !input illuminance_sensor
   illuminance_trigger: !input illuminance_trigger
+  light_brightness_pct: !input light_brightness_pct
 
 actions:
   - alias: If the PC is off
@@ -180,13 +189,17 @@ actions:
       - repeat:
           for_each: !input lights
           sequence:
-            - alias: Continue if this light is off
+            - alias: Continue if the light brightness is too low
               condition: template
-              value_template: "{{ is_state(repeat.item, 'off') }}"
+              value_template: >-
+                {% set brightness = state_attr(repeat.item, 'brightness') %}
+                {{ not is_number(brightness) or brightness < light_brightness_pct / 100 * 255 }}
             - alias: Turn on light
               action: light.turn_on
               target:
                 entity_id: "{{ repeat.item }}"
+              data:
+                brightness_pct: !input light_brightness_pct
             - alias: Remember this light
               variables:
                 lights_to_turn_off: "{{ lights_to_turn_off + [repeat.item] }}"
