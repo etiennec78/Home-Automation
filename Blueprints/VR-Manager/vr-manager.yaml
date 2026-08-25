@@ -96,7 +96,33 @@ actions:
         action: button.press
         target:
           entity_id: !input pc_wol
-  - alias: Turn on lights
-    action: light.turn_on
-    target:
-      entity_id: !input lights
+  - variables:
+      lights_to_turn_off: []
+  - repeat:
+      for_each: !input lights
+      sequence:
+        - alias: Continue if this light is off
+          condition: template
+          value_template: "{{ is_state(repeat.item, 'off') }}"
+        - alias: Turn on light
+          action: light.turn_on
+          target:
+            entity_id: "{{ repeat.item }}"
+        - alias: Remember this light
+          variables:
+            lights_to_turn_off: "{{ lights_to_turn_off + [repeat.item] }}"
+  - alias: Wait for VR headset to turn off
+    wait_for_trigger:
+      - trigger: state
+        entity_id: !input hmd_trackers
+        to:
+          - not_home
+          - unknown
+        from: home
+  - alias: Restore lights
+    repeat:
+      for_each: "{{ lights_to_turn_off }}"
+      sequence:
+        - action: light.turn_off
+          target:
+            entity_id: "{{ repeat.item }}"
