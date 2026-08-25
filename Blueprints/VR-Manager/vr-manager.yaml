@@ -70,6 +70,23 @@ blueprint:
               multiple: true
               filter:
                 domain: light
+        light_sensor:
+          name: 🛋️ Room light sensor
+          default: ""
+          selector:
+            entity:
+              filter:
+                domain: sensor
+                device_class: illuminance
+        light_sensor_value:
+          name: 🛋️ Room light sensor value
+          description: Turn on the lights below this light level
+          default: 100
+          selector:
+            number:
+              min: 0
+              max: 200
+              unit_of_measurement: lux
         sun:
           name: ☀️ Sun
           default: ""
@@ -102,6 +119,8 @@ variables:
   pc_wol: !input pc_wol
   sun: !input sun
   sun_elevation: !input sun_elevation
+  light_sensor: !input light_sensor
+  light_sensor_value: !input light_sensor_value
 
 actions:
   - alias: If the PC is off
@@ -136,6 +155,11 @@ actions:
           value_template: >-
             {% set elevation = state_attr(sun, 'elevation') %}
             {{ not is_number(elevation) or elevation < sun_elevation }}
+        - alias: Continue if the room light level is too low
+          condition: template
+          value_template: >-
+            {% set light = states(light_sensor) %}
+            {{ not is_number(light) or light < light_sensor_value }}
         - alias: Turn on light
           action: light.turn_on
           target:
