@@ -1,0 +1,64 @@
+blueprint:
+  name: VR Manager 🥽
+  source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Blueprints/VR-Manager/vr-manager.yaml"
+  domain: automation
+  author: etiennec78
+  description: |-
+    # VR Manager 🥽
+
+    ## Description 📝
+    A blueprint that sets up the devices in your room to play VR
+
+    <details>
+      <summary><h2>Key Features 🌟</h2></summary>
+
+    * Turn on computer when VR headset is powered on
+
+    </details>
+
+    ## More Info ℹ️
+    * Version: 2.1.0
+    * GitHub: [click here](https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/VR-Manager)
+    * Discord: @etiennec78
+    [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
+  homeassistant:
+    min_version: 2025.4.0  # Outer scope variables: PR #141114
+  input:
+    headset:
+      name: VR headset
+      icon: mdi:virtual-reality
+      input:
+        hmd_trackers:
+          name: 🛜 Headset device trackers
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain: device_tracker
+    computer:
+      name: Computer
+      icon: mdi:desktop-tower-monitor
+      input:
+        pc_wol:
+          name: 💤 Wake On LAN entity
+          selector:
+            entity:
+              filter:
+                integration: wake_on_lan
+                domain: button
+
+triggers:
+  - alias: VR headset turns on
+    trigger: state
+    entity_id: !input hmd_trackers
+    to: home
+    from:
+      - not_home
+      - unavailable
+      - unknown
+
+actions:
+  - alias: Turn on PC
+    action: button.press
+    target:
+      entity_id: !input pc_wol
