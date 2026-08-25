@@ -77,6 +77,15 @@ blueprint:
             entity:
               filter:
                 domain: sun
+        sun_elevation:
+          name: 🌅 Sun elevation
+          description: Turn on the lights below this sun elevation
+          default: 6
+          selector:
+            number:
+              min: -90
+              max: 90
+              unit_of_measurement: °
 
 triggers:
   - alias: VR headset turns on
@@ -92,6 +101,7 @@ variables:
   pc_router_tracker: !input pc_router_tracker
   pc_wol: !input pc_wol
   sun: !input sun
+  sun_elevation: !input sun_elevation
 
 actions:
   - alias: If the PC is off
@@ -125,7 +135,7 @@ actions:
           condition: template
           value_template: >-
             {% set elevation = state_attr(sun, 'elevation') %}
-            {{ not is_number(elevation) or elevation < 6 }}
+            {{ not is_number(elevation) or elevation < sun_elevation }}
         - alias: Turn on light
           action: light.turn_on
           target:
