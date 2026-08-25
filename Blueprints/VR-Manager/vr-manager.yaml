@@ -14,7 +14,8 @@ blueprint:
 
     When a VR session starts:
     * Turn on computer
-    * Turn on lights for inside-out tracking
+    * Turn on lights for inside-out tracking, based on:
+      * sun elevation
 
     When the session ends:
     * Turn off the lights
@@ -85,6 +86,15 @@ blueprint:
               multiple: true
               filter:
                 domain: light
+        sun:
+          name: ☀️ Sun
+          description: |-
+            Take the **sun** into account to **estimate** when to turn on **lights**
+          default: ""
+          selector:
+            entity:
+              filter:
+                domain: sun
 
 triggers:
   - alias: VR headset turns on
@@ -99,6 +109,7 @@ triggers:
 variables:
   pc_router_tracker: !input pc_router_tracker
   pc_wol: !input pc_wol
+  sun: !input sun
 
 actions:
   - alias: If the PC is off
@@ -119,19 +130,27 @@ actions:
           entity_id: !input pc_wol
   - variables:
       lights_to_turn_off: []
-  - repeat:
-      for_each: !input lights
-      sequence:
-        - alias: Continue if this light is off
-          condition: template
-          value_template: "{{ is_state(repeat.item, 'off') }}"
-        - alias: Turn on light
-          action: light.turn_on
-          target:
-            entity_id: "{{ repeat.item }}"
-        - alias: Remember this light
-          variables:
-            lights_to_turn_off: "{{ lights_to_turn_off + [repeat.item] }}"
+  - alias: If the lights should be turned on
+    if:
+      - alias: The sun is low enough
+        condition: template
+        value_template: >-
+          {% set elevation = state_attr(sun, 'elevation') %}
+          {{ not is_number(elevation) or elevation < 6 }}
+    then:
+      - repeat:
+          for_each: !input lights
+          sequence:
+            - alias: Continue if this light is off
+              condition: template
+              value_template: "{{ is_state(repeat.item, 'off') }}"
+            - alias: Turn on light
+              action: light.turn_on
+              target:
+                entity_id: "{{ repeat.item }}"
+            - alias: Remember this light
+              variables:
+                lights_to_turn_off: "{{ lights_to_turn_off + [repeat.item] }}"
   - alias: Wait for VR headset to turn off
     wait_for_trigger:
       - trigger: state

@@ -10,7 +10,8 @@ A blueprint that sets up the devices in your room to play VR
 When a VR session starts:
 
 * Turn on computer
-* Turn on lights for inside-out tracking
+* Turn on lights for inside-out tracking, based on:
+  * sun elevation
 
 When the session ends:
 
