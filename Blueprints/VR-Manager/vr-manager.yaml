@@ -158,6 +158,17 @@ blueprint:
             Send **notifications** to your headset when the automation is **triggered** and **stopped**
           selector:
             boolean:
+        language:
+          name: 🌍 Notification language
+          description: |-
+            The **language** used for **notifications**
+            > *If your language is not supported by this blueprint, please [open a pull request](https://github.com/etiennec78/Home-Automation/pulls)*
+          default: "en"
+          selector:
+            language:
+              languages:
+                - en
+                - fr
 
 triggers:
   - alias: VR headset turns on
@@ -178,6 +189,7 @@ variables:
   illuminance_sensor: !input illuminance_sensor
   illuminance_trigger: !input illuminance_trigger
   light_brightness_pct: !input light_brightness_pct
+  language: !input language
   notify_service: >-
     {{
       none if hmd_device == ''
@@ -193,6 +205,10 @@ variables:
       message:
         starting: "Setting up your VR setup"
         stopping: "Restoring your VR setup"
+    fr:
+      message:
+        starting: "Mise en place du setup VR"
+        stopping: "Restoration du setup VR"
 
 actions:
   - alias: If the PC is off
@@ -253,7 +269,15 @@ actions:
         variables:
           title: "{{ blueprint_name }}"
           message_id: "starting"
-          message: &get_message "{{ strings['en']['message'][message_id] }}"
+          message: &get_message >-
+            {# Selected language #}
+            {% if message_id in strings[language]['message'] %}
+              {{ strings[language]['message'][message_id] }}
+
+            {# Fallback to english #}
+            {% else %}
+              {{ strings['en']['message'][message_id] }}
+            {% endif %}
       - alias: Notify that the VR setup is being set up
         action: "{{ notify_service }}"
         data:
