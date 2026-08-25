@@ -70,6 +70,13 @@ blueprint:
               multiple: true
               filter:
                 domain: light
+        sun:
+          name: ☀️ Sun
+          default: ""
+          selector:
+            entity:
+              filter:
+                domain: sun
 
 triggers:
   - alias: VR headset turns on
@@ -84,6 +91,7 @@ triggers:
 variables:
   pc_router_tracker: !input pc_router_tracker
   pc_wol: !input pc_wol
+  sun: !input sun
 
 actions:
   - alias: If the PC is off
@@ -113,6 +121,11 @@ actions:
         - alias: Continue if this light is off
           condition: template
           value_template: "{{ is_state(repeat.item, 'off') }}"
+        - alias: Continue if the sun is too low to light up the room
+          condition: template
+          value_template: >-
+            {% set elevation = state_attr(sun, 'elevation') %}
+            {{ not is_number(elevation) or elevation < 6 }}
         - alias: Turn on light
           action: light.turn_on
           target:
