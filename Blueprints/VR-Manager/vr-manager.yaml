@@ -66,7 +66,9 @@ blueprint:
             entity:
               filter:
                 integration: wake_on_lan
-                domain: button
+                domain:
+                  - button
+                  - switch
 
     lights:
       name: Lights
@@ -96,6 +98,7 @@ triggers:
 
 variables:
   pc_router_tracker: !input pc_router_tracker
+  pc_wol: !input pc_wol
 
 actions:
   - alias: If the PC is off
@@ -108,7 +111,7 @@ actions:
           }}
     then:
       - alias: Turn on PC
-        action: button.press
+        action: homeassistant.turn_on
         target:
           entity_id: !input pc_wol
   - variables:
