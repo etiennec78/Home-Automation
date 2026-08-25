@@ -11,6 +11,7 @@ Home Assistant blueprints for easy home automation
 | Automatic Gate ⛩️ | [Read More](Automatic-Gate) | [![Quickly import Automatic Gate](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FBlueprints%2FAutomatic-Gate%2Fautomatic-gate.yaml) |
 | Itinerary Tracker Notification 📍 | [Read More](Itinerary-Tracker-Notification) | [![Quickly import Itinerary Tracker Notification](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FBlueprints%2FItinerary-Tracker-Notification%2Fitinerary-tracker-notification.yaml) |
 | Gate Alerts 🚨 | [Read More](Gate-Alerts) | [![Quickly import Gate Alerts](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FBlueprints%2FGate-Alerts%2Fgate-alerts.yaml) |
+| VR Manager 🥽 | [Read More](VR-Manager) | [![Quickly import VR Manager](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fetiennec78%2FHome-Automation%2Fblob%2Fmaster%2FBlueprints%2FVR-Manager%2Fvr-manager.yaml) |
 
 ## How to update 🔁
 

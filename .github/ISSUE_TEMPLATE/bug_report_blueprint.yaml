@@ -16,6 +16,7 @@ body:
         - Automatic Gate
         - Itinerary Tracker Notification
         - Gate Alerts
+        - VR Manager
     validations:
       required: true
   - type: input
