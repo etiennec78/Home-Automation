@@ -55,7 +55,9 @@ blueprint:
             entity:
               filter:
                 integration: wake_on_lan
-                domain: button
+                domain:
+                  - button
+                  - switch
     lights:
       name: Lights
       icon: mdi:lightbulb-group
@@ -81,6 +83,7 @@ triggers:
 
 variables:
   pc_router_tracker: !input pc_router_tracker
+  pc_wol: !input pc_wol
 
 actions:
   - alias: If the PC is off
@@ -93,7 +96,10 @@ actions:
           }}
     then:
       - alias: Turn on PC
-        action: button.press
+        action: >-
+          {% set domain = states[pc_wol].domain %}
+          {% set action = 'turn_on' if domain == 'switch' else 'press' %}
+          {{ domain ~ '.' ~ action }}
         target:
           entity_id: !input pc_wol
   - variables:
