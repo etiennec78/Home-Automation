@@ -46,7 +46,7 @@ blueprint:
     * Discord: @etiennec78
     [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
   homeassistant:
-    min_version: 2026.2.0
+    min_version: 2026.2.0  # Get configured sensor polling state: PR #159900
   input:
     essential_inputs:
       name: Essential inputs
