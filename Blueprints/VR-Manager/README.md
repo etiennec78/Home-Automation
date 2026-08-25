@@ -13,6 +13,7 @@ When a VR session starts:
 * Turn on lights for inside-out tracking, based on:
   * illuminance sensor
   * sun elevation
+* Send a notification
 
 When the session ends:
 

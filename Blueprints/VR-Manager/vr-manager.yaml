@@ -17,6 +17,7 @@ blueprint:
     * Turn on lights for inside-out tracking, based on:
       * illuminance sensor
       * sun elevation
+    * Send a notification
 
     When the session ends:
     * Turn off the lights
@@ -39,11 +40,21 @@ blueprint:
           name: ⚡ Headset device trackers
           description: |-
             Your headset **device trackers** (Wi-Fi, BLE) to detect when it is turned **on**
+          default: []
           selector:
             entity:
               multiple: true
               filter:
                 domain: device_tracker
+        hmd_device:
+          name: 🥽 Headset device
+          description: |-
+            Your headset companion **app** device to sent it **notifications** or **commands**
+          default: ""
+          selector:
+            device:
+              filter:
+                integration: mobile_app
 
     computer:
       name: Computer
@@ -135,6 +146,19 @@ blueprint:
               max: 90
               unit_of_measurement: °
 
+    notifications:
+      name: Notification settings
+      icon: mdi:bell
+      collapsed: true
+      input:
+        send_notification:
+          name: 💬 Send notifications
+          default: false
+          description: |-
+            Send **notifications** to your headset when the automation is **triggered** and **stopped**
+          selector:
+            boolean:
+
 triggers:
   - alias: VR headset turns on
     trigger: state
@@ -146,6 +170,7 @@ triggers:
       - unknown
 
 variables:
+  hmd_device: !input hmd_device
   pc_router_tracker: !input pc_router_tracker
   pc_wol: !input pc_wol
   sun: !input sun
@@ -153,6 +178,21 @@ variables:
   illuminance_sensor: !input illuminance_sensor
   illuminance_trigger: !input illuminance_trigger
   light_brightness_pct: !input light_brightness_pct
+  notify_service: >-
+    {{
+      none if hmd_device == ''
+      else (
+        device_attr(hmd_device, 'name')
+        | slugify
+        | regex_replace('^', 'notify.mobile_app_')
+      )
+    }}
+  blueprint_name: "{{ state_attr(this.entity_id, 'friendly_name') }}"
+  strings:
+    en:
+      message:
+        starting: "Setting up your VR setup"
+        stopping: "Restoring your VR setup"
 
 actions:
   - alias: If the PC is off
@@ -203,6 +243,27 @@ actions:
             - alias: Remember this light
               variables:
                 lights_to_turn_off: "{{ lights_to_turn_off + [repeat.item] }}"
+  - alias: If a notification must be sent
+    if:
+      - condition: template
+        value_template: "{{ notify_service is not none }}"
+    enabled: !input send_notification
+    then:
+      - alias: Get the notification
+        variables:
+          title: "{{ blueprint_name }}"
+          message_id: "starting"
+          message: &get_message "{{ strings['en']['message'][message_id] }}"
+      - alias: Notify that the VR setup is being set up
+        action: "{{ notify_service }}"
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
+          data:
+            notification_icon: mdi:virtual-reality
+            channel: VR Manager
+            tag: vr-manager
+        continue_on_error: true
   - alias: Wait for VR headset to turn off
     wait_for_trigger:
       - trigger: state
@@ -211,6 +272,27 @@ actions:
           - not_home
           - unknown
         from: home
+  - alias: If a notification must be sent
+    if:
+      - condition: template
+        value_template: "{{ notify_service is not none }}"
+    enabled: !input send_notification
+    then:
+      - alias: Get the notification
+        variables:
+          title: "{{ blueprint_name }}"
+          message_id: "stopping"
+          message: *get_message
+      - alias: Notify that the VR setup is being restored
+        action: "{{ notify_service }}"
+        data:
+          title: "{{ title }}"
+          message: "{{ message }}"
+          data:
+            notification_icon: mdi:virtual-reality
+            channel: VR Manager
+            tag: vr-manager
+        continue_on_error: true
   - alias: Restore lights
     repeat:
       for_each: "{{ lights_to_turn_off }}"
