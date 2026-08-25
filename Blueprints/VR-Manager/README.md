@@ -7,7 +7,10 @@ A blueprint that sets up the devices in your room to play VR
 
 ## Features
 
-* Turn on computer when VR headset is powered on
+When a VR session starts:
+
+* Turn on computer
+* Turn on lights for inside-out tracking
 
 
 ## Support me
