@@ -15,11 +15,13 @@ When a VR session starts:
   * illuminance sensor
   * sun elevation
 * Send a notification
+* Run custom actions
 
 When the session ends:
 
 * Turn off the lights
 * Turn off computer
+* Run custom actions
 
 
 ## Support me
