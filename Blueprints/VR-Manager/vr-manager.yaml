@@ -66,6 +66,14 @@ blueprint:
                 domain:
                   - button
                   - switch
+        turn_off_pc:
+          name: 🛑 Turn off PC
+          description: |-
+            Turn off the PC at the end of the VR session
+            Uses the WoL switch
+          default: false
+          selector:
+            boolean:
     player:
       name: Player
       icon: mdi:account
@@ -245,6 +253,8 @@ conditions:
     value_template: "{{ room_tracker == '' or is_state(room_tracker, vr_rooms) }}"
 
 actions:
+  - variables:
+      pc_managed: false
   - alias: If the PC is off
     if:
       - condition: template
@@ -264,6 +274,8 @@ actions:
           {{ domain ~ '.' ~ action }}
         target:
           entity_id: !input pc_wol
+      - variables:
+          pc_managed: true
   - variables:
       lights_to_turn_off: []
     enabled: !input restore_lights
@@ -372,3 +384,13 @@ actions:
           target:
             entity_id: "{{ repeat.item }}"
     enabled: !input restore_lights
+  - alias: If PC has been turned on and should turn off
+    if:
+      - condition: template
+        value_template: "{{ pc_managed and states[pc_wol].domain == 'switch' }}"
+    then:
+      - alias: Turn off PC
+        action: switch.turn_off
+        target:
+          entity_id: !input pc_wol
+    enabled: !input turn_off_pc
