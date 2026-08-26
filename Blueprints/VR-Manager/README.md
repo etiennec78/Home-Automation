@@ -14,6 +14,7 @@ When a VR session starts:
 * Turn on lights for inside-out tracking, based on:
   * illuminance sensor
   * sun elevation
+* Launch a PCVR streaming app
 * Send a notification
 * Run custom actions
 

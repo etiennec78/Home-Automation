@@ -18,6 +18,7 @@ blueprint:
     * Turn on lights for inside-out tracking, based on:
       * illuminance sensor
       * sun elevation
+    * Launch a PCVR streaming app
     * Send a notification
     * Run custom actions
 
@@ -59,6 +60,30 @@ blueprint:
             device:
               filter:
                 integration: mobile_app
+        startup_app:
+          name: 🚀 Startup app
+          description: |-
+            The **app** to launch on your VR device when the **automation starts**
+            > The input above is required
+          default: ""
+          selector:
+            select:
+              custom_value: true
+              options:
+                - label: Don't start an app
+                  value: ""
+                - label: ALVR
+                  value: alvr.client
+                - label: Meta Air Link
+                  value: com.oculus.xrstreamingclient
+                - label: Meta Remote Desktop (2D)
+                  value: com.oculus.remotedesktop
+                - label: Steam Link
+                  value: com.valvesoftware.steamlinkvr
+                - label: Virtual Desktop
+                  value: VirtualDesktop.Android
+                - label: WiVRn
+                  value: org.meumeu.wivrn
 
     computer:
       name: Computer
@@ -269,6 +294,7 @@ triggers:
 
 variables:
   hmd_device: !input hmd_device
+  startup_app: !input startup_app
   pc_router_tracker: !input pc_router_tracker
   pc_wol: !input pc_wol
   player: !input player
@@ -368,6 +394,18 @@ actions:
   - alias: Extra action on session start
     sequence: !input extra_start
     continue_on_error: true
+  - alias: If an app needs to be opened
+    if:
+      - condition: template
+        value_template: "{{ startup_app != '' and notify_service is not none }}"
+    then:
+      - alias: Open the app
+        action: "{{ notify_service }}"
+        data:
+          message: "command_launch_app"
+          data:
+            package_name: "{{ startup_app }}"
+        continue_on_error: true
   - alias: If a notification must be sent
     if:
       - condition: template
