@@ -78,12 +78,28 @@ blueprint:
               filter:
                 domain: person
         confirm_presence:
-          name: 📍 Confirm presence
+          name: 📍 Confirm home presence
           description: |-
             Check that the player is home before starting the automation
           default: false
           selector:
             boolean:
+        room_tracker:
+          name: 🔎 Player room tracker
+          description: |-
+            Sensor to check that the player is in a vr room before starting the automation
+          default: ""
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain: bermuda__custom_device_class
+        vr_rooms:
+          name: 🏠 VR rooms
+          default: []
+          selector:
+            area:
+              multiple: true
     lights:
       name: Lights
       icon: mdi:lightbulb-group
@@ -183,6 +199,8 @@ variables:
   pc_router_tracker: !input pc_router_tracker
   pc_wol: !input pc_wol
   player: !input player
+  room_tracker: !input room_tracker
+  vr_rooms: !input vr_rooms
   sun: !input sun
   sun_elevation: !input sun_elevation
   light_sensor: !input light_sensor
@@ -211,10 +229,13 @@ variables:
         stopping: Restoration du setup VR
 
 conditions:
-  - alias: Confirm the user presence before starting
+  - alias: Confirm the user presence at home before starting
     condition: template
     value_template: "{{ is_state(player, 'home') }}"
     enabled: !input confirm_presence
+  - alias: Confirm the user presence in the room before starting
+    condition: template
+    value_template: "{{ room_tracker == '' or is_state(room_tracker, vr_rooms) }}"
 
 actions:
   - alias: If the PC is off
