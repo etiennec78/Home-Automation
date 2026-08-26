@@ -19,6 +19,7 @@ When a VR session starts:
 When the session ends:
 
 * Turn off the lights
+* Turn off computer
 
 
 ## Support me
