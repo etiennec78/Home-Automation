@@ -198,6 +198,25 @@ blueprint:
             message: {}
           selector:
             object:
+    extra_actions:
+      name: Extra actions
+      icon: mdi:plus-circle
+      collapsed: true
+      input:
+        extra_start:
+          name: ➕ On session start
+          description: |-
+            > Examples: Fan, Wi-Fi priority switch, door lock
+          default: []
+          selector:
+            action:
+        extra_end:
+          name: ➕ On session end
+          description: |-
+            > Examples: All of the above, lights
+          default: []
+          selector:
+            action:
 
 triggers:
   - alias: VR headset turns on
@@ -310,6 +329,9 @@ actions:
           variables:
             lights_to_turn_off: "{{ lights_to_turn_off + [repeat.item] }}"
           enabled: !input restore_lights
+  - alias: Extra action on session start
+    sequence: !input extra_start
+    continue_on_error: true
   - alias: If a notification must be sent
     if:
       - condition: template
@@ -394,3 +416,6 @@ actions:
         target:
           entity_id: !input pc_wol
     enabled: !input turn_off_pc
+  - alias: Extra action on session end
+    sequence: !input extra_end
+    continue_on_error: true
