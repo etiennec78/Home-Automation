@@ -66,6 +66,24 @@ blueprint:
                 domain:
                   - button
                   - switch
+    player:
+      name: Player
+      icon: mdi:account
+      input:
+        player:
+          name: 👤 Player
+          default: ""
+          selector:
+            entity:
+              filter:
+                domain: person
+        confirm_presence:
+          name: 📍 Confirm presence
+          description: |-
+            Check that the player is home before starting the automation
+          default: false
+          selector:
+            boolean:
     lights:
       name: Lights
       icon: mdi:lightbulb-group
@@ -164,6 +182,7 @@ variables:
   hmd_device: !input hmd_device
   pc_router_tracker: !input pc_router_tracker
   pc_wol: !input pc_wol
+  player: !input player
   sun: !input sun
   sun_elevation: !input sun_elevation
   light_sensor: !input light_sensor
@@ -190,6 +209,12 @@ variables:
       message:
         starting: Mise en place du setup VR
         stopping: Restoration du setup VR
+
+conditions:
+  - alias: Confirm the user presence before starting
+    condition: template
+    value_template: "{{ is_state(player, 'home') }}"
+    enabled: !input confirm_presence
 
 actions:
   - alias: If the PC is off
