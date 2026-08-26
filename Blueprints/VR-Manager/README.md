@@ -9,7 +9,7 @@ A blueprint that sets up the devices in your room to play VR
 
 When a VR session starts:
 
-* Confirm the user presence in the house
+* Confirm the user presence in the room/house
 * Turn on computer
 * Turn on lights for inside-out tracking, based on:
   * illuminance sensor

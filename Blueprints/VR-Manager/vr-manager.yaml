@@ -13,7 +13,7 @@ blueprint:
       <summary><h2>Features 🌟</h2></summary>
 
     When a VR session starts:
-    * Confirm the user presence in the house
+    * Confirm the user presence in the room/house
     * Turn on computer
     * Turn on lights for inside-out tracking, based on:
       * illuminance sensor
@@ -105,6 +105,23 @@ blueprint:
           default: false
           selector:
             boolean:
+        room_tracker:
+          name: 🔎 Player room tracker
+          description: |-
+            Sensor to check that the headset is in a vr room before starting the automation
+          default: ""
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain: sensor
+                device_class: bermuda__custom_device_class
+        vr_rooms:
+          name: 🔎 VR rooms
+          default: []
+          selector:
+            area:
+              multiple: true
 
     lights:
       name: Lights
@@ -217,6 +234,8 @@ variables:
   pc_router_tracker: !input pc_router_tracker
   pc_wol: !input pc_wol
   player: !input player
+  room_tracker: !input room_tracker
+  vr_rooms: !input vr_rooms
   sun: !input sun
   sun_elevation: !input sun_elevation
   illuminance_sensor: !input illuminance_sensor
@@ -245,10 +264,13 @@ variables:
         stopping: "Restoration du setup VR"
 
 conditions:
-  - alias: Confirm the user presence before starting
+  - alias: Confirm the user presence at home before starting
     condition: template
     value_template: "{{ is_state(player, 'home') }}"
     enabled: !input confirm_presence
+  - alias: Confirm the user presence in the room before starting
+    condition: template
+    value_template: "{{ room_tracker == '' or is_state(room_tracker, vr_rooms) }}"
 
 actions:
   - alias: If the PC is off
