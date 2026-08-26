@@ -112,6 +112,13 @@ blueprint:
               multiple: true
               filter:
                 domain: light
+        restore_lights:
+          name: 💡 Restore lights state
+          description: |-
+            Turn off the lights turned on by this blueprint at the end of the vr session
+          default: true
+          selector:
+            boolean:
         light_brightness:
           name: ✨ Light brightness
           default: 20
@@ -259,6 +266,7 @@ actions:
           entity_id: !input pc_wol
   - variables:
       lights_to_turn_off: []
+    enabled: !input restore_lights
   - repeat:
       for_each: !input lights
       sequence:
@@ -289,6 +297,7 @@ actions:
         - alias: Remember this light
           variables:
             lights_to_turn_off: "{{ lights_to_turn_off + [repeat.item] }}"
+          enabled: !input restore_lights
   - alias: If a notification must be sent
     if:
       - condition: template
@@ -362,3 +371,4 @@ actions:
         - action: light.turn_off
           target:
             entity_id: "{{ repeat.item }}"
+    enabled: !input restore_lights
