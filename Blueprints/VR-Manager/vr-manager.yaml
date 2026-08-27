@@ -295,6 +295,7 @@ triggers:
 variables:
   MAX_INT: 2147483647
   NOTIF_RETRY_TIMER: 3
+  MAX_NOTIF_TRIES: 5
   hmd_device: !input hmd_device
   startup_app: !input startup_app
   pc_router_tracker: !input pc_router_tracker
@@ -467,6 +468,7 @@ actions:
           and not ios_device
           and notify_service is not none
         }}
+      notif_rounds: 0
   - alias: Repeat until the user has stopped his headset
     repeat:
       until: "{{ wait.completed and wait.trigger.id == 'hmd_off' }}"
@@ -531,6 +533,16 @@ actions:
                 - condition: template
                   value_template: "{{ wait_app_ack }}"
               then: *app_launch
+            - variables:
+                notif_rounds: "{{ notif_rounds + 1 }}"
+            - alias: Stop sending notifications after too many tries
+              if:
+                - condition: template
+                  value_template: "{{ notif_rounds >= MAX_NOTIF_TRIES }}"
+              then:
+                - variables:
+                    wait_start_ack: false
+                    wait_app_ack: false
   - alias: If a notification must be sent
     if:
       - condition: template
