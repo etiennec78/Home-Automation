@@ -130,6 +130,16 @@ blueprint:
           selector:
             area:
               multiple: true
+        ble_scanner_switches:
+          name: ⏯️ BLE scanner activator switches
+          description: |-
+            **[Switches](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#bluetooth-scanner-switch-)** to automatically **start and stop BLE scanning** when needed
+            > *Leave empty if you want your BLE scanners to be always on*
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: switch
     lights:
       name: Lights
       icon: mdi:lightbulb-group
@@ -266,6 +276,7 @@ variables:
   player: !input player
   room_tracker: !input room_tracker
   vr_rooms: !input vr_rooms
+  ble_scanner_switches: !input ble_scanner_switches
   sun: !input sun
   sun_elevation: !input sun_elevation
   light_sensor: !input light_sensor
@@ -311,11 +322,46 @@ conditions:
     condition: template
     value_template: "{{ is_state(player, 'home') }}"
     enabled: !input confirm_presence
-  - alias: Confirm the user presence in the room before starting
-    condition: template
-    value_template: "{{ room_tracker == '' or is_state(room_tracker, vr_rooms) }}"
 
 actions:
+  - alias: If the automation should check that the user is in the vr room
+    if:
+      - condition: template
+        value_template: "{{ room_tracker != '' }}"
+    then:
+      - variables:
+          ble_scanners_to_manage: >-
+            {%
+              if ble_scanner_switches == []
+              or is_state(room_tracker, vr_rooms)
+            %}
+              {{ [] }}
+            {% else %}
+              {{
+                ble_scanner_switches
+                | select('is_state', 'off')
+                | list
+              }}
+            {% endif %}
+      - alias: Turn on BLE scanner to manage
+        action: switch.turn_on
+        target:
+          entity_id: "{{ ble_scanners_to_manage }}"
+        continue_on_error: true
+      - alias: Confirm the user presence in the room before starting
+        wait_template: "{{ is_state(room_tracker, vr_rooms) }}"
+        timeout: 30
+      - alias: Turn off managed BLE scanners
+        action: switch.turn_off
+        target:
+          entity_id: "{{ ble_scanners_to_manage }}"
+        continue_on_error: true
+      - alias: If the player is not in his room
+        if:
+          - condition: template
+            value_template: "{{ not wait.completed }}"
+        then:
+          - stop: Player not in room
   - variables:
       pc_managed: false
   - alias: Skip this sequence once if a confirmation from the user is needed
