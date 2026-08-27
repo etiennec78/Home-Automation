@@ -14,6 +14,7 @@ blueprint:
 
     When a VR session starts:
     * Confirm the user presence in the room/house
+    * Ask the user for a confirmation via a notification
     * Turn on computer
     * Turn on lights for inside-out tracking, based on:
       * illuminance sensor
@@ -241,6 +242,13 @@ blueprint:
             Send **notifications** to your headset when the automation is **triggered** and **stopped**
           selector:
             boolean:
+        start_confirmation:
+          name: 👆 Tap to start
+          description: |-
+            Only **start** the VR Manager if the user has **tapped** the notification button in his headset
+          default: false
+          selector:
+            boolean:
         language:
           name: 🌍 Notification language
           description: |-
@@ -259,6 +267,7 @@ blueprint:
             > *You can find the translation keys in the `strings['en']` variable in the code, or in your traces*
           default:
             message: {}
+            button: {}
           selector:
             object:
 
@@ -309,6 +318,7 @@ variables:
   illuminance_trigger: !input illuminance_trigger
   light_brightness_pct: !input light_brightness_pct
   send_notification: !input send_notification
+  start_confirmation: !input start_confirmation
   language: !input language
   custom_translations: !input custom_translations
   notify_service: >-
@@ -327,15 +337,22 @@ variables:
     }}
   notif_tag: "vr-manager-{{ this.context.id }}"
   blueprint_name: "{{ state_attr(this.entity_id, 'friendly_name') }}"
+  start_order_id: "{{ 'start_order_' ~ this.context.id }}"
   strings:
     en:
       message:
+        request: "Start your VR setup?"
         starting: "Setting up your VR setup"
         stopping: "Restoring your VR setup"
+      button:
+        start: "Start"
     fr:
       message:
+        request: "Démarrer le setup VR ?"
         starting: "Mise en place du setup VR"
         stopping: "Restoration du setup VR"
+      button:
+        start: "Démarrer"
 
 conditions:
   - alias: Confirm the user presence at home before starting
@@ -427,7 +444,8 @@ actions:
       - alias: Get the notification
         variables:
           title: "{{ blueprint_name }}"
-          message_id: "starting"
+          message_id: "{{ 'request' if start_confirmation else 'starting' }}"
+          buttons: []
           message: &get_message >-
             {# Custom translation #}
             {%
@@ -444,7 +462,35 @@ actions:
             {% else %}
               {{ strings['en']['message'][message_id] }}
             {% endif %}
-      - alias: Notify that the VR setup is being set up
+      - alias: If a button needs to be added to the notification
+        if:
+          - condition: template
+            value_template: !input start_confirmation
+        then:
+          - alias: Get the button translation
+            variables:
+              button_id: "start"
+              button: >-
+                {# Custom translation #}
+                {%
+                  if 'button' in custom_translations
+                  and button_id in custom_translations['button']
+                %}
+                  {{ custom_translations['button'][button_id] }}
+
+                {# Selected language #}
+                {% elif button_id in strings[language]['button'] %}
+                  {{ strings[language]['button'][button_id] }}
+
+                {# Fallback to english #}
+                {% else %}
+                  {{ strings['en']['button'][button_id] }}
+                {% endif %}
+              buttons:
+                - action: "{{ start_order_id }}"
+                  title: "{{ button }}"
+                  icon: sfsymbols:play
+      - alias: Notify that the VR setup is being set up or ask for a confirmation
         action: "{{ notify_service }}"
         data:
           title: "{{ title }}"
@@ -454,6 +500,7 @@ actions:
             channel: VR Manager
             tag: "{{ notif_tag }}-start"
             confirmation: "{{ not ios_device }}"
+            actions: "{{ buttons }}"
         continue_on_error: true
   - variables:
       wait_start_ack: >-
@@ -496,6 +543,13 @@ actions:
               event_data:
                 tag: "{{ notif_tag }}-app-launch"
               enabled: "{{ wait_app_ack }}"
+            - alias: Start button pressed
+              trigger: event
+              id: start_order
+              event_type: mobile_app_notification_action
+              event_data:
+                action: "{{ start_order_id }}"
+              enabled: !input start_confirmation
           timeout: >-
             {% if wait_start_ack or wait_app_ack %}
               {{ NOTIF_RETRY_TIMER }}
