@@ -318,261 +318,282 @@ conditions:
 actions:
   - variables:
       pc_managed: false
-  - alias: If the PC is off
-    if:
-      - condition: template
-        value_template: >-
-          {{
-            pc_router_tracker ~ pc_wol == ''
-            or pc_router_tracker != ''
-              and is_state(pc_router_tracker, 'not_home')
-            or pc_wol != ''
-              and is_state(pc_wol, 'off')
-          }}
-    then:
-      - alias: Turn on PC
-        action: >-
-          {% set domain = states[pc_wol].domain %}
-          {% set action = 'turn_on' if domain == 'switch' else 'press' %}
-          {{ domain ~ '.' ~ action }}
-        target:
-          entity_id: !input pc_wol
-      - variables:
-          pc_managed: true
-  - variables:
-      lights_to_turn_off: []
-    enabled: !input restore_lights
-  - repeat:
-      for_each: !input lights
-      sequence:
-        - alias: Continue if this light is off
-          condition: template
-          value_template: "{{ is_state(repeat.item, 'off') }}"
-        - alias: Continue if the sun is too low to light up the room
-          condition: template
-          value_template: >-
-            {% set elevation = state_attr(sun, 'elevation') %}
-            {{ not is_number(elevation) or elevation < sun_elevation }}
-        - alias: Continue if the room light level is too low
-          condition: template
-          value_template: >-
-            {% set light = states(light_sensor) %}
-            {{ not is_number(light) or light < light_sensor_value }}
-        - alias: Continue if the light brightness is too low
-          condition: template
-          value_template: >-
-            {% set brightness = state_attr(repeat.item, 'brightness') %}
-            {{ not is_number(brightness) or brightness < light_brightness }}
-        - alias: Turn on light
-          action: light.turn_on
-          target:
-            entity_id: "{{ repeat.item }}"
-          data:
-            brightness_pct: !input light_brightness
-        - alias: Remember this light
-          variables:
-            lights_to_turn_off: "{{ lights_to_turn_off + [repeat.item] }}"
-          enabled: !input restore_lights
-  - alias: Extra action on session start
-    sequence: !input extra_start
-    continue_on_error: true
-  - alias: If an app needs to be opened
-    if:
-      - condition: template
-        value_template: "{{ startup_app != '' and notify_service is not none }}"
-    then: &app_launch
-      - alias: Open the app
-        action: "{{ notify_service }}"
-        data:
-          message: "command_launch_app"
-          data:
-            package_name: "{{ startup_app }}"
-            confirmation: "{{ not ios_device }}"
-        continue_on_error: true
-  - alias: If a notification must be sent
-    if:
-      - condition: template
-        value_template: !input send_notification
-      - condition: template
-        value_template: "{{ notify_service is not none }}"
-    then: &start_notif
-      - alias: Get the notification
-        variables:
-          title: "{{ blueprint_name }}"
-          message_id: "{{ 'request' if start_confirmation else 'starting' }}"
-          buttons: []
-          message: &get_message >-
-            {# Custom translation #}
-            {%
-              if 'message' in custom_translations
-              and message_id in custom_translations['message']
-            %}
-              {{ custom_translations['message'][message_id] }}
-            {# Selected language #}
-            {% elif message_id in strings[language]['message'] %}
-              {{ strings[language]['message'][message_id] }}
-
-            {# Fallback to english #}
-            {% else %}
-              {{ strings['en']['message'][message_id] }}
-            {% endif %}
-      - alias: If a button needs to be added to the notification
-        if:
-          - condition: template
-            value_template: !input start_confirmation
-        then:
-          - alias: Get the button translation
-            variables:
-              button_id: "start"
-              button: >-
-                {# Custom translation #}
-                {%
-                  if 'button' in custom_translations
-                  and button_id in custom_translations['button']
-                %}
-                  {{ custom_translations['button'][button_id] }}
-
-                {# Selected language #}
-                {% elif button_id in strings[language]['button'] %}
-                  {{ strings[language]['button'][button_id] }}
-
-                {# Fallback to english #}
-                {% else %}
-                  {{ strings['en']['button'][button_id] }}
-                {% endif %}
-              buttons:
-                - action: "{{ start_order_id }}"
-                  title: "{{ button }}"
-                  icon: sfsymbols:play
-      - alias: Notify that the VR setup is being set up or ask for a confirmation
-        action: "{{ notify_service }}"
-        data:
-          title: "{{ title }}"
-          message: "{{ message }}"
-          data:
-            notification_icon: mdi:virtual-reality
-            channel: VR Manager
-            tag: vr-manager-start
-            confirmation: "{{ not ios_device }}"
-            actions: "{{ buttons }}"
-        continue_on_error: true
-  - variables:
-      wait_start_ack: >-
-        {{
-          send_notification
-          and not ios_device
-          and notify_service is not none
-        }}
-      wait_app_ack: >-
-        {{
-          startup_app != ''
-          and not ios_device
-          and notify_service is not none
-        }}
-      notif_rounds: 0
-  - alias: Repeat until the user has stopped his headset
+  - alias: Skip this sequence once if a confirmation from the user is needed
     repeat:
-      until: "{{ wait.trigger.id == 'hmd_off' }}"
+      count: "{{ 2 if start_confirmation else 1 }}"
       sequence:
-        - wait_for_trigger:
-            - alias: Wait for VR headset to turn off
-              trigger: state
-              id: hmd_off
-              entity_id: !input hmd_trackers
-              to:
-                - not_home
-                - unknown
-              from: home
-            - alias: Start notification received
-              trigger: event
-              id: start_ack
-              event_type: mobile_app_notification_received
-              event_data:
-                tag: vr-manager-start
-              enabled: "{{ wait_start_ack }}"
-            - alias: App launch command received
-              trigger: event
-              id: app_ack
-              event_type: mobile_app_notification_received
-              event_data:
-                tag: vr-manager-app-launch
-              enabled: "{{ wait_app_ack }}"
-            - alias: Start button pressed
-              trigger: event
-              id: start_order
-              event_type: mobile_app_notification_action
-              event_data:
-                action: "{{ start_order_id }}"
-              enabled: !input start_confirmation
-          timeout: >-
-            {% if wait_start_ack or wait_app_ack %}
-              3
-            {% else %}
-              {{ MAX_INT }}
-            {% endif %}
-        - alias: If an event occured
+        - variables:
+            confirmed: "{{ not start_confirmation or repeat.index > 1 }}"
+        - alias: Skip this sequence once if a confirmation from the user is needed
           if:
             - condition: template
-              value_template: "{{ wait.completed }}"
+              value_template: "{{ not confirmed }}"
           then:
-            - choose:
-                - alias: The start notification has been received
-                  conditions:
-                    - condition: template
-                      value_template: "{{ wait.trigger.id == 'start_ack' }}"
-                  sequence:
-                    - variables:
-                        wait_start_ack: false
-                - alias: The app launch command has been received
-                  conditions:
-                    - condition: template
-                      value_template: "{{ wait.trigger.id == 'app_ack' }}"
-                  sequence:
-                    - variables:
-                        wait_app_ack: false
-          else:
-            - alias: If the start notification has not been received yet
+            - alias: If the PC is off
               if:
                 - condition: template
-                  value_template: "{{ wait_start_ack }}"
-              then: *start_notif
-            - alias: If the app launch command has not been received yet
-              if:
-                - condition: template
-                  value_template: "{{ wait_app_ack }}"
-              then: *app_launch
-            - variables:
-                notif_rounds: "{{ notif_rounds + 1 }}"
-            - alias: Stop sending notifications after 5 tries
-              if:
-                - condition: template
-                  value_template: "{{ notif_rounds > 4 }}"
+                  value_template: >-
+                    {{
+                      pc_router_tracker ~ pc_wol == ''
+                      or pc_router_tracker != ''
+                        and is_state(pc_router_tracker, 'not_home')
+                      or pc_wol != ''
+                        and is_state(pc_wol, 'off')
+                    }}
               then:
+                - alias: Turn on PC
+                  action: >-
+                    {% set domain = states[pc_wol].domain %}
+                    {% set action = 'turn_on' if domain == 'switch' else 'press' %}
+                    {{ domain ~ '.' ~ action }}
+                  target:
+                    entity_id: !input pc_wol
                 - variables:
-                    wait_start_ack: false
-                    wait_app_ack: false
-  - alias: If a notification must be sent
-    if:
-      - condition: template
-        value_template: !input send_notification
-      - condition: template
-        value_template: "{{ notify_service is not none }}"
-    then:
-      - alias: Get the notification
-        variables:
-          title: "{{ blueprint_name }}"
-          message_id: "stopping"
-          message: *get_message
-      - alias: Notify that the VR setup is being restored
-        action: "{{ notify_service }}"
-        data:
-          title: "{{ title }}"
-          message: "{{ message }}"
-          data:
-            notification_icon: mdi:virtual-reality
-            channel: VR Manager
-            tag: vr-manager-end
-        continue_on_error: true
+                    pc_managed: true
+            - variables:
+                lights_to_turn_off: []
+              enabled: !input restore_lights
+            - repeat:
+                for_each: !input lights
+                sequence:
+                  - alias: Continue if this light is off
+                    condition: template
+                    value_template: "{{ is_state(repeat.item, 'off') }}"
+                  - alias: Continue if the sun is too low to light up the room
+                    condition: template
+                    value_template: >-
+                      {% set elevation = state_attr(sun, 'elevation') %}
+                      {{ not is_number(elevation) or elevation < sun_elevation }}
+                  - alias: Continue if the room light level is too low
+                    condition: template
+                    value_template: >-
+                      {% set light = states(light_sensor) %}
+                      {{ not is_number(light) or light < light_sensor_value }}
+                  - alias: Continue if the light brightness is too low
+                    condition: template
+                    value_template: >-
+                      {% set brightness = state_attr(repeat.item, 'brightness') %}
+                      {{ not is_number(brightness) or brightness < light_brightness }}
+                  - alias: Turn on light
+                    action: light.turn_on
+                    target:
+                      entity_id: "{{ repeat.item }}"
+                    data:
+                      brightness_pct: !input light_brightness
+                  - alias: Remember this light
+                    variables:
+                      lights_to_turn_off: "{{ lights_to_turn_off + [repeat.item] }}"
+                    enabled: !input restore_lights
+            - alias: Extra action on session start
+              sequence: !input extra_start
+              continue_on_error: true
+            - alias: If an app needs to be opened
+              if:
+                - condition: template
+                  value_template: "{{ startup_app != '' and notify_service is not none }}"
+              then: &app_launch
+                - alias: Open the app
+                  action: "{{ notify_service }}"
+                  data:
+                    message: "command_launch_app"
+                    data:
+                      package_name: "{{ startup_app }}"
+                      confirmation: "{{ not ios_device }}"
+                  continue_on_error: true
+        - alias: If a notification must be sent
+          if:
+            - condition: or
+              conditions:
+                - condition: template
+                  value_template: !input send_notification
+                - condition: template
+                  value_template: "{{ not confirmed }}"
+            - condition: template
+              value_template: "{{ notify_service is not none }}"
+          then: &start_notif
+            - alias: Get the notification
+              variables:
+                title: "{{ blueprint_name }}"
+                message_id: "{{ 'starting' if confirmed else 'request' }}"
+                buttons: []
+                message: &get_message >-
+                  {# Custom translation #}
+                  {%
+                    if 'message' in custom_translations
+                    and message_id in custom_translations['message']
+                  %}
+                    {{ custom_translations['message'][message_id] }}
+                  {# Selected language #}
+                  {% elif message_id in strings[language]['message'] %}
+                    {{ strings[language]['message'][message_id] }}
+
+                  {# Fallback to english #}
+                  {% else %}
+                    {{ strings['en']['message'][message_id] }}
+                  {% endif %}
+            - alias: If a button needs to be added to the notification
+              if:
+                - condition: template
+                  value_template: "{{ not confirmed }}"
+              then:
+                - alias: Get the button translation
+                  variables:
+                    button_id: "start"
+                    button: >-
+                      {# Custom translation #}
+                      {%
+                        if 'button' in custom_translations
+                        and button_id in custom_translations['button']
+                      %}
+                        {{ custom_translations['button'][button_id] }}
+
+                      {# Selected language #}
+                      {% elif button_id in strings[language]['button'] %}
+                        {{ strings[language]['button'][button_id] }}
+
+                      {# Fallback to english #}
+                      {% else %}
+                        {{ strings['en']['button'][button_id] }}
+                      {% endif %}
+                    buttons:
+                      - action: "{{ start_order_id }}"
+                        title: "{{ button }}"
+                        icon: sfsymbols:play
+            - alias: Notify that the VR setup is being set up or ask for a confirmation
+              action: "{{ notify_service }}"
+              data:
+                title: "{{ title }}"
+                message: "{{ message }}"
+                data:
+                  notification_icon: mdi:virtual-reality
+                  channel: VR Manager
+                  tag: vr-manager-start
+                  confirmation: "{{ not ios_device }}"
+                  actions: "{{ buttons }}"
+              continue_on_error: true
+        - variables:
+            wait_start_ack: >-
+              {{
+                send_notification
+                and not ios_device
+                and notify_service is not none
+              }}
+            wait_app_ack: >-
+              {{
+                startup_app != ''
+                and not ios_device
+                and notify_service is not none
+                and confirmed
+              }}
+            notif_rounds: 0
+        - alias: Repeat until the user has stopped his headset
+          repeat:
+            until: "{{ wait.trigger.id == 'hmd_off' }}"
+            sequence:
+              - wait_for_trigger:
+                  - alias: Wait for VR headset to turn off
+                    trigger: state
+                    id: hmd_off
+                    entity_id: !input hmd_trackers
+                    to:
+                      - not_home
+                      - unknown
+                    from: home
+                  - alias: Start notification received
+                    trigger: event
+                    id: start_ack
+                    event_type: mobile_app_notification_received
+                    event_data:
+                      tag: vr-manager-start
+                    enabled: "{{ wait_start_ack }}"
+                  - alias: App launch command received
+                    trigger: event
+                    id: app_ack
+                    event_type: mobile_app_notification_received
+                    event_data:
+                      tag: vr-manager-app-launch
+                    enabled: "{{ wait_app_ack }}"
+                  - alias: Start button pressed
+                    trigger: event
+                    id: start_order
+                    event_type: mobile_app_notification_action
+                    event_data:
+                      action: "{{ start_order_id }}"
+                    enabled: "{{ not confirmed }}"
+                timeout: >-
+                  {% if wait_start_ack or wait_app_ack %}
+                    3
+                  {% else %}
+                    {{ MAX_INT }}
+                  {% endif %}
+              - alias: If an event occured
+                if:
+                  - condition: template
+                    value_template: "{{ wait.completed }}"
+                then:
+                  - choose:
+                      - alias: The start notification has been received
+                        conditions:
+                          - condition: template
+                            value_template: "{{ wait.trigger.id == 'start_ack' }}"
+                        sequence:
+                          - variables:
+                              wait_start_ack: false
+                      - alias: The app launch command has been received
+                        conditions:
+                          - condition: template
+                            value_template: "{{ wait.trigger.id == 'app_ack' }}"
+                        sequence:
+                          - variables:
+                              wait_app_ack: false
+                else:
+                  - alias: If the start notification has not been received yet
+                    if:
+                      - condition: template
+                        value_template: "{{ wait_start_ack }}"
+                    then: *start_notif
+                  - alias: If the app launch command has not been received yet
+                    if:
+                      - condition: template
+                        value_template: "{{ wait_app_ack }}"
+                    then: *app_launch
+                  - variables:
+                      notif_rounds: "{{ notif_rounds + 1 }}"
+                  - alias: Stop sending notifications after 5 tries
+                    if:
+                      - condition: template
+                        value_template: "{{ notif_rounds > 4 }}"
+                    then:
+                      - variables:
+                          wait_start_ack: false
+                          wait_app_ack: false
+        - alias: If a notification must be sent
+          if:
+            - condition: template
+              value_template: !input send_notification
+            - condition: template
+              value_template: "{{ notify_service is not none }}"
+            - condition: template
+              value_template: "{{ confirmed }}"
+          then:
+            - alias: Get the notification
+              variables:
+                title: "{{ blueprint_name }}"
+                message_id: "stopping"
+                message: *get_message
+            - alias: Notify that the VR setup is being restored
+              action: "{{ notify_service }}"
+              data:
+                title: "{{ title }}"
+                message: "{{ message }}"
+                data:
+                  notification_icon: mdi:virtual-reality
+                  channel: VR Manager
+                  tag: vr-manager-end
+              continue_on_error: true
+  - alias: Don't restore anything if the button was never pressed
+    condition: template
+    value_template: "{{ confirmed }}"
   - alias: Restore lights
     repeat:
       for_each: "{{ lights_to_turn_off }}"
