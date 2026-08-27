@@ -425,6 +425,7 @@ actions:
           and not ios_device
           and notify_service is not none
         }}
+      notif_rounds: 0
   - alias: Repeat until the user has stopped his headset
     repeat:
       until: "{{ wait.trigger.id == 'hmd_off' }}"
@@ -489,6 +490,16 @@ actions:
                 - condition: template
                   value_template: "{{ wait_app_ack }}"
               then: *app_launch
+            - variables:
+                notif_rounds: "{{ notif_rounds + 1 }}"
+            - alias: Stop sending notifications after 5 tries
+              if:
+                - condition: template
+                  value_template: "{{ notif_rounds > 4 }}"
+              then:
+                - variables:
+                    wait_start_ack: false
+                    wait_app_ack: false
   - alias: If a notification must be sent
     if:
       - condition: template
