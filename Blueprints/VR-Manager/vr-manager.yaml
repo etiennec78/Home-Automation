@@ -251,6 +251,7 @@ triggers:
       - unknown
 
 variables:
+  MAX_INT: 2147483647
   hmd_device: !input hmd_device
   startup_app: !input startup_app
   pc_router_tracker: !input pc_router_tracker
@@ -263,6 +264,7 @@ variables:
   light_sensor: !input light_sensor
   light_sensor_value: !input light_sensor_value
   light_brightness: !input light_brightness
+  send_notification: !input send_notification
   language: !input language
   custom_translations: !input custom_translations
   notify_service: >-
@@ -273,6 +275,11 @@ variables:
         | slugify
         | regex_replace('^', 'notify.mobile_app_')
       )
+    }}
+  ios_device: >-
+    {{
+      false if notify_service is none
+      else device_attr(hmd_device, 'manufacturer') == 'Apple'
     }}
   blueprint_name: "{{ state_attr(this.entity_id, 'friendly_name') }}"
   strings:
@@ -359,13 +366,14 @@ actions:
     if:
       - condition: template
         value_template: "{{ startup_app != '' and notify_service is not none }}"
-    then:
+    then: &app_launch
       - alias: Open the app
         action: "{{ notify_service }}"
         data:
           message: "command_launch_app"
           data:
             package_name: "{{ startup_app }}"
+            confirmation: "{{ not ios_device }}"
         continue_on_error: true
   - alias: If a notification must be sent
     if:
@@ -373,7 +381,7 @@ actions:
         value_template: !input send_notification
       - condition: template
         value_template: "{{ notify_service is not none }}"
-    then:
+    then: &start_notif
       - alias: Get the notification
         variables:
           title: "{{ blueprint_name }}"
@@ -401,16 +409,86 @@ actions:
           data:
             notification_icon: mdi:virtual-reality
             channel: VR Manager
-            tag: vr-manager
+            tag: vr-manager-start
+            confirmation: "{{ not ios_device }}"
         continue_on_error: true
-  - alias: Wait for VR headset to turn off
-    wait_for_trigger:
-      - trigger: state
-        entity_id: !input hmd_trackers
-        to:
-          - not_home
-          - unknown
-        from: home
+  - variables:
+      wait_start_ack: >-
+        {{
+          send_notification
+          and not ios_device
+          and notify_service is not none
+        }}
+      wait_app_ack: >-
+        {{
+          startup_app != ''
+          and not ios_device
+          and notify_service is not none
+        }}
+  - alias: Repeat until the user has stopped his headset
+    repeat:
+      until: "{{ wait.trigger.id == 'hmd_off' }}"
+      sequence:
+        - wait_for_trigger:
+            - alias: Wait for VR headset to turn off
+              trigger: state
+              id: hmd_off
+              entity_id: !input hmd_trackers
+              to:
+                - not_home
+                - unknown
+              from: home
+            - alias: Start notification received
+              trigger: event
+              id: start_ack
+              event_type: mobile_app_notification_received
+              event_data:
+                tag: vr-manager-start
+              enabled: "{{ wait_start_ack }}"
+            - alias: App launch command received
+              trigger: event
+              id: app_ack
+              event_type: mobile_app_notification_received
+              event_data:
+                tag: vr-manager-app-launch
+              enabled: "{{ wait_app_ack }}"
+          timeout: >-
+            {% if wait_start_ack or wait_app_ack %}
+              3
+            {% else %}
+              {{ MAX_INT }}
+            {% endif %}
+        - alias: If an event occured
+          if:
+            - condition: template
+              value_template: "{{ wait.completed }}"
+          then:
+            - choose:
+                - alias: The start notification has been received
+                  conditions:
+                    - condition: template
+                      value_template: "{{ wait.trigger.id == 'start_ack' }}"
+                  sequence:
+                    - variables:
+                        wait_start_ack: false
+                - alias: The app launch command has been received
+                  conditions:
+                    - condition: template
+                      value_template: "{{ wait.trigger.id == 'app_ack' }}"
+                  sequence:
+                    - variables:
+                        wait_app_ack: false
+          else:
+            - alias: If the start notification has not been received yet
+              if:
+                - condition: template
+                  value_template: "{{ wait_start_ack }}"
+              then: *start_notif
+            - alias: If the app launch command has not been received yet
+              if:
+                - condition: template
+                  value_template: "{{ wait_app_ack }}"
+              then: *app_launch
   - alias: If a notification must be sent
     if:
       - condition: template
@@ -431,7 +509,7 @@ actions:
           data:
             notification_icon: mdi:virtual-reality
             channel: VR Manager
-            tag: vr-manager
+            tag: vr-manager-end
         continue_on_error: true
   - alias: Restore lights
     repeat:
