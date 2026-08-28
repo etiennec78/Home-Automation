@@ -856,6 +856,7 @@ variables:
           You have set some gate behaviors to 'Notification request' or 'Cancelable timer', but some users are missing a notify device
           These behaviors will be switched to 'Fully Automatic' (#25)
         wrong_transmitter_entities: "These iBeacon transmitter entities: '{data}' do not come the associated notification device (#26)"
+        gps_requests_not_enabled: "You have set a value for your GPS request refresh rate, but GPS requests are disabled (#29)"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -1040,6 +1041,7 @@ variables:
           Vous avez réglé certains comportements de portail sur 'Notification request' ou 'Cancelable timer', mais certains utilisateurs n'ont pas d'appareil de notification associé
           Ces comportements basculeront sur le mode 'Fully Automatic' (#25)
         wrong_transmitter_entities: "Ces transmetteurs iBeacon: '{data}' ne viennent pas de l'appareil de notifications associé (#26)"
+        gps_requests_not_enabled: "Vous avez entré une valeur pour la fréquence de maj du GPS, mais les requêtes de GPS sont désactivées (#29)"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -1805,6 +1807,10 @@ actions:
                         {% endfor %}
                         {{ data.invalid }}
                       message_id: "wrong_transmitter_entities"
+                      level: 1
+                    - alias: Check that the user has enabled gps requests if he has entered a value other than 0
+                      error: "{{ not(request_gps_location or gps_request_while_open == 0) }}"
+                      message_id: "gps_requests_not_enabled"
                       level: 1
                   sequence:
                     - alias: If a check failed
