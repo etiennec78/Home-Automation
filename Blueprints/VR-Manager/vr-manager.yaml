@@ -482,6 +482,29 @@ actions:
             - alias: Extra action on session start
               sequence: !input extra_start
               continue_on_error: true
+        - alias: If the VR headset has the companion app installed
+          if:
+            - condition: template
+              value_template: "{{ hmd_device != '' }}"
+          then:
+            - variables:
+                wait_start: "{{ now() }}"
+            - wait_for_trigger:
+                - alias: Wait for a sign from the headset before trying to send a notification
+                  trigger: template
+                  value_template: >-
+                    {{
+                      expand(device_entities(hmd_device))
+                      | selectattr('last_updated', '>', wait_start | as_datetime)
+                      | list
+                      | length
+                      > 0
+                    }}
+        - alias: Skip this sequence once if the user has not confirmed that he wanted the automation to run
+          if:
+            - condition: template
+              value_template: "{{ confirmed }}"
+          then:
             - alias: If an app needs to be opened
               if:
                 - condition: template
