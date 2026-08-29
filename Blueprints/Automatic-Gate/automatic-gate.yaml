@@ -4159,6 +4159,15 @@ actions:
                               - alias: Create error
                                 sequence: *create_error
                               - stop: Closing canceled
+                          - alias: If the notification was received
+                            conditions:
+                              - condition: template
+                                value_template: "{{ wait.completed and wait.trigger.id == 'notification_received' }}"
+                            sequence:
+                              - alias: Stop waiting for notification reception and reset the timer
+                                variables:
+                                  timer_reset_timestamp: "{{ now() | as_timestamp }}"
+                                  waiting_for_reception: false
                           - alias: If a GPS request should be made
                             conditions:
                               - condition: template
