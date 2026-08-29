@@ -4145,13 +4145,13 @@ actions:
                           - alias: If the vehicle was restarted
                             conditions:
                               - condition: template
-                                value_template: "{{ wait.trigger.id == 'vehicle_restarted' }}"
+                                value_template: "{{ wait.completed and wait.trigger.id == 'vehicle_restarted' }}"
                             sequence:
                               - stop: Letting the new instance take over
                           - alias: If the itinerary needs to be canceled
                             conditions:
                               - condition: template
-                                value_template: "{{ wait.trigger.id == 'canceling_order' }}"
+                                value_template: "{{ wait.completed and wait.trigger.id == 'canceling_order' }}"
                             sequence:
                               - alias: Set error id
                                 variables:
