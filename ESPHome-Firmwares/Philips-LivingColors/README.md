@@ -2,7 +2,7 @@
 
 ## Description
 
-A simple ESPHome configuration to hack a Philips LivingColors Mini with an ESP32
+A simple ESPHome configuration to hack a Philips LivingColors (Mini) with an ESP32
 
 
 ## Key Features
@@ -46,7 +46,9 @@ A simple ESPHome configuration to hack a Philips LivingColors Mini with an ESP32
 
 4. Hardware Setup:
    * Unplug the lamp
-   * Solder pins +, -, R, G, B from the led controller to the ESP32 as shown in [this tutorial](https://thewerner.medium.com/a-brain-for-the-light-c5b290c2e31a)
+   * Solder your ESP32
+     * LivingColors: Remove power from the microcontroller, then solder your ESP32 by following the pictures below
+     * LivingColors Micro: Solder pins +, -, R, G, B from the led controller to the ESP32 as shown in [this tutorial](https://thewerner.medium.com/a-brain-for-the-light-c5b290c2e31a)
    * Plug back the lamp
 
 5. Home Assistant Integration:
@@ -83,6 +85,14 @@ With the E1.31 effect enabled by default, you can add the device to Artemis by f
 
 ## Pictures
 
+### LivingColors Micro
+
 | | | |
 | :---: | :---: | :---: |
 | ![First lamp components view](https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Philips-LivingColors/livingcolors1.jpg?raw=true) | ![Second lamp components view](https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Philips-LivingColors/livingcolors2.jpg?raw=true) | ![Third lamp components view](https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Philips-LivingColors/livingcolors3.jpg?raw=true) |
+
+### LivingColors
+
+| | | |
+| :---: | :---: | :---: |
+| ![View of the Philips LivingColors lamp](https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Philips-LivingColors/normal_livingcolors.jpg?raw=true) | ![Main circuit board view with highlighted LED circuit](https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Philips-LivingColors/led_circuit.jpg?raw=true) | ![Touch input circuit board view](https://github.com/etiennec78/etiennec78.github.io/blob/main/media/Home-Automation/ESPHome-Firmwares/Philips-LivingColors/touch_controller.jpg?raw=true) |
