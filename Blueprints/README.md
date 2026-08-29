@@ -14,9 +14,19 @@ Home Assistant blueprints for easy home automation
 
 ## How to update
 
+### Quick update
+
 1. Go to [Settings > Automations & Scenes > Blueprints](https://my.home-assistant.io/redirect/blueprints)
 2. Click on the three-dot menu to the right of the blueprint needing an update, and select "Re-import blueprint"
 3. Optional: At the right of the blueprint, press `⁝` then `Run actions` and check your notifications for configuration errors
+
+### Automatic updates
+
+1. Make sure you have [HACS](https://hacs.xyz/) installed
+2. Install the [Blueprints Updater](https://my.home-assistant.io/redirect/hacs_repository/?owner=luuquangvu&repository=blueprints-updater&category=integration) integration
+3. Restart Home Assistant
+4. Go to [Settings > Devices & Services > Add integration > Blueprints Updater](https://my.home-assistant.io/redirect/integration/?domain=blueprints_updater)
+5. You will now receive update alerts in the settings page
 
 ## How to install manually
 
