@@ -315,8 +315,8 @@ triggers:
 variables:
   MAX_INT: 2147483647
   BLE_TIMEOUT: 30
-  NOTIF_RETRY_TIMER: 3
-  MAX_NOTIF_TRIES: 5
+  NOTIF_RETRY_TIMER: 7
+  MAX_NOTIF_TRIES: 25
   hmd_device: !input hmd_device
   startup_app: !input startup_app
   pc_router_tracker: !input pc_router_tracker
@@ -414,12 +414,14 @@ actions:
           - stop: Player not in room
   - variables:
       pc_managed: false
+      wait_notif_ack: false
   - alias: Skip this sequence once if a confirmation from the user is needed
     repeat:
       count: "{{ 2 if start_confirmation else 1 }}"
       sequence:
         - variables:
             confirmed: "{{ not start_confirmation or repeat.index > 1 }}"
+            notifs_to_send: []
         - alias: Skip this sequence once if the user has not confirmed that he wanted the automation to run
           if:
             - condition: template
@@ -442,8 +444,6 @@ actions:
                   target:
                     entity_id: !input pc_wol
                 - variables:
-                    wait_start_ack: false
-                    wait_app_ack: false
                     pc_managed: true
             - variables:
                 lights_to_turn_off: []
@@ -482,6 +482,18 @@ actions:
             - alias: Extra action on session start
               sequence: !input extra_start
               continue_on_error: true
+            - alias: If an app needs to be opened
+              if:
+                - condition: template
+                  value_template: "{{ startup_app != '' and notify_service is not none }}"
+              then:
+                - alias: Plan the app opening
+                  variables:
+                    new_notif_data:
+                      message: "command_launch_app"
+                      data:
+                        package_name: "{{ startup_app }}"
+                    notifs_to_send: &append_notif "{{ notifs_to_send + [new_notif_data] }}"
         - alias: If the VR headset has the companion app installed
           if:
             - condition: template
@@ -500,25 +512,6 @@ actions:
                       | length
                       > 0
                     }}
-        - alias: Skip this sequence once if the user has not confirmed that he wanted the automation to run
-          if:
-            - condition: template
-              value_template: "{{ confirmed }}"
-          then:
-            - alias: If an app needs to be opened
-              if:
-                - condition: template
-                  value_template: "{{ startup_app != '' and notify_service is not none }}"
-              then: &app_launch
-                - alias: Open the app
-                  action: "{{ notify_service }}"
-                  data:
-                    message: "command_launch_app"
-                    data:
-                      package_name: "{{ startup_app }}"
-                      tag: "{{ notif_tag }}-app-launch"
-                      confirmation: "{{ not ios_device }}"
-                  continue_on_error: true
         - alias: If a notification must be sent
           if:
             - condition: or
@@ -529,7 +522,7 @@ actions:
                   value_template: "{{ not confirmed }}"
             - condition: template
               value_template: "{{ notify_service is not none }}"
-          then: &start_notif
+          then:
             - alias: Get the notification
               variables:
                 title: "{{ blueprint_name }}"
@@ -579,36 +572,36 @@ actions:
                       - action: "{{ start_order_id }}"
                         title: "{{ button }}"
                         icon: sfsymbols:play
-            - alias: Notify that the VR setup is being set up or ask for a confirmation
-              action: "{{ notify_service }}"
-              data:
-                title: "{{ title }}"
-                message: "{{ message }}"
-                data:
-                  notification_icon: mdi:virtual-reality
-                  channel: VR Manager
-                  tag: "{{ notif_tag }}-start"
-                  confirmation: "{{ not ios_device }}"
-                  actions: "{{ buttons }}"
-              continue_on_error: true
+            - alias: Plan a notification to inform of the start, or ask for a confirmation
+              variables:
+                new_notif_data:
+                  title: "{{ title }}"
+                  message: "{{ message }}"
+                  data:
+                    notification_icon: mdi:virtual-reality
+                    actions: "{{ buttons }}"
+                notifs_to_send: *append_notif
         - variables:
-            wait_start_ack: >-
+            supports_ack: >-
               {{
-                send_notification
-                and not ios_device
-                and notify_service is not none
-              }}
-            wait_app_ack: >-
-              {{
-                startup_app != ''
-                and not ios_device
+                not ios_device
                 and notify_service is not none
                 and confirmed
               }}
             notif_rounds: 0
+            notif_id: 0
         - alias: Repeat until the user has stopped his headset
           repeat:
-            until: "{{ wait.completed and wait.trigger.id in ['hmd_off', 'start_order'] }}"
+            until: >-
+              {{
+                wait.completed and (
+                  wait.trigger.id == 'hmd_off'
+                  or (
+                    wait.trigger.id == 'start_order'
+                    and not confirmed
+                  )
+                )
+              }}
             sequence:
               - wait_for_trigger:
                   - alias: Wait for VR headset to turn off
@@ -619,20 +612,13 @@ actions:
                       - not_home
                       - unknown
                     from: home
-                  - alias: Start notification received
+                  - alias: Notification received
                     trigger: event
-                    id: start_ack
+                    id: notif_ack
                     event_type: mobile_app_notification_received
                     event_data:
-                      tag: "{{ notif_tag }}-start"
-                    enabled: "{{ wait_start_ack }}"
-                  - alias: App launch command received
-                    trigger: event
-                    id: app_ack
-                    event_type: mobile_app_notification_received
-                    event_data:
-                      tag: "{{ notif_tag }}"-app-launch
-                    enabled: "{{ wait_app_ack }}"
+                      tag: "{{ notif_tag }}-{{ notif_id }}"
+                    enabled: "{{ wait_notif_ack }}"
                   - alias: Start button pressed
                     trigger: event
                     id: start_order
@@ -641,42 +627,71 @@ actions:
                       action: "{{ start_order_id }}"
                     enabled: "{{ not confirmed }}"
                 timeout: >-
-                  {% if wait_start_ack or wait_app_ack %}
+                  {% if notifs_to_send | length > 0 %}
                     {{ NOTIF_RETRY_TIMER }}
                   {% else %}
                     {{ MAX_INT }}
                   {% endif %}
-              - alias: If an event occured
+              - alias: If notifications should be sent
                 if:
                   - condition: template
-                    value_template: "{{ wait.completed }}"
+                    value_template: "{{ not wait.completed or wait.trigger.id == 'notif_ack' }}"
                 then:
-                  - choose:
-                      - alias: The start notification has been received
-                        conditions:
-                          - condition: template
-                            value_template: "{{ wait.trigger.id == 'start_ack' }}"
-                        sequence:
-                          - variables:
-                              wait_start_ack: false
-                      - alias: The app launch command has been received
-                        conditions:
-                          - condition: template
-                            value_template: "{{ wait.trigger.id == 'app_ack' }}"
-                        sequence:
-                          - variables:
-                              wait_app_ack: false
-                else:
-                  - alias: If the start notification has not been received yet
+                  - alias: If the ack was received
                     if:
                       - condition: template
-                        value_template: "{{ wait_start_ack }}"
-                    then: *start_notif
-                  - alias: If the app launch command has not been received yet
-                    if:
-                      - condition: template
-                        value_template: "{{ wait_app_ack }}"
-                    then: *app_launch
+                        value_template: "{{ wait.completed }}"
+                    then:
+                      - variables:
+                          wait_notif_ack: false
+                      - variables: &notification_received_variables
+                          notifs_to_send: "{{ notifs_to_send[1:] }}"
+                          notif_id: "{{ notif_id + 1 }}"
+                  - variables:
+                      notif_failed: false
+                  - alias: For each notification to send, until one fails or if the device supports ack
+                    note: >-
+                      If the device supports ack,
+                      we return to the wait_for_trigger and wait for the ack
+                      before sending the next notification
+                    repeat:
+                      while: "{{ notifs_to_send | length > 0 and not wait_notif_ack and not notif_failed }}"
+                      sequence:
+                        - variables:
+                            notif_failed: true
+                        - alias: Error safe sequence
+                          sequence:
+                            - alias: Send the notification
+                              action: "{{ notify_service }}"
+                              data: >-
+                                {{
+                                  notifs_to_send[0]
+                                  | combine(
+                                    {
+                                      'data': {
+                                        'tag': notif_tag ~ '-' ~ notif_id,
+                                        'channel': 'VR Manager',
+                                        'confirmation': not ios_device
+                                      }
+                                    },
+                                    recursive=True
+                                  )
+                                }}
+                            - variables:
+                                notif_failed: false
+                            - alias: If the device supports ack
+                              if:
+                                - condition: template
+                                  value_template: "{{ supports_ack }}"
+                              then:
+                                - variables:
+                                    wait_notif_ack: "{{ supports_ack }}"
+                              else:
+                                - variables: *notification_received_variables
+                          continue_on_error: true
+                  - alias: Only continue if the last notification failed
+                    condition: template
+                    value_template: "{{ notif_failed }}"
                   - variables:
                       notif_rounds: "{{ notif_rounds + 1 }}"
                   - alias: Stop sending notifications after too many tries
@@ -685,8 +700,7 @@ actions:
                         value_template: "{{ notif_rounds >= MAX_NOTIF_TRIES }}"
                     then:
                       - variables:
-                          wait_start_ack: false
-                          wait_app_ack: false
+                          notifs_to_send: []
         - alias: Restart the loop if the start notification button was pressed
           condition: template
           value_template: "{{ wait.trigger.id != 'start_order' }}"
