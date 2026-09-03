@@ -302,6 +302,9 @@ blueprint:
           selector:
             action:
 
+mode: single
+max_exceeded: silent
+
 triggers:
   - alias: VR headset turns on
     trigger: state
