@@ -38,12 +38,23 @@ blueprint:
   homeassistant:
     min_version: 2025.4.0  # Outer scope variables: PR #141114
   input:
-    headset:
-      name: VR headset
-      icon: mdi:virtual-reality
+    trigger:
+      name: Trigger
+      icon: mdi:flash
       input:
+        main_trigger:
+          name: ⚡ Main trigger
+          description: |-
+            Which **event** must this automation wait for to **start** and **stop**?
+          selector:
+            select:
+              options:
+                - label: Device trackers
+                  value: "trackers"
+                - label: Interactive sensor
+                  value: "interactive"
         hmd_trackers:
-          name: ⚡ Headset device trackers
+          name: 🛜 Headset device trackers
           description: |-
             Your headset **device trackers** (Wi-Fi, BLE) to detect when it is turned **on**
           default: []
@@ -52,6 +63,30 @@ blueprint:
               multiple: true
               filter:
                 domain: device_tracker
+        hmd_interactive_sensor:
+          name: 🎮 Headset interactive sensor
+          description: |-
+            A **binary sensor** reporting whether your headset **screen** is **on**
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: binary_sensor
+        non_interactive_duration:
+          name: 🎮 Non-interactive duration
+          description: |-
+            The time of **non-interactivity** before considering that the vr session is **over**
+          default: 30
+          selector:
+            number:
+              min: 0
+              max: 300
+
+    headset:
+      name: VR headset
+      icon: mdi:virtual-reality
+      collapsed: true
+      input:
         hmd_device:
           name: 🥽 Headset device
           description: |-
@@ -312,6 +347,9 @@ blueprint:
 mode: single
 max_exceeded: silent
 
+trigger_variables:
+  main_trigger: !input main_trigger
+
 triggers:
   - alias: VR headset turns on
     trigger: state
@@ -321,6 +359,12 @@ triggers:
       - not_home
       - unavailable
       - unknown
+    enabled: "{{ main_trigger == 'trackers' }}"
+  - alias: VR headset is interactive
+    trigger: state
+    entity_id: !input hmd_interactive_sensor
+    to: "on"
+    enabled: "{{ main_trigger == 'interactive' }}"
 
 variables:
   MAX_INT: 2147483647
@@ -329,6 +373,7 @@ variables:
   MAX_NOTIF_TRIES: 25
   LIGHT_RESTORE_TRANSITION: 3
   hmd_device: !input hmd_device
+  main_trigger: !input main_trigger
   startup_app: !input startup_app
   pc_router_tracker: !input pc_router_tracker
   pc_wol: !input pc_wol
@@ -642,7 +687,7 @@ actions:
             until: >-
               {{
                 wait.completed and (
-                  wait.trigger.id == 'hmd_off'
+                  wait.trigger.id == main_trigger
                   or (
                     wait.trigger.id == 'start_order'
                     and not confirmed
@@ -655,12 +700,20 @@ actions:
               - wait_for_trigger:
                   - alias: Wait for VR headset to turn off
                     trigger: state
-                    id: hmd_off
+                    id: trackers
                     entity_id: !input hmd_trackers
                     to:
                       - not_home
                       - unknown
                     from: home
+                    enabled: "{{ main_trigger == 'trackers' }}"
+                  - alias: Wait for VR headset to no longer be worn
+                    trigger: state
+                    id: interactive
+                    entity_id: !input hmd_interactive_sensor
+                    to: "off"
+                    for: !input non_interactive_duration
+                    enabled: "{{ main_trigger == 'interactive' }}"
                   - alias: Notification received
                     trigger: event
                     id: notif_ack
