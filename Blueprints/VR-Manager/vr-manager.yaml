@@ -336,6 +336,7 @@ variables:
   room_tracker: !input room_tracker
   vr_rooms: !input vr_rooms
   ble_scanner_switches: !input ble_scanner_switches
+  restore_lights: !input restore_lights
   sun: !input sun
   sun_elevation: !input sun_elevation
   illuminance_sensor: !input illuminance_sensor
@@ -686,99 +687,120 @@ actions:
                     event_data:
                       action: "{{ start_order_id }}"
                     enabled: "{{ not confirmed }}"
+                  - alias: Light state changed
+                    trigger: state
+                    id: light_state
+                    entity_id: !input lights
+                    enabled: "{{ confirmed and restore_lights }}"
                 timeout: >-
                   {% if notifs_to_send | length > 0 %}
                     {{ NOTIF_RETRY_TIMER }}
                   {% else %}
                     {{ MAX_INT }}
                   {% endif %}
-              - alias: If notifications should be sent
-                if:
-                  - condition: template
-                    value_template: >-
-                      {{
-                        not wait.completed
-                        or wait.trigger.id in ['notif_ack', 'hmd_sign']
-                      }}
-                then:
-                  - choose:
-                      - alias: If the ack was received
-                        conditions:
-                          - condition: template
-                            value_template: "{{ wait.completed and wait.trigger.id == 'notif_ack' }}"
-                        sequence:
-                          - variables:
-                              wait_notif_ack: false
-                          - variables: &notification_received_variables
-                              notifs_to_send: "{{ notifs_to_send[1:] }}"
-                              notif_id: "{{ notif_id + 1 }}"
-                      - alias: If the hmd showed a sign
-                        conditions:
-                          - condition: template
-                            value_template: "{{ wait.completed and wait.trigger.id == 'hmd_sign' }}"
-                        sequence:
-                          - variables:
-                              hmd_showed_sign: true
-                  - variables:
-                      notif_failed: false
-                  - alias: For each notification to send, until one fails or if the device supports ack
-                    note: >-
-                      If the device supports ack,
-                      we return to the wait_for_trigger and wait for the ack
-                      before sending the next notification
-                    repeat:
-                      while: "{{ notifs_to_send | length > 0 and not wait_notif_ack and not notif_failed }}"
-                      sequence:
-                        - variables:
-                            notif_failed: true
-                        - alias: Error safe sequence
-                          sequence:
-                            - alias: Send the notification
-                              action: "{{ notify_service }}"
-                              data: >-
-                                {{
-                                  notifs_to_send[0]
-                                  | combine(
-                                    {
-                                      'data': {
-                                        'tag': notif_tag ~ '-' ~ notif_id,
-                                        'channel': 'VR Manager',
-                                        'confirmation': not ios_device
-                                      }
-                                    },
-                                    recursive=True
-                                  )
-                                }}
-                            - variables:
-                                notif_failed: false
-                            - alias: If the device supports ack
-                              if:
-                                - condition: template
-                                  value_template: "{{ supports_ack }}"
-                              then:
-                                - variables:
-                                    wait_notif_ack: "{{ supports_ack }}"
-                              else:
-                                - variables: *notification_received_variables
-                          continue_on_error: true
-                  - alias: If the last notification failed
-                    if:
+              - choose:
+                  - alias: If notifications should be sent
+                    conditions:
                       - condition: template
-                        value_template: "{{ notif_failed }}"
-                    then:
+                        value_template: >-
+                          {{
+                            not wait.completed
+                            or wait.trigger.id in ['notif_ack', 'hmd_sign']
+                          }}
+                    sequence:
+                      - choose:
+                          - alias: If the ack was received
+                            conditions:
+                              - condition: template
+                                value_template: "{{ wait.completed and wait.trigger.id == 'notif_ack' }}"
+                            sequence:
+                              - variables:
+                                  wait_notif_ack: false
+                              - variables: &notification_received_variables
+                                  notifs_to_send: "{{ notifs_to_send[1:] }}"
+                                  notif_id: "{{ notif_id + 1 }}"
+                          - alias: If the hmd showed a sign
+                            conditions:
+                              - condition: template
+                                value_template: "{{ wait.completed and wait.trigger.id == 'hmd_sign' }}"
+                            sequence:
+                              - variables:
+                                  hmd_showed_sign: true
                       - variables:
-                          notif_rounds: "{{ notif_rounds + 1 }}"
-                          wait_hmd_sign: "{{ not hmd_showed_sign and hmd_device != '' }}"
-                      - alias: Stop sending notifications after too many tries
+                          notif_failed: false
+                      - alias: For each notification to send, until one fails or if the device supports ack
+                        note: >-
+                          If the device supports ack,
+                          we return to the wait_for_trigger and wait for the ack
+                          before sending the next notification
+                        repeat:
+                          while: "{{ notifs_to_send | length > 0 and not wait_notif_ack and not notif_failed }}"
+                          sequence:
+                            - variables:
+                                notif_failed: true
+                            - alias: Error safe sequence
+                              sequence:
+                                - alias: Send the notification
+                                  action: "{{ notify_service }}"
+                                  data: >-
+                                    {{
+                                      notifs_to_send[0]
+                                      | combine(
+                                        {
+                                          'data': {
+                                            'tag': notif_tag ~ '-' ~ notif_id,
+                                            'channel': 'VR Manager',
+                                            'confirmation': not ios_device
+                                          }
+                                        },
+                                        recursive=True
+                                      )
+                                    }}
+                                - variables:
+                                    notif_failed: false
+                                - alias: If the device supports ack
+                                  if:
+                                    - condition: template
+                                      value_template: "{{ supports_ack }}"
+                                  then:
+                                    - variables:
+                                        wait_notif_ack: "{{ supports_ack }}"
+                                  else:
+                                    - variables: *notification_received_variables
+                              continue_on_error: true
+                      - alias: If the last notification failed
                         if:
                           - condition: template
-                            value_template: "{{ notif_rounds >= MAX_NOTIF_TRIES }}"
+                            value_template: "{{ notif_failed }}"
                         then:
                           - variables:
-                              notifs_to_send: []
-                    else:
-                      - variables:
-                          wait_hmd_sign: false
+                              notif_rounds: "{{ notif_rounds + 1 }}"
+                              wait_hmd_sign: "{{ not hmd_showed_sign and hmd_device != '' }}"
+                          - alias: Stop sending notifications after too many tries
+                            if:
+                              - condition: template
+                                value_template: "{{ notif_rounds >= MAX_NOTIF_TRIES }}"
+                            then:
+                              - variables:
+                                  notifs_to_send: []
+                        else:
+                          - variables:
+                              wait_hmd_sign: false
+                  - alias: If a light state changed
+                    conditions:
+                      - condition: template
+                        value_template: "{{ wait.trigger.id == 'light_state' }}"
+                    sequence:
+                      - alias: Remove this light from the restore list
+                        variables:
+                          restore_light_data: >-
+                            {% set data = namespace(filtered={}) %}
+                            {% for key, value in restore_light_data | items %}
+                              {% if key != wait.trigger.entity_id %}
+                                {% set data.filtered = data.filtered | combine({key: value}) %}
+                              {% endif %}
+                            {% endfor %}
+                            {{ data.filtered }}
         - alias: Restart the loop if the start notification button was pressed
           condition: template
           value_template: "{{ wait.trigger.id != 'start_order' }}"
