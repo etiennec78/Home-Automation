@@ -24,7 +24,7 @@ blueprint:
     * Run custom actions
 
     When the session ends:
-    * Turn off the lights
+    * Restore the lights
     * Turn off computer
     * Run custom actions
 
@@ -327,6 +327,7 @@ variables:
   BLE_TIMEOUT: 30
   NOTIF_RETRY_TIMER: 7
   MAX_NOTIF_TRIES: 25
+  LIGHT_RESTORE_TRANSITION: 3
   hmd_device: !input hmd_device
   startup_app: !input startup_app
   pc_router_tracker: !input pc_router_tracker
@@ -457,7 +458,7 @@ actions:
                 - variables:
                     pc_managed: true
             - variables:
-                lights_to_turn_off: []
+                restore_light_data: {}
               enabled: !input restore_lights
             - alias: If the lights should be turned on
               if:
@@ -522,15 +523,25 @@ actions:
                             {% endif %}
                           {% endfor %}
                           {{ different }}
+                      - alias: Remember this light state
+                        variables:
+                          restore_light_data: >-
+                            {% set state_obj = states[repeat.item] %}
+                            {% set clean_attrs = state_obj.attributes | to_json | from_json %}
+                            {{
+                              restore_light_data
+                              | combine(
+                                {
+                                  repeat.item: dict(clean_attrs, state=state_obj.state)
+                                }
+                              )
+                            }}
+                        enabled: !input restore_lights
                       - alias: Turn on light
                         action: light.turn_on
                         target:
                           entity_id: "{{ repeat.item }}"
                         data: "{{ light_data }}"
-                      - alias: Remember this light
-                        variables:
-                          lights_to_turn_off: "{{ lights_to_turn_off + [repeat.item] }}"
-                        enabled: !input restore_lights
             - alias: Extra action on session start
               sequence: !input extra_start
               continue_on_error: true
@@ -798,12 +809,10 @@ actions:
     condition: template
     value_template: "{{ confirmed }}"
   - alias: Restore lights
-    repeat:
-      for_each: "{{ lights_to_turn_off }}"
-      sequence:
-        - action: light.turn_off
-          target:
-            entity_id: "{{ repeat.item }}"
+    action: scene.apply
+    data:
+      entities: "{{ restore_light_data }}"
+      transition: "{{ LIGHT_RESTORE_TRANSITION }}"
     enabled: !input restore_lights
   - alias: If PC has been turned on and should turn off
     if:

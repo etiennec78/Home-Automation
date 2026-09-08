@@ -21,7 +21,7 @@ When a VR session starts:
 
 When the session ends:
 
-* Turn off the lights
+* Restore the lights
 * Turn off computer
 * Run custom actions
 
