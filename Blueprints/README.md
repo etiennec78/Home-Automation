@@ -68,5 +68,10 @@ Refer to the table below to fix the errors
   | #25 | You have set some gate behaviors to 'Notification request' or 'Cancelable timer', but some users are missing a notify device. These behaviors will be switched to 'Fully Automatic' | Either set these behaviors to 'Off' or 'Fully Automatic', or add missing notification devices |
   | #26 | These iBeacon transmitter entities: '...' do not come the associated notification device | Either make sure that these transmitter entities come from your notification device, or remove them (but you will have to always keep your iBeacon on) |
   | #27 | Your dead zone is invalid | Either set the 'Maximum distance' input to 0, or set a value higher than the 'Minimum distance' |
+  | #30 | You are missing a player entity | Either turn off 'Confirm home presence' or add a 'Player' |
+  | #31 | You room tracker config is incomplete | Ensure that you have given at least one 'Player room tracker' and listed one 'VR room', or remove both |
+  | #32 | Your Wake on LAN entity cannot turn off your computer | Either give a switch for you 'Wake On LAN entity', or disable 'Turn off PC' |
+  | #33 | You are missing a VR headset device to send notifications | Either add a 'Headset device' or disable 'Send notifications', 'Tap to start', 'Startup app' |
+  | #34 | You are missing an entity for your selected trigger | If you are using 'Device tracker' as your 'Main trigger', you should have at lease one 'Headset device tracker'. Otherwise, you need a 'Headset interactive sensor' |
   
 </details>

@@ -7,6 +7,8 @@ A blueprint that sets up the devices in your room to play VR
 
 ## Features
 
+* Built-in configuration checker
+
 When a VR session starts:
 
 * Confirm the user presence in the room/house
@@ -43,4 +45,5 @@ When the session ends:
 2. Select `VR Manager` in your [blueprint dashboard](https://my.home-assistant.io/create-link/?redirect=blueprints)
 3. Fill in the inputs
 4. Press `Save` in the bottom right corner
-5. Read [this](../) page about my blueprints
+5. Optional: In the upper-right corner, press `⁝` then `Run actions` and check your dashboard notifications for configuration errors
+6. Read [this](../) page about my blueprints
