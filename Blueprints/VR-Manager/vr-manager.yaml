@@ -12,6 +12,8 @@ blueprint:
     <details>
       <summary><h2>Features 🌟</h2></summary>
 
+    * Built-in configuration checker
+
     When a VR session starts:
     * Confirm the user presence in the room/house
     * Ask the user for a confirmation via a notification
@@ -319,6 +321,7 @@ blueprint:
             A **YAML** dictionary to override the default **notification translations**
             > *You can find the translation keys in the `strings['en']` variable in the code, or in your traces*
           default:
+            title: {}
             message: {}
             button: {}
           selector:
@@ -344,6 +347,26 @@ blueprint:
           selector:
             action:
 
+    config_checker:
+      name: Config checker
+      icon: mdi:shield-check
+      collapsed: true
+      input:
+        run_checks_when_enabled:
+          name: 🧪 Run tests when blueprint enabled
+          description: |-
+            Run tests after adding the blueprint or updating inputs
+          default: true
+          selector:
+            boolean:
+        run_checks_on_ha_start:
+          name: 🧪 Run tests on HA start
+          description: |-
+            Run tests when Home Assistant finishes starting
+          default: true
+          selector:
+            boolean:
+
 mode: single
 max_exceeded: silent
 
@@ -353,6 +376,7 @@ trigger_variables:
 triggers:
   - alias: VR headset turns on
     trigger: state
+    id: hmd_on
     entity_id: !input hmd_trackers
     to: home
     from:
@@ -362,9 +386,20 @@ triggers:
     enabled: "{{ main_trigger == 'trackers' }}"
   - alias: VR headset is interactive
     trigger: state
+    id: hmd_on
     entity_id: !input hmd_interactive_sensor
     to: "on"
     enabled: "{{ main_trigger == 'interactive' }}"
+  - alias: Trigger when the blueprint the user added the blueprint or updated inputs
+    trigger: template
+    id: blueprint_enabled
+    value_template: "{{ is_state(this.entity_id, 'on') }}"
+    enabled: !input run_checks_when_enabled
+  - alias: Trigger when HA starts
+    trigger: homeassistant
+    id: ha_started
+    event: start
+    enabled: !input run_checks_on_ha_start
 
 variables:
   MAX_INT: 2147483647
@@ -373,11 +408,15 @@ variables:
   MAX_NOTIF_TRIES: 25
   LIGHT_RESTORE_TRANSITION: 3
   hmd_device: !input hmd_device
+  hmd_trackers: !input hmd_trackers
+  hmd_interactive_sensor: !input hmd_interactive_sensor
   main_trigger: !input main_trigger
   startup_app: !input startup_app
   pc_router_tracker: !input pc_router_tracker
   pc_wol: !input pc_wol
+  turn_off_pc: !input turn_off_pc
   player: !input player
+  confirm_presence: !input confirm_presence
   room_tracker: !input room_tracker
   vr_rooms: !input vr_rooms
   ble_scanner_switches: !input ble_scanner_switches
@@ -410,27 +449,286 @@ variables:
   start_order_id: "{{ 'start_order_' ~ this.context.id }}"
   strings:
     en:
+      title:
+        valid_config: "{{blueprint_name}}: Valid configuration 🛠️✅"
+        invalid_config: "{{blueprint_name}}: Invalid configuration 🛠️❌"
       message:
         request: "Start your VR setup?"
         starting: "Setting up your VR setup"
         stopping: "Restoring your VR setup"
+        valid_config: "Your configuration seems valid"
+        more_info: "More info"
+        invalid_translations: |-
+          Your custom translations are not valid
+          Check the following keys: '{data}' (#1)
+        missing_player_entity: "You are missing a player entity (#30)"
+        missing_room_data: "You room tracker config is incomplete (#31)"
+        wol_no_off_support: "Your Wake on LAN entity cannot turn off your computer (#32)"
+        missing_device: "You are missing a VR headset device to send notifications (#33)"
+        missing_trigger_entity: "You are missing an entity for your selected trigger (#34)"
       button:
         start: "Start"
     fr:
+      title:
+        valid_config: "{{blueprint_name}}: Configuration valide 🛠️✅"
+        invalid_config: "{{blueprint_name}}: Configuration invalide 🛠️❌"
       message:
         request: "Démarrer le setup VR ?"
         starting: "Mise en place du setup VR"
         stopping: "Restoration du setup VR"
+        valid_config: "Votre configuration semble valide"
+        more_info: "Plus d'infos"
+        invalid_translations: |-
+          Vos traductions personnalisées ne sont pas valides
+          Vérifiez les valeurs suivantes: '{data}' (#1)
+        missing_player_entity: "Il vous manque une entité pour le joueur (#30)"
+        missing_room_data: "Votre configuration de présence dans la salle de jeu est invalide (#31)"
+        wol_no_off_support: "Votre entité de Wake on LAN ne peut pas éteindre votre pc (#32)"
+        missing_device: "Il vous manque l'appareil de votre casque VR pour pouvoir envoyer des notifications (#33)"
+        missing_trigger_entity: "Il vous manque une entité pour le déclencheur que vous avez sélectionné (#34)"
       button:
         start: "Démarrer"
 
-conditions:
-  - alias: Confirm the user presence at home before starting
+actions:
+  - alias: Check that custom strings are valid
+    variables:
+      custom_translations_error: "{{ custom_translations is not mapping }}"
+  - alias: If the custom translations is not a mapping
+    if:
+      - condition: template
+        value_template: "{{ custom_translations_error }}"
+    then:
+      - alias: Reset the custom translations
+        variables:
+          custom_translations: {}
+  - alias: If the config checker should run checks
+    if:
+      - condition: or
+        conditions:
+          - alias: If the blueprint was executed manually
+            condition: template
+            value_template: "{{ trigger.platform is none }}"
+          - alias: If the user added the blueprint, updated inputs, or HA started
+            condition: trigger
+            id:
+              - blueprint_enabled
+              - ha_started
+    then:
+      ##################
+      # ERROR CHECKING #
+      ##################
+
+      - alias: Initialize variables for the error checker
+        variables:
+          successful_check: false
+          messages: []
+          config_checker_tag: "{{ 'config-checker-' ~ this.attributes.id }}"
+      - alias: Run the error checker in an error-safe sequence
+        sequence:
+          - alias: Check for errors
+            repeat:
+              for_each:
+                - alias: Check custom translations
+                  error: >-
+                    {% set data = namespace(invalid=[]) %}
+                    {% for key, sub_items in custom_translations.items() %}
+                      {% if key not in strings['en'] %}
+                        {% set data.invalid = data.invalid + [key] %}
+                      {% else %}
+                        {% for subkey, value in sub_items.items() %}
+                          {%
+                            if value is not string
+                            or subkey not in strings['en'][key]
+                          %}
+                            {% set data.invalid = data.invalid + [subkey] %}
+                          {% endif %}
+                        {% endfor %}
+                      {% endif %}
+                    {% endfor %}
+                    {{ data.invalid }}
+                  message_id: "invalid_translations"
+                - alias: Check that a person entity has been given if confirm_presence is true
+                  error: "{{ confirm_presence and player == '' }}"
+                  message_id: "missing_player_entity"
+                - alias: Check that the room tracker and vr rooms inputs have neither or both been filled
+                  error: "{{ (vr_rooms == []) != (room_tracker == '') }}"
+                  message_id: "missing_room_data"
+                - alias: Check that the WoL entity is a switch if turn_off_pc is on
+                  error: >-
+                    {{
+                      turn_off_pc and (
+                        pc_wol == ''
+                        or (
+                          states[pc_wol]
+                          | attr('domain')
+                          | default('')
+                          != 'switch'
+                        )
+                      )
+                    }}
+                  message_id: "wol_no_off_support"
+                - alias: Check that a device has been given to receive notifications
+                  error: >-
+                    {{
+                      hmd_device == '' and (
+                        send_notification or start_confirmation or startup_app != ''
+                      )
+                    }}
+                  message_id: "missing_device"
+                - alias: Check that there is an entity for the trigger
+                  error: >-
+                    {{
+                      main_trigger == 'tracker' and hmd_trackers == []
+                      or main_trigger == 'interactive' and hmd_interactive_sensor == []
+                    }}
+                  message_id: "missing_trigger_entity"
+              sequence:
+                - alias: If a check failed
+                  if:
+                    - condition: template
+                      value_template: >-
+                        {% set error = repeat.item.error %}
+                        {{ error != [] if error is list else error }}
+                  then:
+                    - alias: Get notification translation
+                      variables:
+                        message_id: "{{ repeat.item.message_id }}"
+                        message: &get_message >-
+                          {# Custom translation #}
+                          {%
+                            if 'message' in custom_translations
+                            and message_id in custom_translations['message']
+                          %}
+                            {{ custom_translations['message'][message_id] }}
+
+                          {# Selected language #}
+                          {% elif message_id in strings[language]['message'] %}
+                            {{ strings[language]['message'][message_id] }}
+
+                          {# Fallback to english #}
+                          {% else %}
+                            {{ strings['en']['message'][message_id] }}
+                          {% endif %}
+                    - alias: If the error variable contains a list
+                      if:
+                        - condition: template
+                          value_template: "{{ repeat.item.error is list }}"
+                      then:
+                        - alias: Format the string with error data
+                          variables:
+                            message: >-
+                              {{
+                                message.format(
+                                  data=(
+                                    ', '.join(repeat.item.error)
+                                  )
+                                )
+                              }}
+                    - alias: Append the error message to the list
+                      variables:
+                        messages: "{{ messages | union([message]) }}"
+          - alias: If the config is valid
+            if:
+              - condition: template
+                value_template: "{{ messages | length == 0 }}"
+            then:
+              - alias: If the blueprint was triggered manually
+                if:
+                  - condition: template
+                    value_template: "{{ trigger.platform is none }}"
+                then:
+                  - alias: Set message ids
+                    variables:
+                      title_id: "valid_config"
+                      message_id: "valid_config"
+                  - alias: Get notification translation
+                    variables:
+                      message: *get_message
+                      title: &get_title >-
+                        {# Custom translation #}
+                        {%
+                          if 'title' in custom_translations
+                          and title_id in custom_translations['title']
+                        %}
+                          {{ custom_translations['title'][title_id] }}
+
+                        {# Selected language #}
+                        {% elif title_id in strings[language]['title'] %}
+                          {{ strings[language]['title'][title_id] }}
+
+                        {# Fallback to english #}
+                        {% else %}
+                          {{ strings['en']['title'][title_id] }}
+                        {% endif %}
+                  - alias: Notify all users on the dashboard that the config is valid
+                    action: persistent_notification.create
+                    data:
+                      title: "{{ title }}"
+                      message: "{{ message }}"
+                      notification_id: "{{ config_checker_tag }}"
+                    continue_on_error: true
+                else:
+                  - alias: Remove the previous dashboard notification
+                    action: persistent_notification.dismiss
+                    data:
+                      notification_id: "{{ config_checker_tag }}"
+                    continue_on_error: true
+            else:
+              - alias: Build the notification
+                variables:
+                  title_id: "invalid_config"
+                  title: *get_title
+                  message: "{{ '• ' ~ '\n• '.join(messages) }}"
+              - alias: Build the more info link
+                variables:
+                  message_id: "more_info"
+                  more_info: *get_message
+                  link: "https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/README.md#error-codes-table-%EF%B8%8F"
+                  more_info_md: "[{{more_info}}]({{link}})"
+              - alias: Notify all users on the dashboard that the config is invalid
+                action: persistent_notification.create
+                data:
+                  title: "{{ title }}"
+                  message: "{{ message ~ '\n\n' ~ more_info_md }}"
+                  notification_id: "{{ config_checker_tag }}"
+                continue_on_error: true
+          - alias: Confirm that no error occured while the config checker was running
+            variables:
+              successful_check: true
+        continue_on_error: true
+      - alias: If an error occured while the config checker was running
+        if:
+          - condition: template
+            value_template: "{{ not successful_check }}"
+        then:
+          - alias: Build notification
+            variables:
+              title_id: "invalid_config"
+              message_id: "something_went_wrong"
+              title: *get_title
+              message: *get_message
+          - alias: Notify all users on the dashboard that an error occured
+            action: persistent_notification.create
+            data:
+              title: "{{ title }}"
+              message: "{{ message }}"
+              notification_id: "{{ config_checker_tag }}"
+            continue_on_error: true
+          - stop: Config checker failed
+            error: true
+
+  - alias: Only continue if the blueprint was triggered normally
+    condition: template
+    value_template: >-
+      {{
+        trigger.platform is not none
+        and trigger.id == 'hmd_on'
+      }}
+  - alias: Only continue if the user is home
     condition: template
     value_template: "{{ is_state(player, 'home') }}"
     enabled: !input confirm_presence
 
-actions:
   - alias: If the automation should check that the user is in the vr room
     if:
       - condition: template
@@ -619,22 +917,7 @@ actions:
                 title: "{{ blueprint_name }}"
                 message_id: "{{ 'starting' if confirmed else 'request' }}"
                 buttons: []
-                message: &get_message >-
-                  {# Custom translation #}
-                  {%
-                    if 'message' in custom_translations
-                    and message_id in custom_translations['message']
-                  %}
-                    {{ custom_translations['message'][message_id] }}
-
-                  {# Selected language #}
-                  {% elif message_id in strings[language]['message'] %}
-                    {{ strings[language]['message'][message_id] }}
-
-                  {# Fallback to english #}
-                  {% else %}
-                    {{ strings['en']['message'][message_id] }}
-                  {% endif %}
+                message: *get_message
             - alias: If a button needs to be added to the notification
               if:
                 - condition: template
