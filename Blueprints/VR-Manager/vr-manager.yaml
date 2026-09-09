@@ -965,6 +965,7 @@ actions:
             notif_rounds: 0
             notif_id: 0
             hmd_showed_sign: false
+            last_notif_ts: "{{ now() | as_timestamp }}"
         - alias: Repeat until the user has stopped his headset
           repeat:
             until: >-
@@ -1030,7 +1031,14 @@ actions:
                     enabled: "{{ confirmed and restore_lights }}"
                 timeout: >-
                   {% if notifs_to_send | length > 0 %}
-                    {{ NOTIF_RETRY_TIMER }}
+                    {%
+                      set remaining = (
+                        last_notif_ts
+                        - now() | as_timestamp
+                        + NOTIF_RETRY_TIMER
+                      )
+                    %}
+                    {{ max(remaining, 0) }}
                   {% else %}
                     {{ MAX_INT }}
                   {% endif %}
@@ -1064,6 +1072,7 @@ actions:
                                   hmd_showed_sign: true
                       - variables:
                           notif_failed: false
+                          last_notif_ts: "{{ now() | as_timestamp }}"
                       - alias: For each notification to send, until one fails or if the device supports ack
                         note: >-
                           If the device supports ack,
