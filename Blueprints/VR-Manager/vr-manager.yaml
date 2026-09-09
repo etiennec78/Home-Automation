@@ -18,12 +18,13 @@ blueprint:
     * Confirm the user presence in the room/house
     * Ask the user for a confirmation via a notification
     * Turn on computer
-    * Turn on lights for inside-out tracking, based on:
-      * illuminance sensor
-      * sun elevation
+    * Turn on lights for inside-out tracking
     * Launch a PCVR streaming app
     * Send a notification
     * Run custom actions
+    * Continuously adapt the lights while playing, thanks to:
+      * illuminance sensor
+      * sun elevation
 
     When the session ends:
     * Restore the lights
@@ -38,7 +39,7 @@ blueprint:
     * Discord: @etiennec78
     [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
   homeassistant:
-    min_version: 2025.4.0  # Outer scope variables: PR #141114
+    min_version: 2026.7.0  # New triggers (eg: sun.elevation_crossed_threshold)
   input:
     trigger:
       name: Trigger
@@ -249,7 +250,7 @@ blueprint:
           name: 🛋️ Room illuminance sensor
           description: |-
             A sensor to turn on the **lights** based on its value
-          default: ""
+          default: []
           selector:
             entity:
               filter:
@@ -803,89 +804,8 @@ actions:
                     pc_managed: true
             - variables:
                 restore_light_data: {}
+                manually_set_lights: []
               enabled: !input restore_lights
-            - alias: If the lights should be turned on
-              if:
-                - alias: The sun is low enough
-                  condition: template
-                  value_template: >-
-                    {% set elevation = state_attr(sun, 'elevation') %}
-                    {{ not is_number(elevation) or elevation < sun_elevation }}
-                - alias: The room illuminance level is low enough
-                  condition: template
-                  value_template: >-
-                    {% set illuminance = states(illuminance_sensor) %}
-                    {{ not is_number(illuminance) or illuminance < illuminance_trigger }}
-              then:
-                - repeat:
-                    for_each: !input lights
-                    sequence:
-                      - variables:
-                          brightness_target: "{{ light_brightness_pct / 100 * 255 }}"
-                          light_data: >-
-                            {# Brightness #}
-                            {% set brightness = state_attr(repeat.item, 'brightness') %}
-                            {% if not is_number(brightness) or brightness < brightness_target %}
-                              {{ {'brightness': brightness_target} }}
-                            {% else %}
-                              {{ {} }}
-                            {% endif %}
-                      - variables:
-                          light_data: >-
-                            {% set data = light_data %}
-                            {% set color_modes = state_attr(repeat.item, 'supported_color_modes') %}
-
-                            {# Color temperature light #}
-                            {% if 'color_temp' in color_modes %}
-                              {% set max = state_attr(repeat.item, 'max_color_temp_kelvin') %}
-                              {% if max is not none %}
-                                {% set min = state_attr(repeat.item, 'min_color_temp_kelvin') %}
-                                {% if min is not none %}
-                                  {% set temp = average(min, max) %}
-                                {% else %}
-                                  {% set temp = max %}
-                                {% endif %}
-                              {% else %}
-                                {% set temp = 4000 %}
-                              {% endif %}
-                              {% set data = data | combine({'color_temp_kelvin': temp}) %}
-
-                            {# RGB light #}
-                            {% elif 'rgb' in color_modes %}
-                              {% set data = data | combine({rgb_color: [255, 255, 255]}) %}
-                            {% endif %}
-                        enabled: !input brightest_color
-                      - alias: Continue if the color is different from the one requested or is dimmer
-                        condition: template
-                        value_template: >-
-                          {% set different = false %}
-                          {% for attr in light_data %}
-                            {% set attr_value = light_data[attr] %}
-                            {% if not is_state_attr(repeat.item, attr, attr_value) %}
-                              {% set different = true %}
-                              {% break %}
-                            {% endif %}
-                          {% endfor %}
-                          {{ different }}
-                      - alias: Remember this light state
-                        variables:
-                          restore_light_data: >-
-                            {% set state_obj = states[repeat.item] %}
-                            {% set clean_attrs = state_obj.attributes | to_json | from_json %}
-                            {{
-                              restore_light_data
-                              | combine(
-                                {
-                                  repeat.item: dict(clean_attrs, state=state_obj.state)
-                                }
-                              )
-                            }}
-                        enabled: !input restore_lights
-                      - alias: Turn on light
-                        action: light.turn_on
-                        target:
-                          entity_id: "{{ repeat.item }}"
-                        data: "{{ light_data }}"
             - alias: Extra action on session start
               sequence: !input extra_start
               continue_on_error: true
@@ -955,7 +875,8 @@ actions:
                     notification_icon: mdi:virtual-reality
                     actions: "{{ buttons }}"
                 notifs_to_send: *append_notif
-        - variables:
+        - alias: Initialize variables
+          variables:
             supports_ack: >-
               {{
                 not ios_device
@@ -965,7 +886,13 @@ actions:
             notif_rounds: 0
             notif_id: 0
             hmd_showed_sign: false
-            last_notif_ts: "{{ now() | as_timestamp }}"
+        - alias: Trigger a light condition check then send the notifications without waiting
+          variables:
+            wait:
+              completed: true
+              trigger:
+                id: condition_changed
+            last_notif_ts: 0
         - alias: Repeat until the user has stopped his headset
           repeat:
             until: >-
@@ -979,70 +906,10 @@ actions:
                 )
               }}
             sequence:
-              - variables:
-                  wait_start: "{{ now() }}"
-              - wait_for_trigger:
-                  - alias: Wait for VR headset to turn off
-                    trigger: state
-                    id: trackers
-                    entity_id: !input hmd_trackers
-                    to:
-                      - not_home
-                      - unknown
-                    from: home
-                    enabled: "{{ main_trigger == 'trackers' }}"
-                  - alias: Wait for VR headset to no longer be worn
-                    trigger: state
-                    id: interactive
-                    entity_id: !input hmd_interactive_sensor
-                    to: "off"
-                    for: !input non_interactive_duration
-                    enabled: "{{ main_trigger == 'interactive' }}"
-                  - alias: Notification received
-                    trigger: event
-                    id: notif_ack
-                    event_type: mobile_app_notification_received
-                    event_data:
-                      tag: "{{ notif_tag }}-{{ notif_id }}"
-                    enabled: "{{ wait_notif_ack }}"
-                  - alias: Wait for a sign from the headset if the last notification was not received
-                    trigger: template
-                    id: hmd_sign
-                    value_template: >-
-                      {{
-                        expand(device_entities(hmd_device))
-                        | selectattr('last_updated', '>', wait_start | as_datetime)
-                        | list
-                        | length
-                        > 0
-                      }}
-                    enabled: "{{ wait_hmd_sign }}"
-                  - alias: Start button pressed
-                    trigger: event
-                    id: start_order
-                    event_type: mobile_app_notification_action
-                    event_data:
-                      action: "{{ start_order_id }}"
-                    enabled: "{{ not confirmed }}"
-                  - alias: Light state changed
-                    trigger: state
-                    id: light_state
-                    entity_id: !input lights
-                    enabled: "{{ confirmed and restore_lights }}"
-                timeout: >-
-                  {% if notifs_to_send | length > 0 %}
-                    {%
-                      set remaining = (
-                        last_notif_ts
-                        - now() | as_timestamp
-                        + NOTIF_RETRY_TIMER
-                      )
-                    %}
-                    {{ max(remaining, 0) }}
-                  {% else %}
-                    {{ MAX_INT }}
-                  {% endif %}
-              - choose:
+              - note: >-
+                  We check for events before waiting for them,
+                  as we are forcing a condition_changed on first loop to start the lights
+                choose:
                   - alias: If notifications should be sent
                     conditions:
                       - condition: template
@@ -1131,6 +998,102 @@ actions:
                         else:
                           - variables:
                               wait_hmd_sign: false
+                  - alias: If a light condition changed
+                    conditions:
+                      - condition: template
+                        value_template: "{{ wait.trigger.id == 'condition_changed' }}"
+                    sequence:
+                      - alias: If the lights should be turned on
+                        if:
+                          - alias: The sun is low enough
+                            condition: template
+                            value_template: >-
+                              {% set elevation = state_attr(sun, 'elevation') %}
+                              {{ not is_number(elevation) or elevation < sun_elevation }}
+                          - alias: The room illuminance level is low enough
+                            condition: template
+                            value_template: >-
+                              {%
+                                set illuminance = (
+                                  states(illuminance_sensor)
+                                  if illuminance_sensor is string
+                                  else none
+                                )
+                              %}
+                              {{ not is_number(illuminance) or illuminance < illuminance_sensor_value }}
+                        then:
+                          - repeat:
+                              for_each: !input lights
+                              sequence:
+                                - alias: Only continue if the light was not set manually
+                                  condition: template
+                                  value_template: "{{ repeat.item not in manually_set_lights }}"
+                                - variables:
+                                    brightness_target: "{{ light_brightness_pct / 100 * 255 }}"
+                                    light_data: >-
+                                      {# Brightness #}
+                                      {% set brightness = state_attr(repeat.item, 'brightness') %}
+                                      {% if not is_number(brightness) or brightness < brightness_target %}
+                                        {{ {'brightness': brightness_target} }}
+                                      {% else %}
+                                        {{ {} }}
+                                      {% endif %}
+                                - variables:
+                                    light_data: >-
+                                      {% set data = light_data %}
+                                      {% set color_modes = state_attr(repeat.item, 'supported_color_modes') %}
+
+                                      {# Color temperature light #}
+                                      {% if 'color_temp' in color_modes %}
+                                        {% set max = state_attr(repeat.item, 'max_color_temp_kelvin') %}
+                                        {% if max is not none %}
+                                          {% set min = state_attr(repeat.item, 'min_color_temp_kelvin') %}
+                                          {% if min is not none %}
+                                            {% set temp = average(min, max) %}
+                                          {% else %}
+                                            {% set temp = max %}
+                                          {% endif %}
+                                        {% else %}
+                                          {% set temp = 4000 %}
+                                        {% endif %}
+                                        {% set data = data | combine({'color_temp_kelvin': temp}) %}
+
+                                      {# RGB light #}
+                                      {% elif 'rgb' in color_modes %}
+                                        {% set data = data | combine({rgb_color: [255, 255, 255]}) %}
+                                      {% endif %}
+                                  enabled: !input brightest_color
+                                - alias: Continue if the color is different from the one requested or is dimmer
+                                  condition: template
+                                  value_template: >-
+                                    {% set different = false %}
+                                    {% for attr in light_data %}
+                                      {% set attr_value = light_data[attr] %}
+                                      {% if not is_state_attr(repeat.item, attr, attr_value) %}
+                                        {% set different = true %}
+                                        {% break %}
+                                      {% endif %}
+                                    {% endfor %}
+                                    {{ different }}
+                                - alias: Remember this light state
+                                  variables:
+                                    restore_light_data: >-
+                                      {% set state_obj = states[repeat.item] %}
+                                      {% set clean_attrs = state_obj.attributes | to_json | from_json %}
+                                      {{
+                                        restore_light_data
+                                        | combine(
+                                          {
+                                            repeat.item: dict(clean_attrs, state=state_obj.state)
+                                          }
+                                        )
+                                      }}
+                                  enabled: !input restore_lights
+                                - alias: Turn on light
+                                  action: light.turn_on
+                                  target:
+                                    entity_id: "{{ repeat.item }}"
+                                  data: "{{ light_data }}"
                   - alias: If a light state changed
                     conditions:
                       - condition: template
@@ -1146,6 +1109,92 @@ actions:
                               {% endif %}
                             {% endfor %}
                             {{ data.filtered }}
+                          manually_set_lights: "{{ manually_set_lights | union([wait.trigger.entity_id]) }}"
+              - variables:
+                  wait_start: "{{ now() }}"
+              - wait_for_trigger:
+                  - alias: Wait for VR headset to turn off
+                    trigger: state
+                    id: trackers
+                    entity_id: !input hmd_trackers
+                    to:
+                      - not_home
+                      - unknown
+                    from: home
+                    enabled: "{{ main_trigger == 'trackers' }}"
+                  - alias: Wait for VR headset to no longer be worn
+                    trigger: state
+                    id: interactive
+                    entity_id: !input hmd_interactive_sensor
+                    to: "off"
+                    for: !input non_interactive_duration
+                    enabled: "{{ main_trigger == 'interactive' }}"
+                  - alias: Notification received
+                    trigger: event
+                    id: notif_ack
+                    event_type: mobile_app_notification_received
+                    event_data:
+                      tag: "{{ notif_tag }}-{{ notif_id }}"
+                    enabled: "{{ wait_notif_ack }}"
+                  - alias: Wait for a sign from the headset if the last notification was not received
+                    trigger: template
+                    id: hmd_sign
+                    value_template: >-
+                      {{
+                        expand(device_entities(hmd_device))
+                        | selectattr('last_updated', '>', wait_start | as_datetime)
+                        | list
+                        | length
+                        > 0
+                      }}
+                    enabled: "{{ wait_hmd_sign }}"
+                  - alias: Start button pressed
+                    trigger: event
+                    id: start_order
+                    event_type: mobile_app_notification_action
+                    event_data:
+                      action: "{{ start_order_id }}"
+                    enabled: "{{ not confirmed }}"
+                  - alias: Light state changed
+                    trigger: state
+                    id: light_state
+                    entity_id: !input lights
+                    enabled: "{{ confirmed and restore_lights }}"
+                  - alias: Sun went down
+                    trigger: sun.elevation_crossed_threshold
+                    id: condition_changed
+                    options:
+                      threshold:
+                        type: below
+                        value:
+                          active_choice: number
+                          number: !input sun_elevation
+                    enabled: "{{ confirmed }}"
+                  - alias: Room illuminance fell too low
+                    trigger: illuminance.crossed_threshold
+                    id: condition_changed
+                    target:
+                      entity_id: !input illuminance_sensor
+                    options:
+                      threshold:
+                        type: below
+                        value:
+                          active_choice: number
+                          number: !input illuminance_trigger
+                    enabled: "{{ confirmed }}"
+                timeout: >-
+                  {% if notifs_to_send | length > 0 %}
+                    {%
+                      set remaining = (
+                        last_notif_ts
+                        - now() | as_timestamp
+                        + NOTIF_RETRY_TIMER
+                      )
+                    %}
+                    {{ max(remaining, 0) }}
+                  {% else %}
+                    {{ MAX_INT }}
+                  {% endif %}
         - alias: Restart the loop if the start notification button was pressed
           condition: template
           value_template: "{{ wait.trigger.id != 'start_order' }}"

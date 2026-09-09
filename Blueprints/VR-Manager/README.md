@@ -14,12 +14,13 @@ When a VR session starts:
 * Confirm the user presence in the room/house
 * Ask the user for a confirmation via a notification
 * Turn on computer
-* Turn on lights for inside-out tracking, based on:
-  * illuminance sensor
-  * sun elevation
+* Turn on lights for inside-out tracking
 * Launch a PCVR streaming app
 * Send a notification
 * Run custom actions
+* Continuously adapt the lights while playing, thanks to:
+  * illuminance sensor
+  * sun elevation
 
 When the session ends:
 
