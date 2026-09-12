@@ -301,7 +301,7 @@ blueprint:
         start_confirmation:
           name: 👆 Tap to start
           description: |-
-            Only **start** the VR Manager if the user has **tapped** the notification button in his headset
+            Only **start** the VR Manager if the user has **tapped** the notification in his headset
           default: false
           selector:
             boolean:
@@ -772,6 +772,8 @@ actions:
       pc_managed: false
       wait_notif_ack: false
       wait_hmd_sign: false
+      webhook_id: "vr-manager-{{ this.context.id }}-start"
+      webhook_url: "/api/webhook/{{ webhook_id }}"
   - alias: Skip this sequence once if a confirmation from the user is needed
     repeat:
       count: "{{ 2 if start_confirmation else 1 }}"
@@ -836,8 +838,8 @@ actions:
               variables:
                 title: "{{ blueprint_name }}"
                 message_id: "{{ 'starting' if confirmed else 'request' }}"
-                buttons: []
                 message: *get_message
+                message_data: "{{ {'notification_icon': 'mdi:virtual-reality'} }}"
             - alias: If a button needs to be added to the notification
               if:
                 - condition: template
@@ -862,18 +864,24 @@ actions:
                       {% else %}
                         {{ strings['en']['button'][button_id] }}
                       {% endif %}
-                    buttons:
-                      - action: "{{ start_order_id }}"
-                        title: "{{ button }}"
-                        icon: sfsymbols:play
+                    url_key: "{{ 'url' if ios_device else 'clickAction' }}"
+                    message_data: >-
+                      {{
+                        message_data | union({
+                          'actions': [{
+                            'action': start_order_id,
+                            'title': button,
+                            'icon': 'sfsymbols:play',
+                            url_key: webhook_url
+                          }]
+                        })
+                      }}
             - alias: Plan a notification to inform of the start, or ask for a confirmation
               variables:
                 new_notif_data:
                   title: "{{ title }}"
                   message: "{{ message }}"
-                  data:
-                    notification_icon: mdi:virtual-reality
-                    actions: "{{ buttons }}"
+                  data: "{{ message_data }}"
                 notifs_to_send: *append_notif
         - alias: Initialize variables
           variables:
@@ -1154,6 +1162,13 @@ actions:
                     event_type: mobile_app_notification_action
                     event_data:
                       action: "{{ start_order_id }}"
+                    enabled: "{{ not confirmed }}"
+                  - alias: Wait for the notification to be tapped
+                    trigger: webhook
+                    id: start_order
+                    allowed_methods: GET
+                    local_only: false
+                    webhook_id: "{{ webhook_id }}"
                     enabled: "{{ not confirmed }}"
                   - alias: Light state changed
                     trigger: state
