@@ -45,10 +45,21 @@ blueprint:
       name: Trigger
       icon: mdi:flash
       input:
-        main_trigger:
-          name: ⚡ Main trigger
+        start_trigger:
+          name: ⚡ Start trigger
           description: |-
-            Which **event** must this automation wait for to **start** and **stop**?
+            Which **event** must this automation wait for to **start**?
+          selector:
+            select:
+              options:
+                - label: Device trackers
+                  value: "trackers"
+                - label: Interactive sensor
+                  value: "interactive"
+        end_trigger:
+          name: ⚡ End trigger
+          description: |-
+            Which **event** must this automation wait for to **stop**?
           selector:
             select:
               options:
@@ -372,7 +383,7 @@ mode: single
 max_exceeded: silent
 
 trigger_variables:
-  main_trigger: !input main_trigger
+  start_trigger: !input start_trigger
 
 triggers:
   - alias: VR headset turns on
@@ -384,13 +395,13 @@ triggers:
       - not_home
       - unavailable
       - unknown
-    enabled: "{{ main_trigger == 'trackers' }}"
+    enabled: "{{ start_trigger == 'trackers' }}"
   - alias: VR headset is interactive
     trigger: state
     id: hmd_on
     entity_id: !input hmd_interactive_sensor
     to: "on"
-    enabled: "{{ main_trigger == 'interactive' }}"
+    enabled: "{{ start_trigger == 'interactive' }}"
   - alias: Trigger when the blueprint the user added the blueprint or updated inputs
     trigger: template
     id: blueprint_enabled
@@ -411,7 +422,8 @@ variables:
   hmd_device: !input hmd_device
   hmd_trackers: !input hmd_trackers
   hmd_interactive_sensor: !input hmd_interactive_sensor
-  main_trigger: !input main_trigger
+  start_trigger: !input start_trigger
+  end_trigger: !input end_trigger
   startup_app: !input startup_app
   pc_router_tracker: !input pc_router_tracker
   pc_wol: !input pc_wol
@@ -578,9 +590,10 @@ actions:
                   message_id: "missing_device"
                 - alias: Check that there is an entity for the trigger
                   error: >-
+                    {% set triggers = [start_trigger] | union([end_trigger]) %}
                     {{
-                      main_trigger == 'tracker' and hmd_trackers == []
-                      or main_trigger == 'interactive' and hmd_interactive_sensor == []
+                      'tracker' in triggers and hmd_trackers == []
+                      or 'interactive' in triggers and hmd_interactive_sensor == []
                     }}
                   message_id: "missing_trigger_entity"
               sequence:
@@ -906,7 +919,7 @@ actions:
             until: >-
               {{
                 wait.completed and (
-                  wait.trigger.id == main_trigger
+                  wait.trigger.id == end_trigger
                   or (
                     wait.trigger.id == 'start_order'
                     and not confirmed
@@ -1129,14 +1142,14 @@ actions:
                       - not_home
                       - unknown
                     from: home
-                    enabled: "{{ main_trigger == 'trackers' }}"
+                    enabled: "{{ end_trigger == 'trackers' }}"
                   - alias: Wait for VR headset to no longer be worn
                     trigger: state
                     id: interactive
                     entity_id: !input hmd_interactive_sensor
                     to: "off"
                     for: !input non_interactive_duration
-                    enabled: "{{ main_trigger == 'interactive' }}"
+                    enabled: "{{ end_trigger == 'interactive' }}"
                   - alias: Notification received
                     trigger: event
                     id: notif_ack
