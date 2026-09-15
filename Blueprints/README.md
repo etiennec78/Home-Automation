@@ -72,6 +72,6 @@ Refer to the table below to fix the errors
   | #31 | You room tracker config is incomplete | Ensure that you have given at least one 'Player room tracker' and listed one 'VR room', or remove both |
   | #32 | Your Wake on LAN entity cannot turn off your computer | Either give a switch for you 'Wake On LAN entity', or disable 'Turn off PC' |
   | #33 | You are missing a VR headset device to send notifications | Either add a 'Headset device' or disable 'Send notifications', 'Tap to start', 'Startup app' |
-  | #34 | You are missing an entity for your selected trigger | If you are using 'Device tracker' as your 'Main trigger', you should have at lease one 'Headset device tracker'. Otherwise, you need a 'Headset interactive sensor' |
+  | #34 | You are missing an entity for your selected trigger | If you are using 'Device tracker' as one of your 'Start/End trigger', you should have at lease one 'Headset device tracker'. Otherwise, you need a 'Headset interactive sensor' |
   
 </details>
