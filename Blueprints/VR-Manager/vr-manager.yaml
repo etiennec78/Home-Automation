@@ -57,6 +57,8 @@ blueprint:
                   value: "trackers"
                 - label: Interactive sensor
                   value: "interactive"
+                - label: Charging stopped
+                  value: "charge"
         end_triggers:
           name: ⚡ End trigger
           description: |-
@@ -69,6 +71,8 @@ blueprint:
                   value: "trackers"
                 - label: Interactive sensor
                   value: "interactive"
+                - label: Charging started
+                  value: "charge"
         hmd_trackers:
           name: 🛜 Headset device trackers
           description: |-
@@ -97,6 +101,16 @@ blueprint:
             number:
               min: 0
               max: 300
+        charging_sensor:
+          name: 🔋 Charging sensor
+          description: |-
+            A binary sensor reporting when your **device** is **plugged**
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: binary_sensor
+                device_class: plug
 
     headset:
       name: VR headset
@@ -404,6 +418,12 @@ triggers:
     entity_id: !input hmd_interactive_sensor
     to: "on"
     enabled: "{{ 'interactive' in start_triggers }}"
+  - alias: Device stopped charging
+    trigger: state
+    id: charge
+    entity_id: !input charging_sensor
+    to: "off"
+    enabled: "{{ 'charge' in start_triggers }}"
   - alias: Trigger when the blueprint the user added the blueprint or updated inputs
     trigger: template
     id: blueprint_enabled
@@ -426,6 +446,7 @@ variables:
   hmd_interactive_sensor: !input hmd_interactive_sensor
   start_triggers: !input start_triggers
   end_triggers: !input end_triggers
+  charging_sensor: !input charging_sensor
   startup_app: !input startup_app
   pc_router_tracker: !input pc_router_tracker
   pc_wol: !input pc_wol
@@ -596,6 +617,7 @@ actions:
                     {{
                       'tracker' in triggers and hmd_trackers == []
                       or 'interactive' in triggers and hmd_interactive_sensor == []
+                      or 'charge' in triggers and charging_sensor == []
                     }}
                   message_id: "missing_trigger_entity"
               sequence:
@@ -1152,6 +1174,12 @@ actions:
                     to: "off"
                     for: !input non_interactive_duration
                     enabled: "{{ 'interactive' in end_triggers }}"
+                  - alias: Wait for the VR headset to be plugged
+                    trigger: state
+                    id: charge
+                    entity_id: !input charging_sensor
+                    to: "on"
+                    enabled: "{{ 'charge' in end_triggers }}"
                   - alias: Notification received
                     trigger: event
                     id: notif_ack
