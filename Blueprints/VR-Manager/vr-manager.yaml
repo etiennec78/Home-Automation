@@ -55,6 +55,8 @@ blueprint:
               options:
                 - label: Device trackers
                   value: "trackers"
+                - label: Last reboot sensor
+                  value: "boot"
                 - label: Interactive sensor
                   value: "interactive"
                 - label: Charging stopped
@@ -83,6 +85,16 @@ blueprint:
               multiple: true
               filter:
                 domain: device_tracker
+        hmd_reboot_sensor:
+          name: 🔁 Last reboot sensor
+          description: |-
+            Will be updated when the **companion app connects** to your HA server after powering up
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: sensor
+                device_class: timestamp
         hmd_interactive_sensor:
           name: 🎮 Headset interactive sensor
           description: |-
@@ -425,6 +437,11 @@ triggers:
     entity_id: !input hmd_interactive_sensor
     to: "on"
     enabled: "{{ 'interactive' in start_triggers }}"
+  - alias: VR headset booted up
+    trigger: state
+    id: boot
+    entity_id: !input hmd_reboot_sensor
+    enabled: "{{ 'boot' in start_triggers }}"
   - alias: Device stopped charging
     trigger: state
     id: charge
