@@ -447,6 +447,7 @@ variables:
   BLE_TIMEOUT: 30
   NOTIF_RETRY_TIMER: 7
   MAX_NOTIF_TRIES: 25
+  LIGHT_START_TRANSITION: 1
   LIGHT_RESTORE_TRANSITION: 3
   AUTO_BRIGHTNESS_STEP: 10
   hmd_device: !input hmd_device
@@ -1096,13 +1097,16 @@ actions:
                                 - variables:
                                     brightness_target: "{{ light_brightness_pct / 100 * 255 }}"
                                     light_data: >-
+                                      {# Transition #}
+                                      {% set data = {'transition': LIGHT_START_TRANSITION} %}
+
                                       {# Brightness #}
                                       {% set brightness = state_attr(repeat.item, 'brightness') %}
                                       {% if not is_number(brightness) or brightness < brightness_target %}
-                                        {{ {'brightness': brightness_target} }}
-                                      {% else %}
-                                        {{ {} }}
+                                        {% set data = data | combine({'brightness': brightness_target}) %}
                                       {% endif %}
+
+                                      {{ data }}
                                 - variables:
                                     light_data: >-
                                       {% set data = light_data %}
@@ -1127,6 +1131,8 @@ actions:
                                       {% elif 'rgb' in color_modes %}
                                         {% set data = data | combine({rgb_color: [255, 255, 255]}) %}
                                       {% endif %}
+
+                                      {{ data }}
                                   enabled: !input brightest_color
                                 - alias: Continue if the color is different from the one requested or is dimmer
                                   condition: template
