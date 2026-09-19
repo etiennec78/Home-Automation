@@ -293,6 +293,13 @@ blueprint:
               min: 0
               max: 200
               unit_of_measurement: lux
+        auto_brightness:
+          name: ✨ Automatic brightness
+          description: |-
+            Uses the **illuminance sensor** value to continuously **adjust** the **light** brightness and get close to the value from the input above
+          default: false
+          selector:
+            boolean:
         sun:
           name: ☀️ Sun
           description: |-
@@ -441,6 +448,7 @@ variables:
   NOTIF_RETRY_TIMER: 7
   MAX_NOTIF_TRIES: 25
   LIGHT_RESTORE_TRANSITION: 3
+  AUTO_BRIGHTNESS_STEP: 10
   hmd_device: !input hmd_device
   hmd_trackers: !input hmd_trackers
   hmd_interactive_sensor: !input hmd_interactive_sensor
@@ -461,6 +469,7 @@ variables:
   sun_elevation: !input sun_elevation
   illuminance_sensor: !input illuminance_sensor
   illuminance_trigger: !input illuminance_trigger
+  auto_brightness: !input auto_brightness
   light_brightness_pct: !input light_brightness_pct
   send_notification: !input send_notification
   start_confirmation: !input start_confirmation
@@ -502,6 +511,7 @@ variables:
         wol_no_off_support: "Your Wake on LAN entity cannot turn off your computer (#32)"
         missing_device: "You are missing a VR headset device to send notifications (#33)"
         missing_trigger_entity: "You are missing an entity for your selected trigger (#34)"
+        missing_illuminance_sensor: "You are missing an illuminance sensor (#35)"
       button:
         start: "Start"
     fr:
@@ -522,6 +532,7 @@ variables:
         wol_no_off_support: "Votre entité de Wake on LAN ne peut pas éteindre votre pc (#32)"
         missing_device: "Il vous manque l'appareil de votre casque VR pour pouvoir envoyer des notifications (#33)"
         missing_trigger_entity: "Il vous manque une entité pour le déclencheur que vous avez sélectionné (#34)"
+        missing_illuminance_sensor: "Il vous manque un capteur de luminosité ambiante (#35)"
       button:
         start: "Démarrer"
 
@@ -620,6 +631,9 @@ actions:
                       or 'charge' in triggers and charging_sensor == []
                     }}
                   message_id: "missing_trigger_entity"
+                - alias: Check that there is an illuminance sensor if auto brightness is on
+                  error: "{{ auto_brightness and illuminance_sensor == [] }}"
+                  message_id: "missing_illuminance_sensor"
               sequence:
                 - alias: If a check failed
                   if:
@@ -811,6 +825,12 @@ actions:
       wait_hmd_sign: false
       webhook_id: "vr-manager-{{ this.context.id }}-start"
       webhook_url: "/api/webhook/{{ webhook_id }}"
+      brightness_target: "{{ light_brightness_pct / 100 * 255 }}"
+  - variables:
+      illuminance_diff: "{{ max(illuminance_sensor_value / 5, 10) }}"
+      illuminance_min: "{{ illuminance_sensor_value - illuminance_diff }}"
+      illuminance_max: "{{ illuminance_sensor_value + illuminance_diff }}"
+    enabled: !input auto_brightness
   - alias: Skip this sequence once if a confirmation from the user is needed
     repeat:
       count: "{{ 2 if start_confirmation else 1 }}"
@@ -1155,6 +1175,58 @@ actions:
                             {% endfor %}
                             {{ data.filtered }}
                           manually_set_lights: "{{ manually_set_lights | union([wait.trigger.entity_id]) }}"
+                  - alias: If the automatic brightness must be re-evaluated
+                    conditions:
+                      - condition: template
+                        value_template: "{{ wait.trigger.id == 'auto_brightness' }}"
+                    sequence:
+                      - choose:
+                          - alias: If the brightness should go up
+                            conditions:
+                              - condition: template
+                                value_template: >-
+                                  {{
+                                    states(illuminance_sensor) | is_number
+                                    and states(illuminance_sensor) < illuminance_min
+                                  }}
+                              - condition: template
+                                value_template: "{{ brightness_target < 255 }}"
+                            sequence:
+                              - variables:
+                                  brightness_target: "{{ max(brightness_target + AUTO_BRIGHTNESS_STEP, 255) }}"
+                          - alias: If the brightness should go down
+                            conditions:
+                              - condition: template
+                                value_template: >-
+                                  {{
+                                    states(illuminance_sensor) | is_number
+                                    and states(illuminance_sensor) > illuminance_max
+                                  }}
+                              - condition: template
+                                value_template: "{{ brightness_target > 0 }}"
+                            sequence:
+                              - variables:
+                                  brightness_target: "{{ min(brightness_target - AUTO_BRIGHTNESS_STEP, 0) }}"
+                      - variables:
+                          lights_to_update: "{{ restore_light_data.keys() }}"
+                      - alias: Only continue if the brightness value has changed
+                        condition: template
+                        value_template: >-
+                          {{
+                            lights_to_update | length > 0
+                            and not is_state_attr(
+                              lights_to_update | first,
+                              'brightness',
+                              brightness_target
+                            )
+                          }}
+                      - alias: Change the brightness of the lights
+                        service: light.turn_on
+                        target:
+                          entity_id: "{{ lights_to_update }}"
+                        data:
+                          brightness: "{{ brightness_target }}"
+                          transition: "{{ LIGHT_RESTORE_TRANSITION }}"
               - variables:
                   wait_start: "{{ now() }}"
               - wait_for_trigger:
@@ -1240,6 +1312,16 @@ actions:
                           active_choice: number
                           number: !input illuminance_trigger
                     enabled: "{{ confirmed }}"
+                  - alias: The light sensor updated (auto brightness)
+                    trigger: state
+                    id: auto_brightness
+                    entity_id: !input illuminance_sensor
+                    enabled: >-
+                      {{
+                        confirmed
+                        and auto_brightness
+                        and restore_light_data.keys() | length > 0
+                      }}
                 timeout: >-
                   {% if notifs_to_send | length > 0 %}
                     {%
