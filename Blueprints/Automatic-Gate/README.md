@@ -100,3 +100,10 @@ Makes managing your gate while driving easier: You won't ever have to use your r
   
   [Learn more](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#option-3-cycling-).
 </details>
+
+<details>
+  <summary><h4>Itinerary notifications</h4></summary>
+  
+  If you would like to know when someone from your household is driving home, you can install the [Itinerary Tracker Notification](../Itinerary-Tracker-Notification) blueprint to set up alerts.
+  
+</details>
