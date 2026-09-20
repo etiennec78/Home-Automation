@@ -5,7 +5,7 @@
 A blueprint that notifies all selected users when another one is driving home
 
 
-## Key Features
+## Features
 
 * Travel time and ETA notification updates
 * Companion app notifications

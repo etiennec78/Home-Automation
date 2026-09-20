@@ -7,7 +7,7 @@ An ESPHome firmware for automating roller shutters using an [ESP32 C3](https://a
 Compatible with [KLI 310](https://amzn.to/4eJeVcS) and 860963 Velux remotes
 
 
-## Key Features
+## Features
 
 * **Physical & Remote Input**: Handles both controls with proper state feedback
 * **Bidirectional Control**: Supports opening/closing even while the shutter is in motion

@@ -7,7 +7,7 @@ Modular and secure gate automation that opens and closes your gate upon leaving 
 Makes managing your gate while driving easier: You won't ever have to use your remote again
 
 
-## Key Features
+## Features
 
 * **Multi-User Support**: Manages up to 10 drivers simultaneously
 * **Broad Compatibility**: This blueprint is compatible with most vehicles, travel time providers (Waze, Here, smart vehicles) and even bikes

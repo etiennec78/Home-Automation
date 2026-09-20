@@ -5,7 +5,7 @@
 A simple ESPHome configuration to hack a Philips LivingColors (Mini) with an ESP32
 
 
-## Key Features
+## Features
 
 * **E1.31 protocol**: Control the light with software like [Artemis RGB](https://github.com/Artemis-RGB/Artemis)
 * **Artemis layout files**: Easily Import your light into [Artemis RGB](https://github.com/Artemis-RGB/Artemis)

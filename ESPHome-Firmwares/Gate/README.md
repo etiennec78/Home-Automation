@@ -5,7 +5,7 @@
 An ESPHome firmware for automating gates using an [ESP32](https://amzn.to/3y2UtCr) microcontroller. It integrates seamlessly with Home Assistant to provide smart gate control functionality
 
 
-## Key Features
+## Features
 
 * **Proximity-based Access**: Only accepts open requests when users are within 1km of home
 * **Queue System**: Prevents the controller from sending two pulses too quickly

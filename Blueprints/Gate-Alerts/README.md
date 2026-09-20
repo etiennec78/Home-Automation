@@ -11,7 +11,7 @@ A blueprint that notifies selected users when the gate:
 * Has been offline for too long
 * Is back online
 
-## Key Features
+## Features
 
 * Compatible with gate switches, covers, and position tracked covers
 * Companion app notifications
