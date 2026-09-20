@@ -66,6 +66,7 @@ Makes managing your gate while driving easier: You won't ever have to use your r
 5. Press `Save` in the bottom right corner
 6. Optional: In the upper-right corner, press `⁝` then `Run actions` and check your dashboard notifications for configuration errors
 7. Setup the [Gate Alerts blueprint](../Gate-Alerts) to receive notifications when opening
+8. Read [this](../) page about my blueprints
 
 ### Tips
 

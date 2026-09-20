@@ -47,6 +47,7 @@ A blueprint that notifies selected users when the gate:
 5. Press `Save` in the bottom right corner
 6. Optional: In the upper-right corner, press `⁝` then `Run actions` and check your dashboard notifications for configuration errors
 7. Optional: On Android, go to your applications settings, then select `Home Assistant > Notifications > Gate alerts` and change the sound to differentiate your gate from other notifications
+8. Read [this](../) page about my blueprints
 
 
 ## Examples
