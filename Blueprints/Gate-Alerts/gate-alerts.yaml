@@ -58,6 +58,7 @@ blueprint:
           description: Type of **event** that should trigger notifications
           selector:
             select:
+              multiple: true
               options:
                 - label: Opening
                   value: "open"
@@ -284,7 +285,7 @@ variables:
   camera_entity: !input camera_entity
   language: !input language
   custom_translations: !input custom_translations
-  notification_tag: "gate-{{ notification_type }}"
+  notification_tag: "gate-{{ trigger.id if trigger.platform is not none else '' }}"
   config_checker_tag: "{{ 'config-checker-' ~ this.attributes.id }}"
   closing_order_id: "{{ 'closing_order_' ~ this.context.id }}"
   error_checker_ran: false
@@ -370,7 +371,7 @@ triggers:
       - "unavailable"
     for:
       minutes: !input notification_delay
-    enabled: "{{ notification_type == 'open' }}"
+    enabled: "{{ 'open' in notification_type }}"
 
   - alias: Wait for gate closing
     trigger: state
@@ -385,13 +386,13 @@ triggers:
       - "unavailable"
     for:
       minutes: !input notification_delay
-    enabled: "{{ notification_type == 'close' }}"
+    enabled: "{{ 'close' in notification_type }}"
 
   - alias: Wait for error
     trigger: template
     id: error
     value_template: "{{ error_message_sensor | has_value }}"
-    enabled: "{{ notification_type == 'error' }}"
+    enabled: "{{ 'error' in notification_type }}"
 
   - alias: Wait for gate unavailable for duration
     trigger: state
@@ -400,14 +401,14 @@ triggers:
     to: "unavailable"
     for:
       minutes: !input notification_delay
-    enabled: "{{ notification_type == 'offline' }}"
+    enabled: "{{ 'offline' in notification_type }}"
 
   - alias: Wait for the gate to be back online
     trigger: state
     id: online
     entity_id: !input gate
     not_to: "unavailable"
-    enabled: "{{ notification_type == 'online' }}"
+    enabled: "{{ 'online' in notification_type }}"
 
   - alias: Trigger when the blueprint the user added the blueprint, updated inputs, or HA started
     trigger: template
@@ -422,7 +423,7 @@ conditions:
       {% set features = state_attr(gate, 'supported_features') %}
       {{
         trigger.id == 'blueprint_enabled'
-        or notification_type != 'close'
+        or trigger.id != 'close'
         or not is_state(gate, 'closed')
         or (
           (0 if features is none else features)
@@ -496,7 +497,7 @@ actions:
                   message_id: "invalid_translations"
                   level: 1
                 - alias: Check gate error sensor presence
-                  error: "{{ notification_type == 'error' and not error_message_sensor }}"
+                  error: "{{ 'error' in notification_type and not error_message_sensor }}"
                   message_id: "missing_error_sensor"
                   level: 2
                 - alias: Check for tts and media player sensors presence
@@ -680,7 +681,7 @@ actions:
     condition: template
     value_template: >-
       {{
-        notification_type != 'online'
+        trigger.id != 'online'
         or (
           trigger.to_state.last_changed
           - trigger.from_state.last_changed
@@ -694,7 +695,7 @@ actions:
       value_template: >-
         {% set features = state_attr(gate, 'supported_features') %}
         {{
-          notification_type == 'open'
+          trigger.id == 'open'
           and is_state(gate, 'open')
           and notification_delay == 0
           and (
@@ -792,12 +793,12 @@ actions:
         variables:
           title_id: >-
             {%
-              if notification_type == 'open'
+              if trigger.id == 'open'
               and notification_delay != 0
             %}
               left_open
             {% else %}
-              {{ notification_type }}
+              {{ trigger.id }}
             {% endif %}
           message_id: "{{ title_id }}"
           button_id: "close"
@@ -805,10 +806,10 @@ actions:
         variables: *get_translation
       - alias: Get button translation
         variables: *get_translation_button
-      - alias: If the notification type is 'error'
+      - alias: If triggered by a gate error
         if:
           - condition: template
-            value_template: "{{ notification_type == 'error' }}"
+            value_template: "{{ trigger.id == 'error' }}"
         then:
           - alias: Format the notification message
             variables:
@@ -834,7 +835,7 @@ actions:
                       priority: high
                       ttl: 0
                       sticky: true
-                      persistent: "{{ notification_type == 'open' }}"
+                      persistent: "{{ trigger.id == 'open' }}"
                       push:
                         sound:
                           name: "default"
@@ -844,14 +845,14 @@ actions:
                       clickAction: !input on_tap_link
                       timeout: >-
                         {%
-                          if notification_type == 'error'
+                          if trigger.id == 'error'
                           or is_state(gate, ['off', 'closed'])
                         %}
                           30
                         {% else %}
                           {{ MAX_INT }}
                         {% endif %}
-                      chronometer: "{{ notification_delay != 0 and notification_type != 'online' }}"
+                      chronometer: "{{ notification_delay != 0 and trigger.id != 'online' }}"
                       when: >-
                         {{
                           (utcnow() - timedelta(minutes=notification_delay))
@@ -860,7 +861,7 @@ actions:
                         }}
                       actions: >-
                         {%
-                          if notification_type == 'open'
+                          if trigger.id == 'open'
                           and states[gate].domain in ['cover', 'switch']
                         %}
                           {{
@@ -1027,7 +1028,7 @@ actions:
 
   - alias: Only continue if an event needs to be listened to to remove the notification
     condition: template
-    value_template: "{{ notification_type != 'online' }}"
+    value_template: "{{ trigger.id != 'online' }}"
 
   - wait_for_trigger:
     - alias: Wait for gate closed
@@ -1039,13 +1040,13 @@ actions:
       trigger: template
       id: started_opening
       value_template: "{{ is_state(gate, ['on', 'opening']) }}"
-      enabled: "{{ notification_type == 'close' }}"
+      enabled: "{{ trigger.id == 'close' }}"
 
     - alias: Wait for gate closing
       trigger: template
       id: started_closing
       value_template: "{{ is_state(gate, 'closing') }}"
-      enabled: "{{ notification_type == 'open' }}"
+      enabled: "{{ trigger.id == 'open' }}"
 
     - alias: Wait for closing button press
       trigger: event
@@ -1053,11 +1054,11 @@ actions:
       event_type: mobile_app_notification_action
       event_data:
         action: "{{ closing_order_id }}"
-      enabled: "{{ notification_type == 'open' }}"
+      enabled: "{{ trigger.id == 'open' }}"
 
     # Remove notification after 30s in case of an error or gate closing without position tracking
     timeout: >-
-      {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
+      {% if trigger.id == 'error' or is_state(gate, ['off', 'closed']) %}
         30
       {% else %}
         {{ MAX_INT }}
@@ -1070,7 +1071,7 @@ actions:
         {{
           not(
             wait.completed
-            or notification_type == 'error'
+            or trigger.id == 'error'
             or is_state(gate, ['off', 'closed'])
           )
         }}
@@ -1112,4 +1113,4 @@ actions:
           notification_id: "{{ notification_tag }}"
         continue_on_error: true
 
-mode: restart
+mode: parallel
