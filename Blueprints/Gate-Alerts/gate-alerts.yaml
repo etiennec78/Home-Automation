@@ -55,7 +55,9 @@ blueprint:
                   - binary_sensor
         notification_type:
           name: 🔔 Notification type
-          description: Type of **event** that should trigger notifications
+          description: |-
+            Type of **event** that should trigger notifications
+            > If you want to change the configuration for some triggers, you should create multiple automations with this blueprint
           selector:
             select:
               multiple: true
