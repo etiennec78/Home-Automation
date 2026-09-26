@@ -407,7 +407,10 @@ triggers:
     trigger: state
     id: online
     entity_id: !input gate
-    not_to: "unavailable"
+    from: "unavailable"
+    not_to:
+      - "unavailable"
+      - "unknown"
     enabled: "{{ 'online' in notification_type }}"
 
   - alias: Trigger when the blueprint the user added the blueprint, updated inputs, or HA started
