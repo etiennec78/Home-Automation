@@ -470,6 +470,7 @@ blueprint:
             Send a notification when:
               * Your itinerary has been started
               * You have stopped your vehicle before arriving
+            > For advanced itinerary notifications, check [this](https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/Itinerary-Tracker-Notification) blueprint
           default: true
           selector:
             boolean:
