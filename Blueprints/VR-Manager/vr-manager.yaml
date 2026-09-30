@@ -26,6 +26,7 @@ blueprint:
       * illuminance sensor
       * sun elevation
       * windows orientation
+      * weather
 
     When the session ends:
     * Restore the lights
@@ -338,6 +339,15 @@ blueprint:
               min: -1
               max: 365
               unit_of_measurement: °
+        weather_entity:
+          name: 🔅 Weather entity
+          description: |-
+            Take the **weather** into account to **estimate** when to turn on **lights**
+          default: ""
+          selector:
+            entity:
+              filter:
+                domain: weather
         low_light_estimation_trigger:
           name: 🔅 Low light estimation trigger
           description: |-
@@ -352,6 +362,10 @@ blueprint:
             {% set WINDOW_ANGLE_LT60 = 1.0 %}
             {% set WINDOW_ANGLE_LT90 = 0.6 %}
             {% set WINDOW_ANGLE_GT90 = 0.3 %}
+            {% set WEATHER_SUNNY = 1.0 %}
+            {% set WEATHER_PARTLY_CLOUDY = 0.7 %}
+            {% set WEATHER_CLOUDY = 0.4 %}
+            {% set WEATHER_RAINY = 0.2 %}
 
 
             {# CODE #}
@@ -381,7 +395,28 @@ blueprint:
               {% endif %}
             {% endif %}
 
-            {% set light_factor = sun_elevation_factor * orientation_factor %}
+            {% set weather_factor = WEATHER_SUNNY %}
+            {% if weather != '' %}
+              {% if weather == 'partlycloudy' %}
+                {% set weather_factor = WEATHER_PARTLY_CLOUDY %}
+              {% elif weather in ['cloudy', 'fog'] %}
+                {% set weather_factor = WEATHER_CLOUDY %}
+              {%
+                elif weather in [
+                  'rainy',
+                  'pouring',
+                  'lightning',
+                  'hail',
+                  'snowy',
+                  'lightning-rainy',
+                  'snowy-rainy'
+                ]
+              %}
+                {% set weather_factor = WEATHER_RAINY %}
+              {% endif %}
+            {% endif %}
+
+            {% set light_factor = sun_elevation_factor * orientation_factor * weather_factor %}
             {{ light_factor > LIGHT_FACTOR_TRIGGER }}
           selector:
             template:
@@ -539,6 +574,7 @@ variables:
   restore_lights: !input restore_lights
   sun: !input sun
   windows_orientation: !input windows_orientation
+  weather_entity: !input weather_entity
   illuminance_sensor: !input illuminance_sensor
   illuminance_trigger: !input illuminance_trigger
   auto_brightness: !input auto_brightness
@@ -1033,6 +1069,7 @@ actions:
             notif_rounds: 0
             notif_id: 0
             hmd_showed_sign: false
+            weather: "{{ '' if weather_entity == '' else states(weather_entity) }}"
         - alias: Trigger a light condition check then send the notifications without waiting
           variables:
             turn_on_lights: !input low_light_estimation_trigger
