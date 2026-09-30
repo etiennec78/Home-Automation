@@ -941,6 +941,7 @@ actions:
           'charge' in end_triggers
           and 'interactive' in end_triggers
         }}
+      next_weather_ts: 0
       webhook_id: "vr-manager-{{ this.context.id }}-start"
       webhook_url: "/api/webhook/{{ webhook_id }}"
       brightness_target: "{{ light_brightness_pct / 100 * 255 }}"
@@ -1070,6 +1071,48 @@ actions:
             notif_id: 0
             hmd_showed_sign: false
             weather: "{{ '' if weather_entity == '' else states(weather_entity) }}"
+        - alias: If the weather entity support hourly reports
+          if:
+            - condition: template
+              value_template: >-
+                {{
+                  weather_entity != ''
+                  and (
+                    state_attr(gate, 'supported_features')
+                    | bitwise_and(2) == 1
+                  )
+                }}
+          then:
+            - action: weather.get_forecasts
+              target:
+                entity_id: "{{ weather_entity }}"
+              data:
+                type: hourly
+              response_variable: weather_forecast
+            - variables:
+                weather_forecast: >-
+                  {{ weather_forecast[weather_entity]['forecast'] }}
+                weather_idx: 0
+            - variables: &weather_data
+                weather: >-
+                  {% set data = weather_forecast %}
+                  {%
+                    if data | length > weather_idx
+                    and 'condition' in data[weather_idx]
+                  %}
+                    {{ data[0]['condition'] }}
+                  {% endif %}
+                next_weather_ts: >-
+                  {% set data = weather_forecast %}
+                  {% set next = weather_idx + 1 %}
+                  {%
+                    if data | length > next
+                    and 'datetime' in data[next]
+                  %}
+                    {{ data[next]['datetime'] | as_timestamp }}
+                  {% else %}
+                    {{ 0 }}
+                  {% endif %}
         - alias: Trigger a light condition check then send the notifications without waiting
           variables:
             turn_on_lights: !input low_light_estimation_trigger
@@ -1190,6 +1233,112 @@ actions:
                         else:
                           - variables:
                               wait_hmd_sign: false
+                  - alias: If the weather has been updated
+                    conditions:
+                      - condition: template
+                        value_template: "{{ not wait.completed and timeout_type == 'weather' }}"
+                    sequence:
+                      - alias: If the forecast needs to be updated
+                        if:
+                          - condition: template
+                            value_template: "{{ weather_forecast | length > weather_idx + 1 }}"
+                        then:
+                          - action: weather.get_forecasts
+                            target:
+                              entity_id: "{{ weather_entity }}"
+                            data:
+                              type: hourly
+                            response_variable: weather_forecast
+                          - variables:
+                              weather_forecast: >-
+                                {{ weather_forecast[weather_entity]['forecast'] }}
+                              weather_idx: 0
+                        else:
+                          - variables:
+                              weather_idx: "{{ weather_idx + 1 }}"
+                      - variables: *weather_data
+                  - alias: If a light condition changed
+                    conditions:
+                      - condition: template
+                        value_template: "{{ wait.trigger.id == 'condition_changed' }}"
+                    sequence:
+                      - repeat:
+                          for_each: !input lights
+                          sequence:
+                            - alias: Only continue if the light was not set manually
+                              condition: template
+                              value_template: "{{ repeat.item not in manually_set_lights }}"
+                            - variables:
+                                brightness_target: "{{ light_brightness_pct / 100 * 255 }}"
+                                light_data: >-
+                                  {# Transition #}
+                                  {% set data = {'transition': LIGHT_START_TRANSITION} %}
+
+                                  {# Brightness #}
+                                  {% set brightness = state_attr(repeat.item, 'brightness') %}
+                                  {% if not is_number(brightness) or brightness < brightness_target %}
+                                    {% set data = data | combine({'brightness': brightness_target}) %}
+                                  {% endif %}
+
+                                  {{ data }}
+                            - variables:
+                                light_data: >-
+                                  {% set data = light_data %}
+                                  {% set color_modes = state_attr(repeat.item, 'supported_color_modes') %}
+
+                                  {# Color temperature light #}
+                                  {% if 'color_temp' in color_modes %}
+                                    {% set max = state_attr(repeat.item, 'max_color_temp_kelvin') %}
+                                    {% if max is not none %}
+                                      {% set min = state_attr(repeat.item, 'min_color_temp_kelvin') %}
+                                      {% if min is not none %}
+                                        {% set temp = average(min, max) %}
+                                      {% else %}
+                                        {% set temp = max %}
+                                      {% endif %}
+                                    {% else %}
+                                      {% set temp = 4000 %}
+                                    {% endif %}
+                                    {% set data = data | combine({'color_temp_kelvin': temp}) %}
+
+                                  {# RGB light #}
+                                  {% elif 'rgb' in color_modes %}
+                                    {% set data = data | combine({rgb_color: [255, 255, 255]}) %}
+                                  {% endif %}
+
+                                  {{ data }}
+                              enabled: !input brightest_color
+                            - alias: Continue if the color is different from the one requested or is dimmer
+                              condition: template
+                              value_template: >-
+                                {% set different = false %}
+                                {% for attr in light_data %}
+                                  {% set attr_value = light_data[attr] %}
+                                  {% if not is_state_attr(repeat.item, attr, attr_value) %}
+                                    {% set different = true %}
+                                    {% break %}
+                                  {% endif %}
+                                {% endfor %}
+                                {{ different }}
+                            - alias: Remember this light state
+                              variables:
+                                restore_light_data: >-
+                                  {% set state_obj = states[repeat.item] %}
+                                  {% set clean_attrs = state_obj.attributes | to_json | from_json %}
+                                  {{
+                                    restore_light_data
+                                    | combine(
+                                      {
+                                        repeat.item: dict(clean_attrs, state=state_obj.state)
+                                      }
+                                    )
+                                  }}
+                              enabled: !input restore_lights
+                            - alias: Turn on light
+                              action: light.turn_on
+                              target:
+                                entity_id: "{{ repeat.item }}"
+                              data: "{{ light_data }}"
                   - alias: If a light condition changed
                     conditions:
                       - condition: template
@@ -1342,6 +1491,36 @@ actions:
                           transition: "{{ LIGHT_RESTORE_TRANSITION }}"
               - variables:
                   wait_start: "{{ now() }}"
+                  timeouts:
+                    notif: >-
+                      {% if notifs_to_send | length > 0 %}
+                        {{
+                          last_notif_ts
+                          - now() | as_timestamp
+                          + NOTIF_RETRY_TIMER
+                        }}
+                      {% else %}
+                        {{ MAX_INT }}
+                      {% endif %}
+                    weather: >-
+                      {% set next_weather = (
+                        next_weather_ts
+                        - now() | as_timestamp
+                      ) %}
+                      {% if next_weather > 0 %}
+                        {{ next_weather }}
+                      {% else %}
+                        {{ MAX_INT }}
+                      {% endif %}
+                  timeout_type: >-
+                    {{
+                      timeouts
+                      | items
+                      | sort(attribute='1')
+                      | first
+                      | first
+                    }}
+                  timeout: "{{ max(timeouts[timeout_type], 0) }}"
               - wait_for_trigger:
                   - alias: Wait for VR headset to turn off
                     trigger: state
@@ -1430,19 +1609,7 @@ actions:
                         and auto_brightness
                         and restore_light_data.keys() | length > 0
                       }}
-                timeout: >-
-                  {% if notifs_to_send | length > 0 %}
-                    {%
-                      set remaining = (
-                        last_notif_ts
-                        - now() | as_timestamp
-                        + NOTIF_RETRY_TIMER
-                      )
-                    %}
-                    {{ max(remaining, 0) }}
-                  {% else %}
-                    {{ MAX_INT }}
-                  {% endif %}
+                timeout: "{{ timeout }}"
               - alias: Only continue if a second end trigger must be awaited
                 condition: template
                 value_template: >-
