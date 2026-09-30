@@ -26,6 +26,7 @@ blueprint:
       * illuminance sensor
       * sun elevation
       * windows orientation
+      * window cover position
       * weather
 
     When the session ends:
@@ -339,6 +340,21 @@ blueprint:
               min: -1
               max: 365
               unit_of_measurement: °
+        window_blind:
+          name: 🔅 Window blind
+          description: |-
+            Take your window **blind** into account to **estimate** when to turn on **lights**
+          default: ""
+          selector:
+            entity:
+              filter:
+                domain: cover
+                device_class:
+                  - blind
+                  - curtain
+                  - shade
+                  - shutter
+                  - window
         weather_entity:
           name: 🔅 Weather entity
           description: |-
@@ -395,6 +411,20 @@ blueprint:
               {% endif %}
             {% endif %}
 
+            {% set blind_factor = 1.0 %}
+            {% set blind_pos = state_attr(window_blind, 'current_position') | float(none) %}
+            {% set blind_tilt = state_attr(window_blind, 'current_tilt_position') | float(none) %}
+            {% if blind_pos is not none %}
+              {% set pos_f = blind_pos / 100 %}
+              {% if blind_tilt is not none %}
+                {% set blind_factor = pos_f + (1.0 - pos_f) * blind_tilt / 100 %}
+              {% else %}
+                {% set blind_factor = pos_f %}
+              {% endif %}
+            {% elif blind_tilt is not none %}
+              {% set blind_factor = blind_tilt / 100 %}
+            {% endif %}
+
             {% set weather_factor = WEATHER_SUNNY %}
             {% if weather != '' %}
               {% if weather == 'partlycloudy' %}
@@ -416,7 +446,7 @@ blueprint:
               {% endif %}
             {% endif %}
 
-            {% set light_factor = sun_elevation_factor * orientation_factor * weather_factor %}
+            {% set light_factor = sun_elevation_factor * orientation_factor * blind_factor * weather_factor %}
             {{ light_factor > LIGHT_FACTOR_TRIGGER }}
           selector:
             template:
