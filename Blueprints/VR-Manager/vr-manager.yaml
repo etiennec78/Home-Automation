@@ -39,7 +39,7 @@ blueprint:
     * Discord: @etiennec78
     [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
   homeassistant:
-    min_version: 2026.7.0  # New triggers (eg: sun.elevation_crossed_threshold)
+    min_version: 2026.7.0  # New triggers (eg: illuminance.crossed_threshold)
   input:
     trigger:
       name: Trigger
@@ -314,7 +314,7 @@ blueprint:
           selector:
             boolean:
         sun:
-          name: ☀️ Sun
+          name: 🔅 Sun
           description: |-
             Take the **sun** into account to **estimate** when to turn on **lights**
           default: ""
@@ -322,16 +322,34 @@ blueprint:
             entity:
               filter:
                 domain: sun
-        sun_elevation:
-          name: ☀️ Sun elevation
+        low_light_estimation_trigger:
+          name: 🔅 Low light estimation trigger
           description: |-
-            Turn **on** the lights **below** this sun elevation
-          default: 6
+            If you **don't** have a room **illumination** sensor, this template will try to **guess** a value with other sensors from your room
+            > *You don't need this if you have an illuminance sensor set*
+          default: |-
+            {# CONSTANTS #}
+            {# 1.0 - 0.0, lower will turn on sooner #}
+            {% set LIGHT_FACTOR_TRIGGER = 0.07 %}
+
+
+            {# CODE #}
+            {# No need to change anything below #}
+
+            {% set sun_elevation_factor = 1.0 %}
+            {% if sun != '' %}
+              {% set elevation = state_attr(sun, 'elevation') %}
+              {% set sun_elevation_factor = (
+                elevation / 90
+                if elevation > 0
+                else 0
+              ) %}
+            {% endif %}
+
+            {% set light_factor = sun_elevation_factor %}
+            {{ light_factor > LIGHT_FACTOR_TRIGGER }}
           selector:
-            number:
-              min: -90
-              max: 90
-              unit_of_measurement: °
+            template:
 
     notifications:
       name: Notification settings
@@ -485,7 +503,6 @@ variables:
   ble_scanner_switches: !input ble_scanner_switches
   restore_lights: !input restore_lights
   sun: !input sun
-  sun_elevation: !input sun_elevation
   illuminance_sensor: !input illuminance_sensor
   illuminance_trigger: !input illuminance_trigger
   auto_brightness: !input auto_brightness
@@ -977,10 +994,13 @@ actions:
             hmd_showed_sign: false
         - alias: Trigger a light condition check then send the notifications without waiting
           variables:
-            wait:
-              completed: true
-              trigger:
-                id: condition_changed
+            turn_on_lights: !input low_light_estimation_trigger
+            wait: >-
+              {% if turn_on_lights %}
+                {{ {'completed': true, 'trigger': {'id': 'condition_changed'}} }}
+              {% else %}
+                {{ none }}
+              {% endif %}
             last_notif_ts: 0
         - alias: Repeat until the user has stopped his headset
           repeat:
@@ -999,6 +1019,11 @@ actions:
                   We check for events before waiting for them,
                   as we are forcing a condition_changed on first loop to start the lights
                 choose:
+                  - alias: If this is the first loop and no trigger was planned, do nothing
+                    conditions:
+                      - condition: template
+                        value_template: "{{ wait is none }}"
+                    sequence:
                   - alias: If notifications should be sent
                     conditions:
                       - condition: template
@@ -1092,102 +1117,83 @@ actions:
                       - condition: template
                         value_template: "{{ wait.trigger.id == 'condition_changed' }}"
                     sequence:
-                      - alias: If the lights should be turned on
-                        if:
-                          - alias: The sun is low enough
-                            condition: template
-                            value_template: >-
-                              {% set elevation = state_attr(sun, 'elevation') %}
-                              {{ not is_number(elevation) or elevation < sun_elevation }}
-                          - alias: The room illuminance level is low enough
-                            condition: template
-                            value_template: >-
-                              {%
-                                set illuminance = (
-                                  states(illuminance_sensor)
-                                  if illuminance_sensor is string
-                                  else none
-                                )
-                              %}
-                              {{ not is_number(illuminance) or illuminance < illuminance_sensor_value }}
-                        then:
-                          - repeat:
-                              for_each: !input lights
-                              sequence:
-                                - alias: Only continue if the light was not set manually
-                                  condition: template
-                                  value_template: "{{ repeat.item not in manually_set_lights }}"
-                                - variables:
-                                    brightness_target: "{{ light_brightness_pct / 100 * 255 }}"
-                                    light_data: >-
-                                      {# Transition #}
-                                      {% set data = {'transition': LIGHT_START_TRANSITION} %}
+                      - repeat:
+                          for_each: !input lights
+                          sequence:
+                            - alias: Only continue if the light was not set manually
+                              condition: template
+                              value_template: "{{ repeat.item not in manually_set_lights }}"
+                            - variables:
+                                brightness_target: "{{ light_brightness_pct / 100 * 255 }}"
+                                light_data: >-
+                                  {# Transition #}
+                                  {% set data = {'transition': LIGHT_START_TRANSITION} %}
 
-                                      {# Brightness #}
-                                      {% set brightness = state_attr(repeat.item, 'brightness') %}
-                                      {% if not is_number(brightness) or brightness < brightness_target %}
-                                        {% set data = data | combine({'brightness': brightness_target}) %}
+                                  {# Brightness #}
+                                  {% set brightness = state_attr(repeat.item, 'brightness') %}
+                                  {% if not is_number(brightness) or brightness < brightness_target %}
+                                    {% set data = data | combine({'brightness': brightness_target}) %}
+                                  {% endif %}
+
+                                  {{ data }}
+                            - variables:
+                                light_data: >-
+                                  {% set data = light_data %}
+                                  {% set color_modes = state_attr(repeat.item, 'supported_color_modes') %}
+
+                                  {# Color temperature light #}
+                                  {% if 'color_temp' in color_modes %}
+                                    {% set max = state_attr(repeat.item, 'max_color_temp_kelvin') %}
+                                    {% if max is not none %}
+                                      {% set min = state_attr(repeat.item, 'min_color_temp_kelvin') %}
+                                      {% if min is not none %}
+                                        {% set temp = average(min, max) %}
+                                      {% else %}
+                                        {% set temp = max %}
                                       {% endif %}
+                                    {% else %}
+                                      {% set temp = 4000 %}
+                                    {% endif %}
+                                    {% set data = data | combine({'color_temp_kelvin': temp}) %}
 
-                                      {{ data }}
-                                - variables:
-                                    light_data: >-
-                                      {% set data = light_data %}
-                                      {% set color_modes = state_attr(repeat.item, 'supported_color_modes') %}
+                                  {# RGB light #}
+                                  {% elif 'rgb' in color_modes %}
+                                    {% set data = data | combine({rgb_color: [255, 255, 255]}) %}
+                                  {% endif %}
 
-                                      {# Color temperature light #}
-                                      {% if 'color_temp' in color_modes %}
-                                        {% set max = state_attr(repeat.item, 'max_color_temp_kelvin') %}
-                                        {% if max is not none %}
-                                          {% set min = state_attr(repeat.item, 'min_color_temp_kelvin') %}
-                                          {% if min is not none %}
-                                            {% set temp = average(min, max) %}
-                                          {% else %}
-                                            {% set temp = max %}
-                                          {% endif %}
-                                        {% else %}
-                                          {% set temp = 4000 %}
-                                        {% endif %}
-                                        {% set data = data | combine({'color_temp_kelvin': temp}) %}
-
-                                      {# RGB light #}
-                                      {% elif 'rgb' in color_modes %}
-                                        {% set data = data | combine({rgb_color: [255, 255, 255]}) %}
-                                      {% endif %}
-
-                                      {{ data }}
-                                  enabled: !input brightest_color
-                                - alias: Continue if the color is different from the one requested or is dimmer
-                                  condition: template
-                                  value_template: >-
-                                    {% set different = false %}
-                                    {% for attr in light_data %}
-                                      {% set attr_value = light_data[attr] %}
-                                      {% if not is_state_attr(repeat.item, attr, attr_value) %}
-                                        {% set different = true %}
-                                        {% break %}
-                                      {% endif %}
-                                    {% endfor %}
-                                    {{ different }}
-                                - alias: Remember this light state
-                                  variables:
-                                    restore_light_data: >-
-                                      {% set state_obj = states[repeat.item] %}
-                                      {% set clean_attrs = state_obj.attributes | to_json | from_json %}
-                                      {{
-                                        restore_light_data
-                                        | combine(
-                                          {
-                                            repeat.item: dict(clean_attrs, state=state_obj.state)
-                                          }
-                                        )
-                                      }}
-                                  enabled: !input restore_lights
-                                - alias: Turn on light
-                                  action: light.turn_on
-                                  target:
-                                    entity_id: "{{ repeat.item }}"
-                                  data: "{{ light_data }}"
+                                  {{ data }}
+                              enabled: !input brightest_color
+                            - alias: Continue if the color is different from the one requested or is dimmer
+                              condition: template
+                              value_template: >-
+                                {% set different = false %}
+                                {% for attr in light_data %}
+                                  {% set attr_value = light_data[attr] %}
+                                  {% if not is_state_attr(repeat.item, attr, attr_value) %}
+                                    {% set different = true %}
+                                    {% break %}
+                                  {% endif %}
+                                {% endfor %}
+                                {{ different }}
+                            - alias: Remember this light state
+                              variables:
+                                restore_light_data: >-
+                                  {% set state_obj = states[repeat.item] %}
+                                  {% set clean_attrs = state_obj.attributes | to_json | from_json %}
+                                  {{
+                                    restore_light_data
+                                    | combine(
+                                      {
+                                        repeat.item: dict(clean_attrs, state=state_obj.state)
+                                      }
+                                    )
+                                  }}
+                              enabled: !input restore_lights
+                            - alias: Turn on light
+                              action: light.turn_on
+                              target:
+                                entity_id: "{{ repeat.item }}"
+                              data: "{{ light_data }}"
                   - alias: If a light state changed
                     conditions:
                       - condition: template
@@ -1319,16 +1325,11 @@ actions:
                     id: light_state
                     entity_id: !input lights
                     enabled: "{{ confirmed and restore_lights }}"
-                  - alias: Sun went down
-                    trigger: sun.elevation_crossed_threshold
+                  - alias: Simulated room illuminance fell too low
+                    trigger: template
                     id: condition_changed
-                    options:
-                      threshold:
-                        type: below
-                        value:
-                          active_choice: number
-                          number: !input sun_elevation
-                    enabled: "{{ confirmed }}"
+                    value_template: !input low_light_estimation_trigger
+                    enabled: "{{ confirmed and illuminance_sensor == [] }}"
                   - alias: Room illuminance fell too low
                     trigger: illuminance.crossed_threshold
                     id: condition_changed
