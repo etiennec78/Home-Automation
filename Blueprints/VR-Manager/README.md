@@ -22,6 +22,7 @@ When a VR session starts:
   * illuminance sensor
   * sun elevation
   * windows orientation
+  * weather
 
 When the session ends:
 
