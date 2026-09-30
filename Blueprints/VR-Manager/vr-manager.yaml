@@ -25,6 +25,7 @@ blueprint:
     * Continuously adapt the lights while playing, thanks to:
       * illuminance sensor
       * sun elevation
+      * windows orientation
 
     When the session ends:
     * Restore the lights
@@ -322,6 +323,21 @@ blueprint:
             entity:
               filter:
                 domain: sun
+        windows_orientation:
+          name: 🔅 Windows orientation
+          description: |-
+            Take your windows **orientation** into account to **estimate** when to turn on **lights**
+            > *-1: Disabled*
+            > *0: North*
+            > *90: East*
+            > *180: South*
+            > *270: West*
+          default: -1
+          selector:
+            number:
+              min: -1
+              max: 365
+              unit_of_measurement: °
         low_light_estimation_trigger:
           name: 🔅 Low light estimation trigger
           description: |-
@@ -331,6 +347,11 @@ blueprint:
             {# CONSTANTS #}
             {# 1.0 - 0.0, lower will turn on sooner #}
             {% set LIGHT_FACTOR_TRIGGER = 0.07 %}
+
+            {# 1.0 - 0.0, lower means more reduction of the final light factor #}
+            {% set WINDOW_ANGLE_LT60 = 1.0 %}
+            {% set WINDOW_ANGLE_LT90 = 0.6 %}
+            {% set WINDOW_ANGLE_GT90 = 0.3 %}
 
 
             {# CODE #}
@@ -346,7 +367,21 @@ blueprint:
               ) %}
             {% endif %}
 
-            {% set light_factor = sun_elevation_factor %}
+            {% set orientation_factor = 1.0 %}
+            {% if windows_orientation != -1 and sun != '' %}
+              {% set sun_azimuth = state_attr(sun, 'azimuth') %}
+              {% set angle_diff = (sun_azimuth - windows_orientation) | abs %}
+              {% set angle_diff = angle_diff if angle_diff <= 180 else 360 - angle_diff %}
+              {% if angle_diff < 60 %}
+                {% set orientation_factor = WINDOW_ANGLE_LT60 %}
+              {% elif angle_diff < 90 %}
+                {% set orientation_factor = WINDOW_ANGLE_LT90 %}
+              {% else %}
+                {% set orientation_factor = WINDOW_ANGLE_GT90 %}
+              {% endif %}
+            {% endif %}
+
+            {% set light_factor = sun_elevation_factor * orientation_factor %}
             {{ light_factor > LIGHT_FACTOR_TRIGGER }}
           selector:
             template:
@@ -503,6 +538,7 @@ variables:
   ble_scanner_switches: !input ble_scanner_switches
   restore_lights: !input restore_lights
   sun: !input sun
+  windows_orientation: !input windows_orientation
   illuminance_sensor: !input illuminance_sensor
   illuminance_trigger: !input illuminance_trigger
   auto_brightness: !input auto_brightness
@@ -548,6 +584,7 @@ variables:
         missing_device: "You are missing a VR headset device to send notifications (#33)"
         missing_trigger_entity: "You are missing an entity for your selected trigger (#34)"
         missing_illuminance_sensor: "You are missing an illuminance sensor (#35)"
+        missing_sun: "You are missing a sun entity (#36)"
       button:
         start: "Start"
     fr:
@@ -569,6 +606,7 @@ variables:
         missing_device: "Il vous manque l'appareil de votre casque VR pour pouvoir envoyer des notifications (#33)"
         missing_trigger_entity: "Il vous manque une entité pour le déclencheur que vous avez sélectionné (#34)"
         missing_illuminance_sensor: "Il vous manque un capteur de luminosité ambiante (#35)"
+        missing_sun: "Il vous manque une entité de soleil (#36)"
       button:
         start: "Démarrer"
 
@@ -670,6 +708,9 @@ actions:
                 - alias: Check that there is an illuminance sensor if auto brightness is on
                   error: "{{ auto_brightness and illuminance_sensor == [] }}"
                   message_id: "missing_illuminance_sensor"
+                - alias: Check that a sun entity has been given if there is a windows orientation value
+                  error: "{{ windows_orientation != -1 and sun == [] }}"
+                  message_id: "missing_sun"
               sequence:
                 - alias: If a check failed
                   if:
