@@ -74,5 +74,6 @@ Refer to the table below to fix the errors
   | #33 | You are missing a VR headset device to send notifications | Either add a 'Headset device' or disable 'Send notifications', 'Tap to start', 'Startup app' |
   | #34 | You are missing an entity for your selected trigger | If you are using 'Device tracker' as one of your 'Start/End trigger', you should have at lease one 'Headset device tracker'. Otherwise, you need a 'Headset interactive sensor' |
   | #35 | You are missing an illuminance sensor | Either add a 'Room illuminance sensor', or disable 'Automatic brightness' |
+  | #36 | You are missing a sun entity | Either add a 'Sun' or set 'Windows orientation' to -1 |
   
 </details>

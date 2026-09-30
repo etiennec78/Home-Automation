@@ -21,6 +21,7 @@ When a VR session starts:
 * Continuously adapt the lights while playing, thanks to:
   * illuminance sensor
   * sun elevation
+  * windows orientation
 
 When the session ends:
 
