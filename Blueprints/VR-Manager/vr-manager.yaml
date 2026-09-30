@@ -65,6 +65,7 @@ blueprint:
           name: ⚡ End trigger
           description: |-
             Which **event** must this automation wait for to **stop**?
+            > If 'Interactive sensor' and 'Charging started' are selected, the automation will wait for both conditions to be true
           selector:
             select:
               multiple: true
@@ -841,6 +842,11 @@ actions:
       pc_managed: false
       wait_notif_ack: false
       wait_hmd_sign: false
+      wait_charging_and_interactive: >-
+        {{
+          'charge' in end_triggers
+          and 'interactive' in end_triggers
+        }}
       webhook_id: "vr-manager-{{ this.context.id }}-start"
       webhook_url: "/api/webhook/{{ webhook_id }}"
       brightness_target: "{{ light_brightness_pct / 100 * 255 }}"
@@ -1358,6 +1364,19 @@ actions:
                   {% else %}
                     {{ MAX_INT }}
                   {% endif %}
+              - alias: Only continue if a second end trigger must be awaited
+                condition: template
+                value_template: >-
+                  {{
+                    wait_charging_and_interactive
+                    and wait.completed
+                    and wait.trigger.id in [
+                      'charge',
+                      'interactive'
+                    ]
+                  }}
+              - variables:
+                  wait_charging_and_interactive: false
         - alias: Restart the loop if the start notification button was pressed
           condition: template
           value_template: "{{ wait.trigger.id != 'start_order' }}"
