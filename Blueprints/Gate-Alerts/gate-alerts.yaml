@@ -73,6 +73,7 @@ blueprint:
           name: ⌛ Notification delay
           description: |-
             Wait **time** in minutes before sending notifications
+            Useful to have 'Gate left open for too long' alerts, or delay offline notifications
             > *For the "Back online" mode, this variable represents the down time needed before sending a notification when reconnected*
           default: 0
           selector:
