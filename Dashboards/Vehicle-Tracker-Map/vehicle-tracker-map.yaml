@@ -21,8 +21,23 @@ sections:
 
       # EDIT: Duplicate this card as many times as you have drivers set in Automatic Gate
       - type: custom:mushroom-template-card
-        # Show the ETA only if someone is driving
+        # Show the ETA only if someone is driving home
         visibility:
+          # EDIT: If you are using the Automatic Gate blueprint and have HA 2026.9+, keep the first condition. Otherwise, keep the second.
+          - condition: template
+            value_template: >-
+              {# EDIT #}
+              {% set itinerary_sensor = 'input_text.user0_itinerary_sensor' %}
+
+              {% set state = states(itinerary_sensor) | from_json({}) %}
+              {{
+                itinerary_sensor | has_value
+                and 'status' in state
+                and state['status'] in ['arriving', 'on_approach']
+              }}
+            state:
+              - arriving
+              - on_approach
           - condition: state
             entity: sensor.user0_driving_sensor # EDIT
             state: on
