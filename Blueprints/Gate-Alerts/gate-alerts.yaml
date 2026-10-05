@@ -1039,18 +1039,37 @@ actions:
       trigger: template
       id: closed
       value_template: "{{ is_state(gate, ['off', 'closed']) }}"
+      enabled: >-
+        {{
+          trigger.to_state.state == 'closing'
+          or trigger.id in ['open', 'offline']
+        }}
+
+    - alias: Wait for gate open
+      trigger: template
+      id: open
+      value_template: "{{ is_state(gate, ['on', 'open']) }}"
+      enabled: >-
+        {{
+          trigger.to_state.state == 'opening'
+          or trigger.id in ['close', 'offline']
+        }}
 
     - alias: Wait for gate opening
       trigger: template
       id: started_opening
-      value_template: "{{ is_state(gate, ['on', 'opening']) }}"
-      enabled: "{{ trigger.id == 'close' }}"
+      value_template: "{{ is_state(gate, 'opening') }}"
+      enabled: >-
+        {{
+          trigger.to_state.state == 'open'
+          or trigger.id in ['close', 'offline']
+        }}
 
     - alias: Wait for gate closing
       trigger: template
       id: started_closing
       value_template: "{{ is_state(gate, 'closing') }}"
-      enabled: "{{ trigger.id == 'open' }}"
+      enabled: "{{ trigger.id in ['open', 'offline'] }}"
 
     - alias: Wait for closing button press
       trigger: event
