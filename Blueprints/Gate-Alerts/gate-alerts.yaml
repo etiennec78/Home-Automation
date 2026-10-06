@@ -287,7 +287,10 @@ variables:
   camera_entity: !input camera_entity
   language: !input language
   custom_translations: !input custom_translations
-  notification_tag: "gate-{{ trigger.id if trigger.platform is not none else '' }}"
+  notification_tag: >-
+    gate-
+    {%- set id = device_attr(gate, 'id') -%}
+    {{ id if id is not none else gate }}
   config_checker_tag: "{{ 'config-checker-' ~ this.attributes.id }}"
   closing_order_id: "{{ 'closing_order_' ~ this.context.id }}"
   error_checker_ran: false
@@ -1101,19 +1104,66 @@ actions:
     then:
       - stop: Timer ran out
 
-  - alias: Close gate if user pressed closing button
-    if:
-      condition: template
-      value_template: "{{ wait.trigger.id == 'closing_order' }}"
-    then:
-      - action: >-
-          {% if states[gate].domain == 'switch' %}
-            switch.turn_off
-          {% elif states[gate].domain == 'cover' %}
-            cover.close_cover
-          {% endif %}
-        target:
-          entity_id: "{{ gate }}"
+  - choose:
+      - alias: If the timeout was reached
+        conditions:
+          - condition: template
+            value_template: "{{ not wait.completed }}"
+        sequence:
+          - note: |-
+              Filter out Android devices, as they hold a timeout themselves and don't need to be cleared
+            variables:
+              notify_services: >-
+                {{
+                  notify_devices
+                  | select('is_device_attr', 'manufacturer', 'Apple')
+                  | map('device_attr', 'name')
+                  | map('slugify')
+                  | map('regex_replace', '^', 'notify.mobile_app_')
+                  | list
+                }}
+      - alias: Close gate if user pressed closing button
+        conditions:
+          condition: template
+          value_template: "{{ wait.trigger.id == 'closing_order' }}"
+        sequence:
+          - action: >-
+              {% if states[gate].domain == 'switch' %}
+                switch.turn_off
+              {% elif states[gate].domain == 'cover' %}
+                cover.close_cover
+              {% endif %}
+            target:
+              entity_id: "{{ gate }}"
+
+  - alias: Only clear the notification if needed
+    note: |-
+      Clear if:
+        * An opposite trigger is selected (and will replace this one)
+        * The closing notification must be removed (the gate has finished closing)
+        * The timer has ran out (iOS and dashboard notifications need to be cleared manually)
+    condition: template
+    value_template: >-
+      {% set opposites = {
+        'close': 'open',
+        'open': 'close',
+        'offline': 'online'
+      } %}
+      {% set will_be_replaced = (
+        trigger.id in opposites
+        and opposites[trigger.id] in notification_type
+      ) %}
+      {% set finished_closing = (
+        wait.completed
+        and wait.trigger.id != 'closing_order'
+        and wait.trigger.from_state.state == 'closing'
+        and wait.trigger.to_state.state == 'closed'
+      ) %}
+      {{
+        not will_be_replaced
+        or finished_closing
+        or not wait.completed
+      }}
 
   - alias: Remove notification sent to users
     repeat:
