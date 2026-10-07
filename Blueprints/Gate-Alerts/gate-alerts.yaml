@@ -1095,20 +1095,6 @@ actions:
         {{ MAX_INT }}
       {% endif %}
 
-  - alias: Stop if timer ran out but problem still present
-    if:
-      condition: template
-      value_template: >-
-        {{
-          not(
-            wait.completed
-            or trigger.id == 'error'
-            or is_state(gate, ['off', 'closed'])
-          )
-        }}
-    then:
-      - stop: Timer ran out
-
   - choose:
       - alias: If the timeout was reached
         conditions:
