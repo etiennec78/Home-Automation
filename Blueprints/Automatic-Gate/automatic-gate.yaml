@@ -269,10 +269,20 @@ blueprint:
         ultra_precision:
           name: 🎯 Ultra precision mode
           description: |-
-            Send a location request then a travel time request 2 seconds before opening to delay it if needed and increase opening itme precision
+            Send a location request then a travel time request before opening to delay it if needed and increase opening itme precision
           default: false
           selector:
             boolean:
+        ultra_precision_timer:
+          name: 🎯 Ultra precision timer
+          description: |-
+            The lead time before the opening to trigger the ultra precision mode
+          default: 2
+          selector:
+            number:
+              min: 1
+              max: 15
+              unit_of_measurement: s
 
     gate_behavior:
       name: Gate behavior
@@ -733,6 +743,7 @@ variables:
   request_gps_location: !input request_gps_location
   gps_request_while_open: !input gps_request_while_open
   ultra_precision: !input ultra_precision
+  ultra_precision_timer: !input ultra_precision_timer
   behavior:
     departure:
       opening: !input departure_opening_behavior
@@ -3242,7 +3253,11 @@ actions:
                               }}
                             ultra_precision: >-
                               {{
-                                opening_time - 2 - now() | as_timestamp
+                                (
+                                  opening_time
+                                  - ultra_precision_timer
+                                  - now() | as_timestamp
+                                )
                                 if (
                                   wait_opening
                                   and ultra_precision
