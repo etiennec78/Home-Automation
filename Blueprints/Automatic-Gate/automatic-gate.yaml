@@ -3220,6 +3220,7 @@ actions:
                   variables:
                     in_activation_zone: false
                     ultra_precision_waiting_gps: false
+                    up_count: 0
                 - alias: Repeat while driver still driving and the opening should not be triggered yet
                   repeat:
                     while:
@@ -3467,6 +3468,18 @@ actions:
                                   - alias: Increment the API calls counter
                                     variables:
                                       api_calls: "{{ api_calls + 1 }}"
+                                  - alias: Only continue if ultra precision mode is active
+                                    condition: template
+                                    value_template: "{{ ultra_precision_waiting_gps }}"
+                                  - variables:
+                                      up_count: "{{ up_count + 1 }}"
+                                  - alias: Only continue if the ultra precision limit API calls limit has been reached
+                                    condition: template
+                                    value_template: "{{ up_count >= 5 }}"
+                                  - alias: Disable ultra precision mode
+                                    variables:
+                                      ultra_precision: false
+                                      ultra_precision_waiting_gps: false
                                 else:
                                   - alias: If the last quick update was a long time ago
                                     if:
