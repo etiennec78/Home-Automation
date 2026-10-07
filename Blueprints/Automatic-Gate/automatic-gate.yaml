@@ -1318,7 +1318,7 @@ actions:
               error_checker_ran: true
               successful_check: false
               messages: []
-              api_calls: 0
+              api_calls: "{{ 5 if ultra_precision else 0 }}"
               error_level: 0
           - alias: Run the error checker in an error-safe sequence
             sequence:
