@@ -266,6 +266,13 @@ blueprint:
           default: "{{ max(seconds_before_opening / 10, 5) }}"
           selector:
             template:
+        ultra_precision:
+          name: 🎯 Ultra precision mode
+          description: |-
+            Send a location request then a travel time request 2 seconds before opening to delay it if needed and increase opening itme precision
+          default: false
+          selector:
+            boolean:
 
     gate_behavior:
       name: Gate behavior
@@ -725,6 +732,7 @@ variables:
   travel_time_rate: !input travel_time_rate
   request_gps_location: !input request_gps_location
   gps_request_while_open: !input gps_request_while_open
+  ultra_precision: !input ultra_precision
   behavior:
     departure:
       opening: !input departure_opening_behavior
@@ -3200,6 +3208,7 @@ actions:
                 - alias: Initialize variables for the following sequence
                   variables:
                     in_activation_zone: false
+                    ultra_precision_waiting_gps: false
                 - alias: Repeat while driver still driving and the opening should not be triggered yet
                   repeat:
                     while:
@@ -3212,21 +3221,33 @@ actions:
                     sequence:
                       - alias: Set the timeout for the next 'wait for trigger' action
                         variables:
+                          wait_opening: >-
+                            {{
+                              in_activation_zone
+                              and arrival_opening_method == 'time'
+                              and opening_time is not none
+                            }}
                           timeouts:
                             opening: >-
                               {{
                                 opening_time - now() | as_timestamp
-                                if (
-                                  in_activation_zone
-                                  and arrival_opening_method == 'time'
-                                  and opening_time is not none
-                                )
+                                if wait_opening
                                 else MAX_INT
                               }}
                             gps_request: >-
                               {{
                                 next_gps_refresh_ts - now() | as_timestamp
                                 if request_gps_location and next_gps_refresh_ts is not none
+                                else MAX_INT
+                              }}
+                            ultra_precision: >-
+                              {{
+                                opening_time - 2 - now() | as_timestamp
+                                if (
+                                  wait_opening
+                                  and ultra_precision
+                                  and not ultra_precision_waiting_gps
+                                )
                                 else MAX_INT
                               }}
                             timed_out: >-
@@ -3332,6 +3353,7 @@ actions:
                                     wait.trigger.id == 'position'
                                     and (
                                       travel_time_rate == 'continuous'
+                                      or ultra_precision_waiting_gps
                                       or in_activation_zone and (
                                         travel_time_rate == 'near-home'
                                         or (
@@ -3354,9 +3376,15 @@ actions:
                                 condition: template
                                 value_template: >-
                                   {{
-                                    (in_activation_zone and not was_in_zone
-                                     and arrival_opening_method == 'time')
-                                    or last_refresh_timestamp + next_refresh < now() | as_timestamp
+                                    ultra_precision_waiting_gps
+                                    or (
+                                      in_activation_zone and not was_in_zone
+                                      and arrival_opening_method == 'time'
+                                    )
+                                    or (
+                                      last_refresh_timestamp + next_refresh
+                                      < now() | as_timestamp
+                                    )
                                   }}
                               - alias: Get the current distance of the user from the gate
                                 variables:
@@ -3413,6 +3441,7 @@ actions:
                                         - states[travel_time_sensor].last_updated
                                         > timedelta(seconds=2)
                                         and api_calls < 300
+                                        or ultra_precision_waiting_gps
                                       }}
                                 then:
                                   - alias: Update travel time
@@ -3522,6 +3551,8 @@ actions:
                                           logger: blueprints.etiennec78.automatic_gate
                                       - stop: Travel time integration not supported
                                         error: true
+                                  - variables:
+                                      ultra_precision_waiting_gps: false
                                   - alias: Only continue if the duration is positive
                                     condition: template
                                     value_template: "{{ travel_time_duration >= 0 }}"
@@ -3559,7 +3590,11 @@ actions:
                           - alias: If a GPS request must be sent
                             conditions:
                               - condition: template
-                                value_template: "{{ not wait.completed and timeout_type == 'gps_request' }}"
+                                value_template: >-
+                                  {{
+                                    not wait.completed
+                                    and timeout_type in ['gps_request', 'ultra_precision']
+                                  }}
                             sequence:
                               - alias: If an opening time is planned
                                 if:
@@ -3569,9 +3604,16 @@ actions:
                                   - alias: Get the next gps refresh timestamp
                                     variables:
                                       seconds_before_opening: "{{ opening_time - now() | as_timestamp }}"
-                                      outdated_delay: !input gps_outdated_function
                                       next_gps_refresh: !input gps_request_refresh_function
                                       next_gps_refresh_ts: "{{ now() | as_timestamp + next_gps_refresh }}"
+                                  - if: "{{ timeout_type == 'gps_request' }}"
+                                    then:
+                                      - variables:
+                                          outdated_delay: !input gps_outdated_function
+                                    else:
+                                      - variables:
+                                          outdated_delay: 0
+                                          ultra_precision_waiting_gps: true
                                 else:
                                   - alias: Remove the planned gps request
                                     variables:
