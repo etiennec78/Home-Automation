@@ -3217,9 +3217,15 @@ actions:
                       continue_on_error: true
                     - sequence: *tts
                 - alias: Initialize variables for the following sequence
+                  note: |-
+                    ultra precision stage values:
+                      0: off
+                      1: waiting for planning of opening
+                      2: waiting for gps
+                      3: waiting for travel time
                   variables:
                     in_activation_zone: false
-                    ultra_precision_waiting_gps: false
+                    up_stage: "{{ 1 if ultra_precision else 0 }}"
                     up_count: 0
                 - alias: Repeat while driver still driving and the opening should not be triggered yet
                   repeat:
@@ -3259,11 +3265,7 @@ actions:
                                   - ultra_precision_timer
                                   - now() | as_timestamp
                                 )
-                                if (
-                                  wait_opening
-                                  and ultra_precision
-                                  and not ultra_precision_waiting_gps
-                                )
+                                if wait_opening and up_stage == 1
                                 else MAX_INT
                               }}
                             timed_out: >-
@@ -3369,7 +3371,7 @@ actions:
                                     wait.trigger.id == 'position'
                                     and (
                                       travel_time_rate == 'continuous'
-                                      or ultra_precision_waiting_gps
+                                      or up_stage == 2
                                       or in_activation_zone and (
                                         travel_time_rate == 'near-home'
                                         or (
@@ -3392,7 +3394,7 @@ actions:
                                 condition: template
                                 value_template: >-
                                   {{
-                                    ultra_precision_waiting_gps
+                                    up_stage == 2
                                     or (
                                       in_activation_zone and not was_in_zone
                                       and arrival_opening_method == 'time'
@@ -3457,7 +3459,7 @@ actions:
                                         - states[travel_time_sensor].last_updated
                                         > timedelta(seconds=2)
                                         and api_calls < 300
-                                        or ultra_precision_waiting_gps
+                                        or up_stage == 3
                                       }}
                                 then:
                                   - alias: Update travel time
@@ -3470,7 +3472,7 @@ actions:
                                       api_calls: "{{ api_calls + 1 }}"
                                   - alias: Only continue if ultra precision mode is active
                                     condition: template
-                                    value_template: "{{ ultra_precision_waiting_gps }}"
+                                    value_template: "{{ up_stage == 3 }}"
                                   - variables:
                                       up_count: "{{ up_count + 1 }}"
                                   - alias: Only continue if the ultra precision limit API calls limit has been reached
@@ -3478,8 +3480,7 @@ actions:
                                     value_template: "{{ up_count >= 5 }}"
                                   - alias: Disable ultra precision mode
                                     variables:
-                                      ultra_precision: false
-                                      ultra_precision_waiting_gps: false
+                                      up_stage: 0
                                 else:
                                   - alias: If the last quick update was a long time ago
                                     if:
@@ -3580,7 +3581,7 @@ actions:
                                       - stop: Travel time integration not supported
                                         error: true
                                   - variables:
-                                      ultra_precision_waiting_gps: false
+                                      up_stage: 1
                                   - alias: Only continue if the duration is positive
                                     condition: template
                                     value_template: "{{ travel_time_duration >= 0 }}"
@@ -3641,7 +3642,7 @@ actions:
                                     else:
                                       - variables:
                                           outdated_delay: 0
-                                          ultra_precision_waiting_gps: true
+                                          up_stage: 2
                                 else:
                                   - alias: Remove the planned gps request
                                     variables:
