@@ -795,8 +795,6 @@ actions:
                   importance: high
                   priority: high
                   ttl: 0
-                  sticky: true
-                  persistent: true
                   tag: "{{ notification_tag }}"
                   url: !input on_tap_link
                   clickAction: !input on_tap_link
@@ -888,8 +886,6 @@ actions:
                       importance: high
                       priority: high
                       ttl: 0
-                      sticky: true
-                      persistent: "{{ notification_lifetime == 'persistent' or (notification_lifetime == 'automatic' and notification_type == 'open') }}"
                       push:
                         sound:
                           name: "default"
