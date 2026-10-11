@@ -63,12 +63,32 @@ blueprint:
                   value: "open"
                 - label: Closing
                   value: "close"
+                - label: Open (fully open; requires an explicit open state)
+                  value: "fully_open"
+                - label: Closed (fully closed)
+                  value: "fully_closed"
                 - label: Error
                   value: "error"
                 - label: Offline
                   value: "offline"
                 - label: Back online
                   value: "online"
+        notification_lifetime:
+          name: 🔔 Notification lifetime
+          description: >-
+            Automatic preserves the existing notification lifecycle. Choose
+            30 seconds or persistent for a fixed lifetime regardless of alert type.
+            This affects mobile notifications, not dashboard persistent notifications.
+          default: automatic
+          selector:
+            select:
+              options:
+                - label: Automatic (legacy)
+                  value: automatic
+                - label: Remove after 30 seconds
+                  value: 30_seconds
+                - label: Keep notification until dismissed
+                  value: persistent
         notification_delay:
           name: ⌛ Notification delay
           description: |-
@@ -263,6 +283,7 @@ variables:
   MAX_INT: 2147483647
   gate: !input gate
   notification_type: !input notification_type
+  notification_lifetime: !input notification_lifetime
   notification_delay: !input notification_delay
   notify_devices: !input notify_devices
   notify_services: >-
@@ -296,6 +317,8 @@ variables:
         still_open: Gate open 🔓
         left_open: Gate left open 🔓
         close: Gate closing 🔐
+        fully_closed: Gate closed 🔒
+        fully_open: Gate open 🔓
         error: Gate error ⚠️
         offline: Gate offline 🌐❌
         online: Gate online 🌐✅
@@ -306,6 +329,8 @@ variables:
         still_open: The gate is open
         left_open: The gate has been left open for {{notification_delay}} minutes
         close: The gate is closing
+        fully_closed: The gate is fully closed
+        fully_open: The gate is fully open
         error: "The gate has encountered an error: {error}"
         offline: The gate has been offline for {{notification_delay}} minutes
         online: The gate is back online !
@@ -326,6 +351,8 @@ variables:
         still_open: Portail ouvert 🔓
         left_open: Portail laissé ouvert 🔓️
         close: Fermeture portail 🔐
+        fully_closed: Portail fermé 🔒
+        fully_open: Portail ouvert 🔓
         error: Erreur portail ⚠️
         offline: Portail hors ligne 🌐❌
         online: Portail en ligne 🌐✅
@@ -336,6 +363,8 @@ variables:
         still_open: Le portail est ouvert
         left_open: Le portail est ouvert depuis {{notification_delay}} minutes
         close: Fermeture du portail en cours
+        fully_closed: Le portail est complètement fermé
+        fully_open: Le portail est complètement ouvert
         error: "Le portail a rencontré une erreur: {error}"
         offline: Le portail est hors ligne depuis {{notification_delay}} minutes
         online: Le portail est de nouveau en ligne !
@@ -372,7 +401,7 @@ triggers:
       minutes: !input notification_delay
     enabled: "{{ notification_type == 'open' }}"
 
-  - alias: Wait for gate closing
+  - alias: Wait for gate closing (legacy behavior)
     trigger: state
     id: close
     entity_id: !input gate
@@ -386,6 +415,32 @@ triggers:
     for:
       minutes: !input notification_delay
     enabled: "{{ notification_type == 'close' }}"
+
+  - alias: Wait until the gate is fully closed
+    trigger: state
+    id: fully_closed
+    entity_id: !input gate
+    to:
+      - "off"
+      - "closed"
+    not_from:
+      - "unknown"
+      - "unavailable"
+    for:
+      minutes: !input notification_delay
+    enabled: "{{ notification_type == 'fully_closed' }}"
+
+  - alias: Wait until the gate is fully open
+    trigger: state
+    id: fully_open
+    entity_id: !input gate
+    to: "open"
+    not_from:
+      - "unknown"
+      - "unavailable"
+    for:
+      minutes: !input notification_delay
+    enabled: "{{ notification_type == 'fully_open' }}"
 
   - alias: Wait for error
     trigger: template
@@ -834,7 +889,7 @@ actions:
                       priority: high
                       ttl: 0
                       sticky: true
-                      persistent: "{{ notification_type == 'open' }}"
+                      persistent: "{{ notification_lifetime == 'persistent' or (notification_lifetime == 'automatic' and notification_type == 'open') }}"
                       push:
                         sound:
                           name: "default"
@@ -843,10 +898,11 @@ actions:
                       url: !input on_tap_link
                       clickAction: !input on_tap_link
                       timeout: >-
-                        {%
-                          if notification_type == 'error'
-                          or is_state(gate, ['off', 'closed'])
-                        %}
+                        {% if notification_lifetime == '30_seconds' %}
+                          30
+                        {% elif notification_lifetime == 'persistent' %}
+                          {{ MAX_INT }}
+                        {% elif notification_type in ['fully_open', 'fully_closed', 'error'] or is_state(gate, ['off', 'closed']) %}
                           30
                         {% else %}
                           {{ MAX_INT }}
@@ -1025,27 +1081,27 @@ actions:
             sequence: !input extra_actions
             continue_on_error: true
 
-  - alias: Only continue if an event needs to be listened to to remove the notification
+  - alias: Keep persistent notifications without automatic dismissal
     condition: template
-    value_template: "{{ notification_type != 'online' }}"
+    value_template: "{{ notification_lifetime != 'persistent' }}"
 
   - wait_for_trigger:
     - alias: Wait for gate closed
       trigger: template
       id: closed
-      value_template: "{{ is_state(gate, ['off', 'closed']) }}"
+      value_template: "{{ is_state(gate, ['off', 'closed']) and notification_lifetime != '30_seconds' }}"
 
     - alias: Wait for gate opening
       trigger: template
       id: started_opening
-      value_template: "{{ is_state(gate, ['on', 'opening']) }}"
-      enabled: "{{ notification_type == 'close' }}"
+      value_template: "{{ is_state(gate, ['on', 'opening']) and notification_lifetime != '30_seconds' }}"
+      enabled: "{{ notification_type in ['close', 'fully_closed'] and notification_lifetime != '30_seconds' }}"
 
     - alias: Wait for gate closing
       trigger: template
       id: started_closing
-      value_template: "{{ is_state(gate, 'closing') }}"
-      enabled: "{{ notification_type == 'open' }}"
+      value_template: "{{ is_state(gate, 'closing') and notification_lifetime != '30_seconds' }}"
+      enabled: "{{ notification_type == 'open' and notification_lifetime != '30_seconds' }}"
 
     - alias: Wait for closing button press
       trigger: event
@@ -1053,11 +1109,13 @@ actions:
       event_type: mobile_app_notification_action
       event_data:
         action: "{{ closing_order_id }}"
-      enabled: "{{ notification_type == 'open' }}"
+      enabled: "{{ notification_type == 'open' and notification_lifetime != '30_seconds' }}"
 
-    # Remove notification after 30s in case of an error or gate closing without position tracking
+    # Explicit lifetimes override the legacy state-dependent lifecycle.
     timeout: >-
-      {% if notification_type == 'error' or is_state(gate, ['off', 'closed']) %}
+      {% if notification_lifetime == '30_seconds' %}
+        30
+      {% elif notification_lifetime == 'automatic' and (notification_type in ['fully_open', 'fully_closed', 'error'] or is_state(gate, ['off', 'closed'])) %}
         30
       {% else %}
         {{ MAX_INT }}
@@ -1067,13 +1125,13 @@ actions:
     if:
       condition: template
       value_template: >-
-        {{
-          not(
-            wait.completed
-            or notification_type == 'error'
-            or is_state(gate, ['off', 'closed'])
-          )
-        }}
+        {% if notification_lifetime == '30_seconds' or notification_type in ['fully_open', 'fully_closed'] %}
+          false
+        {% elif notification_lifetime == 'automatic' %}
+          {{ not (wait.completed or notification_type == 'error' or is_state(gate, ['off', 'closed'])) }}
+        {% else %}
+          false
+        {% endif %}
     then:
       - stop: Timer ran out
 
