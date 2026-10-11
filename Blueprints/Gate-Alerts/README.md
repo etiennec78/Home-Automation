@@ -23,6 +23,29 @@ A blueprint that notifies selected users when the gate:
 * Customizable extra actions ➕
 
 
+
+## Notification event and lifetime options 🔔
+
+The **Notification type** selector supports the original **Opening** and **Closing**
+events, plus **Open (fully open)** and **Closed (fully closed)**:
+
+* **Opening** / **Closing** preserve their existing trigger behavior.
+* **Open (fully open)** requires a gate entity that explicitly reports `open`.
+  A binary contact alone cannot confirm that the gate is fully open.
+* **Closed (fully closed)** triggers when the gate reports `off` or `closed`.
+  For a binary contact, `off` must mean fully closed.
+
+**Notification lifetime** applies to all notification types:
+
+* **Automatic (legacy)** retains the existing state-dependent dismissal rules
+  for original event types; new fully-open/fully-closed events expire after 30 seconds.
+* **Remove after 30 seconds** always clears the mobile notification after 30 seconds.
+* **Keep notification until dismissed** does not automatically clear it.
+
+This setting is independent of the existing dashboard persistent-notification option.
+The default is **Automatic (legacy)** to preserve existing configurations.
+Existing blueprint values `open` and `close` remain unchanged.
+
 ## Buy Me a Coffee ☕
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
