@@ -271,7 +271,7 @@ script:
             # If the shutter has reached the requested position and needs to stop, then stop it
             - if:
                 condition:
-                  lambda: "return !physical_press and id(shutter).current_operation != COVER_OPERATION_IDLE and position_requested != 1.0 or position_requested != 0.0;"
+                  lambda: "return !physical_press and id(shutter).current_operation != COVER_OPERATION_IDLE and position_requested != 1.0 and position_requested != 0.0;"
                 then:
                   - button.press: stop_cover_button
 
