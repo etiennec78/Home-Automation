@@ -457,13 +457,9 @@ actions:
           - alias: If the blueprint was executed manually
             condition: template
             value_template: "{{ trigger.platform is none }}"
-          - alias: If checks should be run when triggered by a driving sensor
-            condition: and
-            conditions:
-              - condition: trigger
-                id: vehicle_started
-              - condition: template
-                value_template: !input always_run_checks
+          - alias: If checks should be run when triggered by the gate
+            condition: template
+            value_template: !input always_run_checks
           - alias: If the user added the blueprint, updated inputs, or HA started
             condition: trigger
             id: blueprint_enabled
