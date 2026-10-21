@@ -69,5 +69,6 @@ Refer to the table below to fix the errors
   | #27 | Your dead zone is invalid | Either set the 'Maximum distance' input to 0, or set a value higher than the 'Minimum distance' |
   | #28 | These device tracker: '...' are not reporting GPS coordinates | Check that these trackers are online and currently holding latitude and longitude attributes |
   | #29 | You are using a feature requiring GPS requests, but they are disabled | Either enable 'Request GPS location', or set 'GPS request refresh rate while open' to 0, or disable 'Ultra precision mode' |
+  | #37 | The 'Ultra precision mode' did not work | Your gps or travel time did not respond on time |
   
 </details>

@@ -801,6 +801,7 @@ variables:
         disabled: "Automatic Gate disabled 🚫"
         valid_config: "{{blueprint_name}}: Valid configuration 🛠️✅"
         invalid_config: "{{blueprint_name}}: Invalid configuration 🛠️❌"
+        tip: "{{blueprint_name}}: Tip 💡️"
       message:
         leaving_home: "You are leaving home"
         vehicle_started: "You have started your vehicle"
@@ -843,6 +844,7 @@ variables:
         too_close: "You have started driving too close to the gate zone"
         valid_config: "Your configuration seems valid"
         more_info: "More info"
+        up_should_be_higher: "You should consider increasing 'Ultra precision timer' to {data}+, as your sensors didn't have enough time to respond."
         invalid_translations: |-
           Your custom translations are not valid
           Check the following keys: '{data}' (#1)
@@ -877,6 +879,7 @@ variables:
         wrong_transmitter_entities: "These iBeacon transmitter entities: '{data}' do not come the associated notification device (#26)"
         no_gps_coordinates: "These device tracker: '{data}' are not reporting GPS coordinates (#28)"
         gps_requests_not_enabled: "You are using a feature requiring GPS requests, but they are disabled (#29)"
+        up_failing: "The 'Ultra precision mode' did not work (#37)"
       button:
         open: "Open 🔓"
         close: "Close 🔐"
@@ -987,6 +990,7 @@ variables:
         disabled: "Automatic Gate désactivé 🚫"
         valid_config: "{{blueprint_name}}: Configuration valide 🛠️✅"
         invalid_config: "{{blueprint_name}}: Configuration invalide 🛠️❌"
+        tip: "{{blueprint_name}}: Conseil 💡"
       message:
         leaving_home: "Vous sortez de la maison"
         vehicle_started: "Vous avez démarré votre véhicule"
@@ -1029,6 +1033,7 @@ variables:
         too_close: "Vous avez démarré trop près de la zone du portail"
         valid_config: "Votre configuration semble valide"
         more_info: "Plus d'infos"
+        up_should_be_higher: "Vous devriez considérer d'augmenter 'Ultra precision timer' à {data}+, car vos capteurs n'ont pas eu le temps de se mettre à jour."
         invalid_translations: |-
           Vos traductions personnalisées ne sont pas valides
           Vérifiez les valeurs suivantes: '{data}' (#1)
@@ -1063,6 +1068,7 @@ variables:
         wrong_transmitter_entities: "Ces transmetteurs iBeacon: '{data}' ne viennent pas de l'appareil de notifications associé (#26)"
         no_gps_coordinates: "Ces traceurs: '{data}' ne renvoient pas de coordonnées GPS (#28)"
         gps_requests_not_enabled: "Vous avez activé une fonctionnalité qui requiert des requêtes GPS, mais celles-ci sont désactivées (#29)"
+        up_failing: "Le mode 'Ultra precision' n'a pas fonctionné (#37)"
       button:
         open: "Ouvrir 🔓"
         close: "Fermer 🔐"
@@ -3227,6 +3233,10 @@ actions:
                     in_activation_zone: false
                     up_stage: "{{ 1 if ultra_precision else 0 }}"
                     up_count: 0
+                    up_successful: false
+                    up_had_time: false
+                    up_start_ts: 0
+                    up_late_update_ts: 0
                 - alias: Repeat while driver still driving and the opening should not be triggered yet
                   repeat:
                     while:
@@ -3385,6 +3395,12 @@ actions:
                                 )
                               }}
                         then:
+                          - alias: If triggered by a new position while waiting for gps
+                            if: "{{ up_stage == 2 and wait.trigger.id == 'position' }}"
+                            then:
+                              - alias: Start waiting for a travel time update
+                                variables:
+                                  up_stage: 3
                           - alias: If the refresh rate is not set to 'Listen'
                             if:
                               - condition: template
@@ -3394,7 +3410,7 @@ actions:
                                 condition: template
                                 value_template: >-
                                   {{
-                                    up_stage == 2
+                                    up_stage == 3
                                     or (
                                       in_activation_zone and not was_in_zone
                                       and arrival_opening_method == 'time'
@@ -3470,7 +3486,7 @@ actions:
                                   - alias: Increment the API calls counter
                                     variables:
                                       api_calls: "{{ api_calls + 1 }}"
-                                  - alias: Only continue if ultra precision mode is active
+                                  - alias: Only continue if ultra precision mode is waiting for travel time
                                     condition: template
                                     value_template: "{{ up_stage == 3 }}"
                                   - variables:
@@ -3582,6 +3598,7 @@ actions:
                                         error: true
                                   - variables:
                                       up_stage: 1
+                                      up_successful: true
                                   - alias: Only continue if the duration is positive
                                     condition: template
                                     value_template: "{{ travel_time_duration >= 0 }}"
@@ -3643,6 +3660,12 @@ actions:
                                       - variables:
                                           outdated_delay: 0
                                           up_stage: 2
+                                          up_had_time: "{{ up_had_time or timeout != 0 }}"
+                                          up_start_ts: >-
+                                            {{
+                                              up_start_ts if up_start_ts != 0
+                                              else now() | as_timestamp
+                                            }}
                                 else:
                                   - alias: Remove the planned gps request
                                     variables:
@@ -3754,6 +3777,7 @@ actions:
               variables:
                 opening_behavior: "{{ behavior[itinerary_mode].opening }}"
                 closing_behavior: "{{ behavior[itinerary_mode].closing }}"
+                waited_gate: false
             - alias: If one of the gates is closed
               if:
                 - condition: template
@@ -3762,6 +3786,7 @@ actions:
                 - alias: Initialize a variable to wait for the phone to receive the notification before starting the timer
                   variables:
                     waiting_for_reception: "{{ not ios_device and opening_behavior == 'timer' }}"
+                    waited_gate: true
                 - alias: If opening behavior is set to cancelable timer or notification request
                   if:
                     - condition: template
@@ -3888,29 +3913,12 @@ actions:
                                 trigger: template
                                 id: vehicle_stopped
                                 value_template: "{{ is_state(driving_sensor, 'off') }}"
-                              - alias: Activation zone left
-                                trigger: template
-                                id: vehicle_away
-                                value_template: >-
-                                  {% if state_attr(driver, 'gps_accuracy') is none %}
-                                    {% set accuracy = 100 %}
-                                  {% else %}
-                                    {% set accuracy = state_attr(driver, 'gps_accuracy') %}
-                                  {% endif %}
-                                  {% set gate_distance = distance(driver, gate_location)*1000 - accuracy %}
-
-                                  {{ gate_distance > activation_zone }}
-                              - alias: Forbidden zone entered
-                                trigger: template
-                                id: forbidden_zone
-                                value_template: >-
-                                  {{
-                                    driver in (
-                                      expand(forbidden_zones)
-                                      | map(attribute='entity_id')
-                                      | list
-                                    )
-                                  }}
+                              - alias: Wait for GPS
+                                id: position
+                                trigger: event
+                                event_type: state_changed
+                                event_data:
+                                  entity_id: "{{ driver }}"
                               - alias: Opening button pressed
                                 trigger: event
                                 id: opening_order
@@ -3930,12 +3938,66 @@ actions:
                                 event_data:
                                   action_2_key: "{{ opening_order_id }}"
                                 enabled: "{{ waiting_for_reception }}"
+                              - alias: Wait for travel time (ultra precision mode)
+                                id: up_travel_time
+                                trigger: event
+                                event_type: state_changed
+                                event_data:
+                                  entity_id: "{{ travel_time_sensor }}"
+                                enabled: >-
+                                  {{
+                                    arrival
+                                    and travel_time_sensor is not none
+                                    and not up_had_time
+                                    and up_stage == 3
+                                  }}
                             timeout: >-
                               {% if opening_behavior == 'timer' %}
                                 {{ timer_opening }}
                               {% else %}
                                 {{ MAX_INT }}
                               {% endif %}
+                          - alias: If a new position was received
+                            if: "{{ wait.completed and wait.trigger.id == 'position' }}"
+                            then:
+                              - choose:
+                                  - alias: Forbidden zone entered
+                                    conditions: >-
+                                      {{
+                                        driver in (
+                                          expand(forbidden_zones)
+                                          | map(attribute='entity_id')
+                                          | list
+                                        )
+                                      }}
+                                    sequence:
+                                      - variables:
+                                          wait:
+                                            completed: true
+                                            trigger:
+                                              id: forbidden_zone
+                                  - alias: Activation zone left
+                                    conditions: >-
+                                      {% if state_attr(driver, 'gps_accuracy') is none %}
+                                        {% set accuracy = 100 %}
+                                      {% else %}
+                                        {% set accuracy = state_attr(driver, 'gps_accuracy') %}
+                                      {% endif %}
+                                      {% set gate_distance = distance(driver, gate_location)*1000 - accuracy %}
+
+                                      {{ gate_distance > activation_zone }}
+                                    sequence:
+                                      - variables:
+                                          wait:
+                                            completed: true
+                                            trigger:
+                                              id: vehicle_away
+                                  - alias: Ultra precision mode was waiting for GPS
+                                    conditions: "{{ arrival and not up_had_time and up_stage == 2 }}"
+                                    sequence:
+                                      - variables:
+                                          up_late_update_ts: "{{ now() | as_timestamp }}"
+                                          up_stage: 0
                           - choose:
                               - alias: If the timer ran out but not in timer mode
                                 conditions:
@@ -3994,6 +4056,12 @@ actions:
                                     action: "{{ notify_service }}"
                                     data: *clear_notification
                                     continue_on_error: true
+                              - alias: Ultra precision mode travel time update finally occured
+                                conditions: "{{ wait.completed and wait.trigger.id == 'up_travel_time' }}"
+                                sequence:
+                                  - variables:
+                                      up_late_update_ts: "{{ now() | as_timestamp }}"
+                                      up_stage: 0
                 - alias: If opening behavior is not set to off
                   if:
                     - condition: template
@@ -4049,6 +4117,7 @@ actions:
                         and gps_request_departure != 0
                       }}
                     last_gps_request: "{{ now() | as_timestamp }}"
+                    waited_gate: true
                 - alias: Keep waiting for events until the gate should close
                   repeat:
                     until: "{{ break }}"
@@ -4157,7 +4226,25 @@ actions:
                             event_type: state_changed
                             event_data:
                               entity_id: "{{ driver }}"
-                            enabled: "{{ waiting_for_safety or send_gps_requests }}"
+                            enabled: >-
+                              {{
+                                waiting_for_safety
+                                or send_gps_requests
+                                or arrival and not up_had_time and up_stage == 2
+                              }}
+                          - alias: Wait for travel time (ultra precision mode)
+                            id: up_travel_time
+                            trigger: event
+                            event_type: state_changed
+                            event_data:
+                              entity_id: "{{ travel_time_sensor }}"
+                            enabled: >-
+                              {{
+                                arrival
+                                and travel_time_sensor is not none
+                                and not up_had_time
+                                and up_stage == 3
+                              }}
                           - alias: Closing button pressed
                             trigger: event
                             id: closing_order
@@ -4181,6 +4268,12 @@ actions:
                             enabled: "{{ waiting_for_reception }}"
                         timeout:
                           seconds: "{{ trigger_timeout }}"
+                      - alias: If ultra precision mode update finally occured
+                        if: "{{ wait.completed and wait.trigger.id in ['up_position', 'up_travel_time'] }}"
+                        then:
+                          - variables:
+                              up_late_update_ts: "{{ now() | as_timestamp }}"
+                              up_stage: 0
                       - alias: If the device tracker was updated while waiting for a safety event
                         if:
                           - condition: template
@@ -4699,54 +4792,104 @@ actions:
                 entity_id: "{{ itinerary_sensor }}"
               data:
                 value: "{{ itinerary_value | to_json }}"
-            - alias: If the driver was leaving home
-              if:
-                - condition: template
-                  value_template: "{{ departure_mode }}"
-              then:
-                - alias: Avoid looping if the driver has stopped his vehicle on departure
-                  if:
+            - choose:
+                - alias: If the driver was leaving home
+                  conditions:
                     - condition: template
-                      value_template: "{{ is_state(driving_sensor, 'off') }}"
-                  then:
-                    - stop: Vehicle stopped
-                - alias: Wait for driver to travel 250m away from activation zone, then return, to start itinerary
-                  repeat:
-                    count: 2
-                    sequence:
-                      - wait_for_trigger:
-                          - alias: Vehicle stopped
-                            trigger: template
-                            id: vehicle_stopped
-                            value_template: "{{ is_state(driving_sensor, 'off') }}"
-                          - alias: Driver drove 250m away
-                            trigger: template
-                            value_template: >-
-                              {% if state_attr(driver, 'gps_accuracy') is none %}
-                                {% set accuracy = 100 %}
-                              {% else %}
-                                {% set accuracy = state_attr(driver, 'gps_accuracy') %}
-                              {% endif %}
-                              {% set gate_distance = distance(driver, gate_location)*1000 - accuracy %}
+                      value_template: "{{ departure_mode }}"
+                  sequence:
+                    - alias: Avoid looping if the driver has stopped his vehicle on departure
+                      if:
+                        - condition: template
+                          value_template: "{{ is_state(driving_sensor, 'off') }}"
+                      then:
+                        - stop: Vehicle stopped
+                    - alias: Wait for driver to travel 250m away from activation zone, then return, to start itinerary
+                      repeat:
+                        count: 2
+                        sequence:
+                          - wait_for_trigger:
+                              - alias: Vehicle stopped
+                                trigger: template
+                                id: vehicle_stopped
+                                value_template: "{{ is_state(driving_sensor, 'off') }}"
+                              - alias: Driver drove 250m away
+                                trigger: template
+                                value_template: >-
+                                  {% if state_attr(driver, 'gps_accuracy') is none %}
+                                    {% set accuracy = 100 %}
+                                  {% else %}
+                                    {% set accuracy = state_attr(driver, 'gps_accuracy') %}
+                                  {% endif %}
+                                  {% set gate_distance = distance(driver, gate_location)*1000 - accuracy %}
 
-                              {{ gate_distance > activation_zone + 250 }}
-                          - alias: Driver returned to the activation zone
-                            trigger: template
-                            value_template: >-
-                              {% if state_attr(driver, 'gps_accuracy') is none %}
-                                {% set accuracy = 100 %}
-                              {% else %}
-                                {% set accuracy = state_attr(driver, 'gps_accuracy') %}
-                              {% endif %}
-                              {% set gate_distance = distance(driver, gate_location)*1000 + accuracy %}
+                                  {{ gate_distance > activation_zone + 250 }}
+                              - alias: Driver returned to the activation zone
+                                trigger: template
+                                value_template: >-
+                                  {% if state_attr(driver, 'gps_accuracy') is none %}
+                                    {% set accuracy = 100 %}
+                                  {% else %}
+                                    {% set accuracy = state_attr(driver, 'gps_accuracy') %}
+                                  {% endif %}
+                                  {% set gate_distance = distance(driver, gate_location)*1000 + accuracy %}
 
-                              {{ gate_distance < activation_zone }}
-                      - alias: Don't continue if driver stopped vehicle
-                        if:
-                          - condition: template
-                            value_template: "{{ wait.trigger.id == 'vehicle_stopped' }}"
+                                  {{ gate_distance < activation_zone }}
+                          - alias: Don't continue if driver stopped vehicle
+                            if:
+                              - condition: template
+                                value_template: "{{ wait.trigger.id == 'vehicle_stopped' }}"
+                            then:
+                              - stop: Arrived to destination
+                - alias: If the driver was arriving and the ultra precision mode failed
+                  conditions:
+                    - condition: template
+                      value_template: "{{ arrival and not up_successful and up_had_time }}"
+                  sequence:
+                      - variables:
+                          up_update_diff: "{{ up_late_update_ts - up_start_ts }}"
+                      - alias: If ultra precision sensors update occured too late (>30s)
+                        if: "{{ up_update_diff > 30 }}"
                         then:
-                          - stop: Arrived to destination
+                          - variables:
+                              title_id: "invalid_config"
+                              message_id: "up_failing"
+                        else:
+                          - variables:
+                              title_id: "tip"
+                              message_id: "up_should_be_higher"
+                      - alias: Get notification translation
+                        variables:
+                          title: *get_title
+                          message: *get_message
+                      - alias: If ultra precision sensors update occured too late (>30s)
+                        if: "{{ up_update_diff > 30 }}"
+                        then:
+                          - alias: Build the more info link
+                            variables:
+                              message_id: "more_info"
+                              more_info: *get_message
+                              link: "https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/README.md#error-codes-table-%EF%B8%8F"
+                              more_info_md: "[{{more_info}}]({{link}})"
+                              message: "{{ message ~ '\n\n' ~ more_info_md }}"
+                        else:
+                          - alias: Format the string with recommended timings
+                            variables:
+                              message: >-
+                                {{
+                                  message.format(
+                                    data=(
+                                      ', '.join(up_update_diff)
+                                    )
+                                  )
+                                }}
+                      - alias: Notify all users on the dashboard that the config is invalid
+                        action: persistent_notification.create
+                        data:
+                          title: "{{ title }}"
+                          message: "{{ message }}"
+                          notification_id: "{{ config_checker_tag }}"
+                        continue_on_error: true
       - alias: Mark the automation as not failed
         variables:
           errored: false
