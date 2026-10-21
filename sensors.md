@@ -21,9 +21,9 @@ There are two main types of gate entities you can use:
 
       To use such gates:
 
-      * Option 1: Disable the closing behavior in the blueprint settings
-      * Option 2: Use the [ESPHome Gate Firmware](ESPHome-Firmwares/Gate), which supports pulse-triggered gates correctly
-      * Option 3: If you have three separate pulse triggers (for open / close / stop), you can combine them into a single gate entity using a [state-based template cover](https://www.home-assistant.io/integrations/template/#state-based-cover---garage-door)
+      * Option 1: Flash the [ESPHome Gate Firmware](ESPHome-Firmwares/Gate) if you have an [ESP32](https://amzn.to/3y2UtCr)
+      * Option 2: If you have three separate pulse triggers (for open / close / stop), you can combine them into a single gate entity using a [state-based template cover](https://www.home-assistant.io/integrations/template/#state-based-cover---garage-door)
+      * Option 3: Use [this script](Extra/Relay-Gate-Blueprint) to create a virtual interface on HA, controling your single relay and remembering the gate state
     </details>
   
 
@@ -571,3 +571,58 @@ Provides the distance of the nearest person to your gate, to open only if someon
 | Devices or persons to track | `[person.user0, ...]` |
 | Zones to ignore | - |
 | Tolerance distance | - |
+
+
+## Memory helper 🧠
+
+> Only necessary for [Relay Gate Blueprint](Extra/Relay-Gate-Blueprint)
+
+This will hold values for your virtual gate interface
+
+#### Setup
+
+1. Add an [input_text helper](https://www.home-assistant.io/integrations/input_text/) through the UI: [Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Text
+2. Optional: edit settings
+3. Click on the helper you created, then on the cog and disable 'Visible'
+4. Optional: If you want to reduce spam in your history and recorder, edit your HA configuration.yaml file to exclude this entity
+
+#### Data stored
+
+<details>
+  <summary><h5>Sensor JSON structure</h5></summary>
+
+| Key | Value |
+| :---: | :---: |
+| `state` | Holds the current gate state (open, opening, closed, closing) |
+
+</details>
+
+
+## Virtual gate interface ⛩️
+
+> Only necessary for [Relay Gate Blueprint](Extra/Relay-Gate-Blueprint)
+
+This will allow you to have a real gate entity that remembers its current state and have dedicated open, close buttons
+
+#### Setup
+
+1. Add a [template helper](https://www.home-assistant.io/integrations/template/#cover/) through the UI: [Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Template
+2. Select 'Cover'
+3. Apply the settings from below
+
+#### Settings
+
+| Setting | Parameter |
+| :--- | :---: |
+| State | `{% set memory_helper = 'input_text.memory_helper' %}{{ (states(memory_helper) | from_json({'state': 'unavailable'})).state }}` |
+| Action on open | 'Script: Relay Gate', select 'Open' and no response variable |
+| Action on close | 'Script: Relay Gate', select 'Close' and no response variable |
+| Action on stop | - |
+| Position | - |
+| Actions on set position | - |
+| Device class | 'Gate' or 'Garage' |
+| Device | *your relay* |
+
+Where:
+
+* `input_text.memory_helper` is the id of your memory helper

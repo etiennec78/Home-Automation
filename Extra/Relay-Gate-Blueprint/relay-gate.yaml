@@ -1,0 +1,119 @@
+blueprint:
+  name: Relay Gate ⛩️
+  source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Extra/Relay-Gate-Blueprint/relay-gate.yaml"
+  domain: script
+  author: etiennec78
+  description: |-
+    # Relay Gate ⛩️
+
+    ## Description 📝
+    A script to transform a basic relay switch into a proper cover entity for your gate/garage door.
+
+    > If you are using an [ESP32 with relay](https://amzn.to/3y2UtCr), you should use my [ESPHome firmware](https://github.com/etiennec78/Home-Automation/blob/master/ESPHome-Firmwares/Gate) instead
+
+    > ⚠️ Since this script uses a relay without additional sensors, it cannot detect state changes from external controls (e.g: remotes). For consistent operation, use the same control method to open and then close consecutively.
+
+    ## More info ℹ️
+    * Version: 2.1.0
+    * Github: [click here](https://github.com/etiennec78/Home-Automation/tree/master/Extra/Relay-Gate-Blueprint)
+    * Discord: @etiennec78
+    * Configure cover template: [click here](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#virtual-gate-interface-%EF%B8%8F)
+    [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
+  input:
+    relay:
+      name: ⛩️ Relay
+      description: |-
+        The **relay** that will be turned **on** to **move your gate**
+      selector:
+        entity:
+          filter:
+            domain: switch
+    duration:
+      name: 🕓 Duration of movement
+      description: |-
+        The **time** it takes for your gate to **open** or **close**
+      selector:
+        number:
+          min: 10
+          max: 300
+          unit_of_measurement: s
+    memory_helper:
+      name: 🧠 Memory helper
+      description: |-
+        An empty **text helper** to store long term memory about the state of the gate
+        > *Make this entity invisible to avoid flooding logs*
+      selector:
+        entity:
+          filter:
+            domain: input_text
+
+fields:
+  mode:
+    required: true
+    selector:
+      select:
+        options:
+          - label: Open
+            value: open
+          - label: Close
+            value: close
+
+mode: queued
+max: 3
+
+variables:
+  memory_helper: !input memory_helper
+  default_memory_helper_value:
+    state: "closed"
+  state:
+    opposite:
+      open: "closed"
+      close: "open"
+    moving:
+      open: "opening"
+      close: "closing"
+    done:
+      open: "open"
+      close: "closed"
+
+sequence:
+  - alias: Get the current gate state
+    variables:
+      gate_state: >-
+        {%
+          set state = (
+            states(memory_helper)
+            | from_json(default_memory_helper_value)
+          )
+        %}
+        {%
+          if default_memory_helper_value.keys() == state.keys()
+        %}
+          {{ state }}
+        {% else %}
+          {{ default_memory_helper_value }}
+        {% endif %}
+  - alias: Only continue if the gate should move
+    condition: template
+    value_template: "{{ state.opposite[mode] == gate_state.state }}"
+  - variables:
+      update:
+        state: "{{ state.moving[mode] }}"
+  - sequence: &update_helper
+      - alias: Update the dict to store the new state
+        variables:
+          gate_state: "{{ gate_state | combine(update) }}"
+      - alias: Save the new state to the helper
+        action: input_text.set_value
+        target:
+          entity_id: !input memory_helper
+        data:
+          value: "{{ gate_state | to_json }}"
+  - aciton: switch.turn_on
+    target:
+      entity_id: !input relay
+  - delay: !input duration
+  - variables:
+      update:
+        state: "{{ state.done[mode] }}"
+  - sequence: *update_helper
