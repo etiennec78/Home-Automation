@@ -62,9 +62,11 @@ mode: queued
 max: 3
 
 variables:
+  duration: !input duration
   memory_helper: !input memory_helper
   default_memory_helper_value:
     state: "closed"
+    position: 0
   state:
     opposite:
       open: "closed"
@@ -72,6 +74,9 @@ variables:
     moving:
       open: "opening"
       close: "closing"
+    position:
+      open: 100
+      close: 0
     done:
       open: "open"
       close: "closed"
@@ -109,10 +114,28 @@ sequence:
           entity_id: !input memory_helper
         data:
           value: "{{ gate_state | to_json }}"
-  - aciton: switch.turn_on
+  - action: homeassistant.turn_on
     target:
       entity_id: !input relay
-  - delay: !input duration
+  - alias: Wait for the gate to reach the targetted position
+    repeat:
+      while:
+        - condition: template
+          value_template: >-
+            {{
+              mode == 'open' and gate_state.position < 100
+              or mode == 'close' and gate_state.position > 0
+            }}
+      sequence:
+        - variables:
+            update:
+              position: >-
+                {{
+                  gate_state.position
+                  + (1 if mode == 'open' else -1)
+                }}
+        - sequence: *update_helper
+        - delay: "{{ duration / 100 }}"
   - variables:
       update:
         state: "{{ state.done[mode] }}"

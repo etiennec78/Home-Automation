@@ -594,6 +594,7 @@ This will hold values for your virtual gate interface
 | Key | Value |
 | :---: | :---: |
 | `state` | Holds the current gate state (open, opening, closed, closing) |
+| `position` | Holds the current gate position (0-100) |
 
 </details>
 
@@ -618,7 +619,7 @@ This will allow you to have a real gate entity that remembers its current state 
 | Action on open | 'Script: Relay Gate', select 'Open' and no response variable |
 | Action on close | 'Script: Relay Gate', select 'Close' and no response variable |
 | Action on stop | - |
-| Position | - |
+| Position | `{% set memory_helper = 'input_text.memory_helper' %}{{ (states(memory_helper) | from_json({'position': 0})).position }}` |
 | Actions on set position | - |
 | Device class | 'Gate' or 'Garage' |
 | Device | *your relay* |
