@@ -46,6 +46,36 @@ blueprint:
         entity:
           filter:
             domain: input_text
+    authorized_zone:
+      name: Authorized zone
+      icon: mdi:security
+      collapsed: true
+      input:
+        persons:
+          name: 👤 Persons / GPS trackers
+          description: |-
+            **Users** for whom the **position** must be checked before **opening** the gate
+            > *Disabled if no user is provided*
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                domain:
+                  - device_tracker
+                  - person
+        authorized_zone:
+          name: 📍 Authorized zone
+          description: |-
+            The gate will **refuse** to **open** if no user is in this zone
+            > *Setting it to 0 will require users to be at home*
+          default: 1
+          selector:
+            number:
+              min: 0
+              max: 20
+              step: 0.1
+              unit_of_measurement: km
 
 fields:
   mode:
@@ -64,6 +94,8 @@ max: 3
 variables:
   duration: !input duration
   memory_helper: !input memory_helper
+  persons: !input persons
+  authorized_zone: !input authorized_zone
   default_memory_helper_value:
     state: "closed"
     position: 0
@@ -101,6 +133,29 @@ sequence:
   - alias: Only continue if the gate should move
     condition: template
     value_template: "{{ state.opposite[mode] == gate_state.state }}"
+  - alias: Only continue if someone is home
+    condition: template
+    value_template: >-
+      {% if mode == 'close' %}
+        {{ true }}
+      {% else %}
+        {% set valid = true if persons | length == 0 else false %}
+        {% set data = namespace(valid=valid) %}
+        {% for person in persons %}
+          {% set dist = (
+              not is_state_attr(person, 'latitude', null)
+              and distance(person)
+          ) %}
+          {%
+            if is_state(person, 'home')
+            or dist is not none and dist <= authorized_zone
+          %}
+            {% set data.valid = true %}
+            {% break %}
+          {% endif %}
+        {% endfor %}
+        {{ data.valid }}
+      {% endif %}
   - variables:
       update:
         state: "{{ state.moving[mode] }}"
