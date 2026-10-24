@@ -117,12 +117,8 @@ sequence:
           {{ default_memory_helper_value }}
         {% endif %}
       gate_moving: "{{ gate_state.state in ['opening', 'closing'] }}"
-  - alias: Only continue if someone is home
-    condition: template
-    value_template: >-
-      {% if mode == 'close' or gate_moving %}
-        {{ true }}
-      {% else %}
+  - variables:
+      someone_home: >-
         {% set valid = true if persons | length == 0 else false %}
         {% set data = namespace(valid=valid) %}
         {% for person in persons %}
@@ -139,7 +135,15 @@ sequence:
           {% endif %}
         {% endfor %}
         {{ data.valid }}
-      {% endif %}
+  - alias: If there is no one home, and the gate is closing
+    if: "{{ not someone_home and gate_state.state == 'closing' }}"
+    then:
+      - alias: Override the mode to keep closing and ignore other requests
+        variables:
+          mode: close
+  - alias: Only continue if someone is home
+    condition: template
+    value_template: "{{ true if mode == 'close' else someone_home }}"
   - variables:
       pulses: >-
         {% if mode == 'open' %}
