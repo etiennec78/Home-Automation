@@ -89,6 +89,8 @@ fields:
             value: close
           - label: Stop
             value: stop
+          - label: Position  # If you call this script manually, you need to define the variable 'position' [0-100]
+            value: position
 
 mode: restart
 
@@ -118,7 +120,6 @@ sequence:
         {% else %}
           {{ default_memory_helper_value }}
         {% endif %}
-      gate_moving: "{{ gate_state.state in ['opening', 'closing'] }}"
   - variables:
       someone_home: >-
         {% set valid = true if persons | length == 0 else false %}
@@ -143,6 +144,35 @@ sequence:
       - alias: Override the mode to keep closing and ignore other requests
         variables:
           mode: close
+  - alias: If the script has received a position
+    if: "{{ mode == 'position' }}"
+    then:
+      - alias: Stop if no position was received
+        if: "{{ position is not defined }}"
+        then:
+          - stop: No position received
+            error: true
+      - alias: Choose the correct mode
+        variables:
+          mode: >-
+            {% if position == gate_state.position %}
+              stop
+            {% elif position > gate_state.position %}
+              open
+            {% else %}
+              close
+            {% endif %}
+          position_target: "{{ position }}"
+    else:
+      - variables:
+          position_target: >-
+            {% if mode == 'open' %}
+              {{ 100 }}
+            {% elif mode == 'close' %}
+              {{ 0 }}
+            {% else %}
+              {{ gate_state.position }}
+            {% endif %}
   - alias: Only continue if someone is home
     condition: template
     value_template: "{{ true if mode == 'close' else someone_home }}"
@@ -212,14 +242,7 @@ sequence:
     repeat:
       while:
         - condition: template
-          value_template: >-
-            {{
-              mode != 'stop'
-              and (
-                mode == 'open' and gate_state.position < 100
-                or mode == 'close' and gate_state.position > 0
-              )
-            }}
+          value_template: "{{ gate_state.position != position_target }}"
       sequence:
         - variables:
             update:
@@ -234,3 +257,10 @@ sequence:
       update:
         state: "{{ 'closed' if mode == 'close' else 'open' }}"
   - sequence: *update_helper
+  - alias: If the gate should stop while not being fully open/closed
+    if: "{{ position_target not in [0, 100] }}"
+    then:
+      - alias: Stop the gate
+        action: homeassistant.turn_on
+        target:
+          entity_id: !input relay
