@@ -102,6 +102,7 @@ variables:
   default_memory_helper_value:
     state: "closed"
     position: 0
+    error: null
 
 sequence:
   - alias: Get the current gate state
@@ -173,9 +174,37 @@ sequence:
             {% else %}
               {{ gate_state.position }}
             {% endif %}
-  - alias: Only continue if someone is home
-    condition: template
-    value_template: "{{ true if mode == 'close' else someone_home }}"
+  - choose:
+      - alias: If nobody is home
+        conditions: "{{ mode != 'close' and not someone_home }}"
+        sequence:
+          - variables:
+              update:
+                error: "nobody-near-home"
+          - sequence: &update_helper
+              - alias: Update the dict to store the new state
+                variables:
+                  gate_state: "{{ gate_state | combine(update) }}"
+              - alias: Save the new state to the helper
+                action: input_text.set_value
+                target:
+                  entity_id: !input memory_helper
+                data:
+                  value: "{{ gate_state | to_json }}"
+          - delay: 1
+          - variables:
+              update:
+                error: null
+          - sequence: *update_helper
+          - stop: Nobody near home
+            error: true
+      - alias: If a bugged error is still stored
+        conditions: "{{ gate_state.error is not none }}"
+        sequence:
+          - variables:
+              update:
+                error: null
+          - sequence: *update_helper
   - variables:
       pulses: >-
         {% if mode == 'open' %}
@@ -218,16 +247,7 @@ sequence:
                 {% else %}
                   opening
                 {% endif %}
-        - sequence: &update_helper
-            - alias: Update the dict to store the new state
-              variables:
-                gate_state: "{{ gate_state | combine(update) }}"
-            - alias: Save the new state to the helper
-              action: input_text.set_value
-              target:
-                entity_id: !input memory_helper
-              data:
-                value: "{{ gate_state | to_json }}"
+        - sequence: *update_helper
         - alias: Send a pulse
           action: homeassistant.turn_on
           target:

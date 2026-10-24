@@ -88,10 +88,14 @@ blueprint:
           description: |-
             Sensor that provides gate error messages
             > *Only needed for error notification type*
+
+            > *The sensor should contain a string or a json containing an `error` key*
           default: ""
           selector:
             entity:
-              domain: sensor
+              domain:
+                - sensor
+                - input_text
         notify_devices:
           name: 💬 Notify devices
           description: |-
@@ -394,9 +398,11 @@ triggers:
     enabled: "{{ 'close' in notification_type }}"
 
   - alias: Wait for error
-    trigger: template
+    trigger: event
     id: error
-    value_template: "{{ error_message_sensor | has_value }}"
+    event_type: state_changed
+    event_data:
+      entity_id: "{{ error_message_sensor }}"
     enabled: "{{ 'error' in notification_type }}"
 
   - alias: Wait for gate unavailable for duration
@@ -437,6 +443,26 @@ conditions:
           | bitwise_and(4) == 0
         )
       }}
+  - alias: If triggered by an error sensor, only continue if it holds a value
+    condition: template
+    value_template: >-
+      {% if trigger.id == 'error' %}
+        {% set json_old = trigger.event.data.old_state.state | from_json(none) %}
+        {% set json_new = trigger.event.data.new_state.state | from_json(none) %}
+        {{
+          json_new is none and error_message_sensor | has_value
+          or (
+            'error' in json_new and json_new.error is not none
+            and (
+              json_old is none
+              or 'error' not in json_old
+              or json_old.error != json_new.error
+            )
+          )
+        }}
+      {% else %}
+        {{ true }}
+      {% endif %}
 
 actions:
   - alias: Check that custom strings are valid
@@ -820,10 +846,17 @@ actions:
         then:
           - alias: Format the notification message
             variables:
+              error_message: >-
+                {% set json = trigger.event.data.new_state.state | from_json(none) %}
+                {% if json is none or 'error' not in json %}
+                  {{ states(error_message_sensor) }}
+                {% else %}
+                  {{ json.error }}
+                {% endif %}
               message: >-
                 {{
                   message.format(
-                    error=states(error_message_sensor)
+                    error=error_message
                   )
                 }}
 
@@ -1044,7 +1077,7 @@ actions:
       value_template: "{{ is_state(gate, ['off', 'closed']) }}"
       enabled: >-
         {{
-          trigger.to_state.state == 'closing'
+          trigger.id == 'close' and trigger.to_state.state == 'closing'
           or trigger.id in ['open', 'offline']
         }}
 
@@ -1054,7 +1087,7 @@ actions:
       value_template: "{{ is_state(gate, ['on', 'open']) }}"
       enabled: >-
         {{
-          trigger.to_state.state == 'opening'
+          trigger.id == 'open' and trigger.to_state.state == 'opening'
           or trigger.id in ['close', 'offline']
         }}
 
@@ -1064,7 +1097,7 @@ actions:
       value_template: "{{ is_state(gate, 'opening') }}"
       enabled: >-
         {{
-          trigger.to_state.state == 'open'
+          trigger.id == 'open' and trigger.to_state.state == 'open'
           or trigger.id in ['close', 'offline']
         }}
 
