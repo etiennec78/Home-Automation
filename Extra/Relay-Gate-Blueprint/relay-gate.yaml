@@ -95,6 +95,7 @@ fields:
 mode: restart
 
 variables:
+  relay: !input relay
   duration: !input duration
   memory_helper: !input memory_helper
   persons: !input persons
@@ -232,6 +233,10 @@ sequence:
             {{ 0 }}
           {% endif %}
         {% endif %}
+  - alias: If a pulse is needed but a previous automation just sent a pulse
+    if: "{{ pulses > 0 and states[relay] | attr(last_changed) + timedelta(seconds=2) > now() }}"
+    then:
+      - delay: 2
   - alias: Keep sending pulses until the gate is going in the right way
     repeat:
       while: "{{ pulses > 0 }}"
