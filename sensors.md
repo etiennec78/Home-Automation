@@ -618,7 +618,7 @@ This will allow you to have a real gate entity that remembers its current state 
 | State | `{% set memory_helper = 'input_text.memory_helper' %}{{ (states(memory_helper) | from_json({'state': 'unavailable'})).state }}` |
 | Action on open | 'Script: Relay Gate', select 'Open' and no response variable |
 | Action on close | 'Script: Relay Gate', select 'Close' and no response variable |
-| Action on stop | - |
+| Action on stop | 'Script: Relay Gate', select 'Close' and no response variable |
 | Position | `{% set memory_helper = 'input_text.memory_helper' %}{{ (states(memory_helper) | from_json({'position': 0})).position }}` |
 | Actions on set position | - |
 | Device class | 'Gate' or 'Garage' |
