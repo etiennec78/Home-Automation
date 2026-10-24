@@ -88,8 +88,7 @@ fields:
           - label: Close
             value: close
 
-mode: queued
-max: 3
+mode: restart
 
 variables:
   duration: !input duration
@@ -99,19 +98,6 @@ variables:
   default_memory_helper_value:
     state: "closed"
     position: 0
-  state:
-    opposite:
-      open: "closed"
-      close: "open"
-    moving:
-      open: "opening"
-      close: "closing"
-    position:
-      open: 100
-      close: 0
-    done:
-      open: "open"
-      close: "closed"
 
 sequence:
   - alias: Get the current gate state
@@ -130,13 +116,11 @@ sequence:
         {% else %}
           {{ default_memory_helper_value }}
         {% endif %}
-  - alias: Only continue if the gate should move
-    condition: template
-    value_template: "{{ state.opposite[mode] == gate_state.state }}"
+      gate_moving: "{{ gate_state.state in ['opening', 'closing'] }}"
   - alias: Only continue if someone is home
     condition: template
     value_template: >-
-      {% if mode == 'close' %}
+      {% if mode == 'close' or gate_moving %}
         {{ true }}
       {% else %}
         {% set valid = true if persons | length == 0 else false %}
@@ -157,21 +141,59 @@ sequence:
         {{ data.valid }}
       {% endif %}
   - variables:
-      update:
-        state: "{{ state.moving[mode] }}"
-  - sequence: &update_helper
-      - alias: Update the dict to store the new state
-        variables:
-          gate_state: "{{ gate_state | combine(update) }}"
-      - alias: Save the new state to the helper
-        action: input_text.set_value
-        target:
-          entity_id: !input memory_helper
-        data:
-          value: "{{ gate_state | to_json }}"
-  - action: homeassistant.turn_on
-    target:
-      entity_id: !input relay
+      pulses: >-
+        {% if mode == 'open' %}
+          {% if gate_state.state in ['closed', 'closing'] %}
+            {{ 1 }}
+          {% elif gate_state.state == 'open' and gate_state.position < 100 %}
+            {{ 2 }}
+          {% else %}
+            {{ 0 }}
+          {% endif %}
+        {% else %}
+          {% if gate_state.state == 'open' %}
+            {{ 1 }}
+          {% elif gate_state.state == 'opening' %}
+            {{ 2 }}
+          {% else %}
+            {{ 0 }}
+          {% endif %}
+        {% endif %}
+  - alias: Keep sending pulses until the gate is going in the right way
+    repeat:
+      while: "{{ pulses > 0 }}"
+      sequence:
+        - variables:
+            update:
+              state: >-
+                {% set state = gate_state.state %}
+                {% if state == 'open' %}
+                  closing
+                {% elif state == 'opening' %}
+                  open
+                {% else %}
+                  opening
+                {% endif %}
+        - sequence: &update_helper
+            - alias: Update the dict to store the new state
+              variables:
+                gate_state: "{{ gate_state | combine(update) }}"
+            - alias: Save the new state to the helper
+              action: input_text.set_value
+              target:
+                entity_id: !input memory_helper
+              data:
+                value: "{{ gate_state | to_json }}"
+        - alias: Send a pulse
+          action: homeassistant.turn_on
+          target:
+            entity_id: !input relay
+        - variables:
+            pulses: "{{ pulses - 1 }}"
+        - alias: Only continue if there will be other pulses
+          condition: "{{ pulses > 0 }}"
+        - alias: Wait for the relay to turn off to send the next pulse
+          delay: 2
   - alias: Wait for the gate to reach the targetted position
     repeat:
       while:
@@ -193,5 +215,5 @@ sequence:
         - delay: "{{ duration / 100 }}"
   - variables:
       update:
-        state: "{{ state.done[mode] }}"
+        state: "{{ 'open' if mode == 'open' else 'closed' }}"
   - sequence: *update_helper
