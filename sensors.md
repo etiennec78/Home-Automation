@@ -575,7 +575,7 @@ Provides the distance of the nearest person to your gate, to open only if someon
 
 ## Memory helper 🧠
 
-> Only necessary for [Relay Gate Blueprint](Extra/Relay-Gate-Blueprint)
+> Only necessary for [Relay Gate Blueprint](Blueprints/Relay-Gate)
 
 This will hold values for your virtual gate interface
 
@@ -601,7 +601,7 @@ This will hold values for your virtual gate interface
 
 ## Virtual gate interface ⛩️
 
-> Only necessary for [Relay Gate Blueprint](Extra/Relay-Gate-Blueprint)
+> Only necessary for [Relay Gate Blueprint](Blueprints/Relay-Gate)
 
 This will allow you to have a real gate entity that remembers its current state and have dedicated open, close buttons
 

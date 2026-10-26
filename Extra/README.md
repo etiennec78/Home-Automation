@@ -9,4 +9,3 @@ Miscellaneous content used for other projects of this repo
 | Item | Description | File |
 | :---: | :---: | :---: |
 | ESP Bluetooth Dummie 🚗 | [Read More](Extra/ESP-Bluetooth-Dummie) | [File](Extra/ESP-Bluetooth-Dummie/esp-bluetooth-dummie.ino) |
-| Relay Gate ⛩️ | [Read More](Relay-Gate-Blueprint) | [File](Relay-Gate-Blueprint/relay-gate.yaml) |
