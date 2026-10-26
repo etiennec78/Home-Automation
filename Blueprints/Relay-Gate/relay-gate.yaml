@@ -1,6 +1,6 @@
 blueprint:
   name: Relay Gate ⛩️
-  source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Extra/Relay-Gate-Blueprint/relay-gate.yaml"
+  source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Blueprints/Relay-Gate/relay-gate.yaml"
   domain: script
   author: etiennec78
   description: |-
@@ -15,7 +15,7 @@ blueprint:
 
     ## More info ℹ️
     * Version: 2.1.0
-    * Github: [click here](https://github.com/etiennec78/Home-Automation/tree/master/Extra/Relay-Gate-Blueprint)
+    * Github: [click here](https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/Relay-Gate)
     * Discord: @etiennec78
     * Configure cover template: [click here](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md#virtual-gate-interface-%EF%B8%8F)
     [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
