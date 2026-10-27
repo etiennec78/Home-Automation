@@ -169,6 +169,35 @@ sequence:
                   close
                 {% endif %}
               position_target: "{{ position }}"
+      - variables:
+          pulses: >-
+            {% if mode == 'open' %}
+              {% if gate_state.state in ['closed', 'closing'] %}
+                {{ 1 }}
+              {% elif gate_state.state == 'open' and gate_state.position < 100 %}
+                {{ 2 }}
+              {% else %}
+                {{ 0 }}
+              {% endif %}
+            {% elif mode == 'close' %}
+              {% if gate_state.state == 'open' %}
+                {{ 1 }}
+              {% elif gate_state.state == 'opening' %}
+                {{ 2 }}
+              {% else %}
+                {{ 0 }}
+              {% endif %}
+            {% else %}
+              {% if gate_state.state == 'opening' %}
+                {{ 1 }}
+              {% elif gate_state.state == 'closing' %}
+                {{ 2 }}
+              {% else %}
+                {{ 0 }}
+              {% endif %}
+            {% endif %}
+      - alias: Only continue if pulses are needed
+        condition: "{{ pulses > 0 }}"
       - choose:
           - alias: If nobody is home
             conditions: "{{ mode != 'close' and not someone_home }}"
@@ -200,35 +229,8 @@ sequence:
                   update:
                     error: null
               - sequence: *update_helper
-      - variables:
-          pulses: >-
-            {% if mode == 'open' %}
-              {% if gate_state.state in ['closed', 'closing'] %}
-                {{ 1 }}
-              {% elif gate_state.state == 'open' and gate_state.position < 100 %}
-                {{ 2 }}
-              {% else %}
-                {{ 0 }}
-              {% endif %}
-            {% elif mode == 'close' %}
-              {% if gate_state.state == 'open' %}
-                {{ 1 }}
-              {% elif gate_state.state == 'opening' %}
-                {{ 2 }}
-              {% else %}
-                {{ 0 }}
-              {% endif %}
-            {% else %}
-              {% if gate_state.state == 'opening' %}
-                {{ 1 }}
-              {% elif gate_state.state == 'closing' %}
-                {{ 2 }}
-              {% else %}
-                {{ 0 }}
-              {% endif %}
-            {% endif %}
       - alias: If a pulse is needed but a previous automation just sent a pulse
-        if: "{{ pulses > 0 and states[relay] | attr(last_changed) + timedelta(seconds=2) > now() }}"
+        if: "{{ states[relay] | attr(last_changed) + timedelta(seconds=2) > now() }}"
         then:
           - delay: 2
       - alias: Keep sending pulses until the gate is going in the right way
