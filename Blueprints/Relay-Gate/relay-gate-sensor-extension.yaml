@@ -1,0 +1,63 @@
+blueprint:
+  name: Relay Gate (sensor extension) ⛩️
+  source_url: "https://github.com/etiennec78/Home-Automation/blob/master/Blueprints/Relay-Gate/relay-gate-sensor-extension.yaml"
+  domain: automation
+  author: etiennec78
+  description: |-
+    # Relay Gate (sensor extension) ⛩️
+
+    ## Description 📝
+    This automation completes the Relay Gate script, to allow it to be used with a real gate sensor in parallel.
+
+    > You need to setup Relay Gate first
+
+    ## More info ℹ️
+    * Version: 2.1.0
+    * Github: [click here](https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/Relay-Gate)
+    * Discord: @etiennec78
+    [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)
+  input:
+    gate_sensor:
+      name: 🚪 Gate state sensor
+      description: |-
+        A **binary sensor** that is **on** when the gate is open
+      selector:
+        entity:
+          filter:
+            domain: binary_sensor
+    relay_gate:
+      name: ⛩️ Relay Gate blueprint
+      description: |-
+        The **script** you have set up, based on the **Relay Gate** blueprint
+      selector:
+        entity:
+          filter:
+            domain: script
+
+triggers:
+  - alias: Trigger when the gate sensor updates
+    trigger: state
+    id: vehicle_started
+    entity_id: !input gate_sensor
+    not_from:
+      - "unknown"
+      - "unavailable"
+
+mode: restart
+
+conditions:
+  - alias: Only trigger when the script is not already running
+    condition: numeric_state
+    entity_id: !input relay_gate
+    attribute: current
+    below: 1
+  - alias: Only continue if not manually executed
+    condition: template
+    value_template: "{{ trigger.platform is not none }}"
+
+actions:
+  - alias: Call the script without turning on the relay
+    action: !input relay_gate
+    data:
+      mode: "{{ 'open' if trigger.to_state.state == 'on' else 'close' }}"
+      extension: true
