@@ -3322,7 +3322,10 @@ actions:
                           - condition: template
                             value_template: >-
                               {{
-                                wait.completed
+                                (in_activation_zone and not was_in_zone
+                                 and arrival_opening_method == 'time'
+                                 and travel_time_rate != 'listen')
+                                or wait.completed
                                 and (
                                   wait.trigger.id == 'travel_time'
                                   or (
@@ -3349,7 +3352,12 @@ actions:
                             then:
                               - alias: Only continue if the travel time should be updated
                                 condition: template
-                                value_template: "{{ last_refresh_timestamp + next_refresh < now() | as_timestamp }}"
+                                value_template: >-
+                                  {{
+                                    (in_activation_zone and not was_in_zone
+                                     and arrival_opening_method == 'time')
+                                    or last_refresh_timestamp + next_refresh < now() | as_timestamp
+                                  }}
                               - alias: Get the current distance of the user from the gate
                                 variables:
                                   current_distance: "{{ distance(driver, gate_location) }}"
