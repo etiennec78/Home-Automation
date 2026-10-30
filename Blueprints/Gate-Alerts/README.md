@@ -23,6 +23,17 @@ A blueprint that notifies selected users when the gate:
 * Customizable extra actions ➕
 
 
+## Closure messages
+
+For a binary contact, `off` must mean fully closed. The closing event then
+reports "Gate closed", rather than "Gate closing". A cover reporting `closed`
+also selects the closed message. Switches and input booleans keep their command
+semantics: turning off alone does not confirm physical closure.
+
+The automatic lifecycle is unchanged: a cover completing `closing -> closed`
+clears the movement notification. Optional retained confirmations are proposed
+separately.
+
 ## Buy Me a Coffee ☕
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/C0C5XVRMM)

@@ -805,8 +805,11 @@ actions:
             %}
               left_open
             {%
-              elif trigger.from_state.state == 'open'
-              and trigger.to_state.state == 'closed'
+              elif trigger.id == 'close'
+              and (
+                (gate.split('.')[0] == 'binary_sensor' and trigger.to_state.state == 'off')
+                or (gate.split('.')[0] == 'cover' and trigger.to_state.state == 'closed')
+              )
             %}
               closed
             {% else %}
