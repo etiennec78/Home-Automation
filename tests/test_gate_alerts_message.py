@@ -15,9 +15,9 @@ class MessageTests(unittest.TestCase):
     def test_confirmed_closure_vs_command(self):
         for domain,old,new,expected in [('binary_sensor','on','off','closed'),('cover','open','closed','closed'),('cover','opening','closed','closed'),('cover','open','closing','close'),('switch','on','off','close'),('input_boolean','on','off','close')]:
             with self.subTest(domain=domain,old=old,new=new):
-                self.assertEqual(TEMPLATE.render(gate=domain+'.gate',trigger=NS(id='close',from_state=NS(state=old),to_state=NS(state=new)),notification_delay=0).strip(),expected)
+                self.assertEqual(TEMPLATE.render(gate=domain+'.gate',trigger=NS(id='close',from_state=NS(state=old),to_state=NS(state=new)),notification_delay=0,is_closed_confirmation=(domain in ['binary_sensor','cover'] and new in ['off','closed'])).strip(),expected)
     def test_other_messages_unchanged(self):
         for event,delay,expected in [('open',0,'open'),('open',1,'left_open'),('error',0,'error'),('offline',0,'offline'),('online',0,'online')]:
             with self.subTest(event=event):
-                self.assertEqual(TEMPLATE.render(gate='cover.gate',trigger=NS(id=event),notification_delay=delay).strip(),expected)
+                self.assertEqual(TEMPLATE.render(gate='cover.gate',trigger=NS(id=event),notification_delay=delay,is_closed_confirmation=False).strip(),expected)
 if __name__=='__main__': unittest.main()

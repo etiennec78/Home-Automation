@@ -31,8 +31,51 @@ also selects the closed message. Switches and input booleans keep their command
 semantics: turning off alone does not confirm physical closure.
 
 The automatic lifecycle is unchanged: a cover completing `closing -> closed`
-clears the movement notification. Optional retained confirmations are proposed
-separately.
+clears the movement notification. The optional retained-confirmation behavior is described below.
+
+## Retained closure confirmation
+
+Enable **Keep closed confirmation** to always confirm physical closure, including
+`closing -> closed` covers, and keep that confirmation beyond 30 seconds. Select
+the existing **Closing** event; no additional event type is needed. This option
+defaults to off and does not turn a switch/input boolean command into position
+feedback. A binary contact must report `off` only when fully closed.
+
+The confirmation remains dismissible and is removed when the gate leaves its
+closed state, including when the sensor becomes unknown/unavailable. It has a
+separate tag scoped to the automation, so a movement notification cannot clear
+it. Physical closure clears the previous movement alert for the same recipients.
+The confirmation uses the existing closed translations. With zero delay, a
+cover's completed movement does not repeat TTS or extra actions already invoked
+for its closing transition.
+
+With the option off, direct closure confirmations retain the 30-second lifecycle;
+the usual `closing -> closed` movement completion clears the closing alert.
+Other alert types retain their existing lifecycle.
+
+### Validation and limits
+
+Offline tests render templates extracted from this blueprint (PyYAML and Jinja2):
+`python -m unittest discover -s tests -p "test_gate_alerts*.py" -v`.
+These checks do not execute the complete Home Assistant automation engine or
+simulate asynchronous notification delivery.
+
+The combined candidate was loaded on Home Assistant 2026.10.4. The retained
+confirmation was tested with a real gate contact and Android: delivery, presence
+after more than 40 seconds, manual dismissal, another closure notification and
+automatic removal upon reopening all passed. Eight classification cases were
+also rendered in Home Assistant's template engine.
+
+Cover transitions are covered by offline template tests, not real cover hardware.
+iOS delivery and 30-second expiry have not been verified in real conditions.
+Waits do not survive automation reloads/restarts: an existing short-lived iOS or
+dashboard confirmation can outlive its timer until subsequent cleanup. Retained
+confirmations are cleared on subsequent non-closed state transitions; startup
+cleanup of a non-closed gate depends on enabling configuration checks on load.
+The generation check prevents an older closure from clearing a newer one in the
+tested templates, but checking state and calling a notification service are not
+atomic; rapid asynchronous cycles are not proven by these tests. The distinct
+confirmation tag does not guarantee a silent notification on every platform.
 
 ## Buy Me a Coffee ☕
 

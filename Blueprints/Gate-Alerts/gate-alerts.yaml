@@ -130,6 +130,16 @@ blueprint:
             message: {}
           selector:
             object:
+        retain_closed_confirmation:
+          name: Keep closed confirmation
+          description: >-
+            Always confirm physical closure, including covers reporting closing then
+            closed, and keep that confirmation until dismissed or the gate leaves
+            its closed state. Off must mean fully closed for binary sensors.
+            Does not apply to switches or input booleans, which report commands.
+          default: false
+          selector:
+            boolean:
         car_visible:
           name: 🚗 Visible in Android Auto/CarPlay
           description: Show notifications on your **car's dashboard**
@@ -267,6 +277,16 @@ variables:
   gate: !input gate
   notification_type: !input notification_type
   notification_delay: !input notification_delay
+  retain_closed_confirmation: !input retain_closed_confirmation
+  is_closed_confirmation: >-
+    {{ trigger.id == 'close'
+       and trigger.to_state is not none
+       and ((gate.split('.')[0] == 'binary_sensor' and trigger.to_state.state == 'off')
+            or (gate.split('.')[0] == 'cover' and trigger.to_state.state == 'closed')) }}
+  closed_confirmation_tag: "{{ 'gate-closed-' ~ this.attributes.id }}"
+  completion_update: >-
+    {{ is_closed_confirmation and notification_delay == 0 and trigger.from_state is not none
+       and trigger.from_state.state == 'closing' }}
   notify_devices: !input notify_devices
   notify_services: >-
     {{
@@ -365,8 +385,22 @@ trigger_variables:
   notification_type: !input notification_type
   error_message_sensor: !input error_message_sensor
   gate: !input gate
+  retain_closed_confirmation: !input retain_closed_confirmation
 
 triggers:
+  - alias: Clear a retained closure confirmation when no longer closed
+    trigger: state
+    id: closed_confirmation_cleanup
+    entity_id: !input gate
+    to:
+      - "on"
+      - "open"
+      - "opening"
+      - "closing"
+      - "unknown"
+      - "unavailable"
+    enabled: "{{ gate.split('.')[0] in ['binary_sensor', 'cover'] }}"
+
   - alias: Wait for gate opening or fully open
     trigger: state
     id: open
@@ -433,12 +467,37 @@ conditions:
     condition: template
     value_template: >-
       {{
-        trigger.id != 'close'
+        retain_closed_confirmation
+        or trigger.id != 'close'
         or trigger.to_state.state != 'closed'
         or trigger.from_state.state != 'closing'
       }}
 
 actions:
+  - alias: Clear retained closure on startup or a non-closed state
+    if:
+      condition: template
+      value_template: >-
+        {{ trigger.id in ['blueprint_enabled', 'closed_confirmation_cleanup']
+           and not is_state(gate, ['off', 'closed']) }}
+    then:
+      - repeat:
+          for_each: "{{ notify_services }}"
+          sequence:
+            - action: "{{ repeat.item }}"
+              data:
+                message: clear_notification
+                data:
+                  tag: "{{ closed_confirmation_tag }}"
+              continue_on_error: true
+      - action: persistent_notification.dismiss
+        data:
+          notification_id: "{{ closed_confirmation_tag }}"
+        enabled: !input persistent_notification
+        continue_on_error: true
+  - alias: Cleanup does not send an alert or execute extra actions
+    condition: template
+    value_template: "{{ trigger.id != 'closed_confirmation_cleanup' }}"
   - alias: Check that custom strings are valid
     variables:
       custom_translations_error: "{{ custom_translations is not mapping }}"
@@ -696,6 +755,34 @@ actions:
         )
       }}
 
+  - alias: Reject an obsolete closure before sending its confirmation
+    condition: template
+    value_template: >-
+      {{ not is_closed_confirmation
+         or (is_state(gate, trigger.to_state.state)
+             and states[gate].last_changed == trigger.to_state.last_changed) }}
+  - alias: Physical closure replaces any previous movement alert
+    if:
+      condition: template
+      value_template: "{{ is_closed_confirmation }}"
+    then:
+      - repeat:
+          for_each: "{{ notify_services }}"
+          sequence:
+            - action: "{{ repeat.item }}"
+              data:
+                message: clear_notification
+                data:
+                  tag: "{{ notification_tag }}"
+              continue_on_error: true
+      - action: persistent_notification.dismiss
+        data:
+          notification_id: "{{ notification_tag }}"
+        enabled: !input persistent_notification
+        continue_on_error: true
+      - variables:
+          notification_tag: "{{ closed_confirmation_tag }}"
+
   - alias: If gate paused or fully open, and supporting state transitions
     if:
       condition: template
@@ -805,11 +892,7 @@ actions:
             %}
               left_open
             {%
-              elif trigger.id == 'close'
-              and (
-                (gate.split('.')[0] == 'binary_sensor' and trigger.to_state.state == 'off')
-                or (gate.split('.')[0] == 'cover' and trigger.to_state.state == 'closed')
-              )
+              elif is_closed_confirmation
             %}
               closed
             {% else %}
@@ -849,7 +932,7 @@ actions:
                       importance: high
                       priority: high
                       ttl: 0
-                      sticky: true
+                      sticky: "{{ not is_closed_confirmation }}"
                       persistent: "{{ trigger.id == 'open' }}"
                       push:
                         sound:
@@ -859,8 +942,10 @@ actions:
                       url: !input on_tap_link
                       clickAction: !input on_tap_link
                       timeout: >-
-                        {%
-                          if trigger.id == 'error'
+                        {% if is_closed_confirmation and retain_closed_confirmation %}
+                          {{ MAX_INT }}
+                        {% elif
+                          trigger.id == 'error'
                           or is_state(gate, ['off', 'closed'])
                         %}
                           30
@@ -919,8 +1004,12 @@ actions:
 
                 - alias: Play TTS on each phone, if enabled
                   if:
-                    condition: template
-                    value_template: !input phone_tts
+                    condition: and
+                    conditions:
+                      - condition: template
+                        value_template: !input phone_tts
+                      - condition: template
+                        value_template: "{{ not completion_update }}"
                   then:
                     - action: "{{ repeat.item }}"
                       data:
@@ -937,7 +1026,7 @@ actions:
           - alias: If the user has entered a TTS service
             if:
               - condition: template
-                value_template: "{{ speaker_tts_service != '' }}"
+                value_template: "{{ speaker_tts_service != '' and not completion_update }}"
             then:
               - alias: Play TTS on each speaker
                 repeat:
@@ -1038,8 +1127,42 @@ actions:
                 continue_on_error: true
 
           - alias: Exec user extra actions
-            sequence: !input extra_actions
+            if:
+              condition: template
+              value_template: "{{ not completion_update }}"
+            then: !input extra_actions
             continue_on_error: true
+
+  - alias: Manage the physical closure confirmation independently of movement alerts
+    if:
+      condition: template
+      value_template: "{{ is_closed_confirmation }}"
+    then:
+      - wait_template: >-
+          {{ not is_state(gate, trigger.to_state.state)
+             or states[gate].last_changed != trigger.to_state.last_changed }}
+        timeout: "{{ MAX_INT if retain_closed_confirmation else 30 }}"
+        continue_on_timeout: true
+      - alias: An older execution must not clear a newer closure confirmation
+        condition: template
+        value_template: >-
+          {{ not is_state(gate, trigger.to_state.state)
+             or states[gate].last_changed == trigger.to_state.last_changed }}
+      - repeat:
+          for_each: "{{ notify_services }}"
+          sequence:
+            - action: "{{ repeat.item }}"
+              data:
+                message: clear_notification
+                data:
+                  tag: "{{ notification_tag }}"
+              continue_on_error: true
+      - action: persistent_notification.dismiss
+        data:
+          notification_id: "{{ notification_tag }}"
+        enabled: !input persistent_notification
+        continue_on_error: true
+      - stop: Physical closure confirmation lifecycle completed
 
   - alias: Only continue if an event needs to be listened to to remove the notification
     condition: template
