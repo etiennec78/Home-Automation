@@ -2408,7 +2408,7 @@ actions:
           ble_started: false
       - alias: Get whether the user is leaving or arriving
         variables: &get_itinerary_mode
-          departure: >-
+          departure: &driver_home >-
             {{
               is_state(
                 driver, [
@@ -2994,30 +2994,14 @@ actions:
             sequence: *restore_ble
       - alias: Get whether the driver is at the gate location
         variables:
-          departure_mode: >-
-            {{
-              is_state(
-                driver, [
-                  state_attr(gate_location, 'friendly_name'),
-                  states[gate_location].object_id
-                ]
-              )
-            }}
+          departure_mode: &driver_home
       - alias: Repeat if the driver is at gate location
         repeat:
           count: "{{ 2 if departure_mode else 1 }}"
           sequence:
             - alias: Get whether the driver is at the gate location
               variables:
-                departure_mode: >-
-                  {{
-                    is_state(
-                      driver, [
-                        state_attr(gate_location, 'friendly_name'),
-                        states[gate_location].object_id
-                      ]
-                    )
-                  }}
+                departure_mode: *driver_home
             - choose:
                 - alias: If driver at gate location
                   conditions:
@@ -3617,17 +3601,12 @@ actions:
                         default:
                           - alias: Try to get a message error id
                             variables:
+                              driver_home: *driver_home
                               message_id: >-
                                 {% if not wait.completed %}
                                   {{ timeout_type }}
                                 {%
-                                  elif is_state(
-                                    driver,
-                                    [
-                                      state_attr(gate_location, 'friendly_name'),
-                                      states[gate_location].object_id
-                                    ]
-                                  )
+                                  elif driver_home
                                   and arrival_opening_method == 'time'
                                   and opening_time is none
                                 %}
