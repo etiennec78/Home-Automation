@@ -4184,18 +4184,18 @@ actions:
                                 {% endif %}
                           - alias: Check if the trigger is a safety or suggestion event
                             variables:
+                              driver_home: *driver_home
                               safety_event: >-
                                 {{
-                                  wait.completed and wait.trigger.id in [
-                                    'vehicle_stopped',
-                                    'vehicle_away',
-                                    'forbidden_zone'
-                                  ]
+                                  wait.completed and (
+                                    wait.trigger.id in ['vehicle_away', 'forbidden_zone']
+                                    or wait.trigger.id == 'vehicle_stopped' and not driver_home
+                                  )
                                   or not wait.completed and timeout_type == 'safety_delay'
                                 }}
                               suggestion_event: >-
                                 {{
-                                  wait.completed and wait.trigger.id == 'ble_out_of_range'
+                                  wait.completed and wait.trigger.id in ['ble_out_of_range', 'vehicle_stopped']
                                   or not wait.completed and timeout_type == 'closing_suggestion'
                                 }}
                           - alias: If a safety feature needs to change the closing behavior from notif to timer
