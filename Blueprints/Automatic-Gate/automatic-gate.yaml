@@ -2418,12 +2418,9 @@ actions:
         variables: &get_itinerary_mode
           departure: &driver_home >-
             {{
-              is_state(
-                driver, [
-                  state_attr(gate_location, 'friendly_name'),
-                  states[gate_location].object_id
-                ]
-              )
+              driver in
+              state_attr(gate_location, 'persons')
+              + state_attr(gate_location, 'device_trackers')
             }}
           eta_zone: *activation_zone_in_condition
           arrival: "{{ not eta_zone }}"
