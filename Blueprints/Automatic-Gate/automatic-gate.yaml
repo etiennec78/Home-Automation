@@ -2049,6 +2049,16 @@ actions:
                             | list
                             != []
                           }}
+                      - alias: If the error occured while in the activation zone
+                        condition: template
+                        value_template: &activation_zone_in_condition >-
+                          {% if state_attr(driver, 'gps_accuracy') is none %}
+                            {% set accuracy = 100 %}
+                          {% else %}
+                            {% set accuracy = state_attr(driver, 'gps_accuracy') %}
+                          {% endif %}
+                          {% set gate_distance = distance(driver, gate_location)*1000 - accuracy %}
+                          {{ gate_distance < activation_zone }}
                     sequence:
                       - alias: Reopen each gate to avoid closing on the driver
                         repeat: &open_gates
@@ -2356,15 +2366,7 @@ actions:
                 ]
               )
             }}
-          eta_zone: &activation_zone_in_condition >-
-            {% if state_attr(driver, 'gps_accuracy') is none %}
-              {% set accuracy = 100 %}
-            {% else %}
-              {% set accuracy = state_attr(driver, 'gps_accuracy') %}
-            {% endif %}
-            {% set gate_distance = distance(driver, gate_location)*1000 - accuracy %}
-
-            {{ gate_distance < activation_zone }}
+          eta_zone: *activation_zone_in_condition
           arrival: "{{ not eta_zone }}"
       - alias: If the user wants to confirm his presence before starting the blueprint
         if:
