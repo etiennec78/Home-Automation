@@ -99,6 +99,8 @@ Use Android Auto, Apple CarPlay, Bluetooth, or a combination of these
 
 If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack adapter](https://amzn.to/3G0vOCT), a [Bluetooth-to-radio adapter](https://amzn.to/4jVEoRp), or use an [ESP32 emulating a Bluetooth keyboard](./Extra/ESP-Bluetooth-Dummie)
 
+⚠️ Please ensure that your driving sensor will not trigger in quick bursts (on then off for <1s), as this could lead to unexpected behaviors
+
 #### Summary 📝
 
 | Service | Wireless | Reliability | Compatibility |
@@ -131,6 +133,7 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
   | State template | `{{ '00:00:00:00:00:00 (BT-Device)' in state_attr('sensor.user0_bluetooth_connection', 'connected_paired_devices') }}` |
   | Device class | `Moving` |
   | Device | *Your phone* |
+  | Additional options > Delay off > ss | 1 |
 
   Where:
 
@@ -230,6 +233,7 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
   | State template | `{% set s = state_attr('sensor.user0_detected_activity', 'on_bicycle') %}{{ s | is_number and s > 80 }}` |
   | Device class | `Moving` |
   | Device | *Your phone* |
+  | Additional options > Delay off > ss | 1 |
 
   > Replace `sensor.user0_detected_activity` with your own sensor entity id, and change `80` if the confidence is too high and the condition is never triggered
 
@@ -253,6 +257,7 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
   | State template | `{% set s = 'sensor.user0_detected_activity' %}{{ is_state(s, 'Cycling') and is_state_attr(s, 'confidence', 'High') }}` |
   | Device class | `Moving` |
   | Device | *Your phone* |
+  | Additional options > Delay off > ss | 1 |
 
   > Replace `sensor.user0_detected_activity` with your own sensor entity id, and change `High` to Medium or Low if the confidence is too high and the condition is never triggered
   
@@ -287,8 +292,38 @@ If your vehicle does not support any of these, you can buy a [Bluetooth-to-jack 
   | State template | `{{ is_state('sensor.first_sensor', 'on') or is_state('sensor.second_sensor', 'on') }}` |
   | Device class | `Moving` |
   | Device | *Your phone* |
+  | Additional options > Delay off > ss | 1 |
 
   > Replace `sensor.first_sensor` and `sensor.second_sensor` with your own sensor entity ids
+
+</details>
+
+<details>
+  <summary><h4>Unreliable sensor ⚠️</h4></summary>
+  
+  If you notice that your driving sensor turns on then off in quick bursts, then you need to add an off delay thanks to a template sensor.
+  
+  If your sensor is already a template, you can simply add the off delay without needing to create a new sensor.
+  
+  #### Setup 🛠️
+
+  1. Install sensors from any option above
+  2. Install a [template helper](https://www.home-assistant.io/integrations/template/) through the UI: [Settings > Devices & services > Helpers tab](https://my.home-assistant.io/redirect/helpers/) > Create helper > Template > Binary sensor
+  3. Apply the settings from below
+  
+  #### Settings 🔧
+
+  | Setting | Parameter |
+  | :--- | :---: |
+  | Name | `User0 driving` |
+  | State template | `{{ is_state('sensor.unreliable_sensor', 'on') }}` |
+  | Device class | `Moving` |
+  | Device | *Your phone* |
+  | Additional options > Delay off > ss | 1 |
+
+  > Replace `sensor.unreliable_sensor` with your own sensor entity id
+  
+  > If 1s is not enough, increase the delay
 
 </details>
 

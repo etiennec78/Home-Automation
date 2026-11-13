@@ -799,7 +799,9 @@ variables:
           Your phone is reachable, but is not sending back its location !
           Check that the 'Single Accurate Location' sensor is enabled
         gate_closed: "The gate has been closed manually"
-        triggered_frequently: "The blueprint is being triggered repeatedly !"
+        triggered_frequently: |-
+          The blueprint is being triggered repeatedly !
+          You might need to add a delay_off to your template driving sensor.
         disabled_triggered_frequently: |-
           The blueprint has been triggered {quick_triggers} times in a row
           Please enable the blueprint manually once the issue has been fixed
@@ -891,7 +893,6 @@ variables:
           Tu teléfono responde, pero no está enviando su ubicación.
           Comprueba que el sensor 'Single Accurate Location' está habilitado.
         gate_closed: "La puerta se ha cerrado manualmente"
-        triggered_frequently: "El blueprint se está ejecutando repetidamente"
         disabled_triggered_frequently: |-
           El blueprint se ha ejecutado {quick_triggers} veces seguidas.
           Actívalo manualmente cuando el problema esté resuelto.
@@ -983,7 +984,9 @@ variables:
           Votre téléphone est joignable, mais ne renvoie pas sa localisation !
           Vérifiez que le capteur 'Emplacement précis unique' est activé
         gate_closed: "Le portail a été fermé manuellement"
-        triggered_frequently: "L'automatisation se déclenche à répétition !"
+        triggered_frequently: |-
+          L'automatisation se déclenche à répétition !
+          Vous devriez sûrement ajouter un delay_off à votre template de capteur de conduite.
         disabled_triggered_frequently: |-
           L'automation s'est déclenchée {quick_triggers} fois d'affilée
           Réactivez l'automatisation manuellement une fois le problème corrigé
@@ -1075,7 +1078,6 @@ variables:
           Il tuo telefono è raggiungibile, ma non sta inviando la sua posizione !
           Controlla che il sensore 'Posizione accurata' sia abilitato
         gate_closed: "Il cancello è stato chiuso manualmente"
-        triggered_frequently: "Il blueprint viene attivato ripetutamente !"
         disabled_triggered_frequently: |-
           Il blueprint è stato attivato {quick_triggers} volte di fila
           Riabilita il blueprint manualmente una volta risolto il problema
@@ -2002,10 +2004,15 @@ actions:
         condition: template
         value_template: "{{ errored }}"
       - choose:
-          - alias: If last automation iteration ended less than 5s ago
+          - alias: If the automation is triggered in bursts
+            condition: or
             conditions:
-              - condition: template
-                value_template: "{{ states[itinerary_sensor].last_updated + timedelta(seconds=5) > now() }}"
+              - conditions:
+                  - alias: Last automation iteration ended less than 5s ago
+                    condition: template
+                    value_template: "{{ states[itinerary_sensor].last_updated + timedelta(seconds=5) > now() }}"
+                  - alias: The driving sensor has already been turned off while starting this automation
+                    condition: "{{ is_state(driving_sensor, 'off') }}"
             sequence:
               - alias: Update the quick triggers counter
                 variables:
