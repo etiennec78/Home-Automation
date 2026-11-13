@@ -808,6 +808,10 @@ variables:
         disabled_updated_frequently: |-
           The automation spammed the travel time API with requests too quickly
           Please report this issue on GitHub !
+        unexpectedly_stopped: |-
+          The driving sensor was turned off but the automation did not catch the update !
+          Please make sure that your driving sensor is reliable.
+          If it is, report this issue on GitHub.
         forbidden_zone: "You entered a forbidden zone"
         invalid_travel_time_sensor: "Your travel time sensor does not exist !"
         unsupported_tt_integration: "Your travel time integration is not supported !"
@@ -993,6 +997,10 @@ variables:
         disabled_updated_frequently: |-
           L'automatisation a saturé l'API de temps de trajet avec des requêtes trop rapides
           Signalez ce problème sur GitHub svp !
+        unexpectedly_stopped: |-
+          Le capteur de conduite s'est désactivé mais l'automatisation n'a pas vu la maj !
+          Svp, vérifiez que votre capteur de conduite est fiable.
+          Si c'est le cas, signalez ce problème sur GitHub svp.
         forbidden_zone: "Vous êtes entré dans une zone interdite"
         invalid_travel_time_sensor: "Votre capteur de temps de trajet n'existe pas !"
         unsupported_tt_integration: "Votre intégration de temps de trajet n'est pas supportée !"
@@ -3593,6 +3601,15 @@ actions:
             ##############################
             # OPENING & CLOSING SEQUENCE #
             ##############################
+            - alias: If the driving sensor was so quick to turn off that the blueprint did not have time to react
+              if: "{{ is_state(driving_sensor, 'off') }}"
+              then:
+                - variables:
+                    message_id: "unexpectedly_stopped"
+                - alias: Create error
+                  sequence: *create_error
+                - stop: Driving sensor off update was not caught
+                  error: true
             - alias: Get the opening/closing behaviors
               variables:
                 opening_behavior: "{{ behavior[itinerary_mode].opening }}"
