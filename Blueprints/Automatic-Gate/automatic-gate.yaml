@@ -40,7 +40,7 @@ blueprint:
     </details>
 
     ## More info ℹ️
-    * Version: 2.0.3
+    * Version: 2.0.3-dev
     * Set up sensors: [click here](https://github.com/etiennec78/Home-Automation/blob/master/sensors.md)
     * Github: [click here](https://github.com/etiennec78/Home-Automation/tree/master/Blueprints/Automatic-Gate)
     * Discord: @etiennec78
@@ -4386,7 +4386,7 @@ actions:
                                       | from_json(default_itinerary_sensor_value)
                                     )
                                   %}
-                                  {% if value.status in ['on_approach', 'leaving'] %}
+                                  {% if value.status in ['on_approach', 'leaving', 'waiting_for_others', 'closing_gate'] %}
                                     {% if sensor_idx < persons | length %}
                                       {% set name_sensor = persons[sensor_idx] %}
                                     {% else %}
@@ -4403,56 +4403,188 @@ actions:
                               {{ data.drivers_near_gate }}
                         - alias: If someone is currently approaching or leaving
                           if:
-                            - condition: template
-                              value_template: "{{ drivers_near_gate != [] }}"
-                            - condition: template
-                              value_template: *gate_open
+                          - condition: template
+                            value_template: '{{ drivers_near_gate != [] }}'
+                          - condition: template
+                            value_template: "{{\n  gate\n  | select('is_state', ['on', 'open', 'opening'])\n  | list\n  != []\n}}"
                           then:
-                            - alias: Set notification ids
+                          - alias: Release this driver only after its existing closing decision
+                            variables:
+                              coordination_epoch: '{{ now() | as_timestamp }}'
+                              coordination_deadline: '{{ as_timestamp(now()) + timeout_delay * 60 }}'
+                          - alias: Mark this driver ready
+                            variables:
+                              itinerary_value: '{{ itinerary_value | combine({''status'': ''waiting_for_others'', ''last_closed'': coordination_epoch})
+                                }}'
+                          - alias: Publish multi-driver coordination
+                            action: input_text.set_value
+                            target:
+                              entity_id: '{{ itinerary_sensor }}'
+                            data:
+                              value: '{{ itinerary_value | to_json }}'
+                          - alias: Set notification ids
+                            variables:
+                              title_id: awaiting
+                              message_id: awaiting
+                          - alias: Get notification translation
+                            variables: *get_translation
+                          - alias: Format title with names of drivers near gate
+                            variables:
+                              title: "{{\n  title.format(\n    awaited_persons=(\n      drivers_near_gate | join(', ')\n    )\n  )\n}}"
+                          - alias: If a notify service exists
+                            if:
+                            - condition: template
+                              value_template: '{{ notify_service is not none }}'
+                            then:
+                            - alias: Notify driver that gate will wait for next person
+                              action: '{{ notify_service }}'
+                              data:
+                                title: '{{ title }}'
+                                message: '{{ message }}'
+                                data:
+                                  car_ui: true
+                                  notification_icon: mdi:sleep
+                                  channel: Itinerary status
+                                  importance: high
+                                  priority: high
+                                  ttl: 0
+                                  push:
+                                    sound:
+                                      name: default
+                                      critical: 1
+                                  tag: itinerary-status
+                              continue_on_error: true
+                            - sequence: *tts
+                          - alias: Wait for itinerary completion or manual closing
+                            wait_template: "{% set data = namespace(active=[], ready=[], claimed=[], invalid=false) %}\n{% for sensor_idx\
+                              \ in range(itinerary_sensors | length) %}\n  {% set raw = states(itinerary_sensors[sensor_idx]) %}\n  {% set\
+                              \ value = raw | from_json(none) %}\n  {% if value is not mapping or 'status' not in value or value.status\
+                              \ not in [none, 'arriving', 'on_approach', 'leaving', 'waiting_for_others', 'closing_gate'] %}\n    {% set\
+                              \ data.invalid = true %}\n  {% elif value.status in ['on_approach', 'leaving'] %}\n    {% set data.active\
+                              \ = data.active + [sensor_idx] %}\n  {% elif value.status == 'waiting_for_others' %}\n    {% set data.ready\
+                              \ = data.ready + [sensor_idx] %}\n  {% elif value.status == 'closing_gate' %}\n    {% set data.claimed = data.claimed\
+                              \ + [sensor_idx] %}\n  {% endif %}\n{% endfor %}\n{% set closed = gate | select('is_state', ['off', 'closed',\
+                              \ 'closing']) | list == gate %}\n{{ closed or data.claimed != [] or (not data.invalid and data.active == [])\
+                              \ }}"
+                            timeout: &id001
+                              seconds: '{{ max(coordination_deadline - as_timestamp(now()), 0) }}'
+                            continue_on_timeout: true
+                          - alias: If a notify service exists
+                            if:
+                            - condition: template
+                              value_template: '{{ notify_service is not none }}'
+                            then:
+                            - alias: Remove awaiting user notification
+                              action: '{{ notify_service }}'
+                              data: *clear_notification
+                              continue_on_error: true
+                          - alias: Recompute live closing participants
+                            variables:
+                              coordination: "{% set data = namespace(active=[], ready=[], claimed=[], invalid=false) %}\n{% for sensor_idx\
+                                \ in range(itinerary_sensors | length) %}\n  {% set raw = states(itinerary_sensors[sensor_idx]) %}\n  {%\
+                                \ set value = raw | from_json(none) %}\n  {% if value is not mapping or 'status' not in value or value.status\
+                                \ not in [none, 'arriving', 'on_approach', 'leaving', 'waiting_for_others', 'closing_gate'] %}\n    {% set\
+                                \ data.invalid = true %}\n  {% elif value.status in ['on_approach', 'leaving'] %}\n    {% set data.active\
+                                \ = data.active + [sensor_idx] %}\n  {% elif value.status == 'waiting_for_others' %}\n    {% set data.ready\
+                                \ = data.ready + [sensor_idx] %}\n  {% elif value.status == 'closing_gate' %}\n    {% set data.claimed =\
+                                \ data.claimed + [sensor_idx] %}\n  {% endif %}\n{% endfor %}\n{% set closed = gate | select('is_state',\
+                                \ ['off', 'closed', 'closing']) | list == gate %}\n{{ dict(active=data.active, ready=data.ready, claimed=data.claimed,\
+                                \ invalid=data.invalid, closed=closed) }}"
+                          - alias: Elect one closing owner
+                            if:
+                            - condition: template
+                              value_template: '{{ not coordination.closed and not coordination.invalid and coordination.active == [] and
+                                coordination.claimed == [] and coordination.ready != [] and idx == coordination.ready | min }}'
+                            - condition: template
+                              value_template: '{{ (states(itinerary_sensor) | from_json({})).get(''last_closed'') == coordination_epoch
+                                and (states(itinerary_sensor) | from_json({})).get(''status'') in [''waiting_for_others'', ''closing_gate'']
+                                }}'
+                            then:
+                            - alias: Claim the single closing command
                               variables:
-                                title_id: "awaiting"
-                                message_id: "awaiting"
-                            - alias: Get notification translation
-                              variables: *get_translation
-                            - alias: Format title with names of drivers near gate
+                                itinerary_value: '{{ itinerary_value | combine({''status'': ''closing_gate''}) }}'
+                            - alias: Publish multi-driver coordination
+                              action: input_text.set_value
+                              target:
+                                entity_id: '{{ itinerary_sensor }}'
+                              data:
+                                value: '{{ itinerary_value | to_json }}'
+                            - alias: Wait again if a new driver appeared during election
+                              wait_template: "{% set data = namespace(active=[], ready=[], claimed=[], invalid=false) %}\n{% for sensor_idx\
+                                \ in range(itinerary_sensors | length) %}\n  {% set raw = states(itinerary_sensors[sensor_idx]) %}\n  {%\
+                                \ set value = raw | from_json(none) %}\n  {% if value is not mapping or 'status' not in value or value.status\
+                                \ not in [none, 'arriving', 'on_approach', 'leaving', 'waiting_for_others', 'closing_gate'] %}\n    {% set\
+                                \ data.invalid = true %}\n  {% elif value.status in ['on_approach', 'leaving'] %}\n    {% set data.active\
+                                \ = data.active + [sensor_idx] %}\n  {% elif value.status == 'waiting_for_others' %}\n    {% set data.ready\
+                                \ = data.ready + [sensor_idx] %}\n  {% elif value.status == 'closing_gate' %}\n    {% set data.claimed =\
+                                \ data.claimed + [sensor_idx] %}\n  {% endif %}\n{% endfor %}\n{% set closed = gate | select('is_state',\
+                                \ ['off', 'closed', 'closing']) | list == gate %}\n{{ closed or (not data.invalid and data.active == [])\
+                                \ }}"
+                              timeout: *id001
+                              continue_on_timeout: true
+                            - alias: Recheck live itineraries immediately before commanding
                               variables:
-                                title: >-
-                                  {{
-                                    title.format(
-                                      awaited_persons=(
-                                        drivers_near_gate | join(', ')
-                                      )
-                                    )
-                                  }}
-                            - alias: If a notify service exists
+                                coordination: "{% set data = namespace(active=[], ready=[], claimed=[], invalid=false) %}\n{% for sensor_idx\
+                                  \ in range(itinerary_sensors | length) %}\n  {% set raw = states(itinerary_sensors[sensor_idx]) %}\n \
+                                  \ {% set value = raw | from_json(none) %}\n  {% if value is not mapping or 'status' not in value or value.status\
+                                  \ not in [none, 'arriving', 'on_approach', 'leaving', 'waiting_for_others', 'closing_gate'] %}\n    {%\
+                                  \ set data.invalid = true %}\n  {% elif value.status in ['on_approach', 'leaving'] %}\n    {% set data.active\
+                                  \ = data.active + [sensor_idx] %}\n  {% elif value.status == 'waiting_for_others' %}\n    {% set data.ready\
+                                  \ = data.ready + [sensor_idx] %}\n  {% elif value.status == 'closing_gate' %}\n    {% set data.claimed\
+                                  \ = data.claimed + [sensor_idx] %}\n  {% endif %}\n{% endfor %}\n{% set closed = gate | select('is_state',\
+                                  \ ['off', 'closed', 'closing']) | list == gate %}\n{{ dict(active=data.active, ready=data.ready, claimed=data.claimed,\
+                                  \ invalid=data.invalid, closed=closed) }}"
+                            - alias: Only the current owner may command the gate
                               if:
-                                - condition: template
-                                  value_template: "{{ notify_service is not none }}"
+                              - condition: template
+                                value_template: '{{ not coordination.closed and not coordination.invalid and coordination.active == [] and
+                                  coordination.claimed == [idx] }}'
+                              - condition: template
+                                value_template: '{{ (states(itinerary_sensor) | from_json({})).get(''last_closed'') == coordination_epoch
+                                  and (states(itinerary_sensor) | from_json({})).get(''status'') in [''waiting_for_others'', ''closing_gate'']
+                                  }}'
                               then:
-                                - alias: Notify driver that gate will wait for next person
-                                  action: "{{ notify_service }}"
-                                  data:
-                                    title: "{{ title }}"
-                                    message: "{{ message }}"
-                                    data:
-                                      <<: *notification_data
-                                      notification_icon: mdi:sleep
-                                  continue_on_error: true
-                                - sequence: *tts
-                            - alias: Wait for manual gate closing
-                              wait_for_trigger:
-                                - alias: Manual closing
-                                  trigger: template
-                                  value_template: *all_gates_closed
-                            - alias: If a notify service exists
-                              if:
+                              - alias: Close all gates
+                                repeat:
+                                  for_each: "{{\n  gate\n  | select('is_state', ['on', 'open', 'opening'])\n  | list\n}}"
+                                  sequence:
+                                  - condition: template
+                                    value_template: '{{ is_state(repeat.item, [''on'', ''open'', ''opening'']) }}'
+                                  - action: "{% if states[repeat.item].domain == 'switch' %}\n  switch.turn_off\n{% elif states[repeat.item].domain\
+                                      \ == 'cover' %}\n  cover.close_cover\n{% endif %}"
+                                    target:
+                                      entity_id: '{{ repeat.item }}'
+                              - alias: Keep the closing claim until the gate acknowledges
+                                wait_template: '{{ gate | select(''is_state'', [''off'', ''closed'', ''closing'']) | list == gate }}'
+                                timeout: *id001
+                                continue_on_timeout: true
+                              - alias: Keep an unacknowledged claim rather than issue duplicate motor commands
+                                if:
                                 - condition: template
-                                  value_template: "{{ notify_service is not none }}"
-                              then:
-                                - alias: Remove awaiting user notification
-                                  action: "{{ notify_service }}"
-                                  data: *clear_notification
-                                  continue_on_error: true
+                                  value_template: '{{ not wait.completed }}'
+                                then:
+                                - stop: Gate did not acknowledge closing; keep the coordination claim for inspection
+                              else:
+                              - alias: Do not discard a claim while safety is uncertain
+                                if:
+                                - condition: template
+                                  value_template: '{{ not coordination.closed }}'
+                                then:
+                                - stop: Safety remained uncertain at deadline; keep the closing claim for inspection
+                            else:
+                            - alias: Wait for the owner or a manual closing
+                              wait_template: '{{ gate | select(''is_state'', [''off'', ''closed'', ''closing'']) | list == gate }}'
+                              timeout:
+                                minutes: '{{ max(coordination_deadline - as_timestamp(now()), 0) / 60 }}'
+                              continue_on_timeout: true
+                          - alias: Do not overwrite a newer itinerary
+                            if:
+                            - condition: template
+                              value_template: '{{ not ((states(itinerary_sensor) | from_json({})).get(''last_closed'') == coordination_epoch
+                                and (states(itinerary_sensor) | from_json({})).get(''status'') in [''waiting_for_others'', ''closing_gate''])
+                                }}'
+                            then:
+                            - stop: A newer itinerary superseded this coordination run
                           else:
                             - alias: If an error needs to be raised
                               if:
