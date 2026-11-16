@@ -3781,6 +3781,7 @@ actions:
               variables:
                 opening_behavior: "{{ behavior[itinerary_mode].opening }}"
                 closing_behavior: "{{ behavior[itinerary_mode].closing }}"
+                waited_gates: false
             - alias: If one of the gates is closed
               if:
                 - condition: template
@@ -3789,6 +3790,7 @@ actions:
                 - alias: Initialize a variable to wait for the phone to receive the notification before starting the timer
                   variables:
                     waiting_for_reception: "{{ not ios_device and opening_behavior == 'timer' }}"
+                    waited_gates: true
                 - alias: If opening behavior is set to cancelable timer or notification request
                   if:
                     - condition: template
@@ -4119,6 +4121,7 @@ actions:
                         and gps_request_departure != 0
                       }}
                     last_gps_request: "{{ now() | as_timestamp }}"
+                    waited_gates: true
                 - alias: Keep waiting for events until the gate should close
                   repeat:
                     until: "{{ break }}"
@@ -4855,7 +4858,13 @@ actions:
                 - alias: If the driver was arriving and the ultra precision mode failed
                   conditions:
                     - condition: template
-                      value_template: "{{ arrival and not up_successful and up_had_time }}"
+                      value_template: >-
+                        {{
+                          arrival
+                          and waited_gates
+                          and not up_successful
+                          and up_had_time
+                        }}
                   sequence:
                       - variables:
                           up_update_diff: "{{ up_late_update_ts - up_start_ts }}"
