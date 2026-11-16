@@ -2423,7 +2423,7 @@ actions:
               + state_attr(gate_location, 'device_trackers')
             }}
           eta_zone: *activation_zone_in_condition
-          arrival: "{{ not eta_zone }}"
+          arrival: "{{ not departure and not eta_zone }}"
       - alias: If the user wants to confirm his presence before starting the blueprint
         if:
           - condition: template
