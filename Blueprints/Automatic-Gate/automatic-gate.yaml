@@ -2751,21 +2751,11 @@ actions:
                         - condition: template
                           value_template: "{{ wait.completed and wait.trigger.id == 'position' }}"
                       sequence:
-                        - alias: Save the previous location
-                          variables:
-                            was_departure: "{{ departure }}"
                         - alias: Get whether the user is leaving or arriving
                           variables: *get_itinerary_mode
                         - alias: Get whether the user has entered the activation zone
                           variables:
-                            entered_activation_zone: >-
-                              {{
-                                eta_zone and not departure
-                                or (
-                                  wait.trigger.event.data.old_state.context.id != old_location_id
-                                  and eta_zone and was_departure
-                                )
-                              }}
+                            entered_activation_zone: "{{ eta_zone and not departure }}"
                             gps_confirmed: true
                     - alias: Triggered by the gate closing
                       conditions:
