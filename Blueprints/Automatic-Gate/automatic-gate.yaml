@@ -2827,7 +2827,10 @@ actions:
                                     location_not_confirmed
                                   {% endif %}
                                 {% endif %}
-                              {% elif entered_activation_zone %}
+                              {%
+                                elif wait.trigger.id == 'position'
+                                and entered_activation_zone
+                              %}
                                 too_close
                               {% elif departure and lock_departure %}
                                 gate_closed
